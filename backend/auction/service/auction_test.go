@@ -1,0 +1,240 @@
+package service
+
+import (
+	"testing"
+	"time"
+
+	"auction-service/model"
+
+	"github.com/stretchr/testify/assert"
+)
+
+// TestStateMachine_CanBid 测试出价权限判断
+func TestStateMachine_CanBid(t *testing.T) {
+	tests := []struct {
+		name     string
+		status   model.AuctionStatus
+		expected bool
+	}{
+		{"待开始不可出价", model.AuctionStatusPending, false},
+		{"进行中可以出价", model.AuctionStatusOngoing, true},
+		{"延时中可以出价", model.AuctionStatusDelayed, true},
+		{"已结束不可出价", model.AuctionStatusEnded, false},
+		{"已取消不可出价", model.AuctionStatusCancelled, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			auction := &model.Auction{Status: tt.status}
+			sm := NewStateMachine(auction)
+			assert.Equal(t, tt.expected, sm.CanBid())
+		})
+	}
+}
+
+// TestStateMachine_ShouldTriggerDelay 测试延时触发判断
+func TestStateMachine_ShouldTriggerDelay(t *testing.T) {
+	tests := []struct {
+		name            string
+		endTime         time.Time
+		status          model.AuctionStatus
+		triggerBefore   int
+		expectedTrigger bool
+	}{
+		{
+			name:            "进行中且在延时窗口内",
+			endTime:         time.Now().Add(20 * time.Second),
+			status:          model.AuctionStatusOngoing,
+			triggerBefore:   30,
+			expectedTrigger: true,
+		},
+		{
+			name:            "延时中且在延时窗口内",
+			endTime:         time.Now().Add(20 * time.Second),
+			status:          model.AuctionStatusDelayed,
+			triggerBefore:   30,
+			expectedTrigger: true,
+		},
+		{
+			name:            "不在延时窗口内",
+			endTime:         time.Now().Add(2 * time.Minute),
+			status:          model.AuctionStatusOngoing,
+			triggerBefore:   30,
+			expectedTrigger: false,
+		},
+		{
+			name:            "已结束不触发延时",
+			endTime:         time.Now().Add(-1 * time.Second),
+			status:          model.AuctionStatusEnded,
+			triggerBefore:   30,
+			expectedTrigger: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			auction := &model.Auction{
+				EndTime: tt.endTime,
+				Status:  tt.status,
+			}
+			sm := NewStateMachine(auction)
+			result := sm.ShouldTriggerDelay(tt.triggerBefore)
+			assert.Equal(t, tt.expectedTrigger, result)
+		})
+	}
+}
+
+// TestStateMachine_CanDelay 测试是否可以继续延时
+func TestStateMachine_CanDelay(t *testing.T) {
+	tests := []struct {
+		name        string
+		delayUsed   int
+		maxDelay    int
+		expectedCan bool
+	}{
+		{
+			name:        "未延时可以继续",
+			delayUsed:   0,
+			maxDelay:    180,
+			expectedCan: true,
+		},
+		{
+			name:        "部分延时可以继续",
+			delayUsed:   100,
+			maxDelay:    180,
+			expectedCan: true,
+		},
+		{
+			name:        "已达最大延时不可继续",
+			delayUsed:   180,
+			maxDelay:    180,
+			expectedCan: false,
+		},
+		{
+			name:        "超过最大延时不可继续",
+			delayUsed:   200,
+			maxDelay:    180,
+			expectedCan: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			auction := &model.Auction{
+				DelayUsed: tt.delayUsed,
+			}
+			sm := NewStateMachine(auction)
+			result := sm.CanDelay(tt.maxDelay)
+			assert.Equal(t, tt.expectedCan, result)
+		})
+	}
+}
+
+// TestStateMachine_GetRemainingDelayTime 测试剩余延时时长计算
+func TestStateMachine_GetRemainingDelayTime(t *testing.T) {
+	tests := []struct {
+		name      string
+		delayUsed int
+		maxDelay  int
+		expected  int
+	}{
+		{"未延时", 0, 180, 180},
+		{"已延时部分", 100, 180, 80},
+		{"已达最大", 180, 180, 0},
+		{"超过最大", 200, 180, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			auction := &model.Auction{DelayUsed: tt.delayUsed}
+			sm := NewStateMachine(auction)
+			result := sm.GetRemainingDelayTime(tt.maxDelay)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// TestAuction_IsInDelayWindow 测试延时窗口判断
+func TestAuction_IsInDelayWindow(t *testing.T) {
+	tests := []struct {
+		name            string
+		endTime         time.Time
+		triggerBefore   int
+		expectedInWindow bool
+	}{
+		{
+			name:             "在延时窗口内（剩余20秒）",
+			endTime:          time.Now().Add(20 * time.Second),
+			triggerBefore:    30,
+			expectedInWindow: true,
+		},
+		{
+			name:             "不在延时窗口内（剩余40秒）",
+			endTime:          time.Now().Add(40 * time.Second),
+			triggerBefore:    30,
+			expectedInWindow: false,
+		},
+		{
+			name:             "刚好在边界（剩余30秒）",
+			endTime:          time.Now().Add(30 * time.Second),
+			triggerBefore:    30,
+			expectedInWindow: true,
+		},
+		{
+			name:             "竞拍已结束",
+			endTime:          time.Now().Add(-1 * time.Second),
+			triggerBefore:    30,
+			expectedInWindow: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			auction := &model.Auction{EndTime: tt.endTime}
+			result := auction.IsInDelayWindow(tt.triggerBefore)
+			assert.Equal(t, tt.expectedInWindow, result)
+		})
+	}
+}
+
+// TestAuction_CanBid 测试竞拍模型方法
+func TestAuction_CanBid_Method(t *testing.T) {
+	tests := []struct {
+		name     string
+		status   model.AuctionStatus
+		expected bool
+	}{
+		{"进行中可以出价", model.AuctionStatusOngoing, true},
+		{"延时中可以出价", model.AuctionStatusDelayed, true},
+		{"待开始不可出价", model.AuctionStatusPending, false},
+		{"已结束不可出价", model.AuctionStatusEnded, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			auction := &model.Auction{Status: tt.status}
+			assert.Equal(t, tt.expected, auction.CanBid())
+		})
+	}
+}
+
+// TestAuction_IsEnded 测试竞拍是否已结束
+func TestAuction_IsEnded(t *testing.T) {
+	tests := []struct {
+		name     string
+		status   model.AuctionStatus
+		expected bool
+	}{
+		{"已结束", model.AuctionStatusEnded, true},
+		{"已取消", model.AuctionStatusCancelled, true},
+		{"进行中", model.AuctionStatusOngoing, false},
+		{"延时中", model.AuctionStatusDelayed, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			auction := &model.Auction{Status: tt.status}
+			assert.Equal(t, tt.expected, auction.IsEnded())
+		})
+	}
+}

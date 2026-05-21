@@ -118,7 +118,7 @@ func TokenBucketRateLimit(redis *redis.Client, rate int, burst int) app.HandlerF
 		// 简化的令牌桶实现：使用 Redis 的 DECR 和 TTL
 		// 实际生产环境建议使用更完善的令牌桶算法
 		tokens, err := redis.Get(ctx, key).Int()
-		if err == redis.Nil {
+		if err != nil {
 			// 首次请求，初始化令牌桶
 			redis.Set(ctx, key, burst-1, time.Second)
 			c.Next(ctx)

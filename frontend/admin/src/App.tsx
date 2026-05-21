@@ -9,21 +9,36 @@ import OrderList from './pages/Order/List'
 function App() {
   const location = useLocation()
 
+  const navItems = [
+    { path: '/products', label: '商品管理', icon: '📦' },
+    { path: '/auctions', label: '竞拍管理', icon: '🎯' },
+    { path: '/orders', label: '订单管理', icon: '🧾' },
+  ]
+
   return (
     <div className="app">
       <nav className="sidebar">
-        <h2>竞拍管理后台</h2>
-        <ul>
-          <li className={location.pathname.startsWith('/products') ? 'active' : ''}>
-            <Link to="/products">商品管理</Link>
-          </li>
-          <li className={location.pathname.startsWith('/auctions') ? 'active' : ''}>
-            <Link to="/auctions">竞拍管理</Link>
-          </li>
-          <li className={location.pathname.startsWith('/orders') ? 'active' : ''}>
-            <Link to="/orders">订单管理</Link>
-          </li>
-        </ul>
+        <div className="sidebar-header">
+          <div className="sidebar-logo">
+            <div className="sidebar-logo-icon">🎯</div>
+            <h2>竞拍管理后台</h2>
+          </div>
+        </div>
+        <div className="sidebar-nav">
+          <ul>
+            {navItems.map((item) => (
+              <li
+                key={item.path}
+                className={location.pathname.startsWith(item.path) ? 'active' : ''}
+              >
+                <Link to={item.path}>
+                  <span>{item.icon}</span>
+                  <span>{item.label}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
       </nav>
       <main className="content">
         <Routes>

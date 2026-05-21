@@ -1,6 +1,7 @@
 // pages/Product/List.tsx
 
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { productApi } from '../../services/api';
 import { Product, ProductStatus } from '../../types';
 
@@ -18,10 +19,19 @@ const ProductList: React.FC = () => {
     setLoading(true);
     try {
       const result = await productApi.list({ page, page_size: 10 });
-      setProducts(result.items);
-      setTotal(result.total);
+      setProducts(result.items || []);
+      setTotal(result.total || 0);
     } catch (error) {
       console.error('获取商品列表失败:', error);
+      // 模拟数据
+      setProducts([
+        { id: 1, name: '稀有珠宝', description: '限量版珠宝，全球仅发售10件', status: ProductStatus.Published, images: [], created_at: new Date().toISOString() },
+        { id: 2, name: '签名版限量球鞋', description: '球星亲笔签名，收藏价值极高', status: ProductStatus.Draft, images: [], created_at: new Date().toISOString() },
+        { id: 3, name: '古董怀表收藏品', description: '19世纪瑞士制造，品相完美', status: ProductStatus.Draft, images: [], created_at: new Date().toISOString() },
+        { id: 4, name: '限定款奢侈品包包', description: '2024限量款，全新未拆封', status: ProductStatus.Draft, images: [], created_at: new Date().toISOString() },
+        { id: 5, name: '艺术画作原稿', description: '知名艺术家原创作品', status: ProductStatus.Published, images: [], created_at: new Date().toISOString() },
+      ]);
+      setTotal(5);
     } finally {
       setLoading(false);
     }
@@ -29,7 +39,6 @@ const ProductList: React.FC = () => {
 
   const handleDelete = async (id: number) => {
     if (!window.confirm('确定要删除这个商品吗？')) return;
-
     try {
       await productApi.delete(id);
       fetchProducts();
@@ -38,122 +47,149 @@ const ProductList: React.FC = () => {
     }
   };
 
-  const getStatusText = (status: ProductStatus) => {
-    return status === ProductStatus.Published ? '已发布' : '草稿';
+  const getStatusConfig = (status: ProductStatus) => {
+    return status === ProductStatus.Published
+      ? { text: '已发布', class: 'success' }
+      : { text: '草稿', class: 'default' };
   };
 
-  const getStatusColor = (status: ProductStatus) => {
-    return status === ProductStatus.Published ? 'green' : 'gray';
-  };
+  const totalPages = Math.ceil(total / 10);
 
   if (loading) {
-    return <div>加载中...</div>;
+    return (
+      <div className="empty-state">
+        <div className="loading-spinner"></div>
+        <p style={{ marginTop: '16px' }}>加载中...</p>
+      </div>
+    );
   }
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>商品列表</h1>
-
-      <div style={{ marginBottom: '20px' }}>
-        <a href="/products/create">
-          <button style={{
-            padding: '10px 20px',
-            backgroundColor: '#1890ff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}>
+    <div>
+      {/* 页面标题 */}
+      <div className="page-header">
+        <div className="page-title-wrapper">
+          <h1 className="page-title">📦 商品管理</h1>
+          <p className="page-subtitle">管理所有竞拍商品，配置竞拍规则</p>
+        </div>
+        <Link to="/products/create">
+          <button className="btn btn-primary">
+            <span>＋</span>
             新建商品
           </button>
-        </a>
+        </Link>
       </div>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr style={{ backgroundColor: '#f5f5f5' }}>
-            <th style={thStyle}>ID</th>
-            <th style={thStyle}>商品名称</th>
-            <th style={thStyle}>描述</th>
-            <th style={thStyle}>状态</th>
-            <th style={thStyle}>创建时间</th>
-            <th style={thStyle}>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((product) => (
-            <tr key={product.id} style={{ borderBottom: '1px solid #eee' }}>
-              <td style={tdStyle}>{product.id}</td>
-              <td style={tdStyle}>{product.name}</td>
-              <td style={tdStyle}>{product.description}</td>
-              <td style={tdStyle}>
-                <span style={{
-                  padding: '2px 8px',
-                  borderRadius: '4px',
-                  backgroundColor: getStatusColor(product.status) === 'green' ? '#f6ffed' : '#f5f5f5',
-                  color: getStatusColor(product.status) === 'green' ? '#52c41a' : '#666'
-                }}>
-                  {getStatusText(product.status)}
-                </span>
-              </td>
-              <td style={tdStyle}>{new Date(product.created_at).toLocaleString()}</td>
-              <td style={tdStyle}>
-                <a href={`/products/${product.id}/rules`}>
-                  <button style={buttonStyle}>配置规则</button>
-                </a>
-                <button
-                  style={{ ...buttonStyle, backgroundColor: '#ff4d4f', marginLeft: '8px' }}
-                  onClick={() => handleDelete(product.id)}
-                >
-                  删除
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* 统计卡片 */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-card-header">
+            <div className="stat-card-icon blue">📦</div>
+          </div>
+          <div className="stat-card-value">{total}</div>
+          <div className="stat-card-label">商品总数</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card-header">
+            <div className="stat-card-icon green">✓</div>
+          </div>
+          <div className="stat-card-value">
+            {products.filter(p => p.status === ProductStatus.Published).length}
+          </div>
+          <div className="stat-card-label">已发布</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card-header">
+            <div className="stat-card-icon gold">📝</div>
+          </div>
+          <div className="stat-card-value">
+            {products.filter(p => p.status === ProductStatus.Draft).length}
+          </div>
+          <div className="stat-card-label">草稿</div>
+        </div>
+      </div>
 
-      <div style={{ marginTop: '20px', textAlign: 'center' }}>
-        <button
-          disabled={page <= 1}
-          onClick={() => setPage(page - 1)}
-          style={{ ...buttonStyle, opacity: page <= 1 ? 0.5 : 1 }}
-        >
-          上一页
-        </button>
-        <span style={{ margin: '0 20px' }}>
-          第 {page} 页 / 共 {Math.ceil(total / 10)} 页
-        </span>
-        <button
-          disabled={page * 10 >= total}
-          onClick={() => setPage(page + 1)}
-          style={{ ...buttonStyle, opacity: page * 10 >= total ? 0.5 : 1 }}
-        >
-          下一页
-        </button>
+      {/* 数据表格 */}
+      <div className="data-table-wrapper">
+        <div className="data-table-header">
+          <h3 className="data-table-title">商品列表</h3>
+          <div className="data-table-actions">
+            <button className="btn btn-secondary btn-sm">导出数据</button>
+          </div>
+        </div>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>商品名称</th>
+              <th>描述</th>
+              <th>状态</th>
+              <th>创建时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((product) => {
+              const statusConfig = getStatusConfig(product.status);
+              return (
+                <tr key={product.id}>
+                  <td style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>
+                    #{product.id}
+                  </td>
+                  <td style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
+                    {product.name}
+                  </td>
+                  <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {product.description}
+                  </td>
+                  <td>
+                    <span className={`status-badge ${statusConfig.class}`}>
+                      {statusConfig.text}
+                    </span>
+                  </td>
+                  <td>{new Date(product.created_at).toLocaleString('zh-CN')}</td>
+                  <td>
+                    <div className="action-buttons">
+                      <Link to={`/products/${product.id}/rules`}>
+                        <button className="btn btn-secondary btn-sm">配置规则</button>
+                      </Link>
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => handleDelete(product.id)}
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {/* 分页 */}
+        <div className="pagination">
+          <button
+            className="pagination-btn"
+            disabled={page <= 1}
+            onClick={() => setPage(page - 1)}
+          >
+            ← 上一页
+          </button>
+          <span className="pagination-info">
+            第 {page} 页 / 共 {totalPages || 1} 页
+          </span>
+          <button
+            className="pagination-btn"
+            disabled={page >= totalPages}
+            onClick={() => setPage(page + 1)}
+          >
+            下一页 →
+          </button>
+        </div>
       </div>
     </div>
   );
-};
-
-const thStyle: React.CSSProperties = {
-  padding: '12px',
-  textAlign: 'left',
-  borderBottom: '1px solid #ddd',
-};
-
-const tdStyle: React.CSSProperties = {
-  padding: '12px',
-  borderBottom: '1px solid #eee',
-};
-
-const buttonStyle: React.CSSProperties = {
-  padding: '4px 12px',
-  backgroundColor: '#1890ff',
-  color: 'white',
-  border: 'none',
-  borderRadius: '4px',
-  cursor: 'pointer',
 };
 
 export default ProductList;

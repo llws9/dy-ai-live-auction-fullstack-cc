@@ -152,3 +152,13 @@ func (s *AuctionService) IsAuctionActive(ctx context.Context, id int64) (bool, e
 	sm := NewStateMachine(auction)
 	return sm.CanBid(), nil
 }
+
+// ListAuctions 获取竞拍列表
+func (s *AuctionService) ListAuctions(ctx context.Context, status *model.AuctionStatus, page, pageSize int) ([]model.Auction, int64, error) {
+	return s.auctionDAO.List(ctx, status, page, pageSize)
+}
+
+// ListAllAuctions 获取所有竞拍（不分页）
+func (s *AuctionService) ListAllAuctions(ctx context.Context) ([]model.Auction, error) {
+	return s.auctionDAO.ListAll(ctx)
+}

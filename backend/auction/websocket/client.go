@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -50,10 +51,22 @@ func NewClient(id string, auctionID, userID int64, conn *websocket.Conn, hub *Hu
 	}
 }
 
+// NewClientSimple 创建客户端（简化版，自动生成ID）
+func NewClientSimple(conn *websocket.Conn, auctionID, userID int64) *Client {
+	id := fmt.Sprintf("%d-%d-%d", auctionID, userID, time.Now().UnixNano())
+	return &Client{
+		ID:        id,
+		AuctionID: auctionID,
+		UserID:    userID,
+		conn:      conn,
+		Send:      make(chan *Message, sendBufferSize),
+	}
+}
+
 // ReadPump 读取消息循环
 func (c *Client) ReadPump() {
 	defer func() {
-		c.hub.unregister <- c
+		c.hub.Unregister <- c
 	}()
 
 	c.conn.SetReadLimit(512)

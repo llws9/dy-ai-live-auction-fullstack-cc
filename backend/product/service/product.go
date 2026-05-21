@@ -1,8 +1,14 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
+	"os"
+	"time"
 
 	"product-service/dao"
 	"product-service/model"
@@ -146,7 +152,58 @@ func (s *ProductService) CreateAuctionRule(ctx context.Context, req *CreateAucti
 		return nil, err
 	}
 
+	// 自动创建竞拍场次
+	go s.createAuctionAsync(rule)
+
 	return rule, nil
+}
+
+// createAuctionAsync 异步创建竞拍场次
+func (s *ProductService) createAuctionAsync(rule *model.AuctionRule) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// 调用 auction-service 创建竞拍场次
+	auctionServiceURL := os.Getenv("AUCTION_SERVICE_URL")
+	if auctionServiceURL == "" {
+		auctionServiceURL = "http://localhost:8082"
+	}
+
+	auctionReq := map[string]interface{}{
+		"product_id":    rule.ProductID,
+		"start_price":   rule.StartPrice,
+		"increment":     rule.Increment,
+		"duration":      rule.Duration,
+	}
+
+	body, err := json.Marshal(auctionReq)
+	if err != nil {
+		fmt.Printf("Failed to marshal auction request: %v\n", err)
+		return
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", auctionServiceURL+"/api/v1/auctions", bytes.NewReader(body))
+	if err != nil {
+		fmt.Printf("Failed to create auction request: %v\n", err)
+		return
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		fmt.Printf("Failed to create auction: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		fmt.Printf("Failed to create auction, status: %d\n", resp.StatusCode)
+		return
+	}
+
+	fmt.Printf("Successfully created auction for product %d\n", rule.ProductID)
 }
 
 // GetAuctionRule 获取竞拍规则

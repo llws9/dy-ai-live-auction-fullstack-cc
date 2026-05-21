@@ -1,0 +1,59 @@
+package dao
+
+import (
+	"context"
+
+	"gorm.io/gorm"
+
+	"auction-service/model"
+)
+
+// UserDAO 用户数据访问层
+type UserDAO struct {
+	db *gorm.DB
+}
+
+// NewUserDAO 创建用户 DAO
+func NewUserDAO(db *gorm.DB) *UserDAO {
+	return &UserDAO{db: db}
+}
+
+// Exists 检查用户是否存在
+func (d *UserDAO) Exists(ctx context.Context, userID int64) (bool, error) {
+	var count int64
+	err := d.db.WithContext(ctx).
+		Model(&model.User{}).
+		Where("id = ?", userID).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// GetByID 根据 ID 获取用户
+func (d *UserDAO) GetByID(ctx context.Context, userID int64) (*model.User, error) {
+	var user model.User
+	err := d.db.WithContext(ctx).First(&user, userID).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// Create 创建用户
+func (d *UserDAO) Create(ctx context.Context, user *model.User) error {
+	return d.db.WithContext(ctx).Create(user).Error
+}
+
+// CreateIfNotExists 如果用户不存在则创建
+func (d *UserDAO) CreateIfNotExists(ctx context.Context, user *model.User) error {
+	exists, err := d.Exists(ctx, user.ID)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+	return d.Create(ctx, user)
+}

@@ -14,14 +14,16 @@ type BidService struct {
 	auctionDAO *dao.AuctionDAO
 	bidDAO     *dao.BidDAO
 	ruleDAO    *dao.AuctionRuleDAO
+	userDAO    *dao.UserDAO
 }
 
 // NewBidService 创建出价服务
-func NewBidService(auctionDAO *dao.AuctionDAO, bidDAO *dao.BidDAO, ruleDAO *dao.AuctionRuleDAO) *BidService {
+func NewBidService(auctionDAO *dao.AuctionDAO, bidDAO *dao.BidDAO, ruleDAO *dao.AuctionRuleDAO, userDAO *dao.UserDAO) *BidService {
 	return &BidService{
 		auctionDAO: auctionDAO,
 		bidDAO:     bidDAO,
 		ruleDAO:    ruleDAO,
+		userDAO:    userDAO,
 	}
 }
 
@@ -43,13 +45,27 @@ type PlaceBidResult struct {
 
 // PlaceBid 出价
 func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*PlaceBidResult, error) {
-	// 1. 获取竞拍信息
+	// 1. 校验用户是否存在（逻辑外键校验）
+	if s.userDAO != nil {
+		exists, err := s.userDAO.Exists(ctx, req.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("校验用户失败: %w", err)
+		}
+		if !exists {
+			return &PlaceBidResult{
+				Success: false,
+				Message: fmt.Sprintf("用户 %d 不存在，请先创建用户", req.UserID),
+			}, nil
+		}
+	}
+
+	// 2. 获取竞拍信息
 	auction, err := s.auctionDAO.GetByID(ctx, req.AuctionID)
 	if err != nil {
 		return nil, fmt.Errorf("竞拍不存在: %w", err)
 	}
 
-	// 2. 检查竞拍状态
+	// 3. 检查竞拍状态
 	sm := NewStateMachine(auction)
 	if !sm.CanBid() {
 		return &PlaceBidResult{
@@ -58,13 +74,13 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 		}, nil
 	}
 
-	// 3. 获取竞拍规则
+	// 4. 获取竞拍规则
 	rule, err := s.ruleDAO.GetByProductID(ctx, auction.ProductID)
 	if err != nil {
 		return nil, fmt.Errorf("获取竞拍规则失败: %w", err)
 	}
 
-	// 4. 校验出价金额
+	// 5. 校验出价金额
 	minBidAmount := auction.CurrentPrice + rule.Increment
 	if req.Amount < minBidAmount {
 		return &PlaceBidResult{
@@ -73,13 +89,13 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 		}, nil
 	}
 
-	// 5. 检查封顶价
+	// 6. 检查封顶价
 	if rule.CapPrice != nil && *rule.CapPrice > 0 && req.Amount >= *rule.CapPrice {
 		// 达到封顶价，直接成交
 		return s.handleCapPriceBid(ctx, auction, req, *rule.CapPrice)
 	}
 
-	// 6. 获取分布式锁
+	// 7. 获取分布式锁
 	bidLock := lock.NewAuctionBidLock(dao.GetRedis(), req.AuctionID)
 	if err := bidLock.Acquire(ctx); err != nil {
 		return &PlaceBidResult{
@@ -89,13 +105,13 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 	}
 	defer bidLock.Release(ctx)
 
-	// 7. 重新获取竞拍信息（防止并发问题）
+	// 8. 重新获取竞拍信息（防止并发问题）
 	auction, err = s.auctionDAO.GetByID(ctx, req.AuctionID)
 	if err != nil {
 		return nil, err
 	}
 
-	// 8. 再次校验（双重检查）
+	// 9. 再次校验（双重检查）
 	minBidAmount = auction.CurrentPrice + rule.Increment
 	if req.Amount < minBidAmount {
 		return &PlaceBidResult{
@@ -104,7 +120,7 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 		}, nil
 	}
 
-	// 9. 创建出价记录
+	// 10. 创建出价记录
 	bid := &model.Bid{
 		AuctionID: req.AuctionID,
 		UserID:    req.UserID,
@@ -115,18 +131,18 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 		return nil, fmt.Errorf("创建出价记录失败: %w", err)
 	}
 
-	// 10. 更新竞拍当前价格和中标者
+	// 11. 更新竞拍当前价格和中标者
 	if err := s.auctionDAO.UpdatePrice(ctx, req.AuctionID, req.Amount, req.UserID); err != nil {
 		return nil, fmt.Errorf("更新竞拍价格失败: %w", err)
 	}
 
-	// 11. 获取用户排名
+	// 12. 获取用户排名
 	rank, err := s.getUserRank(ctx, req.AuctionID, req.UserID)
 	if err != nil {
 		rank = 1 // 默认第一名
 	}
 
-	// 12. 返回成功结果
+	// 13. 返回成功结果
 	return &PlaceBidResult{
 		Success:      true,
 		Message:      "出价成功",

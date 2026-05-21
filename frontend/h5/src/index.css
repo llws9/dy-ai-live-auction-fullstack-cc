@@ -1,304 +1,655 @@
+/*
+ * 直播竞拍 H5 移动端 - 直播间风格
+ * 全屏视频 + 底部浮窗 + 半屏出价面板
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* 深色背景 */
+  --bg-primary: #000000;
+  --bg-secondary: rgba(0, 0, 0, 0.8);
+  --bg-tertiary: rgba(20, 20, 30, 0.95);
+  --bg-card: rgba(30, 30, 45, 0.98);
+  --bg-elevated: rgba(40, 40, 60, 1);
+
+  /* 霓虹强调色 */
+  --neon-blue: #00d4ff;
+  --neon-pink: #ff00aa;
+  --neon-purple: #8b5cf6;
+  --neon-gold: #ffd700;
+  --neon-green: #00ff88;
+  --neon-red: #ff4d4f;
+
+  /* 渐变 */
+  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-gold: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+  --gradient-hot: linear-gradient(135deg, #ff00aa 0%, #ff4d4f 100%);
+  --gradient-success: linear-gradient(135deg, #00ff88 0%, #00d4ff 100%);
+
+  /* 发光效果 */
+  --glow-blue: 0 0 20px rgba(0, 212, 255, 0.5);
+  --glow-gold: 0 0 20px rgba(255, 215, 0, 0.5);
+
+  /* 文字 */
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-muted: rgba(255, 255, 255, 0.5);
+
+  /* 字体 */
+  --font-display: 'Outfit', sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* 圆角 */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  /* 安全区域 */
+  --safe-bottom: env(safe-area-inset-bottom, 20px);
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background-color: #f5f5f5;
-  color: #333;
+  font-family: var(--font-body);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 .app {
-  min-height: 100vh;
-  max-width: 100%;
-  overflow-x: hidden;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  position: relative;
 }
 
-/* 竞拍页面样式 */
-.auction-page {
-  padding: 16px;
-  background: #fff;
-  min-height: 100vh;
+/* ============ 直播间容器 ============ */
+.live-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #000;
 }
 
-.auction-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.product-info {
-  padding: 16px;
-  background: #f9f9f9;
-  border-radius: 8px;
-  margin-bottom: 16px;
-}
-
-.price-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px;
-  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-  border-radius: 12px;
-  color: white;
-  margin-bottom: 16px;
-}
-
-.current-price {
-  font-size: 14px;
-  opacity: 0.9;
-}
-
-.price-value {
-  font-size: 36px;
-  font-weight: bold;
-  margin-top: 4px;
-}
-
-.bid-section {
-  padding: 16px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.bid-input {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.bid-input input {
-  flex: 1;
-  padding: 12px 16px;
-  border: 2px solid #eee;
-  border-radius: 8px;
-  font-size: 18px;
-  outline: none;
-}
-
-.bid-input input:focus {
-  border-color: #ff6b6b;
-}
-
-.bid-button {
+.live-video {
   width: 100%;
-  padding: 16px;
-  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 18px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: transform 0.2s;
+  height: 100%;
+  object-fit: cover;
 }
 
-.bid-button:hover {
-  transform: scale(1.02);
-}
-
-.bid-button:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* 排行榜样式 */
-.ranking-section {
-  margin-top: 16px;
-  padding: 16px;
-  background: #f9f9f9;
-  border-radius: 8px;
-}
-
-.ranking-title {
-  font-size: 16px;
-  font-weight: bold;
-  margin-bottom: 12px;
-}
-
-.ranking-list {
-  list-style: none;
-}
-
-.ranking-item {
+/* 直播间顶部信息 */
+.live-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 60px 16px 16px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%);
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px;
-  background: white;
-  border-radius: 8px;
-  margin-bottom: 8px;
+  gap: 12px;
+  z-index: 10;
 }
 
-.ranking-item.top-1 {
-  background: linear-gradient(135deg, #ffd700 0%, #ffb700 100%);
-  color: #333;
+.live-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--neon-blue);
 }
 
-.ranking-item.top-2 {
-  background: linear-gradient(135deg, #c0c0c0 0%, #a0a0a0 100%);
-  color: #333;
+.live-info {
+  flex: 1;
 }
 
-.ranking-item.top-3 {
-  background: linear-gradient(135deg, #cd7f32 0%, #b5651d 100%);
+.live-title {
+  font-size: 14px;
+  font-weight: 600;
   color: white;
 }
 
-/* 倒计时样式 */
-.countdown {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
+.live-viewer {
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
-.countdown-item {
-  text-align: center;
-}
-
-.countdown-value {
-  font-size: 24px;
-  font-weight: bold;
-  background: rgba(255,255,255,0.2);
-  padding: 8px 12px;
+.live-badge {
+  padding: 4px 10px;
+  background: var(--neon-red);
   border-radius: 4px;
-  min-width: 40px;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.live-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ============ 底部浮窗 ============ */
+.bottom-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg-card);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  z-index: 100;
+  transition: height 0.3s ease;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.bottom-sheet.collapsed {
+  height: 80px;
+}
+
+.bottom-sheet.expanded {
+  height: 80vh;
+}
+
+.sheet-handle {
+  width: 40px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  margin: 12px auto;
+  cursor: grab;
+}
+
+/* 收起状态的商品预览 */
+.sheet-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+
+.preview-image {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.preview-info {
+  flex: 1;
+}
+
+.preview-name {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.preview-price {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--neon-gold);
+}
+
+.preview-countdown {
+  text-align: right;
+}
+
+.countdown-time {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--neon-blue);
 }
 
 .countdown-label {
   font-size: 10px;
-  margin-top: 4px;
-  opacity: 0.8;
+  color: var(--text-muted);
 }
 
-/* 视频区域 */
-.video-section {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16/9;
-  background: #000;
-  border-radius: 8px;
-  overflow: hidden;
+/* 展开状态的商品列表 */
+.sheet-content {
+  height: calc(80vh - 60px);
+  overflow-y: auto;
+  padding: 0 16px;
+}
+
+.sheet-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
   margin-bottom: 16px;
 }
 
-.video-placeholder {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: white;
-  text-align: center;
+/* 商品卡片 */
+.product-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-lg);
+  margin-bottom: 12px;
 }
 
-/* 首页样式 */
-.home-page {
-  padding: 16px;
+.product-image {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
-.home-header {
+.product-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.product-name {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.product-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.ongoing { background: var(--neon-green); }
+.status-dot.pending { background: var(--neon-blue); }
+.status-dot.ended { background: var(--text-muted); }
+
+.product-price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.price-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.price-value {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--neon-gold);
+}
+
+.product-action {
+  margin-top: 8px;
+}
+
+.bid-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bid-btn.primary {
+  background: var(--gradient-gold);
+  color: #000;
+}
+
+.bid-btn.secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+}
+
+.bid-btn.ended {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+}
+
+/* ============ 半屏出价面板 ============ */
+.bid-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 70vh;
+  background: var(--bg-card);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  z-index: 200;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  box-shadow: 0 -10px 60px rgba(0, 0, 0, 0.8);
+}
+
+.bid-sheet.open {
+  transform: translateY(0);
+}
+
+.bid-sheet-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.auction-card {
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.auction-card-image {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
-  background: #f0f0f0;
-}
-
-.auction-card-content {
-  padding: 16px;
-}
-
-.auction-card-title {
+.bid-sheet-title {
+  font-family: var(--font-display);
   font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 8px;
+  font-weight: 700;
 }
 
-.auction-card-price {
-  font-size: 24px;
-  color: #ff6b6b;
-  font-weight: bold;
+.bid-sheet-close {
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  font-size: 18px;
+  cursor: pointer;
 }
 
-.auction-card-status {
-  display: inline-block;
-  padding: 4px 12px;
-  background: #4caf50;
-  color: white;
-  border-radius: 4px;
-  font-size: 12px;
+.bid-sheet-body {
+  padding: 20px;
+  height: calc(70vh - 60px);
+  overflow-y: auto;
 }
 
-.auction-card-status.ended {
-  background: #999;
+/* 倒计时 */
+.countdown-section {
+  text-align: center;
+  margin-bottom: 20px;
 }
 
-/* 历史记录页面 */
-.history-page {
+.countdown-display {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--neon-blue);
+  text-shadow: var(--glow-blue);
+}
+
+.countdown-warning {
+  color: var(--neon-red);
+  text-shadow: 0 0 20px rgba(255, 77, 79, 0.5);
+}
+
+/* 商品信息区 */
+.bid-product {
+  display: flex;
+  gap: 16px;
   padding: 16px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
 }
 
-.history-item {
-  background: white;
-  padding: 16px;
-  border-radius: 8px;
-  margin-bottom: 12px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+.bid-product-image {
+  width: 100px;
+  height: 100px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
 }
 
-.history-item-header {
+.bid-product-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.bid-product-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.bid-price-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 8px;
+  align-items: center;
 }
 
-.history-item-title {
-  font-weight: bold;
-}
-
-.history-item-time {
-  color: #999;
-  font-size: 12px;
-}
-
-/* 结果页面 */
-.result-page {
-  padding: 16px;
+.bid-price-item {
   text-align: center;
 }
 
-.result-icon {
-  font-size: 64px;
+.bid-price-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.bid-price-value {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--neon-gold);
+}
+
+.bid-price-value.my-bid {
+  color: var(--neon-green);
+}
+
+.bid-price-value.no-bid {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* 出价排名 */
+.ranking-section {
+  margin-bottom: 20px;
+}
+
+.ranking-title {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ranking-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+}
+
+.ranking-position {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ranking-position.gold {
+  background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+  color: #000;
+}
+
+.ranking-position.silver {
+  background: linear-gradient(135deg, #c0c0c0 0%, #a0a0a0 100%);
+  color: #000;
+}
+
+.ranking-position.bronze {
+  background: linear-gradient(135deg, #cd7f32 0%, #8b4513 100%);
+  color: white;
+}
+
+.ranking-name {
+  flex: 1;
+  font-size: 14px;
+}
+
+.ranking-amount {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--neon-gold);
+}
+
+/* 出价输入区 */
+.bid-input-section {
+  background: var(--bg-elevated);
+  border-radius: var(--radius-lg);
+  padding: 16px;
   margin-bottom: 16px;
 }
 
-.result-title {
-  font-size: 24px;
-  font-weight: bold;
+.bid-input-label {
+  font-size: 13px;
+  color: var(--text-muted);
   margin-bottom: 8px;
 }
 
-.result-message {
-  color: #666;
-  margin-bottom: 24px;
+.bid-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bid-input {
+  flex: 1;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
+  text-align: center;
+}
+
+.bid-input:focus {
+  outline: none;
+  border-color: var(--neon-blue);
+  box-shadow: var(--glow-blue);
+}
+
+.bid-increment-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* 出价按钮 */
+.bid-submit-btn {
+  width: 100%;
+  padding: 16px;
+  background: var(--gradient-gold);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: 18px;
+  font-weight: 700;
+  color: #000;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.bid-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--glow-gold);
+}
+
+.bid-submit-btn:disabled {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ============ 遮罩层 ============ */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 150;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+}
+
+.overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ============ 提示消息 ============ */
+.toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 16px 32px;
+  background: rgba(0, 0, 0, 0.9);
+  border-radius: var(--radius-lg);
+  color: white;
+  font-size: 14px;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+}
+
+.toast.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.toast.success {
+  border: 1px solid var(--neon-green);
+}
+
+.toast.error {
+  border: 1px solid var(--neon-red);
 }

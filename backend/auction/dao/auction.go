@@ -113,3 +113,39 @@ func (d *AuctionDAO) GetPendingAuctionsToStart(ctx context.Context) ([]model.Auc
 		Find(&auctions).Error
 	return auctions, err
 }
+
+// List 获取竞拍列表（支持分页和状态筛选）
+func (d *AuctionDAO) List(ctx context.Context, status *model.AuctionStatus, page, pageSize int) ([]model.Auction, int64, error) {
+	var auctions []model.Auction
+	var total int64
+
+	query := d.db.WithContext(ctx).Model(&model.Auction{})
+
+	// 状态筛选
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+
+	// 获取总数
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// 分页查询
+	offset := (page - 1) * pageSize
+	err := query.Order("id DESC").
+		Offset(offset).
+		Limit(pageSize).
+		Find(&auctions).Error
+
+	return auctions, total, err
+}
+
+// ListAll 获取所有竞拍（不分页）
+func (d *AuctionDAO) ListAll(ctx context.Context) ([]model.Auction, error) {
+	var auctions []model.Auction
+	err := d.db.WithContext(ctx).
+		Order("id DESC").
+		Find(&auctions).Error
+	return auctions, err
+}

@@ -10,8 +10,8 @@ type Hub struct {
 	rooms     map[int64]*Room
 	roomsLock sync.RWMutex
 
-	register   chan *Client
-	unregister chan *Client
+	Register   chan *Client
+	Unregister chan *Client
 	broadcast  chan *BroadcastMessage
 
 	done chan struct{}
@@ -27,8 +27,8 @@ type BroadcastMessage struct {
 func NewHub() *Hub {
 	return &Hub{
 		rooms:      make(map[int64]*Room),
-		register:   make(chan *Client, 256),
-		unregister: make(chan *Client, 256),
+		Register:   make(chan *Client, 256),
+		Unregister: make(chan *Client, 256),
 		broadcast:  make(chan *BroadcastMessage, 1024),
 		done:       make(chan struct{}),
 	}
@@ -38,10 +38,10 @@ func NewHub() *Hub {
 func (h *Hub) Run() {
 	for {
 		select {
-		case client := <-h.register:
+		case client := <-h.Register:
 			h.registerClient(client)
 
-		case client := <-h.unregister:
+		case client := <-h.Unregister:
 			h.unregisterClient(client)
 
 		case msg := <-h.broadcast:

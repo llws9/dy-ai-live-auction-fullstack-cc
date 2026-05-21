@@ -1,6 +1,7 @@
 package service
 
 import (
+	"strconv"
 	"sync"
 	"time"
 )
@@ -70,5 +71,5 @@ func (t *RankingThrottle) ShouldSend(auctionID int64) bool {
 }
 
 func (t *RankingThrottle) getKey(auctionID int64) string {
-	return "ranking:" + string(auctionID)
+	return "ranking:" + strconv.FormatInt(auctionID, 10)
 }

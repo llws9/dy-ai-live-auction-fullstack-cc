@@ -3,6 +3,7 @@ import Home from './pages/Home'
 import Auction from './pages/Auction'
 import Result from './pages/Result'
 import History from './pages/History'
+import Live from './pages/Live'
 import { AuctionProvider } from './store/auctionContext'
 
 function App() {
@@ -11,6 +12,7 @@ function App() {
       <div className="app">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/live" element={<Live />} />
           <Route path="/auction/:id" element={<Auction />} />
           <Route path="/result/:id" element={<Result />} />
           <Route path="/history" element={<History />} />
