@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  # API Gateway
+  gateway:
+    build:
+      context: ./backend/gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - PRODUCT_SERVICE_ADDR=product:8081
+      - AUCTION_SERVICE_ADDR=auction:8082
+      - REDIS_ADDR=redis:6379
+    depends_on:
+      - product
+      - auction
+      - redis
+    networks:
+      - auction-network
+
+  # Product Service
+  product:
+    build:
+      context: ./backend/product
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_NAME=auction
+      - REDIS_ADDR=redis:6379
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - auction-network
+
+  # Auction Service
+  auction:
+    build:
+      context: ./backend/auction
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"  # HTTP
+      - "8083:8083"  # WebSocket
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_NAME=auction
+      - REDIS_ADDR=redis:6379
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - auction-network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - auction-network
+
+  # MySQL
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: auction
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - auction-network
+
+  # H5 Frontend
+  frontend-h5:
+    build:
+      context: ./frontend/h5
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    networks:
+      - auction-network
+
+  # Admin Frontend
+  frontend-admin:
+    build:
+      context: ./frontend/admin
+      dockerfile: Dockerfile
+    ports:
+      - "3001:80"
+    networks:
+      - auction-network
+
+networks:
+  auction-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-data:

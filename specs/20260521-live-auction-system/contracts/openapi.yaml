@@ -1,0 +1,458 @@
+openapi: 3.0.3
+info:
+  title: 直播竞拍系统 API
+  version: 1.0.0
+  description: 抖音电商直播竞拍全栈系统 API 接口定义
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: 本地开发环境
+
+tags:
+  - name: products
+    description: 商品管理
+  - name: auctions
+    description: 竞拍管理
+  - name: bids
+    description: 出价操作
+  - name: orders
+    description: 订单管理
+
+paths:
+  # ========== 商品管理 ==========
+  /products:
+    post:
+      tags: [products]
+      summary: 创建商品
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+    get:
+      tags: [products]
+      summary: 获取商品列表
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductList'
+
+  /products/{id}:
+    get:
+      tags: [products]
+      summary: 获取商品详情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+    put:
+      tags: [products]
+      summary: 更新商品
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+
+  /products/{id}/rules:
+    post:
+      tags: [products]
+      summary: 配置竞拍规则
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuctionRule'
+      responses:
+        '201':
+          description: 配置成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuctionRule'
+
+  # ========== 竞拍管理 ==========
+  /auctions/{id}/cancel:
+    put:
+      tags: [auctions]
+      summary: 取消竞拍
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 取消成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Auction'
+
+  /auctions/{id}/result:
+    get:
+      tags: [auctions]
+      summary: 获取竞拍结果
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuctionResult'
+
+  # ========== 出价操作 ==========
+  /auctions/{id}/bids:
+    post:
+      tags: [bids]
+      summary: 出价
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceBidRequest'
+      responses:
+        '200':
+          description: 出价成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BidResult'
+        '400':
+          description: 出价失败（金额不足、竞拍已结束等）
+        '429':
+          description: 请求过于频繁
+
+  /auctions/{id}/ranking:
+    get:
+      tags: [bids]
+      summary: 获取当前排名
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RankingList'
+
+  # ========== 订单管理 ==========
+  /orders:
+    get:
+      tags: [orders]
+      summary: 获取订单列表
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderList'
+
+  /orders/{id}/pay:
+    post:
+      tags: [orders]
+      summary: 模拟支付
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 支付成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+        status:
+          type: integer
+          enum: [0, 1]
+        created_at:
+          type: string
+          format: date-time
+
+    CreateProductRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 128
+        description:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+
+    UpdateProductRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+
+    ProductList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+
+    Auction:
+      type: object
+      properties:
+        id:
+          type: integer
+        product_id:
+          type: integer
+        status:
+          type: integer
+          enum: [0, 1, 2, 3, 4]
+        current_price:
+          type: number
+        winner_id:
+          type: integer
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        delay_used:
+          type: integer
+
+    AuctionRule:
+      type: object
+      properties:
+        id:
+          type: integer
+        auction_id:
+          type: integer
+        start_price:
+          type: number
+          default: 0
+        increment:
+          type: number
+        cap_price:
+          type: number
+        duration:
+          type: integer
+        delay_duration:
+          type: integer
+          default: 30
+        max_delay_time:
+          type: integer
+          default: 180
+        trigger_delay_before:
+          type: integer
+          default: 30
+
+    PlaceBidRequest:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          type: number
+
+    BidResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        current_price:
+          type: number
+        rank:
+          type: integer
+
+    RankingList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankingItem'
+
+    RankingItem:
+      type: object
+      properties:
+        rank:
+          type: integer
+        user_id:
+          type: integer
+        user_name:
+          type: string
+        amount:
+          type: number
+        bid_time:
+          type: string
+          format: date-time
+
+    AuctionResult:
+      type: object
+      properties:
+        auction_id:
+          type: integer
+        product_name:
+          type: string
+        final_price:
+          type: number
+        winner:
+          $ref: '#/components/schemas/User'
+        bid_count:
+          type: integer
+        ended_at:
+          type: string
+          format: date-time
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        avatar:
+          type: string
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        auction_id:
+          type: integer
+        product_id:
+          type: integer
+        winner_id:
+          type: integer
+        final_price:
+          type: number
+        status:
+          type: integer
+          enum: [0, 1, 2, 3]
+        created_at:
+          type: string
+          format: date-time
+
+    OrderList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+        total:
+          type: integer

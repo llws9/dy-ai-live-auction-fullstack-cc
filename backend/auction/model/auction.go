@@ -1,0 +1,48 @@
+package model
+
+import "time"
+
+// AuctionStatus 竞拍状态
+type AuctionStatus int
+
+const (
+	AuctionStatusPending   AuctionStatus = 0 // 待开始
+	AuctionStatusOngoing   AuctionStatus = 1 // 进行中
+	AuctionStatusDelayed   AuctionStatus = 2 // 延时中
+	AuctionStatusEnded     AuctionStatus = 3 // 已结束
+	AuctionStatusCancelled AuctionStatus = 4 // 已取消
+)
+
+// Auction 竞拍场次模型
+type Auction struct {
+	ID           int64          `json:"id" gorm:"primaryKey;autoIncrement"`
+	ProductID    int64          `json:"product_id" gorm:"index;not null"`
+	Status       AuctionStatus  `json:"status" gorm:"type:tinyint;default:0"`
+	CurrentPrice float64        `json:"current_price" gorm:"type:decimal(10,2);default:0"`
+	WinnerID     *int64         `json:"winner_id"`
+	StartTime    time.Time      `json:"start_time" gorm:"index;not null"`
+	EndTime      time.Time      `json:"end_time" gorm:"not null"`
+	DelayUsed    int            `json:"delay_used" gorm:"default:0"` // 已延时秒数
+	CreatedAt    time.Time      `json:"created_at" gorm:"autoCreateTime"`
+}
+
+// TableName 指定表名
+func (Auction) TableName() string {
+	return "auctions"
+}
+
+// IsEnded 检查竞拍是否已结束
+func (a *Auction) IsEnded() bool {
+	return a.Status == AuctionStatusEnded || a.Status == AuctionStatusCancelled
+}
+
+// CanBid 检查是否可以出价
+func (a *Auction) CanBid() bool {
+	return a.Status == AuctionStatusOngoing || a.Status == AuctionStatusDelayed
+}
+
+// IsInDelayWindow 检查是否在延时窗口内（结束前30秒）
+func (a *Auction) IsInDelayWindow(triggerDelayBefore int) bool {
+	remaining := time.Until(a.EndTime)
+	return remaining.Seconds() <= float64(triggerDelayBefore) && remaining.Seconds() > 0
+}

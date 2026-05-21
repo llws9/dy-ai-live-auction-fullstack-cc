@@ -1,0 +1,115 @@
+package dao
+
+import (
+	"context"
+	"errors"
+
+	"gorm.io/gorm"
+
+	"auction-service/model"
+)
+
+// AuctionDAO 竞拍数据访问层
+type AuctionDAO struct {
+	db *gorm.DB
+}
+
+// NewAuctionDAO 创建竞拍 DAO
+func NewAuctionDAO(db *gorm.DB) *AuctionDAO {
+	return &AuctionDAO{db: db}
+}
+
+// Create 创建竞拍
+func (d *AuctionDAO) Create(ctx context.Context, auction *model.Auction) error {
+	return d.db.WithContext(ctx).Create(auction).Error
+}
+
+// GetByID 根据 ID 获取竞拍
+func (d *AuctionDAO) GetByID(ctx context.Context, id int64) (*model.Auction, error) {
+	var auction model.Auction
+	err := d.db.WithContext(ctx).First(&auction, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &auction, nil
+}
+
+// GetByProductID 根据商品 ID 获取竞拍
+func (d *AuctionDAO) GetByProductID(ctx context.Context, productID int64) (*model.Auction, error) {
+	var auction model.Auction
+	err := d.db.WithContext(ctx).Where("product_id = ?", productID).First(&auction).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &auction, nil
+}
+
+// Update 更新竞拍
+func (d *AuctionDAO) Update(ctx context.Context, auction *model.Auction) error {
+	return d.db.WithContext(ctx).Save(auction).Error
+}
+
+// UpdateStatus 更新竞拍状态
+func (d *AuctionDAO) UpdateStatus(ctx context.Context, id int64, status model.AuctionStatus) error {
+	return d.db.WithContext(ctx).
+		Model(&model.Auction{}).
+		Where("id = ?", id).
+		Update("status", status).Error
+}
+
+// UpdatePrice 更新当前价格和中标者
+func (d *AuctionDAO) UpdatePrice(ctx context.Context, id int64, price float64, winnerID int64) error {
+	return d.db.WithContext(ctx).
+		Model(&model.Auction{}).
+		Where("id = ?", id).
+		Updates(map[string]interface{}{
+			"current_price": price,
+			"winner_id":     winnerID,
+		}).Error
+}
+
+// ExtendEndTime 延长结束时间
+func (d *AuctionDAO) ExtendEndTime(ctx context.Context, id int64, additionalSeconds int) error {
+	return d.db.WithContext(ctx).
+		Model(&model.Auction{}).
+		Where("id = ?", id).
+		Updates(map[string]interface{}{
+			"end_time":   gorm.Expr("DATE_ADD(end_time, INTERVAL ? SECOND)", additionalSeconds),
+			"delay_used": gorm.Expr("delay_used + ?", additionalSeconds),
+		}).Error
+}
+
+// ListByStatus 根据状态获取竞拍列表
+func (d *AuctionDAO) ListByStatus(ctx context.Context, status model.AuctionStatus) ([]model.Auction, error) {
+	var auctions []model.Auction
+	err := d.db.WithContext(ctx).
+		Where("status = ?", status).
+		Find(&auctions).Error
+	return auctions, err
+}
+
+// GetExpiredAuctions 获取已过期但未结束的竞拍
+func (d *AuctionDAO) GetExpiredAuctions(ctx context.Context) ([]model.Auction, error) {
+	var auctions []model.Auction
+	err := d.db.WithContext(ctx).
+		Where("status IN ?", []model.AuctionStatus{
+			model.AuctionStatusOngoing,
+			model.AuctionStatusDelayed,
+		}).
+		Where("end_time <= NOW()").
+		Find(&auctions).Error
+	return auctions, err
+}
+
+// GetPendingAuctionsToStart 获取待开始且已到开始时间的竞拍
+func (d *AuctionDAO) GetPendingAuctionsToStart(ctx context.Context) ([]model.Auction, error) {
+	var auctions []model.Auction
+	err := d.db.WithContext(ctx).
+		Where("status = ?", model.AuctionStatusPending).
+		Where("start_time <= NOW()").
+		Find(&auctions).Error
+	return auctions, err
+}

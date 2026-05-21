@@ -1,0 +1,103 @@
+package dao
+
+import (
+	"context"
+
+	"gorm.io/gorm"
+
+	"auction-service/model"
+)
+
+// BidDAO 出价数据访问层
+type BidDAO struct {
+	db *gorm.DB
+}
+
+// NewBidDAO 创建出价 DAO
+func NewBidDAO(db *gorm.DB) *BidDAO {
+	return &BidDAO{db: db}
+}
+
+// Create 创建出价记录
+func (d *BidDAO) Create(ctx context.Context, bid *model.Bid) error {
+	return d.db.WithContext(ctx).Create(bid).Error
+}
+
+// GetByID 根据 ID 获取出价记录
+func (d *BidDAO) GetByID(ctx context.Context, id int64) (*model.Bid, error) {
+	var bid model.Bid
+	err := d.db.WithContext(ctx).First(&bid, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &bid, nil
+}
+
+// ListByAuctionID 获取竞拍的所有出价记录
+func (d *BidDAO) ListByAuctionID(ctx context.Context, auctionID int64, limit int) ([]model.Bid, error) {
+	var bids []model.Bid
+	query := d.db.WithContext(ctx).
+		Where("auction_id = ?", auctionID).
+		Order("created_at DESC")
+
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+
+	err := query.Find(&bids).Error
+	return bids, err
+}
+
+// GetRanking 获取出价排名
+func (d *BidDAO) GetRanking(ctx context.Context, auctionID int64, limit int) ([]model.Bid, error) {
+	var bids []model.Bid
+
+	// 使用子查询获取每个用户的最高出价
+	subQuery := d.db.WithContext(ctx).
+		Model(&model.Bid{}).
+		Select("user_id, MAX(amount) as amount, MAX(created_at) as created_at").
+		Where("auction_id = ?", auctionID).
+		Group("user_id")
+
+	err := d.db.WithContext(ctx).
+		Table("(?) as max_bids", subQuery).
+		Order("amount DESC").
+		Limit(limit).
+		Find(&bids).Error
+
+	return bids, err
+}
+
+// GetUserHighestBid 获取用户在某个竞拍中的最高出价
+func (d *BidDAO) GetUserHighestBid(ctx context.Context, auctionID, userID int64) (*model.Bid, error) {
+	var bid model.Bid
+	err := d.db.WithContext(ctx).
+		Where("auction_id = ? AND user_id = ?", auctionID, userID).
+		Order("amount DESC").
+		First(&bid).Error
+
+	if err != nil {
+		return nil, err
+	}
+	return &bid, nil
+}
+
+// CountByAuctionID 统计竞拍的出价次数
+func (d *BidDAO) CountByAuctionID(ctx context.Context, auctionID int64) (int64, error) {
+	var count int64
+	err := d.db.WithContext(ctx).
+		Model(&model.Bid{}).
+		Where("auction_id = ?", auctionID).
+		Count(&count).Error
+	return count, err
+}
+
+// CountByUserIDAndAuctionID 统计用户在竞拍中的出价次数
+func (d *BidDAO) CountByUserIDAndAuctionID(ctx context.Context, auctionID, userID int64) (int64, error) {
+	var count int64
+	err := d.db.WithContext(ctx).
+		Model(&model.Bid{}).
+		Where("auction_id = ? AND user_id = ?", auctionID, userID).
+		Count(&count).Error
+	return count, err
+}

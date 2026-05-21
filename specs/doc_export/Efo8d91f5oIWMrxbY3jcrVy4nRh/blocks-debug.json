@@ -1,0 +1,4979 @@
+[
+  {
+    "block_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh",
+    "block_type": 1,
+    "children": [
+      "doxcnlwIyQDe6cHdrZ1Rm5j5j4g",
+      "doxcna28bZ02cwMqBFY89awBKIb",
+      "doxcnoRoTJnh3wbLfhhdToKwCYz",
+      "doxcnp796f7votEv7yAyzez7Pyb",
+      "doxcnnZgp6dX8P8Wfm6Y8BsZOHb",
+      "doxcnoId81vtafNDYAAdXwQjU4e",
+      "doxcn1TTkDAZRZWHeBKH9qH6eVc",
+      "doxcnE3CpYts4eHmho2w2IClrmb",
+      "doxcnmRkce2M2NXgMJS0qHOyATf",
+      "doxcnuigzhRThAhj55hbPvfUnch",
+      "doxcnf8eyZUro1BLGgpf8PiaJXd",
+      "doxcn22ewe0LAA5fDfa1CmUq3kO",
+      "doxcnvzof1fuJjdKhLVSuL577qb",
+      "doxcnkjZJcYmzjxv1LB7PaHS3fh",
+      "doxcnZCdc6Op4Qmbu084hhnrFBd",
+      "doxcng0xiCu0w0d7Fdo4X5nO2tb",
+      "doxcnYTPEbED2D64HSm3sDMRgah",
+      "doxcnZ52pSrQFC7NV62jjLFq3Ee",
+      "doxcnQl4kBXnLGWFkrwkIDmktxe",
+      "doxcnCWXQ6Mssem2EeaxeKDPbNb",
+      "doxcn1rzp6dLEnNCIMjwjlUQHLe",
+      "doxcnHJuVqwnbqYCq2qJsjBrvYg",
+      "doxcnsrtNqCQmMmskR4df2xbLAd",
+      "doxcnpDDYrvIFII2kFGBDNlmaDg",
+      "doxcnHuD5KjvAVXSLqYCeXyCobf",
+      "doxcnTmfLngPNQX6aWNn2KBhy2b",
+      "doxcnoGqQepzwVxAoP4Y6kXI0Ub",
+      "doxcnObjm9E3jHM0VdxMIgCaatd",
+      "doxcnI3GU0BKdqgubIhlTkdvuZn",
+      "doxcnO2mkuXbGr22OEx1Hbaxrdf",
+      "doxcnAheseXzymqBM3NmchvogXf",
+      "doxcnP7syBxiTyv3F4WOHmgjeqg",
+      "doxcnSaVLDH8V2be8n4C62Pembh",
+      "doxcnBrFbQahXD8yat75i9mG6Wc",
+      "doxcn0jVjC0LgHHNMgr7Ff74Ouf",
+      "doxcnEtPn9tYrbKx8army0tGmlh",
+      "doxcnnSlhp6am2vIE4pMgPjuu1b",
+      "doxcn7B2IIU5PORR9ZvEBXDdBlg",
+      "doxcnWDuIYWij7syDOQmVAmz27e",
+      "doxcntKZ2zFQsIupwYU67v60y2f",
+      "doxcnGGSJu0fSDv66kZgvsx9ypd",
+      "doxcnkiRcfHhGplxYiPRbwLLFcf",
+      "doxcnSpshOycs2aOcNES1UleUAe",
+      "doxcn2EmmdOSWHEYtcRrEszp9Ze",
+      "doxcnN55VtpDAAFTKwO82EocInf",
+      "doxcnX3DpEElzEy27y46hXEhSmf",
+      "doxcnjqjRIbVs4GkyMTbyM7Hzfg",
+      "doxcnb6U0QLBzHWTA9rc1Dba60b",
+      "doxcnX1pomWjjU6eBuXzudPbDcd",
+      "doxcnwzZ3O2Mf63ZumuoZkLRsIb",
+      "doxcn98NqoQCJTgOtzQHsUt5Vxc",
+      "doxcne99Dk4wG497vdYJ39limre",
+      "doxcnVAUiP8EGMDiCwqgqxg7Hkc",
+      "doxcnH29brRMaEsSJc7cgsf39nd",
+      "doxcn9HntmF5GhyazjAuqJh2k7i",
+      "doxcnJ3ppOFGfsSNGQSY7yMOfeh",
+      "doxcnFED15mI8zWtsCgFgbUzGid",
+      "doxcn61OdCuSqV4ZQlbUmLKNM3b",
+      "doxcn0zocXBoLw1iTcjqQFLNixf",
+      "doxcnV5kaGVgbdqYwdq5kddiGef",
+      "doxcnojd1t7GwvZtJIAE7AeJyc9",
+      "doxcnBeQjUiSbWFTxtnkm82QKwd",
+      "doxcnV2dont7KPYebLZTMxmWkbf",
+      "doxcnStVEuprNi6lCEQohjLOHdh",
+      "doxcnQrldGLROEFXB0V4RwC49mg",
+      "doxcnyYGetTztmBWADum3kzjacc",
+      "doxcnp28nDLQUFSuUESRIm2P7vh",
+      "doxcnX5vohS5XRm6RzCB9caTLSf",
+      "doxcnVbFR5D7kKDrZLDj3me2Rdd",
+      "doxcnkvGjmVrAmBYyDFT9Dfc8wc",
+      "doxcnWKKsrC4GmSXq9FA2v9R56f",
+      "doxcng2bzR6WJ4Yluvl3XBRv74d",
+      "doxcnyy29nWbv26hzBsq4wNsM8T",
+      "doxcnRnQAqWLyU0xaFhKmZvUEYf",
+      "doxcnOUyQKpsx2I6G0tWJ0VxKtb",
+      "doxcnJqG8XiYzOBNJn9FiuqTQsh",
+      "doxcnItooIJtbHH0Lazn7mmgkTe",
+      "doxcnpheXaW1LjdW5fcHe0xbmXg",
+      "doxcnM3beWNZVydgUIOxZxQXD2c",
+      "doxcnNK3xaathMhfxURGNqsj77P",
+      "doxcnF5XdSXMkYRvqE0UOJIxElf",
+      "doxcnKFvGpTgX8ZzixA0drqaMrb",
+      "doxcn1u5IPXK6dHj7xzLNyFVb7d",
+      "doxcngC2529msKJXD6n6JhvRpXd",
+      "doxcnUAGmrWEUInuLaKn73Dfezd",
+      "doxcnW8LlGHDpptfhGTBVhOFUDb",
+      "doxcnwUtaAqM1VaXu5TuS10w6Pb",
+      "doxcnZZqNidRQPKKjOTfNQ1R0Uh",
+      "doxcniw1KpivH2QEDJlZ9qul8Kg",
+      "doxcnwU4SJwr4mxaZKF6woACb2g"
+    ],
+    "page": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "🛍️抖音电商AI全栈课题-直播竞拍全栈系统（宣讲版）",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": " 副本",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1
+      }
+    },
+    "parent_id": ""
+  },
+  {
+    "block_id": "doxcnlwIyQDe6cHdrZ1Rm5j5j4g",
+    "block_type": 19,
+    "callout": {
+      "background_color": 5,
+      "border_color": 5,
+      "emoji_id": "rocket"
+    },
+    "children": [
+      "doxcnhfEsxQUYCIXdAhmlsQ0geg",
+      "doxcnsXFIFLniyHq6kcOw2eqHUy"
+    ],
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnhfEsxQUYCIXdAhmlsQ0geg",
+    "block_type": 2,
+    "parent_id": "doxcnlwIyQDe6cHdrZ1Rm5j5j4g",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "欢迎来到 2026 抖音电商AI全栈训练营！",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnsXFIFLniyHq6kcOw2eqHUy",
+    "block_type": 2,
+    "parent_id": "doxcnlwIyQDe6cHdrZ1Rm5j5j4g",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "准备好接受挑战了吗？在这个课题中，你将亲手打造一套",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "直播竞拍全栈系统",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "，体验从 0 到 1 构建高并发实时应用的完整过程。当你完成时，你将拥有一份亮眼的项目经历，以及对 WebSocket、分布式锁、状态机等核心技术的深入理解。让我们一起开启这段技术之旅吧！ 💪",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcna28bZ02cwMqBFY89awBKIb",
+    "block_type": 3,
+    "heading1": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "🎯 课题名称",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnoRoTJnh3wbLfhhdToKwCYz",
+    "block_type": 2,
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "「实时竞拍大师」—— 抖音电商直播竞拍全栈系统设计与实现",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnp796f7votEv7yAyzez7Pyb",
+    "block_type": 3,
+    "heading1": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "💡 课题背景",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnnZgp6dX8P8Wfm6Y8BsZOHb",
+    "block_type": 19,
+    "callout": {
+      "background_color": 3,
+      "emoji_id": "sparkles"
+    },
+    "children": [
+      "doxcn1DmXKyUs4HRvIc3J1O7rDb"
+    ],
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcn1DmXKyUs4HRvIc3J1O7rDb",
+    "block_type": 2,
+    "parent_id": "doxcnnZgp6dX8P8Wfm6Y8BsZOHb",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "想象这样一个场景：直播间里，一件稀世珠宝正在竞拍，数百人同时出价，价格每秒都在跳动，气氛紧张到窒息——",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "这就是我们要你构建的系统！",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnoId81vtafNDYAAdXwQjU4e",
+    "block_type": 2,
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "直播电商的兴起为高价值商品（珠宝、艺术品、二手奢侈品）开辟了全新赛道，这些商品价值难以统一定价，",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "竞拍",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "这种充满互动和竞争感的形式，能让市场动态定价最大化商品价值。你的任务是：",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcn1TTkDAZRZWHeBKH9qH6eVc",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "前端：基于 ",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "React + TypeScript + WebSocket",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": " 打造流畅的交互体验",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnE3CpYts4eHmho2w2IClrmb",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "后端：",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "优先Node/Go（其他语言也不限制",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "）",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "+ MySQL/Redis",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": " 构建高并发处理能力",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnmRkce2M2NXgMJS0qHOyATf",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "全流程：实现「商品上架 → 规则配置 → 实时出价 → 动态排名 → 竞拍成交」的完整闭环",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnuigzhRThAhj55hbPvfUnch",
+    "block_type": 3,
+    "heading1": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "🔥 核心挑战",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnf8eyZUro1BLGgpf8PiaJXd",
+    "block_type": 4,
+    "heading2": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "挑战一：复杂规则的逻辑攻坚",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcn22ewe0LAA5fDfa1CmUq3kO",
+    "block_type": 2,
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "竞拍规则就像一张精密的网，你需要把以下规则",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "零漏洞",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "地实现出来：",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnvzof1fuJjdKhLVSuL577qb",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "🔹 ",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "0 元起拍",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": " —— 从 0 开始，任何人都能参与",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnkjZJcYmzjxv1LB7PaHS3fh",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "🔹 ",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "加价幅度",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": " —— 每次出价必须按固定幅度递增",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnZCdc6Op4Qmbu084hhnrFBd",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "🔹 ",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "封顶价",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": " —— 达到上限自动成交",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcng0xiCu0w0d7Fdo4X5nO2tb",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "🔹 ",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "自动延时",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": " —— 结束前有人出价，时间自动延长 10-30 秒",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnYTPEbED2D64HSm3sDMRgah",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "🔹 ",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "异常取消",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": " —— 主播可随时取消异常竞拍",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnZ52pSrQFC7NV62jjLFq3Ee",
+    "block_type": 2,
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnQl4kBXnLGWFkrwkIDmktxe",
+    "block_type": 4,
+    "heading2": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "挑战二：毫秒级实时同步",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnCWXQ6Mssem2EeaxeKDPbNb",
+    "block_type": 2,
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "想象一下：直播间里有 ",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "100+ 人同时狂点出价按钮",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "，每个人都想在最后一秒绝杀。你需要确保：",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcn1rzp6dLEnNCIMjwjlUQHLe",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "✅ 出价数据秒级同步，所有人看到的排名一致",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnHJuVqwnbqYCq2qJsjBrvYg",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "✅ 倒计时精确到毫秒，不能有任何偏差",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnsrtNqCQmMmskR4df2xbLAd",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "✅ WebSocket 连接稳定，即使网络波动也能自动重连",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnpDDYrvIFII2kFGBDNlmaDg",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "❌ 不能出现数据延迟、页面卡顿、排名错乱",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnHuD5KjvAVXSLqYCeXyCobf",
+    "block_type": 2,
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "技术关键词",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：WebSocket 长连接、心跳保活、乐观锁、防抖节流",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnTmfLngPNQX6aWNn2KBhy2b",
+    "block_type": 2,
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnoGqQepzwVxAoP4Y6kXI0Ub",
+    "block_type": 3,
+    "heading1": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "📋 项目要求",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnObjm9E3jHM0VdxMIgCaatd",
+    "block_type": 19,
+    "callout": {
+      "background_color": 3,
+      "emoji_id": "books"
+    },
+    "children": [
+      "doxcnABU4DdSQWe7HyeWb7AR9se",
+      "doxcnR90obUaMhU4ORwqPvADvng",
+      "doxcnwUrmU5R9q0R9WtnVJAKO0g",
+      "doxcnTY0tFMDrV2uw95kNViBGdh",
+      "doxcnsBjpCtaqYEp7yo2gSCTYtm"
+    ],
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnABU4DdSQWe7HyeWb7AR9se",
+    "block_type": 2,
+    "parent_id": "doxcnObjm9E3jHM0VdxMIgCaatd",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "完成这个课题，你将收获什么？",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnR90obUaMhU4ORwqPvADvng",
+    "block_type": 2,
+    "parent_id": "doxcnObjm9E3jHM0VdxMIgCaatd",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "✅ 掌握 WebSocket 实时通信的完整实践",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnwUrmU5R9q0R9WtnVJAKO0g",
+    "block_type": 2,
+    "parent_id": "doxcnObjm9E3jHM0VdxMIgCaatd",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "✅ 理解高并发场景下的数据一致性解决方案",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnTY0tFMDrV2uw95kNViBGdh",
+    "block_type": 2,
+    "parent_id": "doxcnObjm9E3jHM0VdxMIgCaatd",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "✅ 学会状态机设计和复杂业务规则的代码实现",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnsBjpCtaqYEp7yo2gSCTYtm",
+    "block_type": 2,
+    "parent_id": "doxcnObjm9E3jHM0VdxMIgCaatd",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "✅ 积累全栈项目经验，从数据库设计到前端交互一手包办",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnI3GU0BKdqgubIhlTkdvuZn",
+    "block_type": 4,
+    "heading2": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "🏗️ 技术架构",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnO2mkuXbGr22OEx1Hbaxrdf",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "前端",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：React + TypeScript，组件化开发，状态管理清晰",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnAheseXzymqBM3NmchvogXf",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "后端",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：Node.js 或 Go（语言不限），RESTful API + WebSocket 双通道",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnP7syBxiTyv3F4WOHmgjeqg",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "数据库",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：MySQL / PostgreSQL 存储核心业务数据，Redis 应对高频读写",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnSaVLDH8V2be8n4C62Pembh",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "实时通信",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：WebSocket 长连接，支持房间级隔离，多直播间互不干扰",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnBrFbQahXD8yat75i9mG6Wc",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "代码质量",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：分层架构合理，注释清晰，具备可维护性和扩展性",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcn0jVjC0LgHHNMgr7Ff74Ouf",
+    "block_type": 4,
+    "heading2": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "🎨 功能模块",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnEtPn9tYrbKx8army0tGmlh",
+    "block_type": 5,
+    "heading3": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "商家/主播端（PC 管理后台）",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnnSlhp6am2vIE4pMgPjuu1b",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "📦 竞拍发布",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：上传商品（名称、图片、介绍），配置竞拍规则（起拍价、加价幅度、时长、封顶价、延时机制）",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcn7B2IIU5PORR9ZvEBXDdBlg",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "📊 商品管理",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：查看所有竞拍商品的状态、进度、成交结果；支持修改未开始竞拍的规则，取消异常竞拍",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnWDuIYWij7syDOQmVAmz27e",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "🧾 订单管理",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：成交后自动生成订单，查看成交详情",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcntKZ2zFQsIupwYU67v60y2f",
+    "block_type": 27,
+    "image": {
+      "height": 544,
+      "scale": 1,
+      "token": "Rri9bAITpos1dTx7Mv2caGw0nxf",
+      "width": 1828
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnGGSJu0fSDv66kZgvsx9ypd",
+    "block_type": 5,
+    "heading3": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "用户端（移动端 H5/小程序）",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnkiRcfHhGplxYiPRbwLLFcf",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "📺 直播间",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：可用固定视频或开源库模拟直播画面",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnSpshOycs2aOcNES1UleUAe",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "👀 竞拍浏览",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：查看商品列表、详情、规则、当前出价、参与人数，接收出价提醒",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcn2EmmdOSWHEYtcRrEszp9Ze",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "💰 出价参与",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：手动出价、实时查看排名，接收「被超越」「竞拍延时」「竞拍结束」等关键提醒",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnN55VtpDAAFTKwO82EocInf",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "🏆 结果查看",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：查看成交情况，模拟支付流程，浏览历史竞拍记录",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnX3DpEElzEy27y46hXEhSmf",
+    "block_type": 24,
+    "children": [
+      "doxcngIkxsKQisJk8nnFazbJbqf",
+      "doxcngQE1woNKcvJU8CZIVTXhzb",
+      "doxcnauoeOzHc1akn8o90PNiTAf"
+    ],
+    "grid": {
+      "column_size": 3
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcngIkxsKQisJk8nnFazbJbqf",
+    "block_type": 25,
+    "children": [
+      "doxcnKL8hAMF6buJmSvDA4OCrFb"
+    ],
+    "grid_column": {
+      "width_ratio": 33
+    },
+    "parent_id": "doxcnX3DpEElzEy27y46hXEhSmf"
+  },
+  {
+    "block_id": "doxcnKL8hAMF6buJmSvDA4OCrFb",
+    "block_type": 27,
+    "image": {
+      "height": 1608,
+      "scale": 0.18689320388349515,
+      "token": "QppwbcZqoorEFzx1OSqcpQ7TnOb",
+      "width": 1236
+    },
+    "parent_id": "doxcngIkxsKQisJk8nnFazbJbqf"
+  },
+  {
+    "block_id": "doxcngQE1woNKcvJU8CZIVTXhzb",
+    "block_type": 25,
+    "children": [
+      "doxcnzrWUFTGxezhIlrqvqjNnGf"
+    ],
+    "grid_column": {
+      "width_ratio": 33
+    },
+    "parent_id": "doxcnX3DpEElzEy27y46hXEhSmf"
+  },
+  {
+    "block_id": "doxcnzrWUFTGxezhIlrqvqjNnGf",
+    "block_type": 27,
+    "image": {
+      "height": 583,
+      "scale": 1,
+      "token": "BB3dbr1aMouJO1xOMLUcc51Wnbc",
+      "width": 582
+    },
+    "parent_id": "doxcngQE1woNKcvJU8CZIVTXhzb"
+  },
+  {
+    "block_id": "doxcnauoeOzHc1akn8o90PNiTAf",
+    "block_type": 25,
+    "children": [
+      "doxcnXB3rHPW0L0wlqzcnxG0kwd"
+    ],
+    "grid_column": {
+      "width_ratio": 33
+    },
+    "parent_id": "doxcnX3DpEElzEy27y46hXEhSmf"
+  },
+  {
+    "block_id": "doxcnXB3rHPW0L0wlqzcnxG0kwd",
+    "block_type": 27,
+    "image": {
+      "height": 551,
+      "scale": 0.545662100456621,
+      "token": "GwIDbD3kvoN9bPxihRJcoPfynwe",
+      "width": 438
+    },
+    "parent_id": "doxcnauoeOzHc1akn8o90PNiTAf"
+  },
+  {
+    "block_id": "doxcnjqjRIbVs4GkyMTbyM7Hzfg",
+    "block_type": 24,
+    "children": [
+      "doxcn3mKjpc1AnjXKrVwYDPaIZg",
+      "doxcnpxdWDy83WmzYUaAKvjAn7b"
+    ],
+    "grid": {
+      "column_size": 2
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcn3mKjpc1AnjXKrVwYDPaIZg",
+    "block_type": 25,
+    "children": [
+      "doxcn0oMJEr0mO6lR6t9wgOLE0g"
+    ],
+    "grid_column": {
+      "width_ratio": 50
+    },
+    "parent_id": "doxcnjqjRIbVs4GkyMTbyM7Hzfg"
+  },
+  {
+    "block_id": "doxcn0oMJEr0mO6lR6t9wgOLE0g",
+    "block_type": 27,
+    "image": {
+      "height": 517,
+      "scale": 0.7394957983193278,
+      "token": "ZCiHbIHvBoZlKSxENWVcz9iWnYb",
+      "width": 476
+    },
+    "parent_id": "doxcn3mKjpc1AnjXKrVwYDPaIZg"
+  },
+  {
+    "block_id": "doxcnpxdWDy83WmzYUaAKvjAn7b",
+    "block_type": 25,
+    "children": [
+      "doxcnaHckO0gLX5Pui5OVdJxp0d"
+    ],
+    "grid_column": {
+      "width_ratio": 50
+    },
+    "parent_id": "doxcnjqjRIbVs4GkyMTbyM7Hzfg"
+  },
+  {
+    "block_id": "doxcnaHckO0gLX5Pui5OVdJxp0d",
+    "block_type": 27,
+    "image": {
+      "height": 1634,
+      "scale": 1,
+      "token": "IuAebNaymoDCUdxbfDVchkxcnnf",
+      "width": 1704
+    },
+    "parent_id": "doxcnpxdWDy83WmzYUaAKvjAn7b"
+  },
+  {
+    "block_id": "doxcnb6U0QLBzHWTA9rc1Dba60b",
+    "block_type": 3,
+    "heading1": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "🏅 评分亮点（加分项）",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnX1pomWjjU6eBuXzudPbDcd",
+    "block_type": 2,
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "想要在众多项目中脱颖而出？看看这些",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "加分方向",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnwzZ3O2Mf63ZumuoZkLRsIb",
+    "block_type": 4,
+    "heading2": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "🤖 AI 全栈工具的深度应用",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcn98NqoQCJTgOtzQHsUt5Vxc",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "如何高效使用 AI 辅助编码？你的 AI 工具使用思路和流程沉淀",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcne99Dk4wG497vdYJ39limre",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "AI 代码贡献率的合理性评估（不是越高越好，关键在于",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "关键决策点",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "的人工把控）",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnVAUiP8EGMDiCwqgqxg7Hkc",
+    "block_type": 4,
+    "heading2": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "💫 极致的竞价氛围体验",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnH29brRMaEsSJc7cgsf39nd",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "动画效果：出价领先时「🎉 领先！」、被超越时「⚡ 被超越！」的情绪反馈",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcn9HntmF5GhyazjAuqJh2k7i",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "实时排行榜：让用户一眼看到自己的位置和差距",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnJ3ppOFGfsSNGQSY7yMOfeh",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "紧张感营造：倒计时动画、出价提示音等细节打磨",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnFED15mI8zWtsCgFgbUzGid",
+    "block_type": 4,
+    "heading2": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "⚡ 高并发架构的硬核优化",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcn61OdCuSqV4ZQlbUmLKNM3b",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "Redis 分层缓存策略，读写分离",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcn0zocXBoLw1iTcjqQFLNixf",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "分布式锁解决出价幂等性，",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "绝对不允许一笔出价扣两次钱",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnV5kaGVgbdqYwdq5kddiGef",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "WebSocket 房间级路由隔离，支持单直播间 ",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "1000+ 用户同时在线",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "（超越基础要求 10 倍！）",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnojd1t7GwvZtJIAE7AeJyc9",
+    "block_type": 19,
+    "callout": {
+      "background_color": 3,
+      "border_color": 3,
+      "emoji_id": "bulb"
+    },
+    "children": [
+      "doxcn6QZarSsXTvCnFjG7bRfSfc"
+    ],
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcn6QZarSsXTvCnFjG7bRfSfc",
+    "block_type": 2,
+    "parent_id": "doxcnojd1t7GwvZtJIAE7AeJyc9",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "导师提示",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：不必追求全部满分，选择你最有兴趣的方向深入打磨，",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "把一个亮点做到极致",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "，胜过十个浅尝辄止的功能！",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnBeQjUiSbWFTxtnkm82QKwd",
+    "block_type": 3,
+    "heading1": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "👨‍🏫 导师团队",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnV2dont7KPYebLZTMxmWkbf",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "mention_user": {
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            },
+            "user_id": "ou_84acdb17d4776d414a6619ddd966510a"
+          }
+        },
+        {
+          "mention_user": {
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            },
+            "user_id": "ou_d10a56fe368afadb575d1b360e10072f"
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnStVEuprNi6lCEQohjLOHdh",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "mention_user": {
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            },
+            "user_id": "ou_8ab86796d447168b2a6a1bcf3e4f9f53"
+          }
+        },
+        {
+          "mention_user": {
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            },
+            "user_id": "ou_cb388843834e8a122c7ed775a0fb3a5a"
+          }
+        },
+        {
+          "mention_user": {
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            },
+            "user_id": "ou_d5c0a4af84ab30d9a6abfba7768a00fd"
+          }
+        },
+        {
+          "mention_user": {
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            },
+            "user_id": "ou_6ddee3516342c0272de11f301ea91c38"
+          }
+        },
+        {
+          "mention_user": {
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            },
+            "user_id": "ou_31b669514a2749365d3879a9d67d68bf"
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnQrldGLROEFXB0V4RwC49mg",
+    "block_type": 3,
+    "heading1": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "🔧 技术支持",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnyYGetTztmBWADum3kzjacc",
+    "block_type": 19,
+    "callout": {
+      "background_color": 3,
+      "emoji_id": "sparkles"
+    },
+    "children": [
+      "doxcnXxQ2aAqipg2Fq8nRxjElJf"
+    ],
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnXxQ2aAqipg2Fq8nRxjElJf",
+    "block_type": 2,
+    "parent_id": "doxcnyYGetTztmBWADum3kzjacc",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "Doubao-Seed-2.0-lite",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "link": {
+                "url": "https%3A%2F%2Fcloud.bytedance.net%2Fark%2Fregion%3Aark%2Bcn-beijing%2Fmodel%2Fdetail%3FId%3Ddoubao-seed-2-0-lite"
+              },
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "\nEP：ep-20260514111437-7crsm\n",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "APIKEY：ark-2af51d30-ed70-4061-a2cd-74f454ccc4e8-2282e",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnp28nDLQUFSuUESRIm2P7vh",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "独家支持：字节跳动火山方舟资源",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnX5vohS5XRm6RzCB9caTLSf",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "使用关注：一个课题所有成员共用账号，需要学生注意账号不外泄，仅用于本课题项目。",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnVbFR5D7kKDrZLDj3me2Rdd",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "其他支持：同时提供TRAE操作配置指南",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "TRAE IDE模型配置操作指南",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "link": {
+                "url": "https%3A%2F%2Fbytedance.larkoffice.com%2Fwiki%2FAQsEwxVonibJvAkDDE7ct2qUnCf%3Ffrom%3Dfrom_copylink"
+              },
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnkvGjmVrAmBYyDFT9Dfc8wc",
+    "block_type": 2,
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnWKKsrC4GmSXq9FA2v9R56f",
+    "block_type": 2,
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "除AIcoding的token外，其他工具不提供官方资源，同学们可自由发挥~",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcng2bzR6WJ4Yluvl3XBRv74d",
+    "block_type": 3,
+    "heading1": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "评分标准",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "block_type": 31,
+    "children": [
+      "doxcnXrb98p9YYhpI7tNEeIzxag",
+      "doxcnWQrApbgASD3bullIAZ2VKb",
+      "doxcnF2vY8e2ZGHvDzt7vyaN2Mb",
+      "doxcnHwOXNk3RmW03YzflOrctod",
+      "doxcn7rw8MctffGsHc3IwicxFRf",
+      "doxcnNit3DpPrsv1TzB5K9nq8Lc",
+      "doxcnNf9HeCwtOGHQPOAf9rqg2e",
+      "doxcndG8KVSvmlSBHjlSBk7PYPe",
+      "doxcn496Eols3fXf8GKzZRj0ASf",
+      "doxcnRWksADQQ7T3UUC6OSBjFWg",
+      "doxcnvdSt2MTXJIl4q4yQgOvxdf",
+      "doxcnFeZ3M7rogWJDMMbaISL2ZP",
+      "doxcnsnO1EEQlgN2Dk9n7R4bLKc",
+      "doxcnzfjUpRApNaou2FMSXxNjhg",
+      "doxcnWO8xfCO0eQehZ13in5cmed",
+      "doxcnZ17IkNprJ56qWI5ianLehh",
+      "doxcn5P0oFm5bNokKxhF2CJtbHd",
+      "doxcnTSAZ5n0gb2zuEFxux13ILw",
+      "doxcn1yRMrE6wsFm9gNprFTPFvf",
+      "doxcnGJBS3cyFeGqTmLzSug8wte",
+      "doxcnoaf3j9xLlyecPbeHLWSzAh",
+      "doxcnKy6RIXWkPSTGJfjKIb70Rh",
+      "doxcnyG9Dr1eGqNrqOodMxiY3hd",
+      "doxcnnUhzJXlyuGnRojCOCW4EGc",
+      "doxcn4cnOMo9jDKVY81CNe1Z66e",
+      "doxcn0vDUH3GZD5I0TV7b8f2VcN",
+      "doxcnbHgw2iJgXO0T912Kzv3i4c"
+    ],
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh",
+    "table": {
+      "cells": [
+        "doxcnXrb98p9YYhpI7tNEeIzxag",
+        "doxcnWQrApbgASD3bullIAZ2VKb",
+        "doxcnF2vY8e2ZGHvDzt7vyaN2Mb",
+        "doxcnHwOXNk3RmW03YzflOrctod",
+        "doxcn7rw8MctffGsHc3IwicxFRf",
+        "doxcnNit3DpPrsv1TzB5K9nq8Lc",
+        "doxcnNf9HeCwtOGHQPOAf9rqg2e",
+        "doxcndG8KVSvmlSBHjlSBk7PYPe",
+        "doxcn496Eols3fXf8GKzZRj0ASf",
+        "doxcnRWksADQQ7T3UUC6OSBjFWg",
+        "doxcnvdSt2MTXJIl4q4yQgOvxdf",
+        "doxcnFeZ3M7rogWJDMMbaISL2ZP",
+        "doxcnsnO1EEQlgN2Dk9n7R4bLKc",
+        "doxcnzfjUpRApNaou2FMSXxNjhg",
+        "doxcnWO8xfCO0eQehZ13in5cmed",
+        "doxcnZ17IkNprJ56qWI5ianLehh",
+        "doxcn5P0oFm5bNokKxhF2CJtbHd",
+        "doxcnTSAZ5n0gb2zuEFxux13ILw",
+        "doxcn1yRMrE6wsFm9gNprFTPFvf",
+        "doxcnGJBS3cyFeGqTmLzSug8wte",
+        "doxcnoaf3j9xLlyecPbeHLWSzAh",
+        "doxcnKy6RIXWkPSTGJfjKIb70Rh",
+        "doxcnyG9Dr1eGqNrqOodMxiY3hd",
+        "doxcnnUhzJXlyuGnRojCOCW4EGc",
+        "doxcn4cnOMo9jDKVY81CNe1Z66e",
+        "doxcn0vDUH3GZD5I0TV7b8f2VcN",
+        "doxcnbHgw2iJgXO0T912Kzv3i4c"
+      ],
+      "property": {
+        "column_size": 3,
+        "column_width": [
+          200,
+          507,
+          200
+        ],
+        "merge_info": [
+          {
+            "col_span": 1,
+            "row_span": 1
+          },
+          {
+            "col_span": 1,
+            "row_span": 1
+          },
+          {
+            "col_span": 1,
+            "row_span": 1
+          },
+          {
+            "col_span": 1,
+            "row_span": 2
+          },
+          {
+            "col_span": 1,
+            "row_span": 1
+          },
+          {
+            "col_span": 1,
+            "row_span": 2
+          },
+          {
+            "col_span": 1,
+            "row_span": 1
+          },
+          {
+            "col_span": 1,
+            "row_span": 1
+          },
+          {
+            "col_span": 1,
+            "row_span": 1
+          },
+          {
+            "col_span": 1,
+            "row_span": 2
+          },
+          {
+            "col_span": 1,
+            "row_span": 1
+          },
+          {
+            "col_span": 1,
+            "row_span": 2
+          },
+          {
+            "col_span": 1,
+            "row_span": 1
+          },
+          {
+            "col_span": 1,
+            "row_span": 1
+          },
+          {
+            "col_span": 1,
+            "row_span": 1
+          },
+          {
+            "col_span": 1,
+            "row_span": 2
+          },
+          {
+            "col_span": 1,
+            "row_span": 1
+          },
+          {
+            "col_span": 1,
+            "row_span": 2
+          },
+          {
+            "col_span": 1,
+            "row_span": 1
+          },
+          {
+            "col_span": 1,
+            "row_span": 1
+          },
+          {
+            "col_span": 1,
+            "row_span": 1
+          },
+          {
+            "col_span": 1,
+            "row_span": 2
+          },
+          {
+            "col_span": 1,
+            "row_span": 1
+          },
+          {
+            "col_span": 1,
+            "row_span": 2
+          },
+          {
+            "col_span": 1,
+            "row_span": 1
+          },
+          {
+            "col_span": 1,
+            "row_span": 1
+          },
+          {
+            "col_span": 1,
+            "row_span": 1
+          }
+        ],
+        "row_size": 9
+      }
+    }
+  },
+  {
+    "block_id": "doxcnXrb98p9YYhpI7tNEeIzxag",
+    "block_type": 32,
+    "children": [
+      "doxcnFJ38vaDO3UCRMU63MCMnhf"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnFJ38vaDO3UCRMU63MCMnhf",
+    "block_type": 2,
+    "parent_id": "doxcnXrb98p9YYhpI7tNEeIzxag",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "评分维度",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnWQrApbgASD3bullIAZ2VKb",
+    "block_type": 32,
+    "children": [
+      "doxcnFJqUnlH2meCZQbtGVTGt9d"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnFJqUnlH2meCZQbtGVTGt9d",
+    "block_type": 2,
+    "parent_id": "doxcnWQrApbgASD3bullIAZ2VKb",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "考察要点",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnF2vY8e2ZGHvDzt7vyaN2Mb",
+    "block_type": 32,
+    "children": [
+      "doxcnVbIXvKa7335KwrMR46vMKc"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnVbIXvKa7335KwrMR46vMKc",
+    "block_type": 2,
+    "parent_id": "doxcnF2vY8e2ZGHvDzt7vyaN2Mb",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "建议权重",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnHwOXNk3RmW03YzflOrctod",
+    "block_type": 32,
+    "children": [
+      "doxcncAmYDTBDf91nrBXQHPg3Xg",
+      "doxcnQz5H8SAj2qqR5BKmfe4WId"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcncAmYDTBDf91nrBXQHPg3Xg",
+    "block_type": 2,
+    "parent_id": "doxcnHwOXNk3RmW03YzflOrctod",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "技术实现与工程完整度",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnQz5H8SAj2qqR5BKmfe4WId",
+    "block_type": 2,
+    "parent_id": "doxcnHwOXNk3RmW03YzflOrctod",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcn7rw8MctffGsHc3IwicxFRf",
+    "block_type": 32,
+    "children": [
+      "doxcnkCTeemUJFtiln7ebEGXwRc"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnkCTeemUJFtiln7ebEGXwRc",
+    "block_type": 2,
+    "parent_id": "doxcn7rw8MctffGsHc3IwicxFRf",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "• 完整工程链路：从竞拍数据采集（出价、用户行为）、数据治理，到开源模型调用（可选）、后端服务（出价校验、状态机管控）、接口网关，再到前端交互（氛围动画、实时反馈），链路的顺畅闭环度。",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnNit3DpPrsv1TzB5K9nq8Lc",
+    "block_type": 32,
+    "children": [
+      "doxcncZ9wos7rWAMA10PQmCSfVe",
+      "doxcnFFG2H9F33bmB6v7YDhdsBc"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcncZ9wos7rWAMA10PQmCSfVe",
+    "block_type": 2,
+    "parent_id": "doxcnNit3DpPrsv1TzB5K9nq8Lc",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "50%",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnFFG2H9F33bmB6v7YDhdsBc",
+    "block_type": 2,
+    "parent_id": "doxcnNit3DpPrsv1TzB5K9nq8Lc",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnNf9HeCwtOGHQPOAf9rqg2e",
+    "block_type": 32,
+    "children": [
+      "doxcnR8mECrWKNvR6c5uvVpmCJf"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnR8mECrWKNvR6c5uvVpmCJf",
+    "block_type": 2,
+    "parent_id": "doxcnNf9HeCwtOGHQPOAf9rqg2e",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcndG8KVSvmlSBHjlSBk7PYPe",
+    "block_type": 32,
+    "children": [
+      "doxcnYoc1XnaNY036GLySuHMqUg"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnYoc1XnaNY036GLySuHMqUg",
+    "block_type": 2,
+    "parent_id": "doxcndG8KVSvmlSBHjlSBk7PYPe",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "• 系统可用性（断连重连、异常兜底）、性能、稳定性（缓存防击穿、数据一致性）、可观测性（竞拍状态监控、异常告警）。",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcn496Eols3fXf8GKzZRj0ASf",
+    "block_type": 32,
+    "children": [
+      "doxcnAjZoYqdMasYWfn0MHYLH3e"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnAjZoYqdMasYWfn0MHYLH3e",
+    "block_type": 2,
+    "parent_id": "doxcn496Eols3fXf8GKzZRj0ASf",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnRWksADQQ7T3UUC6OSBjFWg",
+    "block_type": 32,
+    "children": [
+      "doxcnby0pbaqCrIzoMh1tTqBlQg"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnby0pbaqCrIzoMh1tTqBlQg",
+    "block_type": 2,
+    "parent_id": "doxcnRWksADQQ7T3UUC6OSBjFWg",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "技术深度与创新性",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnvdSt2MTXJIl4q4yQgOvxdf",
+    "block_type": 32,
+    "children": [
+      "doxcnFZj0UwwHifIF746MX62U4c"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnFZj0UwwHifIF746MX62U4c",
+    "block_type": 2,
+    "parent_id": "doxcnvdSt2MTXJIl4q4yQgOvxdf",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "• 技术选型（React/TypeScript/WebSocket/Node/Go/Redis/MySQL等）与课题场景（高并发直播竞拍）的适配性，是否针对核心挑战（实时同步、高并发、WebSocket不稳定）做针对性优化。",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnFeZ3M7rogWJDMMbaISL2ZP",
+    "block_type": 32,
+    "children": [
+      "doxcn2Ykl83RDGKwhjbfwBZle8g",
+      "doxcnnRz60qODUbZggHqR4oCWke"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcn2Ykl83RDGKwhjbfwBZle8g",
+    "block_type": 2,
+    "parent_id": "doxcnFeZ3M7rogWJDMMbaISL2ZP",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "25%",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnnRz60qODUbZggHqR4oCWke",
+    "block_type": 2,
+    "parent_id": "doxcnFeZ3M7rogWJDMMbaISL2ZP",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnsnO1EEQlgN2Dk9n7R4bLKc",
+    "block_type": 32,
+    "children": [
+      "doxcn03ZKRaY5E7DCYKyXyOPc34"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcn03ZKRaY5E7DCYKyXyOPc34",
+    "block_type": 2,
+    "parent_id": "doxcnsnO1EEQlgN2Dk9n7R4bLKc",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnzfjUpRApNaou2FMSXxNjhg",
+    "block_type": 32,
+    "children": [
+      "doxcnKC1OEdRtSP5e26P8sU4mqe"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnKC1OEdRtSP5e26P8sU4mqe",
+    "block_type": 2,
+    "parent_id": "doxcnzfjUpRApNaou2FMSXxNjhg",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "• 是否在技术方案上有独特或前瞻性思考（如房间级WebSocket路由隔离、出价幂等性设计、跨端状态同步优化等），能否体现技术差异化优势。",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnWO8xfCO0eQehZ13in5cmed",
+    "block_type": 32,
+    "children": [
+      "doxcnki0z6UEZqLdObzQTuDDmdf"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnki0z6UEZqLdObzQTuDDmdf",
+    "block_type": 2,
+    "parent_id": "doxcnWO8xfCO0eQehZ13in5cmed",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnZ17IkNprJ56qWI5ianLehh",
+    "block_type": 32,
+    "children": [
+      "doxcnFf4CnYTu3KvHdcWFAruJzb",
+      "doxcnn6DV4GK8AWMrtN17rFvs6c"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnFf4CnYTu3KvHdcWFAruJzb",
+    "block_type": 2,
+    "parent_id": "doxcnZ17IkNprJ56qWI5ianLehh",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "AI使用与落地效果",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnn6DV4GK8AWMrtN17rFvs6c",
+    "block_type": 2,
+    "parent_id": "doxcnZ17IkNprJ56qWI5ianLehh",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcn5P0oFm5bNokKxhF2CJtbHd",
+    "block_type": 32,
+    "children": [
+      "doxcnR7ejwKnV5LbVZbnDlrY19e"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnR7ejwKnV5LbVZbnDlrY19e",
+    "block_type": 2,
+    "parent_id": "doxcn5P0oFm5bNokKxhF2CJtbHd",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "• • AI工具使用情况：是否合理使用AI工具（代码生成工具、开源模型调用工具、数据处理工具等），工具选择与课题需求的适配性，使用流程是否规范、可追溯。",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnTSAZ5n0gb2zuEFxux13ILw",
+    "block_type": 32,
+    "children": [
+      "doxcnfciHP94Yd0K8TGGR9TDdmb",
+      "doxcnsWNRn4TafyLUEfdavJsQ5f"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnfciHP94Yd0K8TGGR9TDdmb",
+    "block_type": 2,
+    "parent_id": "doxcnTSAZ5n0gb2zuEFxux13ILw",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "15%",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnsWNRn4TafyLUEfdavJsQ5f",
+    "block_type": 2,
+    "parent_id": "doxcnTSAZ5n0gb2zuEFxux13ILw",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcn1yRMrE6wsFm9gNprFTPFvf",
+    "block_type": 32,
+    "children": [
+      "doxcnt2mxu0HyZ9Z4DAFbM8nb4g"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnt2mxu0HyZ9Z4DAFbM8nb4g",
+    "block_type": 2,
+    "parent_id": "doxcn1yRMrE6wsFm9gNprFTPFvf",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnGJBS3cyFeGqTmLzSug8wte",
+    "block_type": 32,
+    "children": [
+      "doxcnQGZnhKQSBIeXVj6dsnYNHc"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnQGZnhKQSBIeXVj6dsnYNHc",
+    "block_type": 2,
+    "parent_id": "doxcnGJBS3cyFeGqTmLzSug8wte",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "• AI代码贡献率：AI生成代码占项目核心代码（前后端业务逻辑、模型调用、交互组件）的比例，生成代码是否规范、可复用。",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnoaf3j9xLlyecPbeHLWSzAh",
+    "block_type": 32,
+    "children": [
+      "doxcnTJQhC36F1cckuQ6eeR7oQh"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnTJQhC36F1cckuQ6eeR7oQh",
+    "block_type": 2,
+    "parent_id": "doxcnoaf3j9xLlyecPbeHLWSzAh",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnKy6RIXWkPSTGJfjKIb70Rh",
+    "block_type": 32,
+    "children": [
+      "doxcnWaOJhQhepoeFzoOmsAFQPb"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnWaOJhQhepoeFzoOmsAFQPb",
+    "block_type": 2,
+    "parent_id": "doxcnKy6RIXWkPSTGJfjKIb70Rh",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "项目材料完整度",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnyG9Dr1eGqNrqOodMxiY3hd",
+    "block_type": 32,
+    "children": [
+      "doxcnPCMHgrYp8oPOYYWCDQeNTd"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnPCMHgrYp8oPOYYWCDQeNTd",
+    "block_type": 2,
+    "parent_id": "doxcnyG9Dr1eGqNrqOodMxiY3hd",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "• 提交的方案文档、演示视频（双端功能演示、高并发场景测试）、代码库等材料是否完整、规范，无缺失关键内容？",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnnUhzJXlyuGnRojCOCW4EGc",
+    "block_type": 32,
+    "children": [
+      "doxcn1nVkv9pI67A7Ffo2E0SSpg",
+      "doxcnsLvVaF2nVZqZxnZamYiJGg"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcn1nVkv9pI67A7Ffo2E0SSpg",
+    "block_type": 2,
+    "parent_id": "doxcnnUhzJXlyuGnRojCOCW4EGc",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "10%",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnsLvVaF2nVZqZxnZamYiJGg",
+    "block_type": 2,
+    "parent_id": "doxcnnUhzJXlyuGnRojCOCW4EGc",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcn4cnOMo9jDKVY81CNe1Z66e",
+    "block_type": 32,
+    "children": [
+      "doxcnRg7CXGakKqKik9CBTtRbgb"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnRg7CXGakKqKik9CBTtRbgb",
+    "block_type": 2,
+    "parent_id": "doxcn4cnOMo9jDKVY81CNe1Z66e",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcn0vDUH3GZD5I0TV7b8f2VcN",
+    "block_type": 32,
+    "children": [
+      "doxcnR0Cx20WNlTpXYuKFaczN2c"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcnR0Cx20WNlTpXYuKFaczN2c",
+    "block_type": 2,
+    "parent_id": "doxcn0vDUH3GZD5I0TV7b8f2VcN",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "• 方案阐述是否清晰、有条理，能明确体现核心挑战、技术方案、评判亮点；演示效果是否直观，能清晰展示全流程功能与技术优势？",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnbHgw2iJgXO0T912Kzv3i4c",
+    "block_type": 32,
+    "children": [
+      "doxcn6VcTRBDUTMHP2GGWT3Jjyf"
+    ],
+    "parent_id": "doxcnyy29nWbv26hzBsq4wNsM8T",
+    "table_cell": {}
+  },
+  {
+    "block_id": "doxcn6VcTRBDUTMHP2GGWT3Jjyf",
+    "block_type": 2,
+    "parent_id": "doxcnbHgw2iJgXO0T912Kzv3i4c",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnRnQAqWLyU0xaFhKmZvUEYf",
+    "block_type": 3,
+    "heading1": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "奖励收获",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnOUyQKpsx2I6G0tWJ0VxKtb",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "卓越项目团队 (1 )",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "children": [
+      "doxcn0sIMFS5wEc5GOowCItkvEg",
+      "doxcnMYydvqrtXjH5xRu8fXTkye",
+      "doxcnXy8JjDjwFm0Jcx2EYhyPMe"
+    ],
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcn0sIMFS5wEc5GOowCItkvEg",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "直通 Offer",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：团队核心成员直接获得",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "录用意向/直通终面。",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "text_color": 5,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "doxcnOUyQKpsx2I6G0tWJ0VxKtb"
+  },
+  {
+    "block_id": "doxcnMYydvqrtXjH5xRu8fXTkye",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "现金奖励",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：提供极具竞争力的现金奖励（2万元）",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "doxcnOUyQKpsx2I6G0tWJ0VxKtb"
+  },
+  {
+    "block_id": "doxcnXy8JjDjwFm0Jcx2EYhyPMe",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "荣誉奖杯与证书",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "。",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "doxcnOUyQKpsx2I6G0tWJ0VxKtb"
+  },
+  {
+    "block_id": "doxcnJqG8XiYzOBNJn9FiuqTQsh",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "优秀项目团队 (20)",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "children": [
+      "doxcnF1lkGLjY2v5PhSbhbxphAg",
+      "doxcn3lWZN2joFOBb0tRfAOHzwh"
+    ],
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnF1lkGLjY2v5PhSbhbxphAg",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "优先录用通道",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "团队成员直通面试。",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "text_color": 5,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "doxcnJqG8XiYzOBNJn9FiuqTQsh"
+  },
+  {
+    "block_id": "doxcn3lWZN2joFOBb0tRfAOHzwh",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "获奖证书",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "。",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "doxcnJqG8XiYzOBNJn9FiuqTQsh"
+  },
+  {
+    "block_id": "doxcnItooIJtbHH0Lazn7mmgkTe",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "所有完成项目的团队",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "children": [
+      "doxcnhQvHuOz5TOjuGGty0WEMjh",
+      "doxcnzfQyCFfGb3reB0HOWBiC2e"
+    ],
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnhQvHuOz5TOjuGGty0WEMjh",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "项目参与证明",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：官方出具的《AI 全栈项目挑战》项目参与证明。",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "doxcnItooIJtbHH0Lazn7mmgkTe"
+  },
+  {
+    "block_id": "doxcnzfQyCFfGb3reB0HOWBiC2e",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "纪念礼品",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "：定制项目纪念品。",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "doxcnItooIJtbHH0Lazn7mmgkTe"
+  },
+  {
+    "block_id": "doxcnpheXaW1LjdW5fcHe0xbmXg",
+    "block_type": 2,
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnM3beWNZVydgUIOxZxQXD2c",
+    "block_type": 3,
+    "heading1": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "关键节点",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnNK3xaathMhfxURGNqsj77P",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "5.20 课题讲解",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnF5XdSXMkYRvqE0UOJIxElf",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "5.21 导师分配",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnKFvGpTgX8ZzixA0drqaMrb",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "5.20 - 6.10  课题挑战",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcn1u5IPXK6dHj7xzLNyFVb7d",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "6.11 - 6.12 项目演示",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcngC2529msKJXD6n6JhvRpXd",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "颁奖&面聊",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnUAGmrWEUInuLaKn73Dfezd",
+    "block_type": 12,
+    "bullet": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "成功入职",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnW8LlGHDpptfhGTBVhOFUDb",
+    "block_type": 2,
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnwUtaAqM1VaXu5TuS10w6Pb",
+    "block_type": 3,
+    "heading1": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "答疑",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    },
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcnZZqNidRQPKKjOTfNQ1R0Uh",
+    "block_type": 2,
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcniw1KpivH2QEDJlZ9qul8Kg",
+    "block_type": 19,
+    "callout": {
+      "background_color": 4,
+      "border_color": 4,
+      "emoji_id": "tada"
+    },
+    "children": [
+      "doxcn0tJBOnZoCaItlvNs1IknUE",
+      "doxcnuM3xVSMUTzy4xS5v81OOHb",
+      "doxcn6yF5ukloIg8fxxznnSf1xe",
+      "doxcnc5GZTMbg505Bgr7j4ZBNhd"
+    ],
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh"
+  },
+  {
+    "block_id": "doxcn0tJBOnZoCaItlvNs1IknUE",
+    "block_type": 2,
+    "parent_id": "doxcniw1KpivH2QEDJlZ9qul8Kg",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "准备好了吗？",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnuM3xVSMUTzy4xS5v81OOHb",
+    "block_type": 2,
+    "parent_id": "doxcniw1KpivH2QEDJlZ9qul8Kg",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "这不仅仅是一个课题，而是一次",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "全栈工程师的实战演练",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": "。当你看到自己的系统在模拟的高并发场景下稳定运行，当看到实时排名秒级刷新、竞拍氛围紧张刺激——那种成就感，将是你技术成长路上最珍贵的记忆。",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcn6yF5ukloIg8fxxznnSf1xe",
+    "block_type": 2,
+    "parent_id": "doxcniw1KpivH2QEDJlZ9qul8Kg",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "现在，打开你的 IDE，开始这段精彩的旅程吧！",
+            "text_element_style": {
+              "bold": true,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        },
+        {
+          "text_run": {
+            "content": " 🚀🔥",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnc5GZTMbg505Bgr7j4ZBNhd",
+    "block_type": 2,
+    "parent_id": "doxcniw1KpivH2QEDJlZ9qul8Kg",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "有任何问题，随时联系导师团队，我们随时为你答疑解惑！",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  },
+  {
+    "block_id": "doxcnwU4SJwr4mxaZKF6woACb2g",
+    "block_type": 2,
+    "parent_id": "Efo8d91f5oIWMrxbY3jcrVy4nRh",
+    "text": {
+      "elements": [
+        {
+          "text_run": {
+            "content": "",
+            "text_element_style": {
+              "bold": false,
+              "inline_code": false,
+              "italic": false,
+              "strikethrough": false,
+              "underline": false
+            }
+          }
+        }
+      ],
+      "style": {
+        "align": 1,
+        "folded": false
+      }
+    }
+  }
+]

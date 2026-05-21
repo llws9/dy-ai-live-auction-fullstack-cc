@@ -1,0 +1,76 @@
+{
+  "$schema_comment": "Skill-managed runtime baseline. Do NOT hand-edit unless you are bumping the apitest runtime version per apitest.md §5.",
+  "name": "apitest",
+  "version": "1.2.1",
+  "destination": "tests/integration/apitest",
+  "go_import_path": "<go list -m>/tests/integration/apitest",
+  "source_commit": "5ef88f26147e9bd345167602ee44100af20175d1",
+  "source_repo": "git@code.byted.org:tns/tsop_ms_api.git",
+  "files": [
+    {
+      "name": "version.go",
+      "sha256": "965a4de28975ce07b99a3530289f8695cd684cbe0dbb688556fd8fec464184d2"
+    },
+    {
+      "name": "fixture.go",
+      "sha256": "6ef2378efcd3c389db19d3f038e91647281744d057867c46224d5acab1b3dedb"
+    },
+    {
+      "name": "facade.go",
+      "sha256": "f0279aae00f79b6a289794e997cf17555d0cca5cfecdcb450e6ec456f90d699e"
+    },
+    {
+      "name": "runner.go",
+      "sha256": "4bf3f762134cd16e7325028bcb6bf52a416f49ecdf4324cde59a80adee124433"
+    },
+    {
+      "name": "models.go",
+      "sha256": "ff682540345ba514c6b3405ce05ad2aee1b2ae9d9b90edd71f82ce6da0f371e8"
+    },
+    {
+      "name": "gateway.go",
+      "sha256": "4a165c0123c8084c6c92154c7d664651c1b8583834a9fbf7df7573f4eed84a9f"
+    },
+    {
+      "name": "assert.go",
+      "sha256": "0c64834b9b6ccceb16b146667c3eb36506da312762cbfcd5bd5e49d37e3c6dac"
+    },
+    {
+      "name": "jsonpath.go",
+      "sha256": "01e1ef2fe2b04bf0d040514c81feb7d83a031b7dcb10ddaff8861857cc8674d9"
+    },
+    {
+      "name": "vars.go",
+      "sha256": "b6886e3b677281e173df06792d55547789be90a32f72247383433e3907919f1e"
+    },
+    {
+      "name": "extract.go",
+      "sha256": "9058736bd3476426fdd53472d89a32a8e087da53bdd9f33cb4b316e2affc9812"
+    },
+    {
+      "name": "env.go",
+      "sha256": "07e56a9960d84ba6dd80365df054d22a9af4d3b52bd88343c432d746894e5163"
+    },
+    {
+      "name": "header_inject.go",
+      "sha256": "a6f58adae53a330a502d16e2c8204647588645c936d186e966660e351f1b9f4d"
+    },
+    {
+      "name": "log.go",
+      "sha256": "e4303bad76d7ef1f8c318f5bb798a942c7e54b7774cd24af7744cd5df108bb09"
+    },
+    {
+      "name": "README.md",
+      "sha256": "80da4cc8beea4cd19f739a5fbf28e48b6b8800f01d60cab851842379329cc7e3"
+    }
+  ],
+  "breaking_changes": [
+    {
+      "from": "1.1.9",
+      "to": "1.2.0",
+      "summary": "Add fixture helpers (UniqueName, NowSec/Milli/Micro, PastSec/Milli/Micro, FutureSec, RandString, RandInt, PickOne, Sample) for dynamic test data construction and per-env business sample lookup.",
+      "migration_hint": "Additive only — existing tests keep compiling. New tests should use apitest.UniqueName/Now*/Rand*/PickOne for fields with replay collisions or randomness, and declare a package-level `var envSamples = map[string]map[string]string{...}` plus apitest.Sample(t, env, key, envSamples) for env-specific business values that cannot be chained from a List/Query."
+    }
+  ],
+  "min_skill_contract": "v1"
+}

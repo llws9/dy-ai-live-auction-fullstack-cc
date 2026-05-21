@@ -1,0 +1,7 @@
+- generic [ref=e4]:
+  - heading "热门竞拍" [level=1] [ref=e5]
+  - 'link "进行中 ¥150.00 竞拍ID: 1" [ref=e7] [cursor=pointer]':
+    - /url: /auction/1
+    - generic [ref=e8]: 进行中
+    - generic [ref=e9]: ¥150.00
+    - generic [ref=e10]: "竞拍ID: 1"

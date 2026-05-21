@@ -1,0 +1,29 @@
+package model
+
+import "time"
+
+// OrderStatus 订单状态
+type OrderStatus int
+
+const (
+	OrderStatusPending   OrderStatus = 0 // 待支付
+	OrderStatusPaid      OrderStatus = 1 // 已支付
+	OrderStatusShipped   OrderStatus = 2 // 已发货
+	OrderStatusCompleted OrderStatus = 3 // 已完成
+)
+
+// Order 订单模型
+type Order struct {
+	ID          int64        `json:"id" gorm:"primaryKey;autoIncrement"`
+	AuctionID   int64        `json:"auction_id" gorm:"not null"`
+	ProductID   int64        `json:"product_id" gorm:"not null"`
+	WinnerID    int64        `json:"winner_id" gorm:"not null"`
+	FinalPrice  float64      `json:"final_price" gorm:"type:decimal(10,2);not null"`
+	Status      OrderStatus  `json:"status" gorm:"type:tinyint;default:0"`
+	CreatedAt   time.Time    `json:"created_at" gorm:"autoCreateTime"`
+}
+
+// TableName 指定表名
+func (Order) TableName() string {
+	return "orders"
+}
