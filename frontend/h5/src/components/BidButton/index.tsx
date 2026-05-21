@@ -1,6 +1,7 @@
 // components/BidButton/index.tsx
 
 import React, { useState, useCallback } from 'react';
+import { useAuth } from '../../store/authContext';
 
 interface BidButtonProps {
   auctionId: number;
@@ -15,6 +16,7 @@ const BidButton: React.FC<BidButtonProps> = ({
   increment,
   onBidSuccess,
 }) => {
+  const { token, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [customAmount, setCustomAmount] = useState<string>('');
@@ -32,6 +34,11 @@ const BidButton: React.FC<BidButtonProps> = ({
   };
 
   const placeBid = async (amount: number) => {
+    if (!isAuthenticated) {
+      setMessage({ text: '请先登录', type: 'error' });
+      return;
+    }
+
     setLoading(true);
     setMessage(null);
 
@@ -40,7 +47,7 @@ const BidButton: React.FC<BidButtonProps> = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-ID': '1',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ amount }),
       });

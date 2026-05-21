@@ -49,12 +49,16 @@ func (h *BidHandler) PlaceBid(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// 从上下文获取用户 ID（简化实现，实际应从 JWT 或 Session 获取）
-	userIDStr := c.GetHeader("X-User-ID")
-	userID, err := strconv.ParseInt(string(userIDStr), 10, 64)
-	if err != nil {
-		userID = 1 // 默认用户 ID，实际应该返回未登录错误
+	// 从JWT上下文获取用户ID
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, map[string]interface{}{
+			"code":    401,
+			"message": "未认证，请先登录",
+		})
+		return
 	}
+	userID := userIDInterface.(int64)
 
 	// 调用服务层出价
 	result, err := h.bidService.PlaceBid(ctx, &service.PlaceBidRequest{

@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -57,8 +58,17 @@ func main() {
 	wsHandler := handler.NewWSHandler()
 	userHandler := handler.NewUserHandler(userDAO)
 
-	// 设置 WebSocket Hub 到 Handler
+	// 初始化认证 Handler
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "your-secret-key-change-in-production" // 默认密钥，生产环境应使用环境变量
+	}
+	jwtExpire := 24 // 24小时
+	authHandler := handler.NewAuthHandler(userDAO, jwtSecret, jwtExpire)
+
+	// 设置 WebSocket Hub 和 JWT 密钥到 Handler
 	wsHandler.SetHub(hub)
+	wsHandler.SetJWTSecret(jwtSecret)
 
 	// 启动状态转换定时任务
 	scheduler := service.NewScheduler(auctionService)
@@ -74,7 +84,7 @@ func main() {
 	)
 
 	// 注册路由
-	registerRoutes(h, auctionHandler, bidHandler, wsHandler, userHandler)
+	registerRoutes(h, auctionHandler, bidHandler, wsHandler, userHandler, authHandler)
 
 	// 启动服务
 	log.Println("Auction service starting on :8082 (HTTP) and :8083 (WebSocket)")
@@ -126,10 +136,15 @@ func startWebSocketServer(hub *websocket.Hub, wsHandler *handler.WSHandler) {
 }
 
 // registerRoutes 注册路由
-func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bidHandler *handler.BidHandler, wsHandler *handler.WSHandler, userHandler *handler.UserHandler) {
+func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bidHandler *handler.BidHandler, wsHandler *handler.WSHandler, userHandler *handler.UserHandler, authHandler *handler.AuthHandler) {
 	v1 := h.Group("/api/v1")
 
-	// 用户管理相关路由
+	// ========== 认证相关路由 ==========
+	v1.POST("/auth/register", authHandler.Register)
+	v1.POST("/auth/login", authHandler.Login)
+	v1.GET("/users/me", authHandler.GetCurrentUser)
+
+	// 用户管理相关路由（保留用于测试）
 	v1.POST("/users", userHandler.CreateUser)
 	v1.POST("/users/batch", userHandler.BatchCreateUsers)
 

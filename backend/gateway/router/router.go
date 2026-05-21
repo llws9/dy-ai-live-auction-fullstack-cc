@@ -8,6 +8,7 @@ import (
 
 	"gateway-service/config"
 	"gateway-service/handler"
+	"gateway-service/middleware"
 )
 
 // RegisterRoutes 注册所有路由
@@ -26,6 +27,17 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config) {
 	}))
 	h.GET("/metrics", handler.Metrics("gateway"))
 
+	// ========== 认证路由（无需JWT） ==========
+	v1.POST("/auth/register", auctionProxy.Forward)
+	v1.POST("/auth/login", auctionProxy.Forward)
+
+	// ========== 需要JWT认证的路由 ==========
+	authGroup := v1.Group("")
+	authGroup.Use(middleware.JWTAuth(cfg.JWT.Secret))
+
+	// 用户信息
+	authGroup.GET("/users/me", auctionProxy.Forward)
+
 	// ========== 商品服务路由 ==========
 	v1.GET("/products", productProxy.Forward)
 	v1.GET("/products/:id", productProxy.Forward)
@@ -41,7 +53,9 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config) {
 	v1.POST("/auctions", auctionProxy.Forward)
 	v1.PUT("/auctions/:id/cancel", auctionProxy.Forward)
 	v1.GET("/auctions/:id/result", auctionProxy.Forward)
-	v1.POST("/auctions/:id/bids", auctionProxy.Forward)
+
+	// 出价需要认证
+	authGroup.POST("/auctions/:id/bids", auctionProxy.Forward)
 	v1.GET("/auctions/:id/ranking", auctionProxy.Forward)
 
 	// ========== WebSocket 路由 ==========

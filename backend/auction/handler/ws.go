@@ -2,11 +2,13 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 	ws "auction-service/websocket"
 )
@@ -24,7 +26,8 @@ var (
 
 // WSHandler WebSocket Handler
 type WSHandler struct {
-	hub *ws.Hub
+	hub       *ws.Hub
+	jwtSecret string
 }
 
 // NewWSHandler 创建 WebSocket Handler
@@ -37,20 +40,44 @@ func (h *WSHandler) SetHub(hub *ws.Hub) {
 	h.hub = hub
 }
 
+// SetJWTSecret 设置 JWT 密钥
+func (h *WSHandler) SetJWTSecret(secret string) {
+	h.jwtSecret = secret
+}
+
 // HandleWebSocket 处理 WebSocket 连接
 func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.ResponseWriter, r *http.Request) {
+	// 获取用户ID（优先从token验证）
+	var userID int64
+
+	// 尝试从token参数验证
+	tokenStr := r.URL.Query().Get("token")
+	if tokenStr != "" && h.jwtSecret != "" {
+		claims, err := h.validateToken(tokenStr)
+		if err == nil && claims != nil {
+			userID = claims.UserID
+		} else {
+			log.Printf("WebSocket auth failed: %v", err)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+	} else {
+		// 兼容旧方式（user_id参数），但不推荐
+		userIDStr := r.URL.Query().Get("user_id")
+		var err error
+		userID, err = strconv.ParseInt(userIDStr, 10, 64)
+		if err != nil || userID == 0 {
+			// 如果没有token也没有user_id，拒绝连接
+			http.Error(w, "Missing authentication", http.StatusUnauthorized)
+			return
+		}
+	}
+
 	// 升级 HTTP 连接为 WebSocket
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("WebSocket upgrade error: %v", err)
 		return
-	}
-
-	// 获取用户 ID
-	userIDStr := r.URL.Query().Get("user_id")
-	userID, err := strconv.ParseInt(userIDStr, 10, 64)
-	if err != nil || userID == 0 {
-		userID = time.Now().UnixNano() % 10000 // 生成临时用户ID
 	}
 
 	// 创建客户端
@@ -164,4 +191,33 @@ func BroadcastAuctionEnd(hub *ws.Hub, auctionID int64, winnerID int64, finalPric
 		},
 	}
 	hub.BroadcastToRoom(auctionID, msg)
+}
+
+// JWTClaims JWT声明
+type JWTClaims struct {
+	UserID   int64  `json:"user_id"`
+	Username string `json:"username"`
+	jwt.RegisteredClaims
+}
+
+// validateToken 验证JWT Token
+func (h *WSHandler) validateToken(tokenString string) (*JWTClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(h.jwtSecret), nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	claims, ok := token.Claims.(*JWTClaims)
+	if !ok {
+		return nil, errors.New("invalid claims")
+	}
+
+	return claims, nil
 }

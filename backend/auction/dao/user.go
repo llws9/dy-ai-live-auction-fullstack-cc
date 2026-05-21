@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -56,4 +57,40 @@ func (d *UserDAO) CreateIfNotExists(ctx context.Context, user *model.User) error
 		return nil
 	}
 	return d.Create(ctx, user)
+}
+
+// GetByEmail 根据邮箱获取用户
+func (d *UserDAO) GetByEmail(ctx context.Context, email string) (*model.User, error) {
+	var user model.User
+	err := d.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// GetByPhone 根据手机号获取用户
+func (d *UserDAO) GetByPhone(ctx context.Context, phone string) (*model.User, error) {
+	var user model.User
+	err := d.db.WithContext(ctx).Where("phone = ?", phone).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// UpdateLastLogin 更新最后登录时间
+func (d *UserDAO) UpdateLastLogin(ctx context.Context, userID int64) error {
+	return d.db.WithContext(ctx).
+		Model(&model.User{}).
+		Where("id = ?", userID).
+		Update("last_login_at", time.Now()).Error
+}
+
+// UpdatePassword 更新密码
+func (d *UserDAO) UpdatePassword(ctx context.Context, userID int64, hashedPassword string) error {
+	return d.db.WithContext(ctx).
+		Model(&model.User{}).
+		Where("id = ?", userID).
+		Update("password", hashedPassword).Error
 }

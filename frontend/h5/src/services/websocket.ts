@@ -11,6 +11,7 @@ interface Message {
 class WebSocketService {
   private ws: WebSocket | null = null;
   private auctionId: number;
+  private token: string | null;
   private handlers: Map<string, Set<MessageHandler>> = new Map();
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
@@ -18,8 +19,9 @@ class WebSocketService {
   private pingInterval: NodeJS.Timeout | null = null;
   private isConnecting = false;
 
-  constructor(auctionId: number) {
+  constructor(auctionId: number, token?: string) {
     this.auctionId = auctionId;
+    this.token = token || null;
   }
 
   connect(): Promise<void> {
@@ -34,7 +36,12 @@ class WebSocketService {
       }
 
       this.isConnecting = true;
-      const wsUrl = `ws://${window.location.host}/api/v1/ws?auction_id=${this.auctionId}`;
+
+      // 构建WebSocket URL，添加token参数
+      let wsUrl = `ws://${window.location.host}/api/v1/ws?auction_id=${this.auctionId}`;
+      if (this.token) {
+        wsUrl += `&token=${encodeURIComponent(this.token)}`;
+      }
 
       this.ws = new WebSocket(wsUrl);
 

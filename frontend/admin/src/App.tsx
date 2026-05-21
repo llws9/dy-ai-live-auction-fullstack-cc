@@ -1,4 +1,6 @@
-import { Routes, Route, Link, useLocation } from 'react-router-dom'
+import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom'
+import { AdminAuthProvider, useAdminAuth } from './store/authContext'
+import AdminLogin from './pages/Login'
 import ProductList from './pages/Product/List'
 import ProductCreate from './pages/Product/Create'
 import RuleConfig from './pages/Product/RuleConfig'
@@ -6,7 +8,22 @@ import AuctionList from './pages/Auction/List'
 import AuctionDetail from './pages/Auction/Detail'
 import OrderList from './pages/Order/List'
 
-function App() {
+// 管理员认证保护组件
+function PrivateRoute({ children }: { children: React.ReactElement }) {
+  const { isAuthenticated, isAdmin, loading } = useAdminAuth()
+
+  if (loading) {
+    return <div style={{ padding: '20px', textAlign: 'center' }}>加载中...</div>
+  }
+
+  if (!isAuthenticated || !isAdmin) {
+    return <Navigate to="/admin-login" replace />
+  }
+
+  return children
+}
+
+function AppContent() {
   const location = useLocation()
 
   const navItems = [
@@ -42,16 +59,55 @@ function App() {
       </nav>
       <main className="content">
         <Routes>
-          <Route path="/" element={<ProductList />} />
-          <Route path="/products" element={<ProductList />} />
-          <Route path="/products/create" element={<ProductCreate />} />
-          <Route path="/products/:id/rules" element={<RuleConfig />} />
-          <Route path="/auctions" element={<AuctionList />} />
-          <Route path="/auctions/:id" element={<AuctionDetail />} />
-          <Route path="/orders" element={<OrderList />} />
+          <Route path="/" element={
+            <PrivateRoute>
+              <ProductList />
+            </PrivateRoute>
+          } />
+          <Route path="/products" element={
+            <PrivateRoute>
+              <ProductList />
+            </PrivateRoute>
+          } />
+          <Route path="/products/create" element={
+            <PrivateRoute>
+              <ProductCreate />
+            </PrivateRoute>
+          } />
+          <Route path="/products/:id/rules" element={
+            <PrivateRoute>
+              <RuleConfig />
+            </PrivateRoute>
+          } />
+          <Route path="/auctions" element={
+            <PrivateRoute>
+              <AuctionList />
+            </PrivateRoute>
+          } />
+          <Route path="/auctions/:id" element={
+            <PrivateRoute>
+              <AuctionDetail />
+            </PrivateRoute>
+          } />
+          <Route path="/orders" element={
+            <PrivateRoute>
+              <OrderList />
+            </PrivateRoute>
+          } />
         </Routes>
       </main>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <AdminAuthProvider>
+      <Routes>
+        <Route path="/admin-login" element={<AdminLogin />} />
+        <Route path="/*" element={<AppContent />} />
+      </Routes>
+    </AdminAuthProvider>
   )
 }
 
