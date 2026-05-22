@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -26,14 +27,16 @@ const (
 
 // Client WebSocket 客户端
 type Client struct {
-	ID        string
-	AuctionID int64
-	UserID    int64
+	ID          string
+	AuctionID   int64
+	UserID      int64
+	ConnectedAt time.Time
 
 	conn *websocket.Conn
 	Send chan *Message
 
-	hub *Hub
+	hub          *Hub
+	stateManager *StateManager
 
 	closeOnce sync.Once
 	closed    bool
@@ -41,14 +44,47 @@ type Client struct {
 
 // NewClient 创建客户端
 func NewClient(id string, auctionID, userID int64, conn *websocket.Conn, hub *Hub) *Client {
-	return &Client{
-		ID:        id,
-		AuctionID: auctionID,
-		UserID:    userID,
-		conn:      conn,
-		Send:      make(chan *Message, sendBufferSize),
-		hub:       hub,
+	now := time.Now()
+	client := &Client{
+		ID:          id,
+		AuctionID:   auctionID,
+		UserID:      userID,
+		ConnectedAt: now,
+		conn:        conn,
+		Send:        make(chan *Message, sendBufferSize),
+		hub:         hub,
 	}
+
+	// 保存连接状态到 Redis
+	if hub != nil && hub.GetStateManager() != nil {
+		sm := hub.GetStateManager()
+		state := &ConnectionState{
+			ClientID:       client.ID,
+			AuctionID:      client.AuctionID,
+			UserID:         client.UserID,
+			ConnectedAt:    client.ConnectedAt,
+			LastPongAt:     client.ConnectedAt,
+			ReconnectCount: 0,
+		}
+
+		ctx := context.Background()
+		// 检查是否为重连
+		existingState, err := sm.GetConnectionState(ctx, client.ID)
+		if err == nil && existingState != nil {
+			state.ReconnectCount = existingState.ReconnectCount + 1
+		}
+
+		if err := sm.SaveConnectionState(ctx, state); err != nil {
+			log.Printf("Failed to save connection state: %v", err)
+		}
+	}
+
+	return client
+}
+
+// SetStateManager 设置状态管理器
+func (c *Client) SetStateManager(sm *StateManager) {
+	c.stateManager = sm
 }
 
 // NewClientSimple 创建客户端（简化版，自动生成ID）
@@ -66,6 +102,13 @@ func NewClientSimple(conn *websocket.Conn, auctionID, userID int64) *Client {
 // ReadPump 读取消息循环
 func (c *Client) ReadPump() {
 	defer func() {
+		// 删除连接状态
+		if c.stateManager != nil {
+			ctx := context.Background()
+			if err := c.stateManager.DeleteConnectionState(ctx, c.ID); err != nil {
+				log.Printf("Failed to delete connection state: %v", err)
+			}
+		}
 		c.hub.Unregister <- c
 	}()
 
@@ -144,9 +187,42 @@ func (c *Client) handleMessage(msg *Message) {
 		// 响应 pong
 		c.Send <- NewPongMessage()
 
+	case MessageTypeSyncRequest:
+		// 处理状态同步请求（重连后）
+		c.handleSyncRequest(msg)
+
 	default:
 		log.Printf("Unknown message type: %s", msg.Type)
 	}
+}
+
+// handleSyncRequest 处理状态同步请求
+func (c *Client) handleSyncRequest(msg *Message) {
+	if c.stateManager == nil {
+		return
+	}
+
+	ctx := context.Background()
+
+	// 获取同步状态
+	syncState, err := c.stateManager.GetSyncState(ctx, c.AuctionID)
+	if err != nil {
+		log.Printf("Failed to get sync state: %v", err)
+		// 返回错误消息
+		c.Send <- NewErrorMessage(500, "Failed to sync state")
+		return
+	}
+
+	// 发送同步响应
+	response := &SyncResponseData{
+		AuctionID:    syncState.AuctionID,
+		CurrentPrice: syncState.CurrentPrice,
+		WinnerID:     syncState.WinnerID,
+		EndTime:      syncState.EndTime.UnixMilli(),
+		Status:       syncState.Status,
+	}
+
+	c.Send <- NewSyncResponseMessage(response)
 }
 
 // Close 关闭客户端连接

@@ -17,6 +17,7 @@ const (
 type Auction struct {
 	ID           int64          `json:"id" gorm:"primaryKey;autoIncrement"`
 	ProductID    int64          `json:"product_id" gorm:"index;not null"`
+	CreatorID    *int64         `json:"creator_id" gorm:"index"` // 竞拍创建者ID（主播）
 	Status       AuctionStatus  `json:"status" gorm:"type:tinyint;default:0"`
 	CurrentPrice float64        `json:"current_price" gorm:"type:decimal(10,2);default:0"`
 	WinnerID     *int64         `json:"winner_id"`

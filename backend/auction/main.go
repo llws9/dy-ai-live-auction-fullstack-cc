@@ -45,8 +45,11 @@ func main() {
 
 	// 初始化 WebSocket Hub
 	hub := websocket.NewHub()
-	go hub.Run()
-	defer hub.Stop()
+
+	// 创建 WebSocketManager 统一管理 Hub 和 StateManager
+	wsManager := websocket.NewWebSocketManager(hub, dao.GetRedis())
+	wsManager.Run()
+	defer wsManager.Stop()
 
 	// 初始化 Service 层
 	auctionService := service.NewAuctionService(auctionDAO)
@@ -72,6 +75,7 @@ func main() {
 
 	// 启动状态转换定时任务
 	scheduler := service.NewScheduler(auctionService)
+	scheduler.SetHub(hub)
 	scheduler.Start()
 	defer scheduler.Stop()
 

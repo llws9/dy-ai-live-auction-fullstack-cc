@@ -10,13 +10,15 @@ import (
 
 // OrderService 订单服务
 type OrderService struct {
-	orderDAO *dao.OrderDAO
+	orderDAO     *dao.OrderDAO
+	historyDAO   *dao.HistoryDAO
 }
 
 // NewOrderService 创建订单服务
-func NewOrderService(orderDAO *dao.OrderDAO) *OrderService {
+func NewOrderService(orderDAO *dao.OrderDAO, historyDAO *dao.HistoryDAO) *OrderService {
 	return &OrderService{
-		orderDAO: orderDAO,
+		orderDAO:   orderDAO,
+		historyDAO: historyDAO,
 	}
 }
 
@@ -81,4 +83,24 @@ func (s *OrderService) ShipOrder(ctx context.Context, id int64) (*model.Order, e
 	}
 
 	return s.orderDAO.GetByID(ctx, id)
+}
+
+// GetUserHistory 获取用户竞拍历史
+func (s *OrderService) GetUserHistory(ctx context.Context, userID int64, page, pageSize int) ([]dao.UserHistoryItem, int64, error) {
+	// 使用 HistoryDAO 查询真实数据
+	if s.historyDAO != nil {
+		items, total, err := s.historyDAO.QueryUserHistory(ctx, userID, page, pageSize)
+		if err != nil {
+			// 尝试使用备用方案
+			items, total, err = s.historyDAO.QueryUserHistoryGORM(ctx, userID, page, pageSize)
+			if err != nil {
+				return nil, 0, err
+			}
+		}
+
+		return items, total, nil
+	}
+
+	// 降级：返回空列表
+	return []dao.UserHistoryItem{}, 0, nil
 }

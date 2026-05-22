@@ -162,3 +162,9 @@ func (s *AuctionService) ListAuctions(ctx context.Context, status *model.Auction
 func (s *AuctionService) ListAllAuctions(ctx context.Context) ([]model.Auction, error) {
 	return s.auctionDAO.ListAll(ctx)
 }
+
+// GetAuctionsByStatus 根据状态获取竞拍列表
+func (s *AuctionService) GetAuctionsByStatus(ctx context.Context, status int) ([]model.Auction, error) {
+	slice, _, err := s.auctionDAO.List(ctx, (*model.AuctionStatus)(&status), 1, 1000)
+	return slice, err
+}

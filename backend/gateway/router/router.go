@@ -50,8 +50,10 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config) {
 	// ========== 竞拍服务路由 ==========
 	v1.GET("/auctions", auctionProxy.Forward)
 	v1.GET("/auctions/:id", auctionProxy.Forward)
-	v1.POST("/auctions", auctionProxy.Forward)
-	v1.PUT("/auctions/:id/cancel", auctionProxy.Forward)
+	// 创建竞拍需要主播或管理员权限
+	authGroup.POST("/auctions", middleware.RequireStreamer(), auctionProxy.Forward)
+	// 取消竞拍需要主播或管理员权限
+	authGroup.PUT("/auctions/:id/cancel", middleware.RequireStreamer(), auctionProxy.Forward)
 	v1.GET("/auctions/:id/result", auctionProxy.Forward)
 
 	// 出价需要认证

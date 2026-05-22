@@ -13,6 +13,7 @@ import (
 type JWTClaims struct {
 	UserID   int64  `json:"user_id"`
 	Username string `json:"username"`
+	Role     int    `json:"role"` // 用户角色: 0=普通用户, 1=主播, 2=管理员
 	jwt.RegisteredClaims
 }
 
@@ -77,6 +78,7 @@ func JWTAuth(secret string) app.HandlerFunc {
 		// 将用户信息存入上下文
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
+		c.Set("user_role", claims.Role)
 
 		c.Next(ctx)
 	}
@@ -111,6 +113,7 @@ func OptionalJWTAuth(secret string) app.HandlerFunc {
 		if claims, ok := token.Claims.(*JWTClaims); ok {
 			c.Set("user_id", claims.UserID)
 			c.Set("username", claims.Username)
+			c.Set("user_role", claims.Role)
 		}
 
 		c.Next(ctx)
@@ -118,10 +121,11 @@ func OptionalJWTAuth(secret string) app.HandlerFunc {
 }
 
 // GenerateToken 生成 JWT Token
-func GenerateToken(secret string, userID int64, username string, expireHours int) (string, error) {
+func GenerateToken(secret string, userID int64, username string, role int, expireHours int) (string, error) {
 	claims := &JWTClaims{
 		UserID:   userID,
 		Username: username,
+		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(expireHours) * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

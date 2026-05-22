@@ -14,6 +14,8 @@ type Hub struct {
 	Unregister chan *Client
 	broadcast  chan *BroadcastMessage
 
+	stateManager *StateManager // 状态管理器
+
 	done chan struct{}
 }
 
@@ -32,6 +34,16 @@ func NewHub() *Hub {
 		broadcast:  make(chan *BroadcastMessage, 1024),
 		done:       make(chan struct{}),
 	}
+}
+
+// SetStateManager 设置状态管理器
+func (h *Hub) SetStateManager(sm *StateManager) {
+	h.stateManager = sm
+}
+
+// GetStateManager 获取状态管理器
+func (h *Hub) GetStateManager() *StateManager {
+	return h.stateManager
 }
 
 // Run 运行 Hub
