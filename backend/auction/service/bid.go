@@ -7,24 +7,39 @@ import (
 	"auction-service/dao"
 	"auction-service/lock"
 	"auction-service/model"
+	"auction-service/websocket"
 )
 
 // BidService 出价服务
 type BidService struct {
-	auctionDAO *dao.AuctionDAO
-	bidDAO     *dao.BidDAO
-	ruleDAO    *dao.AuctionRuleDAO
-	userDAO    *dao.UserDAO
+	auctionDAO         *dao.AuctionDAO
+	bidDAO             *dao.BidDAO
+	ruleDAO            *dao.AuctionRuleDAO
+	userDAO            *dao.UserDAO
+	hub                *websocket.Hub
+	rankThrottle       *RankingThrottle
+	notificationSender NotificationSender // 通知发送接口
 }
 
 // NewBidService 创建出价服务
 func NewBidService(auctionDAO *dao.AuctionDAO, bidDAO *dao.BidDAO, ruleDAO *dao.AuctionRuleDAO, userDAO *dao.UserDAO) *BidService {
 	return &BidService{
-		auctionDAO: auctionDAO,
-		bidDAO:     bidDAO,
-		ruleDAO:    ruleDAO,
-		userDAO:    userDAO,
+		auctionDAO:   auctionDAO,
+		bidDAO:       bidDAO,
+		ruleDAO:      ruleDAO,
+		userDAO:      userDAO,
+		rankThrottle: NewRankingThrottle(),
 	}
+}
+
+// SetHub 设置 WebSocket Hub
+func (s *BidService) SetHub(hub *websocket.Hub) {
+	s.hub = hub
+}
+
+// SetNotificationSender 设置通知发送服务
+func (s *BidService) SetNotificationSender(sender NotificationSender) {
+	s.notificationSender = sender
 }
 
 // PlaceBidRequest 出价请求
@@ -132,8 +147,57 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 	}
 
 	// 11. 更新竞拍当前价格和中标者
+	// 保存前中标者信息，用于发送出价超越通知
+	previousWinnerID := auction.WinnerID
+	previousPrice := auction.CurrentPrice
+
 	if err := s.auctionDAO.UpdatePrice(ctx, req.AuctionID, req.Amount, req.UserID); err != nil {
 		return nil, fmt.Errorf("更新竞拍价格失败: %w", err)
+	}
+
+	// 11.1 发送出价超越通知
+	if s.notificationSender != nil && previousWinnerID != nil && *previousWinnerID > 0 && *previousWinnerID != req.UserID {
+		notifyUserID := *previousWinnerID
+		go func() {
+			// 异步发送通知，不阻塞主流程
+			_ = s.notificationSender.SendNotification(ctx, &model.NotificationRequest{
+				UserID:  notifyUserID,
+				Type:    model.NotificationTypeBidOutbid,
+				Title:   "出价被超越",
+				Content: fmt.Sprintf("您在竞拍中的出价 %.2f 元已被超越，当前最高价为 %.2f 元", previousPrice, req.Amount),
+				Data: map[string]interface{}{
+					"auction_id": req.AuctionID,
+					"old_bid":    previousPrice,
+					"new_bid":    req.Amount,
+				},
+			})
+		}()
+	}
+
+	// 11.5 检查并触发延时
+	if rule.TriggerDelayBefore > 0 {
+		// 重新获取竞拍信息
+		auction, err = s.auctionDAO.GetByID(ctx, req.AuctionID)
+		if err == nil {
+			sm := NewStateMachine(auction)
+			if sm.ShouldTriggerDelay(rule.TriggerDelayBefore) && sm.CanDelay(rule.MaxDelayTime) {
+				// 计算可延时时长
+				remainingDelay := sm.GetRemainingDelayTime(rule.MaxDelayTime)
+				actualDelay := rule.DelayDuration
+				if actualDelay > remainingDelay {
+					actualDelay = remainingDelay
+				}
+
+				// 执行延时
+				if err := s.auctionDAO.ExtendEndTime(ctx, req.AuctionID, actualDelay); err == nil {
+					// 更新状态为延时中
+					if auction.Status == model.AuctionStatusOngoing {
+						s.auctionDAO.UpdateStatus(ctx, req.AuctionID, model.AuctionStatusDelayed)
+					}
+					fmt.Printf("Auction %d delayed by %d seconds\n", req.AuctionID, actualDelay)
+				}
+			}
+		}
 	}
 
 	// 12. 获取用户排名
@@ -142,7 +206,10 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 		rank = 1 // 默认第一名
 	}
 
-	// 13. 返回成功结果
+	// 13. 广播排名更新
+	s.broadcastRanking(ctx, req.AuctionID)
+
+	// 14. 返回成功结果
 	return &PlaceBidResult{
 		Success:      true,
 		Message:      "出价成功",
@@ -206,4 +273,44 @@ func (s *BidService) GetRanking(ctx context.Context, auctionID int64, limit int)
 		limit = 10
 	}
 	return s.bidDAO.GetRanking(ctx, auctionID, limit)
+}
+
+// broadcastRanking 广播排名更新
+func (s *BidService) broadcastRanking(ctx context.Context, auctionID int64) {
+	if s.hub == nil {
+		return
+	}
+
+	// 节流检查：每 200ms 最多推送一次
+	if !s.rankThrottle.ShouldSend(auctionID) {
+		return
+	}
+
+	// 获取排名列表
+	bids, err := s.bidDAO.GetRanking(ctx, auctionID, 10)
+	if err != nil {
+		return
+	}
+
+	// 转换为排名项
+	rankItems := make([]websocket.RankItem, len(bids))
+	for i, bid := range bids {
+		rankItems[i] = websocket.RankItem{
+			Rank:   i + 1,
+			UserID: bid.UserID,
+			Amount: bid.Amount,
+		}
+
+		// 获取用户名
+		if s.userDAO != nil {
+			user, err := s.userDAO.GetByID(ctx, bid.UserID)
+			if err == nil {
+				rankItems[i].UserName = user.Name
+			}
+		}
+	}
+
+	// 广播排名更新消息
+	message := websocket.NewRankUpdateMessage(auctionID, rankItems)
+	s.hub.BroadcastToRoom(auctionID, message)
 }

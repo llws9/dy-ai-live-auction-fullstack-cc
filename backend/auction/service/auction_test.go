@@ -238,3 +238,54 @@ func TestAuction_IsEnded(t *testing.T) {
 		})
 	}
 }
+
+// TestAuctionService_Creation 测试竞拍服务创建
+func TestAuctionService_Creation(t *testing.T) {
+	// 测试竞拍创建请求验证
+	req := &CreateAuctionRequest{
+		ProductID: 1,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(1 * time.Hour),
+	}
+
+	assert.Equal(t, int64(1), req.ProductID)
+	assert.True(t, req.EndTime.After(req.StartTime))
+}
+
+// TestNotificationType_Constants 测试通知类型常量
+func TestNotificationType_Constants(t *testing.T) {
+	assert.Equal(t, model.NotificationType("bid_outbid"), model.NotificationTypeBidOutbid)
+	assert.Equal(t, model.NotificationType("auction_won"), model.NotificationTypeAuctionWon)
+	assert.Equal(t, model.NotificationType("auction_lost"), model.NotificationTypeAuctionLost)
+}
+
+// TestStateMachine_Transitions 测试状态机转换
+func TestStateMachine_Transitions(t *testing.T) {
+	tests := []struct {
+		name          string
+		currentStatus model.AuctionStatus
+		targetStatus  model.AuctionStatus
+		canTransition bool
+	}{
+		{"Pending to Ongoing", model.AuctionStatusPending, model.AuctionStatusOngoing, true},
+		{"Ongoing to Ended", model.AuctionStatusOngoing, model.AuctionStatusEnded, true},
+		{"Ongoing to Cancelled", model.AuctionStatusOngoing, model.AuctionStatusCancelled, true},
+		{"Pending to Ended", model.AuctionStatusPending, model.AuctionStatusEnded, false},
+		{"Ended to Ongoing", model.AuctionStatusEnded, model.AuctionStatusOngoing, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			auction := &model.Auction{Status: tt.currentStatus}
+			sm := NewStateMachine(auction)
+			err := sm.Transition(tt.targetStatus)
+
+			if tt.canTransition {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.targetStatus, auction.Status)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}

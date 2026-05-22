@@ -6,7 +6,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/hertz-contrib/cors"
-
+	_ "gateway-service/docs" // Swagger docs
 	"gateway-service/config"
 	"gateway-service/dao"
 	"gateway-service/middleware"

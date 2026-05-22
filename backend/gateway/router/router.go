@@ -5,6 +5,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
+	docs "gateway-service/docs"
 
 	"gateway-service/config"
 	"gateway-service/handler"
@@ -16,6 +17,9 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config) {
 	// 创建代理处理器
 	productProxy := handler.NewProxyHandler(cfg.Services.ProductURL)
 	auctionProxy := handler.NewProxyHandler(cfg.Services.AuctionURL)
+
+	// ========== Swagger 文档 ==========
+	docs.Register(h)
 
 	v1 := h.Group("/api/v1")
 

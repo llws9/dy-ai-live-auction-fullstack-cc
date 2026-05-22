@@ -3,15 +3,27 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"product-service/dao"
 	"product-service/model"
 )
 
+// NotificationCallback 通知回调接口（用于Mock触发通知）
+type NotificationCallback interface {
+	// OnOrderPaid 订单已支付通知
+	OnOrderPaid(ctx context.Context, userID int64, orderID int64) error
+	// OnOrderShipped 订单已发货通知
+	OnOrderShipped(ctx context.Context, userID int64, orderID int64) error
+	// OnOrderCompleted 订单已完成通知
+	OnOrderCompleted(ctx context.Context, userID int64, orderID int64) error
+}
+
 // OrderService 订单服务
 type OrderService struct {
-	orderDAO     *dao.OrderDAO
-	historyDAO   *dao.HistoryDAO
+	orderDAO           *dao.OrderDAO
+	historyDAO         *dao.HistoryDAO
+	notificationCallback NotificationCallback // 通知回调（Mock触发）
 }
 
 // NewOrderService 创建订单服务
@@ -20,6 +32,11 @@ func NewOrderService(orderDAO *dao.OrderDAO, historyDAO *dao.HistoryDAO) *OrderS
 		orderDAO:   orderDAO,
 		historyDAO: historyDAO,
 	}
+}
+
+// SetNotificationCallback 设置通知回调
+func (s *OrderService) SetNotificationCallback(callback NotificationCallback) {
+	s.notificationCallback = callback
 }
 
 // CreateOrder 创建订单
@@ -64,6 +81,13 @@ func (s *OrderService) PayOrder(ctx context.Context, id int64) (*model.Order, er
 		return nil, err
 	}
 
+	// Mock触发：发送订单已支付通知
+	if s.notificationCallback != nil {
+		go func() {
+			_ = s.notificationCallback.OnOrderPaid(ctx, order.WinnerID, id)
+		}()
+	}
+
 	return s.orderDAO.GetByID(ctx, id)
 }
 
@@ -82,7 +106,57 @@ func (s *OrderService) ShipOrder(ctx context.Context, id int64) (*model.Order, e
 		return nil, err
 	}
 
+	// Mock触发：发送订单已发货通知
+	if s.notificationCallback != nil {
+		go func() {
+			_ = s.notificationCallback.OnOrderShipped(ctx, order.WinnerID, id)
+		}()
+	}
+
 	return s.orderDAO.GetByID(ctx, id)
+}
+
+// CompleteOrder 完成订单（模拟）
+func (s *OrderService) CompleteOrder(ctx context.Context, id int64) (*model.Order, error) {
+	order, err := s.orderDAO.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if order.Status != model.OrderStatusShipped {
+		return nil, errors.New("订单状态不允许完成")
+	}
+
+	if err := s.orderDAO.UpdateStatus(ctx, id, model.OrderStatusCompleted); err != nil {
+		return nil, err
+	}
+
+	// Mock触发：发送订单已完成通知
+	if s.notificationCallback != nil {
+		go func() {
+			_ = s.notificationCallback.OnOrderCompleted(ctx, order.WinnerID, id)
+		}()
+	}
+
+	return s.orderDAO.GetByID(ctx, id)
+}
+
+// MockNotificationCallback Mock通知回调实现（用于测试）
+type MockNotificationCallback struct{}
+
+func (m *MockNotificationCallback) OnOrderPaid(ctx context.Context, userID int64, orderID int64) error {
+	fmt.Printf("[Mock] Order %d paid notification sent to user %d\n", orderID, userID)
+	return nil
+}
+
+func (m *MockNotificationCallback) OnOrderShipped(ctx context.Context, userID int64, orderID int64) error {
+	fmt.Printf("[Mock] Order %d shipped notification sent to user %d\n", orderID, userID)
+	return nil
+}
+
+func (m *MockNotificationCallback) OnOrderCompleted(ctx context.Context, userID int64, orderID int64) error {
+	fmt.Printf("[Mock] Order %d completed notification sent to user %d\n", orderID, userID)
+	return nil
 }
 
 // GetUserHistory 获取用户竞拍历史

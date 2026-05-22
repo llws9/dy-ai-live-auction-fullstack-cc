@@ -1,0 +1,297 @@
+openapi: 3.0.3
+info:
+  title: Statistics API
+  description: 数据统计API，用于管理后台数据大屏和报表
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Development server
+
+paths:
+  /statistics/overview:
+    get:
+      summary: 获取统计总览
+      description: 获取管理后台首页大屏的统计数据
+      tags:
+        - Statistics
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 成功获取统计总览
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OverviewResponse'
+        '401':
+          description: 未授权
+        '403':
+          description: 无权限（需要管理员角色）
+
+  /statistics/auctions:
+    get:
+      summary: 获取竞拍统计
+      description: 获取竞拍相关的统计数据
+      tags:
+        - Statistics
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          description: 开始日期
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          description: 结束日期
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: 成功获取竞拍统计
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuctionStatisticsResponse'
+        '401':
+          description: 未授权
+        '403':
+          description: 无权限
+
+  /statistics/revenue:
+    get:
+      summary: 获取收入统计
+      description: 获取收入相关的统计数据
+      tags:
+        - Statistics
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          description: 开始日期
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          description: 结束日期
+          schema:
+            type: string
+            format: date
+        - name: category
+          in: query
+          description: 商品类目筛选
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功获取收入统计
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevenueStatisticsResponse'
+        '401':
+          description: 未授权
+        '403':
+          description: 无权限
+
+  /statistics/users:
+    get:
+      summary: 获取用户统计
+      description: 获取用户相关的统计数据
+      tags:
+        - Statistics
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          description: 开始日期
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          description: 结束日期
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: 成功获取用户统计
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserStatisticsResponse'
+        '401':
+          description: 未授权
+        '403':
+          description: 无权限
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    OverviewResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: success
+        data:
+          type: object
+          properties:
+            total_auctions:
+              type: integer
+              description: 总竞拍场次
+            success_rate:
+              type: number
+              format: float
+              description: 成功率 (0-1)
+            total_revenue:
+              type: number
+              format: float
+              description: 总成交额
+            total_users:
+              type: integer
+              description: 总用户数
+            active_users:
+              type: integer
+              description: 活跃用户数（近7天）
+
+    AuctionStatisticsResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: success
+        data:
+          type: object
+          properties:
+            total_auctions:
+              type: integer
+              description: 总场次
+            success_rate:
+              type: number
+              format: float
+              description: 成功率
+            avg_bid_count:
+              type: number
+              format: float
+              description: 平均出价次数
+            top_auctions:
+              type: array
+              items:
+                $ref: '#/components/schemas/AuctionSummary'
+
+    AuctionSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        final_price:
+          type: number
+          format: float
+        bid_count:
+          type: integer
+
+    RevenueStatisticsResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: success
+        data:
+          type: object
+          properties:
+            total_revenue:
+              type: number
+              format: float
+              description: 总成交额
+            daily_revenue:
+              type: array
+              items:
+                $ref: '#/components/schemas/DailyRevenue'
+            category_distribution:
+              type: array
+              items:
+                $ref: '#/components/schemas/CategoryRevenue'
+
+    DailyRevenue:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        revenue:
+          type: number
+          format: float
+
+    CategoryRevenue:
+      type: object
+      properties:
+        category:
+          type: string
+        revenue:
+          type: number
+          format: float
+        percentage:
+          type: number
+          format: float
+
+    UserStatisticsResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: success
+        data:
+          type: object
+          properties:
+            total_users:
+              type: integer
+              description: 总用户数
+            active_users:
+              type: integer
+              description: 活跃用户数
+            new_users:
+              type: integer
+              description: 新用户数
+            bid_distribution:
+              type: array
+              items:
+                $ref: '#/components/schemas/BidRange'
+
+    BidRange:
+      type: object
+      properties:
+        range:
+          type: string
+          description: 出价区间 (如 "0-50", "50-100")
+        count:
+          type: integer
+          description: 用户数量

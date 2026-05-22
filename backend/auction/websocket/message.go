@@ -5,17 +5,20 @@ type MessageType string
 
 const (
 	// 客户端 -> 服务端
-	MessageTypePing MessageType = "ping"
+	MessageTypePing        MessageType = "ping"
+	MessageTypeSyncRequest MessageType = "sync_request"
 
 	// 服务端 -> 客户端
-	MessageTypePong          MessageType = "pong"
-	MessageTypeBidPlaced     MessageType = "bid_placed"
-	MessageTypeRankUpdate    MessageType = "rank_update"
-	MessageTypeOvertaken     MessageType = "overtaken"
+	MessageTypePong           MessageType = "pong"
+	MessageTypeBidPlaced      MessageType = "bid_placed"
+	MessageTypeRankUpdate     MessageType = "rank_update"
+	MessageTypeOvertaken      MessageType = "overtaken"
 	MessageTypeDelayTriggered MessageType = "delay_triggered"
-	MessageTypeAuctionEnded  MessageType = "auction_ended"
-	MessageTypeTimeSync      MessageType = "time_sync"
-	MessageTypeError         MessageType = "error"
+	MessageTypeAuctionEnded   MessageType = "auction_ended"
+	MessageTypeTimeSync       MessageType = "time_sync"
+	MessageTypeSyncResponse   MessageType = "sync_response"
+	MessageTypeError          MessageType = "error"
+	MessageTypeNotification   MessageType = "notification" // 通知消息类型
 )
 
 // Message WebSocket 消息基础结构
@@ -81,10 +84,35 @@ type TimeSyncData struct {
 	EndTime    int64 `json:"end_time,omitempty"`
 }
 
+// SyncRequestData 状态同步请求数据
+type SyncRequestData struct {
+	AuctionID int64 `json:"auction_id"`
+}
+
+// SyncResponseData 状态同步响应数据
+type SyncResponseData struct {
+	AuctionID    int64       `json:"auction_id"`
+	CurrentPrice float64     `json:"current_price"`
+	WinnerID     int64       `json:"winner_id"`
+	EndTime      int64       `json:"end_time"`
+	Status       int         `json:"status"`
+	Ranking      []RankItem  `json:"ranking,omitempty"`
+}
+
 // ErrorData 错误数据
 type ErrorData struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
+}
+
+// NotificationData 通知数据
+type NotificationData struct {
+	ID        int64                  `json:"id"`
+	Type      string                 `json:"type"`
+	Title     string                 `json:"title"`
+	Content   string                 `json:"content"`
+	Data      map[string]interface{} `json:"data,omitempty"`
+	CreatedAt int64                  `json:"created_at"`
 }
 
 // NewMessage 创建消息
@@ -140,4 +168,29 @@ func NewErrorMessage(code int, message string) *Message {
 		Code:    code,
 		Message: message,
 	})
+}
+
+// NewSyncRequestMessage 创建同步请求消息
+func NewSyncRequestMessage(auctionID int64) *Message {
+	return NewMessage(MessageTypeSyncRequest, &SyncRequestData{
+		AuctionID: auctionID,
+	})
+}
+
+// NewSyncResponseMessage 创建同步响应消息
+func NewSyncResponseMessage(data *SyncResponseData) *Message {
+	return NewMessage(MessageTypeSyncResponse, data)
+}
+
+// NewRankUpdateMessage 创建排名更新消息
+func NewRankUpdateMessage(auctionID int64, ranking []RankItem) *Message {
+	return NewMessage(MessageTypeRankUpdate, &RankUpdateData{
+		AuctionID: auctionID,
+		Ranking:   ranking,
+	})
+}
+
+// NewNotificationMessage 创建通知消息
+func NewNotificationMessage(data *NotificationData) *Message {
+	return NewMessage(MessageTypeNotification, data)
 }

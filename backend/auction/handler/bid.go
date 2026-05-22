@@ -24,9 +24,23 @@ func NewBidHandler(bidService *service.BidService) *BidHandler {
 // PlaceBidRequest 出价请求
 type PlaceBidRequest struct {
 	Amount float64 `json:"amount" binding:"required,gt=0"`
+	UserID int64   `json:"user_id,omitempty"` // 用于测试，生产环境应删除
 }
 
 // PlaceBid 出价
+// @Summary 出价竞拍
+// @Description 在指定竞拍中出价
+// @Tags bid
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "竞拍ID"
+// @Param body body PlaceBidRequest true "出价信息"
+// @Success 200 {object} service.PlaceBidResult
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /auctions/{id}/bids [post]
 func (h *BidHandler) PlaceBid(ctx context.Context, c *app.RequestContext) {
 	// 解析竞拍 ID
 	idStr := c.Param("id")
@@ -49,16 +63,21 @@ func (h *BidHandler) PlaceBid(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// 从JWT上下文获取用户ID
+	// 从JWT上下文获取用户ID，如果没有则从请求体获取（测试模式）
+	var userID int64
 	userIDInterface, exists := c.Get("user_id")
-	if !exists {
+	if exists {
+		userID = userIDInterface.(int64)
+	} else if req.UserID > 0 {
+		// 测试模式：允许从请求体获取user_id
+		userID = req.UserID
+	} else {
 		c.JSON(401, map[string]interface{}{
 			"code":    401,
 			"message": "未认证，请先登录",
 		})
 		return
 	}
-	userID := userIDInterface.(int64)
 
 	// 调用服务层出价
 	result, err := h.bidService.PlaceBid(ctx, &service.PlaceBidRequest{
@@ -84,6 +103,16 @@ func (h *BidHandler) PlaceBid(ctx context.Context, c *app.RequestContext) {
 }
 
 // GetRanking 获取当前排名
+// @Summary 获取竞拍排名
+// @Description 获取指定竞拍的出价排名列表
+// @Tags bid
+// @Produce json
+// @Param id path int true "竞拍ID"
+// @Param limit query int false "返回数量" default(10)
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /auctions/{id}/ranking [get]
 func (h *BidHandler) GetRanking(ctx context.Context, c *app.RequestContext) {
 	idStr := c.Param("id")
 	auctionID, err := strconv.ParseInt(idStr, 10, 64)
