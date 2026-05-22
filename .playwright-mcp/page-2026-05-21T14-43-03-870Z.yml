@@ -1,0 +1,22 @@
+- generic [ref=e11]:
+  - generic [ref=e12]: 直播画面
+  - generic [ref=e13]:
+    - generic [ref=e14]:
+      - generic [ref=e15]: 当前价格
+      - generic [ref=e16]: ¥170.00
+    - generic [ref=e17]:
+      - generic [ref=e18]: 剩余时间
+      - generic [ref=e19]: 00:00.00
+  - generic [ref=e20]:
+    - generic [ref=e21]:
+      - button "出价 +10元" [ref=e22] [cursor=pointer]
+      - button "加倍 +20元" [ref=e23] [cursor=pointer]
+    - generic [ref=e24]:
+      - spinbutton [ref=e25]
+      - button "确认出价" [ref=e26] [cursor=pointer]
+  - generic [ref=e27]:
+    - heading "竞拍信息" [level=3] [ref=e28]
+    - paragraph [ref=e29]: "竞拍ID: 1"
+    - paragraph [ref=e30]: "状态: 已结束"
+    - paragraph [ref=e31]: "开始时间: 2026/5/21 17:16:31"
+    - paragraph [ref=e32]: "结束时间: 2026/5/21 18:16:31"

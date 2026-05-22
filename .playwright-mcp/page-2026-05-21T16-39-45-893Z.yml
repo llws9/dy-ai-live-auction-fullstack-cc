@@ -1,0 +1,21 @@
+- generic [ref=e4]:
+  - generic [ref=e7]:
+    - img "主播" [ref=e8]
+    - generic [ref=e9]:
+      - generic [ref=e10]: 珍品拍卖专场
+      - generic [ref=e11]: 🔥 12,800人在看
+    - generic [ref=e12]: 直播中
+  - generic [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - text: 🎯 5件竞拍商品
+        - generic [ref=e18]: 3件竞拍中
+      - generic [ref=e19]:
+        - generic [ref=e20]: 当前最高价
+        - text: ¥5,200
+    - generic [ref=e21]:
+      - generic [ref=e22]: 29:57.49
+      - generic [ref=e23]: 剩余时间
+  - generic [ref=e25]:
+    - heading "参与竞拍" [level=3] [ref=e26]
+    - button "✕" [ref=e27] [cursor=pointer]

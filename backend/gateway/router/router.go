@@ -74,6 +74,18 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config) {
 	v1.GET("/orders", productProxy.Forward)
 	v1.GET("/orders/:id", productProxy.Forward)
 	v1.POST("/orders/:id/pay", productProxy.Forward)
+
+	// ========== 通知服务路由 ==========
+	authGroup.GET("/notifications", auctionProxy.Forward)
+	authGroup.GET("/notifications/unread-count", auctionProxy.Forward)
+	authGroup.PUT("/notifications/:id/read", auctionProxy.Forward)
+	authGroup.PUT("/notifications/read-all", auctionProxy.Forward)
+
+	// ========== 统计服务路由（需要管理员权限） ==========
+	authGroup.GET("/statistics/overview", middleware.RequireAdmin(), productProxy.Forward)
+	authGroup.GET("/statistics/auctions", middleware.RequireAdmin(), productProxy.Forward)
+	authGroup.GET("/statistics/revenue", middleware.RequireAdmin(), productProxy.Forward)
+	authGroup.GET("/statistics/users", middleware.RequireAdmin(), productProxy.Forward)
 }
 
 // checkService 检查服务是否可用

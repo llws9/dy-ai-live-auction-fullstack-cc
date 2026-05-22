@@ -1,0 +1,529 @@
+definitions:
+  handler.CreateAuctionRequest:
+    properties:
+      duration:
+        type: integer
+      increment:
+        type: number
+      product_id:
+        type: integer
+      start_price:
+        type: number
+    required:
+    - duration
+    - product_id
+    type: object
+  handler.PlaceBidRequest:
+    properties:
+      amount:
+        type: number
+      user_id:
+        description: 用于测试，生产环境应删除
+        type: integer
+    required:
+    - amount
+    type: object
+  model.Auction:
+    properties:
+      created_at:
+        type: string
+      creator_id:
+        description: 竞拍创建者ID（主播）
+        type: integer
+      current_price:
+        type: number
+      delay_used:
+        description: 已延时秒数
+        type: integer
+      end_time:
+        type: string
+      id:
+        type: integer
+      product_id:
+        type: integer
+      start_time:
+        type: string
+      status:
+        $ref: '#/definitions/model.AuctionStatus'
+      winner_id:
+        type: integer
+    type: object
+  model.AuctionStatus:
+    enum:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    type: integer
+    x-enum-comments:
+      AuctionStatusCancelled: 已取消
+      AuctionStatusDelayed: 延时中
+      AuctionStatusEnded: 已结束
+      AuctionStatusOngoing: 进行中
+      AuctionStatusPending: 待开始
+    x-enum-descriptions:
+    - 待开始
+    - 进行中
+    - 延时中
+    - 已结束
+    - 已取消
+    x-enum-varnames:
+    - AuctionStatusPending
+    - AuctionStatusOngoing
+    - AuctionStatusDelayed
+    - AuctionStatusEnded
+    - AuctionStatusCancelled
+  model.JSONMap:
+    additionalProperties: true
+    type: object
+  model.Notification:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      data:
+        $ref: '#/definitions/model.JSONMap'
+      id:
+        type: integer
+      read_at:
+        type: string
+      title:
+        type: string
+      type:
+        $ref: '#/definitions/model.NotificationType'
+      user_id:
+        type: integer
+    type: object
+  model.NotificationListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.Notification'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  model.NotificationType:
+    enum:
+    - bid_outbid
+    - auction_won
+    - auction_lost
+    - order_paid
+    - order_shipped
+    - order_completed
+    type: string
+    x-enum-comments:
+      NotificationTypeAuctionLost: 竞拍未中标
+      NotificationTypeAuctionWon: 竞拍中标
+      NotificationTypeBidOutbid: 出价被超越
+      NotificationTypeOrderCompleted: 订单已完成
+      NotificationTypeOrderPaid: 订单已支付
+      NotificationTypeOrderShipped: 订单已发货
+    x-enum-descriptions:
+    - 出价被超越
+    - 竞拍中标
+    - 竞拍未中标
+    - 订单已支付
+    - 订单已发货
+    - 订单已完成
+    x-enum-varnames:
+    - NotificationTypeBidOutbid
+    - NotificationTypeAuctionWon
+    - NotificationTypeAuctionLost
+    - NotificationTypeOrderPaid
+    - NotificationTypeOrderShipped
+    - NotificationTypeOrderCompleted
+  model.UnreadCountResponse:
+    properties:
+      count:
+        type: integer
+    type: object
+  service.PlaceBidResult:
+    properties:
+      current_price:
+        type: number
+      message:
+        type: string
+      rank:
+        type: integer
+      success:
+        type: boolean
+      winner_id:
+        type: integer
+    type: object
+info:
+  contact: {}
+paths:
+  /auctions:
+    get:
+      description: 获取竞拍列表，支持按状态筛选和分页
+      parameters:
+      - description: 竞拍状态：0-待开始, 1-进行中, 2-已结束, 3-已取消
+        in: query
+        name: status
+        type: integer
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取竞拍列表
+      tags:
+      - auction
+    post:
+      consumes:
+      - application/json
+      description: 创建新的竞拍场次
+      parameters:
+      - description: 竞拍信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateAuctionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Auction'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 创建竞拍
+      tags:
+      - auction
+  /auctions/{id}:
+    get:
+      description: 获取指定竞拍的详细信息
+      parameters:
+      - description: 竞拍ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Auction'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取竞拍详情
+      tags:
+      - auction
+  /auctions/{id}/bids:
+    post:
+      consumes:
+      - application/json
+      description: 在指定竞拍中出价
+      parameters:
+      - description: 竞拍ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 出价信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.PlaceBidRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/service.PlaceBidResult'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 出价竞拍
+      tags:
+      - bid
+  /auctions/{id}/cancel:
+    put:
+      description: 取消指定的竞拍场次
+      parameters:
+      - description: 竞拍ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 取消竞拍
+      tags:
+      - auction
+  /auctions/{id}/ranking:
+    get:
+      description: 获取指定竞拍的出价排名列表
+      parameters:
+      - description: 竞拍ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 10
+        description: 返回数量
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取竞拍排名
+      tags:
+      - bid
+  /auctions/{id}/result:
+    get:
+      description: 获取指定竞拍的最终结果
+      parameters:
+      - description: 竞拍ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 获取竞拍结果
+      tags:
+      - auction
+  /notifications:
+    get:
+      description: 获取用户的通知列表，支持分页和筛选
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: page_size
+        type: integer
+      - default: false
+        description: 仅未读通知
+        in: query
+        name: unread_only
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.NotificationListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取通知列表
+      tags:
+      - notification
+  /notifications/{id}/read:
+    put:
+      description: 将指定通知标记为已读
+      parameters:
+      - description: 通知ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 标记通知为已读
+      tags:
+      - notification
+  /notifications/read-all:
+    put:
+      description: 将用户的所有未读通知标记为已读
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 标记所有通知为已读
+      tags:
+      - notification
+  /notifications/unread-count:
+    get:
+      description: 获取用户的未读通知总数
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UnreadCountResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取未读通知数量
+      tags:
+      - notification
+swagger: "2.0"

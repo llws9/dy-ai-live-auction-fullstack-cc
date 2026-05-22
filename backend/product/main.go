@@ -33,15 +33,18 @@ func main() {
 	ruleDAO := dao.NewAuctionRuleDAO(db)
 	orderDAO := dao.NewOrderDAO(db)
 	historyDAO := dao.NewHistoryDAO(db)
+	statisticsDAO := dao.NewStatisticsDAO(db)
 
 	// 初始化 Service 层
 	productService := service.NewProductService(productDAO, ruleDAO)
 	orderService := service.NewOrderService(orderDAO, historyDAO)
+	statisticsService := service.NewStatisticsService(statisticsDAO)
 
 	// 初始化 Handler 层
 	productHandler := handler.NewProductHandler(productService)
 	ruleHandler := handler.NewRuleHandler(productService)
 	orderHandler := handler.NewOrderHandler(orderService)
+	statisticsHandler := handler.NewStatisticsHandler(statisticsService)
 
 	// 创建 Hertz 服务器
 	h := server.Default(
@@ -49,7 +52,7 @@ func main() {
 	)
 
 	// 注册路由
-	registerRoutes(h, productHandler, ruleHandler, orderHandler)
+	registerRoutes(h, productHandler, ruleHandler, orderHandler, statisticsHandler)
 
 	// 启动服务
 	log.Println("Product service starting on :8081")
@@ -57,7 +60,7 @@ func main() {
 }
 
 // registerRoutes 注册路由
-func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, ruleHandler *handler.RuleHandler, orderHandler *handler.OrderHandler) {
+func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, ruleHandler *handler.RuleHandler, orderHandler *handler.OrderHandler, statisticsHandler *handler.StatisticsHandler) {
 	v1 := h.Group("/api/v1")
 
 	// 商品相关路由
@@ -78,4 +81,10 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	v1.PUT("/orders/:id/pay", orderHandler.Pay)
 	v1.PUT("/orders/:id/ship", orderHandler.Ship)
 	v1.GET("/orders/history", orderHandler.GetUserHistory)
+
+	// ========== 统计相关路由 ==========
+	v1.GET("/statistics/overview", statisticsHandler.GetOverview)
+	v1.GET("/statistics/auctions", statisticsHandler.GetAuctionStatistics)
+	v1.GET("/statistics/revenue", statisticsHandler.GetRevenueStatistics)
+	v1.GET("/statistics/users", statisticsHandler.GetUserStatistics)
 }

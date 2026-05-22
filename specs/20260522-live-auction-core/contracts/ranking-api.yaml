@@ -1,0 +1,92 @@
+openapi: 3.0.0
+info:
+  title: Live Auction - Ranking API
+  version: 1.0.0
+  description: 实时排名同步API接口
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: 本地开发服务器
+
+paths:
+  /auctions/{auctionId}/ranking:
+    get:
+      summary: 获取竞拍排名列表
+      description: 获取指定竞拍的当前排名列表
+      operationId: getRanking
+      tags:
+        - Ranking
+      parameters:
+        - name: auctionId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: 竞拍ID
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+          description: 返回排名数量
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      rankings:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/RankingItem'
+        '404':
+          description: 竞拍不存在
+
+components:
+  schemas:
+    RankingItem:
+      type: object
+      required:
+        - rank
+        - userId
+        - userName
+        - amount
+        - bidTime
+      properties:
+        rank:
+          type: integer
+          description: 排名位置
+          example: 1
+        userId:
+          type: integer
+          format: int64
+          description: 用户ID
+          example: 10001
+        userName:
+          type: string
+          description: 用户名称
+          example: 张三
+        userAvatar:
+          type: string
+          description: 用户头像URL
+          example: https://example.com/avatar.jpg
+        amount:
+          type: number
+          format: float
+          description: 出价金额
+          example: 150.00
+        bidTime:
+          type: string
+          format: date-time
+          description: 出价时间
+          example: "2026-05-22T10:30:00Z"

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import BidButton from '../../components/BidButton';
 import PriceDisplay from '../../components/PriceDisplay';
+import WebSocketService from '../../services/websocket';
 
 interface Auction {
   id: number;
@@ -24,6 +25,13 @@ interface BidRecord {
   created_at: string;
 }
 
+interface RankItem {
+  rank: number;
+  user_id: number;
+  user_name?: string;
+  amount: number;
+}
+
 const AuctionPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -31,13 +39,96 @@ const AuctionPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [bidRecords, setBidRecords] = useState<BidRecord[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const wsRef = useRef<WebSocketService | null>(null);
 
   useEffect(() => {
     if (id) {
       fetchAuction();
       fetchBidRecords();
+      connectWebSocket();
     }
+
+    // 清理WebSocket连接
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.disconnect();
+      }
+    };
   }, [id]);
+
+  const connectWebSocket = () => {
+    if (!id) return;
+
+    const auctionId = parseInt(id, 10);
+    const ws = new WebSocketService(auctionId);
+
+    // 注册排名更新处理器
+    ws.on('rank_update', (data: { ranking: RankItem[] }) => {
+      console.log('Received rank_update:', data);
+      if (data.ranking) {
+        // 转换排名数据为出价记录格式
+        const records: BidRecord[] = data.ranking.map((item, index) => ({
+          id: Date.now() + index,
+          user_id: item.user_id,
+          user_name: item.user_name || `用户${item.user_id}`,
+          amount: item.amount,
+          created_at: new Date().toISOString(),
+        }));
+        setBidRecords(records);
+      }
+    });
+
+    // 注册出价通知处理器
+    ws.on('bid_placed', (data: any) => {
+      console.log('Received bid_placed:', data);
+      if (auction && data.current_price) {
+        setAuction({
+          ...auction,
+          current_price: data.current_price,
+        });
+      }
+    });
+
+    // 注册状态同步响应处理器（重连后）
+    ws.on('sync_response', (data: any) => {
+      console.log('Received sync_response:', data);
+      if (data) {
+        // 更新竞拍状态
+        if (auction) {
+          setAuction({
+            ...auction,
+            current_price: data.current_price,
+            winner_id: data.winner_id,
+            end_time: new Date(data.end_time).toISOString(),
+            status: data.status,
+          });
+        }
+
+        // 如果有排名数据，更新排名
+        if (data.ranking) {
+          const records: BidRecord[] = data.ranking.map((item: RankItem, index: number) => ({
+            id: Date.now() + index,
+            user_id: item.user_id,
+            user_name: item.user_name || `用户${item.user_id}`,
+            amount: item.amount,
+            created_at: new Date().toISOString(),
+          }));
+          setBidRecords(records);
+        }
+      }
+    });
+
+    // 连接WebSocket
+    ws.connect().then(() => {
+      console.log('WebSocket connected successfully');
+      wsRef.current = ws;
+
+      // 重连成功后请求状态同步
+      ws.requestSync();
+    }).catch((error) => {
+      console.error('WebSocket connection failed:', error);
+    });
+  };
 
   const fetchAuction = async () => {
     try {

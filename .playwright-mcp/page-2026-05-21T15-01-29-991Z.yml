@@ -1,0 +1,11 @@
+- generic [ref=e4]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - heading "🎯 直播竞拍" [level=1] [ref=e7]
+      - button "📜 历史" [ref=e8] [cursor=pointer]
+    - paragraph [ref=e9]: 发现好物，竞拍心仪商品
+  - generic [ref=e10]:
+    - button "全部" [ref=e11] [cursor=pointer]
+    - button "进行中" [ref=e12] [cursor=pointer]
+    - button "已结束" [ref=e13] [cursor=pointer]
+  - paragraph [ref=e17]: 加载中...

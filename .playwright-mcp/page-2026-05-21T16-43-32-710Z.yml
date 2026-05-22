@@ -1,0 +1,106 @@
+- generic [ref=e4]:
+  - generic [ref=e7]:
+    - img "主播" [ref=e8]
+    - generic [ref=e9]:
+      - generic [ref=e10]: 珍品拍卖专场
+      - generic [ref=e11]: 🔥 12,800人在看
+    - generic [ref=e12]: 直播中
+  - generic [ref=e29]:
+    - heading "竞拍商品 5件" [level=3] [ref=e30]:
+      - text: 竞拍商品
+      - generic [ref=e31]: 5件
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - img "稀有珠宝 - 限量版钻石项链" [ref=e34]
+        - generic [ref=e35]: 26:10.69
+      - generic [ref=e36]:
+        - generic [ref=e37]: 稀有珠宝 - 限量版钻石项链
+        - generic [ref=e38]:
+          - generic [ref=e40]: 竞拍中
+          - generic [ref=e41]: 12次出价
+        - generic [ref=e42]:
+          - generic [ref=e43]: 当前最高价
+          - generic [ref=e44]: ¥5,200
+        - button "立即出价" [ref=e46] [cursor=pointer]
+    - generic [ref=e47]:
+      - generic [ref=e48]:
+        - img "签名版限量球鞋" [ref=e49]
+        - generic [ref=e50]: 11:10.69
+      - generic [ref=e51]:
+        - generic [ref=e52]: 签名版限量球鞋
+        - generic [ref=e53]:
+          - generic [ref=e55]: 竞拍中
+          - generic [ref=e56]: 8次出价
+        - generic [ref=e57]:
+          - generic [ref=e58]: 当前最高价
+          - generic [ref=e59]: ¥850
+        - button "立即出价" [ref=e61] [cursor=pointer]
+    - generic [ref=e62]:
+      - img "古董怀表收藏品" [ref=e64]
+      - generic [ref=e65]:
+        - generic [ref=e66]: 古董怀表收藏品
+        - generic [ref=e67]:
+          - generic [ref=e69]: 已结束
+          - generic [ref=e70]: 25次出价
+        - generic [ref=e71]:
+          - generic [ref=e72]: 落槌价
+          - generic [ref=e73]: ¥3,500
+        - button "已结束" [ref=e75] [cursor=pointer]
+    - generic [ref=e76]:
+      - img "艺术画作原稿" [ref=e78]
+      - generic [ref=e79]:
+        - generic [ref=e80]: 艺术画作原稿
+        - generic [ref=e83]: 即将开始
+        - generic [ref=e84]:
+          - generic [ref=e85]: 起拍价
+          - generic [ref=e86]: ¥1,000
+        - button "商品详情" [ref=e88] [cursor=pointer]
+    - generic [ref=e89]:
+      - generic [ref=e90]:
+        - img "限量版手表" [ref=e91]
+        - generic [ref=e92]: 41:10.69
+      - generic [ref=e93]:
+        - generic [ref=e94]: 限量版手表
+        - generic [ref=e97]: 竞拍中
+        - generic [ref=e98]:
+          - generic [ref=e99]: 起拍价
+          - generic [ref=e100]: ¥2,000
+        - button "立即出价" [ref=e102] [cursor=pointer]
+  - generic [ref=e24]:
+    - generic [ref=e25]:
+      - heading "参与竞拍" [level=3] [ref=e26]
+      - button "✕" [ref=e27] [cursor=pointer]
+    - generic [ref=e28]:
+      - generic [ref=e104]: 26:10.69
+      - generic [ref=e105]:
+        - img "稀有珠宝 - 限量版钻石项链" [ref=e106]
+        - generic [ref=e107]:
+          - generic [ref=e108]: 稀有珠宝 - 限量版钻石项链
+          - generic [ref=e109]:
+            - generic [ref=e110]:
+              - generic [ref=e111]: 当前价
+              - generic [ref=e112]: ¥5,200
+            - generic [ref=e113]:
+              - generic [ref=e114]: 我的出价
+              - generic [ref=e115]: ¥5,000
+      - generic [ref=e116]:
+        - generic [ref=e117]: 出价排名 TOP 3
+        - generic [ref=e118]:
+          - generic [ref=e119]:
+            - generic [ref=e120]: "1"
+            - generic [ref=e121]: 用户A
+            - generic [ref=e122]: ¥5,200
+          - generic [ref=e123]:
+            - generic [ref=e124]: "2"
+            - generic [ref=e125]: 用户B
+            - generic [ref=e126]: ¥5,100
+          - generic [ref=e127]:
+            - generic [ref=e128]: "3"
+            - generic [ref=e129]: 用户C
+            - generic [ref=e130]: ¥5,000
+      - generic [ref=e131]:
+        - generic [ref=e132]: 输入出价金额
+        - spinbutton [ref=e134]
+        - generic [ref=e135]: 每次加价至少 ¥100
+      - button "立即竞拍" [active] [ref=e136] [cursor=pointer]
+  - generic [ref=e138]: 出价成功！

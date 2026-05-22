@@ -1,0 +1,120 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: 🎯
+      - heading "竞拍管理后台" [level=2] [ref=e8]
+    - list [ref=e10]:
+      - listitem [ref=e11]:
+        - link "📦 商品管理" [ref=e12] [cursor=pointer]:
+          - /url: "#/products"
+          - generic [ref=e13]: 📦
+          - generic [ref=e14]: 商品管理
+      - listitem [ref=e15]:
+        - link "🎯 竞拍管理" [ref=e16] [cursor=pointer]:
+          - /url: "#/auctions"
+          - generic [ref=e17]: 🎯
+          - generic [ref=e18]: 竞拍管理
+      - listitem [ref=e19]:
+        - link "🧾 订单管理" [active] [ref=e20] [cursor=pointer]:
+          - /url: "#/orders"
+          - generic [ref=e21]: 🧾
+          - generic [ref=e22]: 订单管理
+  - main [ref=e23]:
+    - generic [ref=e234]:
+      - generic [ref=e236]:
+        - heading "🧾 订单管理" [level=1] [ref=e237]
+        - paragraph [ref=e238]: 查看成交订单，管理支付和发货状态
+      - generic [ref=e239]:
+        - generic [ref=e240]:
+          - generic [ref=e242]: 🧾
+          - generic [ref=e243]: "4"
+          - generic [ref=e244]: 订单总数
+        - generic [ref=e245]:
+          - generic [ref=e247]: ⏳
+          - generic [ref=e248]: "2"
+          - generic [ref=e249]: 待支付
+        - generic [ref=e250]:
+          - generic [ref=e252]: ✓
+          - generic [ref=e253]: "2"
+          - generic [ref=e254]: 已支付
+        - generic [ref=e255]:
+          - generic [ref=e257]: 💰
+          - generic [ref=e258]: ¥4,020
+          - generic [ref=e259]: 已收款
+      - generic [ref=e260]:
+        - generic [ref=e261]: ⚠️
+        - generic [ref=e262]:
+          - generic [ref=e263]: 待支付订单提醒
+          - generic [ref=e264]: 有 2 笔订单待支付，总计 ¥1,880
+      - generic [ref=e265]:
+        - generic [ref=e267]:
+          - button "全部订单" [ref=e268] [cursor=pointer]
+          - button "待支付" [ref=e269] [cursor=pointer]
+          - button "已支付" [ref=e270] [cursor=pointer]
+        - table [ref=e271]:
+          - rowgroup [ref=e272]:
+            - row "订单号 商品名称 中标者 成交价 状态 创建时间 操作" [ref=e273]:
+              - columnheader "订单号" [ref=e274]
+              - columnheader "商品名称" [ref=e275]
+              - columnheader "中标者" [ref=e276]
+              - columnheader "成交价" [ref=e277]
+              - columnheader "状态" [ref=e278]
+              - columnheader "创建时间" [ref=e279]
+              - columnheader "操作" [ref=e280]
+          - rowgroup [ref=e281]:
+            - row "#1001 古董怀表收藏品 用 用户A ¥520 已支付 2026/05/21 22:30 标记发货" [ref=e282]:
+              - cell "#1001" [ref=e283]
+              - cell "古董怀表收藏品" [ref=e284]
+              - cell "用 用户A" [ref=e285]:
+                - generic [ref=e286]:
+                  - generic [ref=e287]: 用
+                  - text: 用户A
+              - cell "¥520" [ref=e288]:
+                - generic [ref=e289]: ¥520
+              - cell "已支付" [ref=e290]:
+                - generic [ref=e291]: 已支付
+              - cell "2026/05/21 22:30" [ref=e292]
+              - cell "标记发货" [ref=e293]:
+                - button "标记发货" [ref=e295] [cursor=pointer]
+            - row "#1002 艺术画作原稿 用 用户B ¥1,200 待支付 2026/05/21 21:30 确认支付" [ref=e296]:
+              - cell "#1002" [ref=e297]
+              - cell "艺术画作原稿" [ref=e298]
+              - cell "用 用户B" [ref=e299]:
+                - generic [ref=e300]:
+                  - generic [ref=e301]: 用
+                  - text: 用户B
+              - cell "¥1,200" [ref=e302]:
+                - generic [ref=e303]: ¥1,200
+              - cell "待支付" [ref=e304]:
+                - generic [ref=e305]: 待支付
+              - cell "2026/05/21 21:30" [ref=e306]
+              - cell "确认支付" [ref=e307]:
+                - button "确认支付" [ref=e309] [cursor=pointer]
+            - row "#1003 限量版手表 用 用户C ¥3,500 已支付 2026/05/20 23:30 标记发货" [ref=e310]:
+              - cell "#1003" [ref=e311]
+              - cell "限量版手表" [ref=e312]
+              - cell "用 用户C" [ref=e313]:
+                - generic [ref=e314]:
+                  - generic [ref=e315]: 用
+                  - text: 用户C
+              - cell "¥3,500" [ref=e316]:
+                - generic [ref=e317]: ¥3,500
+              - cell "已支付" [ref=e318]:
+                - generic [ref=e319]: 已支付
+              - cell "2026/05/20 23:30" [ref=e320]
+              - cell "标记发货" [ref=e321]:
+                - button "标记发货" [ref=e323] [cursor=pointer]
+            - row "#1004 签名篮球 用 用户D ¥680 待支付 2026/05/19 23:30 确认支付" [ref=e324]:
+              - cell "#1004" [ref=e325]
+              - cell "签名篮球" [ref=e326]
+              - cell "用 用户D" [ref=e327]:
+                - generic [ref=e328]:
+                  - generic [ref=e329]: 用
+                  - text: 用户D
+              - cell "¥680" [ref=e330]:
+                - generic [ref=e331]: ¥680
+              - cell "待支付" [ref=e332]:
+                - generic [ref=e333]: 待支付
+              - cell "2026/05/19 23:30" [ref=e334]
+              - cell "确认支付" [ref=e335]:
+                - button "确认支付" [ref=e337] [cursor=pointer]

@@ -1,0 +1,39 @@
+- generic [ref=e4]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - heading "🎯 直播竞拍" [level=1] [ref=e7]
+      - button "📜 历史" [ref=e8] [cursor=pointer]
+    - paragraph [ref=e9]: 发现好物，竞拍心仪商品
+  - generic [ref=e10]:
+    - button "全部" [ref=e11] [cursor=pointer]
+    - button "进行中" [active] [ref=e12] [cursor=pointer]
+    - button "已结束" [ref=e13] [cursor=pointer]
+  - generic [ref=e15]:
+    - link "限定款奢侈品包包 进行中 👥 12人参与 限定款奢侈品包包 当前价 ¥150 ⏱️ 59分钟后结束 立即出价 →" [ref=e55] [cursor=pointer]:
+      - /url: /auction/1
+      - generic [ref=e17]:
+        - img "限定款奢侈品包包" [ref=e18]
+        - generic [ref=e19]: 进行中
+        - generic [ref=e21]: 👥 12人参与
+      - generic [ref=e22]:
+        - heading "限定款奢侈品包包" [level=3] [ref=e23]
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - generic [ref=e26]: 当前价
+            - generic [ref=e27]: ¥150
+          - generic [ref=e28]: ⏱️ 59分钟后结束
+        - generic [ref=e29]: 立即出价 →
+    - link "签名版限量球鞋 进行中 👥 8人参与 签名版限量球鞋 当前价 ¥280 ⏱️ 29分钟后结束 立即出价 →" [ref=e56] [cursor=pointer]:
+      - /url: /auction/2
+      - generic [ref=e31]:
+        - img "签名版限量球鞋" [ref=e32]
+        - generic [ref=e33]: 进行中
+        - generic [ref=e35]: 👥 8人参与
+      - generic [ref=e36]:
+        - heading "签名版限量球鞋" [level=3] [ref=e37]
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - generic [ref=e40]: 当前价
+            - generic [ref=e41]: ¥280
+          - generic [ref=e42]: ⏱️ 29分钟后结束
+        - generic [ref=e43]: 立即出价 →

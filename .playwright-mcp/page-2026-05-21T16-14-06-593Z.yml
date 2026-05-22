@@ -1,0 +1,128 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: 🎯
+      - heading "竞拍管理后台" [level=2] [ref=e8]
+    - list [ref=e10]:
+      - listitem [ref=e11]:
+        - link "📦 商品管理" [ref=e12] [cursor=pointer]:
+          - /url: "#/products"
+          - generic [ref=e13]: 📦
+          - generic [ref=e14]: 商品管理
+      - listitem [ref=e15]:
+        - link "🎯 竞拍管理" [ref=e16] [cursor=pointer]:
+          - /url: "#/auctions"
+          - generic [ref=e17]: 🎯
+          - generic [ref=e18]: 竞拍管理
+      - listitem [ref=e19]:
+        - link "🧾 订单管理" [ref=e20] [cursor=pointer]:
+          - /url: "#/orders"
+          - generic [ref=e21]: 🧾
+          - generic [ref=e22]: 订单管理
+  - main [ref=e23]:
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - heading "📦 商品管理" [level=1] [ref=e27]
+          - paragraph [ref=e28]: 管理所有竞拍商品，配置竞拍规则
+        - link "＋ 新建商品" [ref=e29] [cursor=pointer]:
+          - /url: "#/products/create"
+          - button "＋ 新建商品" [ref=e30]:
+            - generic [ref=e31]: ＋
+            - text: 新建商品
+      - generic [ref=e32]:
+        - generic [ref=e33]:
+          - generic [ref=e35]: 📦
+          - generic [ref=e36]: "5"
+          - generic [ref=e37]: 商品总数
+        - generic [ref=e38]:
+          - generic [ref=e40]: ✓
+          - generic [ref=e41]: "1"
+          - generic [ref=e42]: 已发布
+        - generic [ref=e43]:
+          - generic [ref=e45]: 📝
+          - generic [ref=e46]: "4"
+          - generic [ref=e47]: 草稿
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - heading "商品列表" [level=3] [ref=e50]
+          - button "导出数据" [ref=e52] [cursor=pointer]
+        - table [ref=e53]:
+          - rowgroup [ref=e54]:
+            - row "ID 商品名称 描述 状态 创建时间 操作" [ref=e55]:
+              - columnheader "ID" [ref=e56]
+              - columnheader "商品名称" [ref=e57]
+              - columnheader "描述" [ref=e58]
+              - columnheader "状态" [ref=e59]
+              - columnheader "创建时间" [ref=e60]
+              - columnheader "操作" [ref=e61]
+          - rowgroup [ref=e62]:
+            - row "#5 性能测试商品 用于并发测试 草稿 2026/5/21 20:48:19 配置规则 删除" [ref=e63]:
+              - cell "#5" [ref=e64]
+              - cell "性能测试商品" [ref=e65]
+              - cell "用于并发测试" [ref=e66]
+              - cell "草稿" [ref=e67]:
+                - generic [ref=e68]: 草稿
+              - cell "2026/5/21 20:48:19" [ref=e69]
+              - cell "配置规则 删除" [ref=e70]:
+                - generic [ref=e71]:
+                  - link "配置规则" [ref=e72] [cursor=pointer]:
+                    - /url: "#/products/5/rules"
+                    - button "配置规则" [ref=e73]
+                  - button "删除" [ref=e74] [cursor=pointer]
+            - row "#4 性能测试商品 用于性能测试 草稿 2026/5/21 20:19:42 配置规则 删除" [ref=e75]:
+              - cell "#4" [ref=e76]
+              - cell "性能测试商品" [ref=e77]
+              - cell "用于性能测试" [ref=e78]
+              - cell "草稿" [ref=e79]:
+                - generic [ref=e80]: 草稿
+              - cell "2026/5/21 20:19:42" [ref=e81]
+              - cell "配置规则 删除" [ref=e82]:
+                - generic [ref=e83]:
+                  - link "配置规则" [ref=e84] [cursor=pointer]:
+                    - /url: "#/products/4/rules"
+                    - button "配置规则" [ref=e85]
+                  - button "删除" [ref=e86] [cursor=pointer]
+            - row "#3 自动创建测试商品 测试自动创建竞拍场次 草稿 2026/5/21 20:00:51 配置规则 删除" [ref=e87]:
+              - cell "#3" [ref=e88]
+              - cell "自动创建测试商品" [ref=e89]
+              - cell "测试自动创建竞拍场次" [ref=e90]
+              - cell "草稿" [ref=e91]:
+                - generic [ref=e92]: 草稿
+              - cell "2026/5/21 20:00:51" [ref=e93]
+              - cell "配置规则 删除" [ref=e94]:
+                - generic [ref=e95]:
+                  - link "配置规则" [ref=e96] [cursor=pointer]:
+                    - /url: "#/products/3/rules"
+                    - button "配置规则" [ref=e97]
+                  - button "删除" [ref=e98] [cursor=pointer]
+            - row "#2 测试商品 这是一个测试商品 草稿 2026/5/21 18:39:49 配置规则 删除" [ref=e99]:
+              - cell "#2" [ref=e100]
+              - cell "测试商品" [ref=e101]
+              - cell "这是一个测试商品" [ref=e102]
+              - cell "草稿" [ref=e103]:
+                - generic [ref=e104]: 草稿
+              - cell "2026/5/21 18:39:49" [ref=e105]
+              - cell "配置规则 删除" [ref=e106]:
+                - generic [ref=e107]:
+                  - link "配置规则" [ref=e108] [cursor=pointer]:
+                    - /url: "#/products/2/rules"
+                    - button "配置规则" [ref=e109]
+                  - button "删除" [ref=e110] [cursor=pointer]
+            - row "#1 稀有珠宝 限量版珠宝，全球仅发售10件 已发布 2026/5/21 16:58:01 配置规则 删除" [ref=e111]:
+              - cell "#1" [ref=e112]
+              - cell "稀有珠宝" [ref=e113]
+              - cell "限量版珠宝，全球仅发售10件" [ref=e114]
+              - cell "已发布" [ref=e115]:
+                - generic [ref=e116]: 已发布
+              - cell "2026/5/21 16:58:01" [ref=e117]
+              - cell "配置规则 删除" [ref=e118]:
+                - generic [ref=e119]:
+                  - link "配置规则" [ref=e120] [cursor=pointer]:
+                    - /url: "#/products/1/rules"
+                    - button "配置规则" [ref=e121]
+                  - button "删除" [ref=e122] [cursor=pointer]
+        - generic [ref=e123]:
+          - button "← 上一页" [disabled] [ref=e124]
+          - generic [ref=e125]: 第 1 页 / 共 1 页
+          - button "下一页 →" [disabled] [ref=e126]

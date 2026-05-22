@@ -42,6 +42,7 @@ func main() {
 	bidDAO := dao.NewBidDAO(db)
 	ruleDAO := dao.NewAuctionRuleDAO(db)
 	userDAO := dao.NewUserDAO(db)
+	notificationDAO := dao.NewNotificationDAO(db, dao.GetRedis())
 
 	// 初始化 WebSocket Hub
 	hub := websocket.NewHub()
@@ -54,12 +55,17 @@ func main() {
 	// 初始化 Service 层
 	auctionService := service.NewAuctionService(auctionDAO)
 	bidService := service.NewBidService(auctionDAO, bidDAO, ruleDAO, userDAO)
+	notificationService := service.NewNotificationService(notificationDAO, dao.GetRedis())
+
+	// 设置出价服务的通知发送器
+	bidService.SetNotificationSender(notificationService)
 
 	// 初始化 Handler 层
 	auctionHandler := handler.NewAuctionHandler(auctionService)
 	bidHandler := handler.NewBidHandler(bidService)
 	wsHandler := handler.NewWSHandler()
 	userHandler := handler.NewUserHandler(userDAO)
+	notificationHandler := handler.NewNotificationHandler(notificationService)
 
 	// 初始化认证 Handler
 	jwtSecret := os.Getenv("JWT_SECRET")
@@ -88,7 +94,7 @@ func main() {
 	)
 
 	// 注册路由
-	registerRoutes(h, auctionHandler, bidHandler, wsHandler, userHandler, authHandler)
+	registerRoutes(h, auctionHandler, bidHandler, wsHandler, userHandler, authHandler, notificationHandler)
 
 	// 启动服务
 	log.Println("Auction service starting on :8082 (HTTP) and :8083 (WebSocket)")
@@ -140,7 +146,7 @@ func startWebSocketServer(hub *websocket.Hub, wsHandler *handler.WSHandler) {
 }
 
 // registerRoutes 注册路由
-func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bidHandler *handler.BidHandler, wsHandler *handler.WSHandler, userHandler *handler.UserHandler, authHandler *handler.AuthHandler) {
+func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bidHandler *handler.BidHandler, wsHandler *handler.WSHandler, userHandler *handler.UserHandler, authHandler *handler.AuthHandler, notificationHandler *handler.NotificationHandler) {
 	v1 := h.Group("/api/v1")
 
 	// ========== 认证相关路由 ==========
@@ -162,4 +168,10 @@ func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bid
 	// 出价相关路由
 	v1.POST("/auctions/:id/bids", bidHandler.PlaceBid)
 	v1.GET("/auctions/:id/ranking", bidHandler.GetRanking)
+
+	// ========== 通知相关路由 ==========
+	v1.GET("/notifications", notificationHandler.List)
+	v1.GET("/notifications/unread-count", notificationHandler.GetUnreadCount)
+	v1.PUT("/notifications/:id/read", notificationHandler.MarkAsRead)
+	v1.PUT("/notifications/read-all", notificationHandler.MarkAllAsRead)
 }

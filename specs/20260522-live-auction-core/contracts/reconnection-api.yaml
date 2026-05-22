@@ -1,0 +1,207 @@
+openapi: 3.0.0
+info:
+  title: Live Auction - Reconnection API
+  version: 1.0.0
+  description: WebSocket断线重连API接口
+
+servers:
+  - url: ws://localhost:8083
+    description: WebSocket服务器
+
+paths:
+  /ws:
+    get:
+      summary: WebSocket连接端点
+      description: 建立WebSocket连接，支持断线重连
+      operationId: websocketConnect
+      parameters:
+        - name: auction_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: 竞拍ID
+        - name: user_id
+          in: query
+          schema:
+            type: integer
+            format: int64
+          description: 用户ID（测试环境）
+        - name: token
+          in: query
+          schema:
+            type: string
+          description: JWT认证token（生产环境）
+      responses:
+        '101':
+          description: 切换到WebSocket协议
+
+components:
+  schemas:
+    # 服务端 → 客户端消息
+    ServerMessage:
+      type: object
+      required:
+        - type
+        - data
+      properties:
+        type:
+          type: string
+          enum:
+            - bid_placed
+            - rank_update
+            - overtaken
+            - delay_triggered
+            - auction_ended
+            - time_sync
+            - sync_response
+            - pong
+        data:
+          oneOf:
+            - $ref: '#/components/schemas/BidPlacedData'
+            - $ref: '#/components/schemas/RankUpdateData'
+            - $ref: '#/components/schemas/OvertakenData'
+            - $ref: '#/components/schemas/DelayTriggeredData'
+            - $ref: '#/components/schemas/AuctionEndedData'
+            - $ref: '#/components/schemas/TimeSyncData'
+            - $ref: '#/components/schemas/SyncResponseData'
+            - $ref: '#/components/schemas/PongData'
+
+    BidPlacedData:
+      type: object
+      properties:
+        amount:
+          type: number
+          format: float
+        userId:
+          type: integer
+          format: int64
+        userName:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    RankUpdateData:
+      type: object
+      properties:
+        rankings:
+          type: array
+          items:
+            type: object
+            properties:
+              rank:
+                type: integer
+              userId:
+                type: integer
+                format: int64
+              userName:
+                type: string
+              amount:
+                type: number
+                format: float
+
+    OvertakenData:
+      type: object
+      properties:
+        byUserId:
+          type: integer
+          format: int64
+        byUserName:
+          type: string
+        newRank:
+          type: integer
+
+    DelayTriggeredData:
+      type: object
+      properties:
+        newEndTime:
+          type: string
+          format: date-time
+        delayDuration:
+          type: integer
+          description: 延时时长（秒）
+
+    AuctionEndedData:
+      type: object
+      properties:
+        winnerId:
+          type: integer
+          format: int64
+        winnerName:
+          type: string
+        finalPrice:
+          type: number
+          format: float
+
+    TimeSyncData:
+      type: object
+      properties:
+        serverTime:
+          type: integer
+          format: int64
+          description: 服务端时间（毫秒时间戳）
+        endTime:
+          type: integer
+          format: int64
+          description: 竞拍结束时间（毫秒时间戳）
+
+    SyncResponseData:
+      type: object
+      properties:
+        auctionId:
+          type: integer
+          format: int64
+        currentPrice:
+          type: number
+          format: float
+        winnerId:
+          type: integer
+          format: int64
+        endTime:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        rankings:
+          type: array
+          items:
+            type: object
+
+    PongData:
+      type: object
+      properties:
+        timestamp:
+          type: integer
+          format: int64
+
+    # 客户端 → 服务端消息
+    ClientMessage:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum:
+            - ping
+            - sync_request
+        data:
+          oneOf:
+            - $ref: '#/components/schemas/PingData'
+            - $ref: '#/components/schemas/SyncRequestData'
+
+    PingData:
+      type: object
+      properties:
+        timestamp:
+          type: integer
+          format: int64
+
+    SyncRequestData:
+      type: object
+      properties:
+        auctionId:
+          type: integer
+          format: int64

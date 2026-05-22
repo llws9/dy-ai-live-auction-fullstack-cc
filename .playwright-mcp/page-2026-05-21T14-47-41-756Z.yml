@@ -1,0 +1,53 @@
+- generic [ref=e55]:
+  - generic [ref=e58]:
+    - generic [ref=e59]:
+      - button "← 返回" [ref=e60] [cursor=pointer]
+      - generic [ref=e61]: 已结束
+    - generic [ref=e64]:
+      - generic [ref=e65]:
+        - generic [ref=e66]:
+          - generic [ref=e67]: 💎
+          - text: 当前价格
+        - generic [ref=e68]:
+          - generic [ref=e69]: ¥
+          - generic [ref=e70]: "170"
+      - generic [ref=e72]: 竞拍已结束
+  - generic [ref=e73]:
+    - heading "💰 出价竞拍" [level=3] [ref=e75]
+    - generic [ref=e76]:
+      - generic [ref=e77]: 🏆
+      - paragraph [ref=e78]: 竞拍已结束
+      - button "查看结果" [ref=e79] [cursor=pointer]
+  - generic [ref=e80]:
+    - heading "📊 出价排行" [level=3] [ref=e81]
+    - generic [ref=e82]:
+      - generic [ref=e83]:
+        - generic [ref=e84]:
+          - generic [ref=e85]: "1"
+          - generic [ref=e86]: 用户A
+        - generic [ref=e87]: ¥150
+      - generic [ref=e88]:
+        - generic [ref=e89]:
+          - generic [ref=e90]: "2"
+          - generic [ref=e91]: 用户B
+        - generic [ref=e92]: ¥140
+      - generic [ref=e93]:
+        - generic [ref=e94]:
+          - generic [ref=e95]: "3"
+          - generic [ref=e96]: 用户C
+        - generic [ref=e97]: ¥130
+  - generic [ref=e98]:
+    - heading "📋 竞拍详情" [level=3] [ref=e99]
+    - generic [ref=e100]:
+      - generic [ref=e101]:
+        - generic [ref=e102]: 竞拍ID
+        - generic [ref=e103]: "1"
+      - generic [ref=e104]:
+        - generic [ref=e105]: 状态
+        - generic [ref=e106]: 已结束
+      - generic [ref=e107]:
+        - generic [ref=e108]: 开始时间
+        - generic [ref=e109]: 2026/5/21 17:16:31
+      - generic [ref=e110]:
+        - generic [ref=e111]: 结束时间
+        - generic [ref=e112]: 2026/5/21 18:16:31

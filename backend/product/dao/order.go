@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -71,4 +72,67 @@ func (d *OrderDAO) GetByAuctionID(ctx context.Context, auctionID int64) (*model.
 		return nil, err
 	}
 	return &order, nil
+}
+
+// GetList 获取订单列表（支持状态筛选）
+func (d *OrderDAO) GetList(ctx context.Context, status *model.OrderStatus, page, pageSize int) ([]model.Order, int64, error) {
+	var orders []model.Order
+	var total int64
+
+	query := d.db.WithContext(ctx).Model(&model.Order{})
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&orders).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return orders, total, nil
+}
+
+// Update 更新订单
+func (d *OrderDAO) Update(ctx context.Context, order *model.Order) error {
+	return d.db.WithContext(ctx).Save(order).Error
+}
+
+// PayOrder 支付订单
+func (d *OrderDAO) PayOrder(ctx context.Context, id int64) error {
+	now := time.Now()
+	return d.db.WithContext(ctx).
+		Model(&model.Order{}).
+		Where("id = ?", id).
+		Updates(map[string]interface{}{
+			"status":  model.OrderStatusPaid,
+			"paid_at": now,
+		}).Error
+}
+
+// ShipOrder 发货
+func (d *OrderDAO) ShipOrder(ctx context.Context, id int64) error {
+	now := time.Now()
+	return d.db.WithContext(ctx).
+		Model(&model.Order{}).
+		Where("id = ?", id).
+		Updates(map[string]interface{}{
+			"status":     model.OrderStatusShipped,
+			"shipped_at": now,
+		}).Error
+}
+
+// CompleteOrder 完成订单
+func (d *OrderDAO) CompleteOrder(ctx context.Context, id int64) error {
+	now := time.Now()
+	return d.db.WithContext(ctx).
+		Model(&model.Order{}).
+		Where("id = ?", id).
+		Updates(map[string]interface{}{
+			"status":       model.OrderStatusCompleted,
+			"completed_at": now,
+		}).Error
 }

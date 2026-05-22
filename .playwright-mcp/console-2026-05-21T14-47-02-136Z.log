@@ -1,0 +1,11 @@
+[      52ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/chunk-XPR23Y44.js?v=2cf1c322:21548
+[      55ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2cf1c322:4433
+[      55ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2cf1c322:4433
+[      60ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/api/v1/auctions:0
+[      61ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/api/v1/auctions:0
+[      61ms] [ERROR] 获取竞拍列表失败: SyntaxError: Unexpected token 'N', "Not Found" is not valid JSON @ http://localhost:5173/src/pages/Home/index.tsx?t=1779374753599:34
+[      61ms] [ERROR] 获取竞拍列表失败: SyntaxError: Unexpected token 'N', "Not Found" is not valid JSON @ http://localhost:5173/src/pages/Home/index.tsx?t=1779374753599:34
+[   37525ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/api/v1/auctions/1/bids:0
+[   37526ms] [ERROR] 获取出价记录失败: SyntaxError: Unexpected token 'N', "Not Found" is not valid JSON @ http://localhost:5173/src/pages/Auction/index.tsx?t=1779374816470:52
+[   37526ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/api/v1/auctions/1/bids:0
+[   37526ms] [ERROR] 获取出价记录失败: SyntaxError: Unexpected token 'N', "Not Found" is not valid JSON @ http://localhost:5173/src/pages/Auction/index.tsx?t=1779374816470:52

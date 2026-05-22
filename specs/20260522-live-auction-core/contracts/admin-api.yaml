@@ -1,0 +1,667 @@
+openapi: 3.0.0
+info:
+  title: Live Auction - Admin API
+  version: 1.0.0
+  description: PC管理后台API接口
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: 本地开发服务器
+
+security:
+  - BearerAuth: []
+
+paths:
+  # 商品管理
+  /products:
+    get:
+      summary: 获取商品列表
+      operationId: listProducts
+      tags:
+        - Product
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: integer
+          description: 商品状态（0=草稿, 1=上架, 2=下架）
+        - name: keyword
+          in: query
+          schema:
+            type: string
+          description: 搜索关键词
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      pageSize:
+                        type: integer
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Product'
+
+    post:
+      summary: 创建商品
+      operationId: createProduct
+      tags:
+        - Product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Product'
+
+  /products/{productId}:
+    get:
+      summary: 获取商品详情
+      operationId: getProduct
+      tags:
+        - Product
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Product'
+
+    put:
+      summary: 更新商品
+      operationId: updateProduct
+      tags:
+        - Product
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: 更新成功
+
+    delete:
+      summary: 删除商品
+      operationId: deleteProduct
+      tags:
+        - Product
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 删除成功
+
+  /products/{productId}/rules:
+    post:
+      summary: 配置竞拍规则
+      operationId: configureAuctionRules
+      tags:
+        - Product
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuctionRuleRequest'
+      responses:
+        '200':
+          description: 配置成功
+
+  # 竞拍管理
+  /auctions:
+    get:
+      summary: 获取竞拍列表
+      operationId: listAuctions
+      tags:
+        - Auction
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: integer
+          description: 竞拍状态（0=待开始, 1=进行中, 2=延时中, 3=已结束, 4=已取消）
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Auction'
+
+  /auctions/{auctionId}:
+    get:
+      summary: 获取竞拍详情
+      operationId: getAuction
+      tags:
+        - Auction
+      parameters:
+        - name: auctionId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/AuctionDetail'
+
+  /auctions/{auctionId}/cancel:
+    put:
+      summary: 取消竞拍
+      operationId: cancelAuction
+      tags:
+        - Auction
+      parameters:
+        - name: auctionId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 取消成功
+
+  # 订单管理
+  /orders:
+    get:
+      summary: 获取订单列表
+      operationId: listOrders
+      tags:
+        - Order
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: integer
+          description: 订单状态（0=待支付, 1=已支付, 2=已发货, 3=已完成）
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Order'
+
+  /orders/{orderId}:
+    get:
+      summary: 获取订单详情
+      operationId: getOrder
+      tags:
+        - Order
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/OrderDetail'
+
+    put:
+      summary: 更新订单状态
+      operationId: updateOrder
+      tags:
+        - Order
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: integer
+      responses:
+        '200':
+          description: 更新成功
+
+  /orders/{orderId}/pay:
+    post:
+      summary: 模拟支付
+      operationId: payOrder
+      tags:
+        - Order
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: 支付成功
+
+  # 用户历史
+  /users/me/history:
+    get:
+      summary: 获取用户竞拍历史
+      operationId: getUserHistory
+      tags:
+        - User
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/UserHistoryItem'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+        status:
+          type: integer
+          enum: [0, 1, 2]
+          description: 0=草稿, 1=上架, 2=下架
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateProductRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+
+    UpdateProductRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+        status:
+          type: integer
+          enum: [0, 1, 2]
+
+    AuctionRuleRequest:
+      type: object
+      required:
+        - increment
+        - duration
+      properties:
+        startPrice:
+          type: number
+          format: float
+          default: 0
+        increment:
+          type: number
+          format: float
+          description: 加价幅度
+        capPrice:
+          type: number
+          format: float
+          description: 封顶价
+        duration:
+          type: integer
+          description: 竞拍时长（秒）
+        delayDuration:
+          type: integer
+          default: 30
+          description: 单次延时时长（秒）
+        maxDelayTime:
+          type: integer
+          default: 180
+          description: 最大延时时长（秒）
+        triggerDelayBefore:
+          type: integer
+          default: 30
+          description: 触发延时的剩余时间（秒）
+
+    Auction:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        productId:
+          type: integer
+          format: int64
+        productName:
+          type: string
+        status:
+          type: integer
+          enum: [0, 1, 2, 3, 4]
+          description: 0=待开始, 1=进行中, 2=延时中, 3=已结束, 4=已取消
+        currentPrice:
+          type: number
+          format: float
+        winnerId:
+          type: integer
+          format: int64
+        winnerName:
+          type: string
+        participantCount:
+          type: integer
+          description: 参与人数
+        bidCount:
+          type: integer
+          description: 出价次数
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    AuctionDetail:
+      allOf:
+        - $ref: '#/components/schemas/Auction'
+        - type: object
+          properties:
+            bids:
+              type: array
+              items:
+                $ref: '#/components/schemas/Bid'
+            rule:
+              $ref: '#/components/schemas/AuctionRule'
+
+    Bid:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        auctionId:
+          type: integer
+          format: int64
+        userId:
+          type: integer
+          format: int64
+        userName:
+          type: string
+        amount:
+          type: number
+          format: float
+        createdAt:
+          type: string
+          format: date-time
+
+    AuctionRule:
+      type: object
+      properties:
+        startPrice:
+          type: number
+          format: float
+        increment:
+          type: number
+          format: float
+        capPrice:
+          type: number
+          format: float
+        duration:
+          type: integer
+        delayDuration:
+          type: integer
+        maxDelayTime:
+          type: integer
+        triggerDelayBefore:
+          type: integer
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        auctionId:
+          type: integer
+          format: int64
+        productId:
+          type: integer
+          format: int64
+        productName:
+          type: string
+        winnerId:
+          type: integer
+          format: int64
+        winnerName:
+          type: string
+        finalPrice:
+          type: number
+          format: float
+        status:
+          type: integer
+          enum: [0, 1, 2, 3]
+          description: 0=待支付, 1=已支付, 2=已发货, 3=已完成
+        paidAt:
+          type: string
+          format: date-time
+        shippedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    OrderDetail:
+      allOf:
+        - $ref: '#/components/schemas/Order'
+        - type: object
+          properties:
+            product:
+              $ref: '#/components/schemas/Product'
+            auction:
+              $ref: '#/components/schemas/Auction'
+
+    UserHistoryItem:
+      type: object
+      properties:
+        auctionId:
+          type: integer
+          format: int64
+        productName:
+          type: string
+        finalPrice:
+          type: number
+          format: float
+        isWinner:
+          type: boolean
+        bidCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time

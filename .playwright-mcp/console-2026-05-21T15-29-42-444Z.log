@@ -1,0 +1,12 @@
+[   35241ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5175/api/v1/auctions:0
+[   35241ms] [ERROR] 获取竞拍列表失败: SyntaxError: Unexpected token 'N', "Not Found" is not valid JSON @ http://localhost:5175/src/pages/Auction/List.tsx?t=1779377173984:34
+[   35244ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5175/api/v1/auctions:0
+[   35245ms] [ERROR] 获取竞拍列表失败: SyntaxError: Unexpected token 'N', "Not Found" is not valid JSON @ http://localhost:5175/src/pages/Auction/List.tsx?t=1779377173984:34
+[   72471ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5175/api/v1/auctions:0
+[   72471ms] [ERROR] 获取竞拍列表失败: SyntaxError: Unexpected token 'N', "Not Found" is not valid JSON @ http://localhost:5175/src/pages/Auction/List.tsx?t=1779377173984:34
+[   72476ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5175/api/v1/auctions:0
+[   72477ms] [ERROR] 获取竞拍列表失败: SyntaxError: Unexpected token 'N', "Not Found" is not valid JSON @ http://localhost:5175/src/pages/Auction/List.tsx?t=1779377173984:34
+[   73437ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5175/api/v1/orders:0
+[   73438ms] [ERROR] 获取订单列表失败: SyntaxError: Unexpected token 'N', "Not Found" is not valid JSON @ http://localhost:5175/src/pages/Order/List.tsx?t=1779377228782:33
+[   73447ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5175/api/v1/orders:0
+[   73448ms] [ERROR] 获取订单列表失败: SyntaxError: Unexpected token 'N', "Not Found" is not valid JSON @ http://localhost:5175/src/pages/Order/List.tsx?t=1779377228782:33

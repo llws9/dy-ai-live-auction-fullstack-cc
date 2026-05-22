@@ -1,0 +1,71 @@
+- generic [ref=e4]:
+  - generic [ref=e5]:
+    - button "←" [ref=e6] [cursor=pointer]
+    - heading "竞拍历史" [level=1] [ref=e7]
+  - generic [ref=e8]:
+    - generic [ref=e9]:
+      - generic [ref=e10]: "4"
+      - generic [ref=e11]: 参与竞拍
+    - generic [ref=e12]:
+      - generic [ref=e13]: "1"
+      - generic [ref=e14]: 待支付
+    - generic [ref=e15]:
+      - generic [ref=e16]: ¥4,700
+      - generic [ref=e17]: 已消费
+  - generic [ref=e18]:
+    - button "全部" [ref=e19] [cursor=pointer]
+    - button "待支付" [ref=e20] [cursor=pointer]
+    - button "已中标" [ref=e21] [cursor=pointer]
+  - generic [ref=e23]:
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - img "古董怀表收藏品" [ref=e26]
+        - generic [ref=e27]: ✓ 已支付
+      - generic [ref=e28]:
+        - heading "古董怀表收藏品" [level=3] [ref=e29]
+        - generic [ref=e30]:
+          - generic [ref=e31]: "订单 #1001"
+          - generic [ref=e32]: 2026/5/21
+        - generic [ref=e34]:
+          - text: 成交价
+          - generic [ref=e35]: ¥520
+        - button "查看详情" [ref=e37] [cursor=pointer]
+    - generic [ref=e38]:
+      - generic [ref=e39]:
+        - img "艺术画作原稿" [ref=e40]
+        - generic [ref=e41]: ⏳ 待支付
+      - generic [ref=e42]:
+        - heading "艺术画作原稿" [level=3] [ref=e43]
+        - generic [ref=e44]:
+          - generic [ref=e45]: "订单 #1002"
+          - generic [ref=e46]: 2026/5/21
+        - generic [ref=e48]:
+          - text: 成交价
+          - generic [ref=e49]: ¥1,200
+        - button "💳 立即支付" [ref=e51] [cursor=pointer]
+    - generic [ref=e52]:
+      - generic [ref=e53]:
+        - img "限量版手表" [ref=e54]
+        - generic [ref=e55]: 🏆 已完成
+      - generic [ref=e56]:
+        - heading "限量版手表" [level=3] [ref=e57]
+        - generic [ref=e58]:
+          - generic [ref=e59]: "订单 #1003"
+          - generic [ref=e60]: 2026/5/20
+        - generic [ref=e62]:
+          - text: 成交价
+          - generic [ref=e63]: ¥3,500
+        - button "查看详情" [ref=e65] [cursor=pointer]
+    - generic [ref=e66]:
+      - generic [ref=e67]:
+        - img "签名篮球" [ref=e68]
+        - generic [ref=e69]: 📦 已发货
+      - generic [ref=e70]:
+        - heading "签名篮球" [level=3] [ref=e71]
+        - generic [ref=e72]:
+          - generic [ref=e73]: "订单 #1004"
+          - generic [ref=e74]: 2026/5/19
+        - generic [ref=e76]:
+          - text: 成交价
+          - generic [ref=e77]: ¥680
+        - button "查看详情" [ref=e79] [cursor=pointer]

@@ -1,0 +1,58 @@
+- generic [ref=e4]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - heading "🎯 直播竞拍" [level=1] [ref=e7]
+      - button "📜 历史" [ref=e8] [cursor=pointer]
+    - paragraph [ref=e9]: 发现好物，竞拍心仪商品
+    - link "🎥 进入直播间 实时竞拍 · 互动体验 直播中" [ref=e10] [cursor=pointer]:
+      - /url: /live
+      - generic [ref=e11]:
+        - generic [ref=e12]: 🎥
+        - generic [ref=e13]:
+          - generic [ref=e14]: 进入直播间
+          - generic [ref=e15]: 实时竞拍 · 互动体验
+      - generic [ref=e16]: 直播中
+  - generic [ref=e17]:
+    - button "全部" [ref=e18] [cursor=pointer]
+    - button "进行中" [ref=e19] [cursor=pointer]
+    - button "已结束" [ref=e20] [cursor=pointer]
+  - generic [ref=e22]:
+    - link "限定款奢侈品包包 进行中 👥 12人参与 限定款奢侈品包包 当前价 ¥150 ⏱️ 1小时后结束 立即出价 →" [ref=e23] [cursor=pointer]:
+      - /url: /auction/1
+      - generic [ref=e24]:
+        - img "限定款奢侈品包包" [ref=e25]
+        - generic [ref=e26]: 进行中
+        - generic [ref=e28]: 👥 12人参与
+      - generic [ref=e29]:
+        - heading "限定款奢侈品包包" [level=3] [ref=e30]
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: 当前价
+            - generic [ref=e34]: ¥150
+          - generic [ref=e35]: ⏱️ 1小时后结束
+        - generic [ref=e36]: 立即出价 →
+    - link "签名版限量球鞋 进行中 👥 8人参与 签名版限量球鞋 当前价 ¥280 ⏱️ 30分钟后结束 立即出价 →" [ref=e37] [cursor=pointer]:
+      - /url: /auction/2
+      - generic [ref=e38]:
+        - img "签名版限量球鞋" [ref=e39]
+        - generic [ref=e40]: 进行中
+        - generic [ref=e42]: 👥 8人参与
+      - generic [ref=e43]:
+        - heading "签名版限量球鞋" [level=3] [ref=e44]
+        - generic [ref=e45]:
+          - generic [ref=e46]:
+            - generic [ref=e47]: 当前价
+            - generic [ref=e48]: ¥280
+          - generic [ref=e49]: ⏱️ 30分钟后结束
+        - generic [ref=e50]: 立即出价 →
+    - link "古董怀表收藏品 已结束 👥 25人参与 古董怀表收藏品 当前价 ¥520" [ref=e51] [cursor=pointer]:
+      - /url: /auction/3
+      - generic [ref=e52]:
+        - img "古董怀表收藏品" [ref=e53]
+        - generic [ref=e54]: 已结束
+        - generic [ref=e55]: 👥 25人参与
+      - generic [ref=e56]:
+        - heading "古董怀表收藏品" [level=3] [ref=e57]
+        - generic [ref=e59]:
+          - generic [ref=e60]: 当前价
+          - generic [ref=e61]: ¥520
