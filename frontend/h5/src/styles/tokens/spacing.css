@@ -1,0 +1,39 @@
+/* 设计系统 - 间距变量 */
+
+:root {
+  /* ===== 基础间距 (4px 基准) ===== */
+  --spacing-0: 0;
+  --spacing-px: 1px;
+  --spacing-0-5: 0.125rem;   /* 2px */
+  --spacing-1: 0.25rem;      /* 4px */
+  --spacing-1-5: 0.375rem;   /* 6px */
+  --spacing-2: 0.5rem;       /* 8px */
+  --spacing-2-5: 0.625rem;   /* 10px */
+  --spacing-3: 0.75rem;      /* 12px */
+  --spacing-3-5: 0.875rem;   /* 14px */
+  --spacing-4: 1rem;         /* 16px */
+  --spacing-5: 1.25rem;      /* 20px */
+  --spacing-6: 1.5rem;       /* 24px */
+  --spacing-7: 1.75rem;      /* 28px */
+  --spacing-8: 2rem;         /* 32px */
+  --spacing-9: 2.25rem;      /* 36px */
+  --spacing-10: 2.5rem;      /* 40px */
+  --spacing-11: 2.75rem;     /* 44px */
+  --spacing-12: 3rem;        /* 48px */
+  --spacing-14: 3.5rem;      /* 56px */
+  --spacing-16: 4rem;        /* 64px */
+  --spacing-20: 5rem;        /* 80px */
+  --spacing-24: 6rem;        /* 96px */
+
+  /* ===== 特殊间距 ===== */
+  --spacing-auto: auto;
+  --spacing-full: 100%;
+
+  /* ===== 负间距 ===== */
+  --spacing-n1: -0.25rem;    /* -4px */
+  --spacing-n2: -0.5rem;     /* -8px */
+  --spacing-n3: -0.75rem;    /* -12px */
+  --spacing-n4: -1rem;       /* -16px */
+  --spacing-n6: -1.5rem;     /* -24px */
+  --spacing-n8: -2rem;       /* -32px */
+}

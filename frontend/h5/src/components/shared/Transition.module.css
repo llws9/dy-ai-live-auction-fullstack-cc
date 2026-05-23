@@ -1,0 +1,203 @@
+/* Transition 过渡动画组件样式 */
+
+/* ===== Fade 动画 ===== */
+.fadeIn {
+  animation: fadeIn var(--duration-normal) var(--easing-default);
+}
+
+.fadeOut {
+  animation: fadeOut var(--duration-normal) var(--easing-default) forwards;
+}
+
+/* ===== Slide 动画 ===== */
+.slideIn {
+  animation: slideIn var(--duration-normal) var(--easing-default);
+}
+
+.slideOut {
+  animation: slideOut var(--duration-normal) var(--easing-default) forwards;
+}
+
+.slideUpIn {
+  animation: slideUpIn var(--duration-normal) var(--easing-default);
+}
+
+.slideUpOut {
+  animation: slideUpOut var(--duration-normal) var(--easing-default) forwards;
+}
+
+.slideDownIn {
+  animation: slideDownIn var(--duration-normal) var(--easing-default);
+}
+
+.slideDownOut {
+  animation: slideDownOut var(--duration-normal) var(--easing-default) forwards;
+}
+
+.slideLeftIn {
+  animation: slideLeftIn var(--duration-normal) var(--easing-default);
+}
+
+.slideLeftOut {
+  animation: slideLeftOut var(--duration-normal) var(--easing-default) forwards;
+}
+
+.slideRightIn {
+  animation: slideRightIn var(--duration-normal) var(--easing-default);
+}
+
+.slideRightOut {
+  animation: slideRightOut var(--duration-normal) var(--easing-default) forwards;
+}
+
+/* ===== Scale 动画 ===== */
+.scaleIn {
+  animation: scaleIn var(--duration-normal) var(--easing-bounce);
+}
+
+.scaleOut {
+  animation: scaleOut var(--duration-fast) var(--easing-default) forwards;
+}
+
+/* ===== 动画关键帧 ===== */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+}
+
+@keyframes slideUpIn {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideUpOut {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes slideDownIn {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideDownOut {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes slideLeftIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideLeftOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes slideRightIn {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideRightOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleOut {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+}

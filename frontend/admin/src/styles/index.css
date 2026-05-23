@@ -1,0 +1,15 @@
+/* 设计系统入口文件 */
+/* 导入所有样式模块 */
+
+/* 基础重置 */
+@import './base/reset.css';
+
+/* 设计 Tokens */
+@import './tokens/colors.css';
+@import './tokens/typography.css';
+@import './tokens/spacing.css';
+@import './tokens/radius.css';
+@import './tokens/animations.css';
+
+/* 全局样式 */
+@import './base/globals.css';

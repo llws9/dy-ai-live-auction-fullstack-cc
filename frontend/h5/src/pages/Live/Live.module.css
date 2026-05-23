@@ -1,0 +1,288 @@
+/* Live 直播页面样式 */
+
+.container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  background: #000;
+  overflow: hidden;
+}
+
+/* ===== Video Background ===== */
+.videoBackground {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.videoOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.4) 0%,
+    transparent 20%,
+    transparent 60%,
+    rgba(0, 0, 0, 0.6) 100%
+  );
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--spacing-4);
+  padding-top: calc(var(--spacing-4) + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(var(--spacing-4) + env(safe-area-inset-bottom, 0px) + 120px);
+}
+
+/* ===== Top Bar ===== */
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.liveInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: var(--radius-full);
+}
+
+.liveDot {
+  width: 8px;
+  height: 8px;
+  background: var(--color-accent-500);
+  border-radius: var(--radius-full);
+  animation: pulse 1.5s infinite;
+}
+
+.liveText {
+  color: white;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.viewerCount {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: var(--font-size-xs);
+  margin-left: var(--spacing-2);
+}
+
+.closeBtn {
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== Product List ===== */
+.productList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  max-height: 50vh;
+  overflow-y: auto;
+  padding-right: var(--spacing-2);
+}
+
+.productCard {
+  display: flex;
+  gap: var(--spacing-3);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.productCard:hover {
+  transform: scale(1.02);
+}
+
+.productCardActive {
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
+}
+
+.productImage {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
+
+.productInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.productName {
+  color: white;
+  font-size: var(--font-size-sm);
+  margin: 0 0 var(--spacing-1) 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.productPrice {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-2);
+}
+
+.currentPrice {
+  color: var(--color-primary-400);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.productStatus {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  margin-top: var(--spacing-1);
+}
+
+.statusOngoing {
+  color: var(--color-success-400);
+  font-size: var(--font-size-xs);
+}
+
+.statusEnded {
+  color: var(--color-neutral-400);
+  font-size: var(--font-size-xs);
+}
+
+.statusPending {
+  color: var(--color-warning-400);
+  font-size: var(--font-size-xs);
+}
+
+/* ===== Bottom Sheet ===== */
+.bottomSheet {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-primary);
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  padding: var(--spacing-4);
+  padding-bottom: calc(var(--spacing-4) + env(safe-area-inset-bottom, 0px));
+  transform: translateY(calc(100% - 60px));
+  transition: transform var(--duration-normal) var(--easing-default);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.bottomSheetExpanded {
+  transform: translateY(0);
+}
+
+.sheetHandle {
+  width: 40px;
+  height: 4px;
+  background: var(--color-neutral-300);
+  border-radius: var(--radius-full);
+  margin: 0 auto var(--spacing-3);
+}
+
+/* ===== Bid Sheet ===== */
+.bidSheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-primary);
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  padding: var(--spacing-5);
+  padding-bottom: calc(var(--spacing-5) + env(safe-area-inset-bottom, 0px));
+  transform: translateY(100%);
+  transition: transform var(--duration-normal) var(--easing-default);
+  z-index: 100;
+}
+
+.bidSheetOpen {
+  transform: translateY(0);
+}
+
+.bidSheetOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+}
+
+.bidSheetTitle {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-4) 0;
+}
+
+.bidInput {
+  display: flex;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+}
+
+.bidInputField {
+  flex: 1;
+  font-size: var(--font-size-2xl);
+  text-align: center;
+  border: 2px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-3);
+}
+
+.quickBidButtons {
+  display: flex;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-4);
+}
+
+.quickBidBtn {
+  flex: 1;
+  padding: var(--spacing-2);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.quickBidBtn:hover {
+  background: var(--color-primary-50);
+  border-color: var(--color-primary-500);
+}
+
+/* ===== Animations ===== */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}

@@ -1,0 +1,334 @@
+/* Home 页面样式 */
+
+.container {
+  min-height: 100vh;
+  background: var(--bg-secondary);
+  padding-bottom: calc(var(--spacing-4) + env(safe-area-inset-bottom, 0px));
+}
+
+/* ===== Header ===== */
+.header {
+  background: var(--gradient-primary);
+  padding: var(--spacing-5) var(--spacing-4);
+  color: var(--text-inverse);
+}
+
+.headerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-2);
+}
+
+.logo {
+  font-size: var(--font-size-2xl);
+  margin: 0;
+  font-weight: var(--font-weight-bold);
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.headerBtn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  border-radius: var(--radius-full);
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.headerBtn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.subtitle {
+  margin: 0;
+  opacity: 0.9;
+  font-size: var(--font-size-sm);
+}
+
+/* ===== Live Entry ===== */
+.liveEntry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--spacing-4);
+  padding: var(--spacing-3) var(--spacing-4);
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-card);
+  text-decoration: none;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: transform var(--transition-fast), background var(--transition-fast);
+}
+
+.liveEntry:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.liveEntryContent {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.liveIcon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xl);
+}
+
+.liveText {
+  display: flex;
+  flex-direction: column;
+}
+
+.liveTitle {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: white;
+}
+
+.liveDesc {
+  font-size: var(--font-size-xs);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.liveBadge {
+  background: var(--color-accent-500);
+  color: white;
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  animation: pulse 2s infinite;
+}
+
+/* ===== Tabs ===== */
+.tabs {
+  display: flex;
+  gap: var(--spacing-2);
+  padding: var(--spacing-4);
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-light);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.tab {
+  flex: 1;
+  padding: var(--spacing-2) var(--spacing-3);
+  background: var(--bg-secondary);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tab:hover {
+  background: var(--bg-tertiary);
+}
+
+.tabActive {
+  background: var(--color-primary-500);
+  color: white;
+  font-weight: var(--font-weight-medium);
+}
+
+/* ===== Content ===== */
+.content {
+  padding: var(--spacing-4);
+}
+
+/* ===== Loading ===== */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-16) 0;
+  color: var(--text-tertiary);
+}
+
+.loadingText {
+  margin-top: var(--spacing-4);
+  color: var(--text-tertiary);
+}
+
+/* ===== Empty State ===== */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-16) 0;
+}
+
+.emptyIcon {
+  font-size: 48px;
+  margin-bottom: var(--spacing-4);
+}
+
+.emptyText {
+  color: var(--text-tertiary);
+  margin: 0;
+}
+
+/* ===== Grid ===== */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-3);
+}
+
+@media (min-width: 480px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+}
+
+/* ===== Card ===== */
+.card {
+  background: var(--bg-primary);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.cardImageWrapper {
+  position: relative;
+  padding-top: 75%;
+  background: var(--bg-secondary);
+}
+
+.cardImage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.statusBadge {
+  position: absolute;
+  top: var(--spacing-2);
+  left: var(--spacing-2);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.statusOngoing {
+  background: var(--color-success-100);
+  color: var(--color-success-600);
+}
+
+.statusEnded {
+  background: var(--color-neutral-100);
+  color: var(--color-neutral-500);
+}
+
+.statusPending {
+  background: var(--color-warning-100);
+  color: var(--color-warning-600);
+}
+
+.liveDot {
+  width: 6px;
+  height: 6px;
+  background: var(--color-success-500);
+  border-radius: var(--radius-full);
+  animation: pulse 1.5s infinite;
+}
+
+.bidderCount {
+  position: absolute;
+  bottom: var(--spacing-2);
+  right: var(--spacing-2);
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+}
+
+.cardContent {
+  padding: var(--spacing-3);
+}
+
+.cardTitle {
+  font-size: var(--font-size-sm);
+  margin: 0 0 var(--spacing-2) 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.priceRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: var(--spacing-2);
+}
+
+.priceSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.priceLabel {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.priceValue {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-accent-500);
+}
+
+.timeBadge {
+  font-size: 10px;
+  color: var(--color-warning-600);
+  background: var(--color-warning-100);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-sm);
+}
+
+.bidButton {
+  text-align: center;
+  padding: var(--spacing-2);
+  background: var(--gradient-primary);
+  color: white;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}

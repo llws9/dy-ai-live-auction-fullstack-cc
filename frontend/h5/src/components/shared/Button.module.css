@@ -1,0 +1,122 @@
+/* Button 组件样式 */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  border: none;
+  border-radius: var(--radius-button);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== Variants ===== */
+.primary {
+  background: var(--gradient-primary);
+  color: var(--text-inverse);
+  box-shadow: 0 2px 4px rgba(249, 115, 22, 0.3);
+}
+
+.primary:hover:not(:disabled) {
+  box-shadow: 0 4px 8px rgba(249, 115, 22, 0.4);
+}
+
+.primary:active:not(:disabled) {
+  box-shadow: 0 1px 2px rgba(249, 115, 22, 0.3);
+}
+
+.secondary {
+  background: var(--color-secondary-400);
+  color: var(--text-inverse);
+  box-shadow: 0 2px 4px rgba(251, 191, 36, 0.3);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--color-secondary-500);
+  box-shadow: 0 4px 8px rgba(251, 191, 36, 0.4);
+}
+
+.outline {
+  background: transparent;
+  border: 2px solid var(--color-primary-500);
+  color: var(--color-primary-500);
+}
+
+.outline:hover:not(:disabled) {
+  background: var(--color-primary-50);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--color-primary-500);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--color-primary-50);
+}
+
+/* ===== Sizes ===== */
+.sm {
+  padding: var(--spacing-1) var(--spacing-3);
+  font-size: var(--font-size-sm);
+  min-height: 32px;
+}
+
+.md {
+  padding: var(--spacing-2) var(--spacing-4);
+  font-size: var(--font-size-base);
+  min-height: 40px;
+}
+
+.lg {
+  padding: var(--spacing-3) var(--spacing-6);
+  font-size: var(--font-size-lg);
+  min-height: 48px;
+}
+
+/* ===== Full Width ===== */
+.fullWidth {
+  width: 100%;
+}
+
+/* ===== Loading State ===== */
+.loading {
+  cursor: wait;
+}
+
+.textHidden {
+  visibility: hidden;
+}
+
+.spinner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: var(--radius-full);
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

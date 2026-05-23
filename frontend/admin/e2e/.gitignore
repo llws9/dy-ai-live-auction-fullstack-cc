@@ -1,0 +1,34 @@
+# Playwright测试输出
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/test-results.json
+
+# 测试截图和视频
+/screenshots/
+/videos/
+
+# 环境变量
+.env.test.local
+
+# Node modules
+node_modules/
+
+# 构建输出
+dist/
+build/
+
+# 日志
+*.log
+npm-debug.log*
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# IDE配置
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -1,0 +1,313 @@
+/* Auction 详情页样式 */
+
+.container {
+  min-height: 100vh;
+  background: var(--bg-secondary);
+  padding-bottom: calc(var(--spacing-5) + env(safe-area-inset-bottom, 0px));
+}
+
+/* ===== Loading & Error States ===== */
+.loadingContainer,
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg-secondary);
+  padding: var(--spacing-5);
+}
+
+.errorIcon {
+  font-size: 64px;
+  margin-bottom: var(--spacing-4);
+}
+
+.errorTitle {
+  font-size: var(--font-size-xl);
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-5);
+}
+
+/* ===== Video Section ===== */
+.videoSection {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  overflow: hidden;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.videoOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.1) 50%, rgba(0, 0, 0, 0.7) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* ===== Top Bar ===== */
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-4);
+}
+
+.backBtn {
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  border-radius: var(--radius-full);
+  padding: var(--spacing-2) var(--spacing-4);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: background var(--transition-fast);
+}
+
+.backBtn:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.liveBadge {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  background: var(--color-accent-500);
+  color: white;
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  animation: pulse 2s infinite;
+}
+
+.liveDot {
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: var(--radius-full);
+  animation: pulse 1.5s infinite;
+}
+
+.floatingCountdown {
+  padding: var(--spacing-4);
+}
+
+/* ===== Bid Section ===== */
+.bidSection {
+  margin: -30px var(--spacing-4) var(--spacing-4);
+  background: var(--bg-primary);
+  border-radius: var(--radius-card);
+  padding: var(--spacing-5);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 10;
+}
+
+.bidHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-4);
+}
+
+.bidTitle {
+  font-size: var(--font-size-lg);
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.delayBadge {
+  background: var(--color-warning-100);
+  color: var(--color-warning-600);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+}
+
+.endedMessage {
+  text-align: center;
+  padding: var(--spacing-8) 0;
+  color: var(--text-secondary);
+}
+
+.endedIcon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: var(--spacing-2);
+}
+
+.viewResultBtn {
+  margin-top: var(--spacing-4);
+  padding: var(--spacing-3) var(--spacing-6);
+  background: var(--gradient-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.viewResultBtn:hover {
+  transform: scale(1.02);
+}
+
+/* ===== Ranking Section ===== */
+.rankingSection {
+  margin: 0 var(--spacing-4) var(--spacing-4);
+  background: var(--bg-primary);
+  border-radius: var(--radius-card);
+  padding: var(--spacing-5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.rankingTitle {
+  font-size: var(--font-size-base);
+  margin: 0 0 var(--spacing-4) 0;
+  color: var(--text-primary);
+}
+
+.rankingList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.rankingItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-3);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  transition: transform var(--transition-fast);
+}
+
+.rankingItem:hover {
+  transform: translateX(4px);
+}
+
+.rankingItemTop1 {
+  background: linear-gradient(135deg, #ffd700 0%, #ffb700 100%);
+}
+
+.rankingItemTop2 {
+  background: linear-gradient(135deg, #e0e0e0 0%, #c0c0c0 100%);
+}
+
+.rankingItemTop3 {
+  background: linear-gradient(135deg, #cd7f32 0%, #b5651d 100%);
+  color: white;
+}
+
+.rankingLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.rankingNum {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-neutral-300);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.rankingNum1 {
+  background: #ffd700;
+}
+
+.rankingNum2 {
+  background: #c0c0c0;
+}
+
+.rankingNum3 {
+  background: #cd7f32;
+  color: white;
+}
+
+.rankingName {
+  font-size: var(--font-size-sm);
+}
+
+.rankingAmount {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-accent-500);
+}
+
+.emptyRanking {
+  text-align: center;
+  padding: var(--spacing-5);
+  color: var(--text-tertiary);
+}
+
+/* ===== Info Section ===== */
+.infoSection {
+  margin: 0 var(--spacing-4);
+  background: var(--bg-primary);
+  border-radius: var(--radius-card);
+  padding: var(--spacing-5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.infoTitle {
+  font-size: var(--font-size-base);
+  margin: 0 0 var(--spacing-4) 0;
+  color: var(--text-primary);
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-4);
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.infoLabel {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.infoValue {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.statusActive {
+  color: var(--color-success-500);
+  font-weight: var(--font-weight-medium);
+}
+
+.statusEnded {
+  color: var(--color-neutral-500);
+}
+
+/* ===== Animations ===== */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
