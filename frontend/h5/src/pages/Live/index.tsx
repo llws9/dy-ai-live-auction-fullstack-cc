@@ -349,8 +349,10 @@ const LiveAuctionPage: React.FC = () => {
                   <div style={styles.productStatus}>
                     <span style={{
                       ...styles.statusDot,
-                      background: product.status === 'ongoing' ? 'var(--neon-green)' :
-                        product.status === 'pending' ? 'var(--neon-blue)' : 'var(--text-muted)'
+                      background: product.status === 'ongoing' ? '#00ff88' :
+                        product.status === 'pending' ? '#00d4ff' : 'rgba(255,255,255,0.3)',
+                      boxShadow: product.status === 'ongoing' ? '0 0 8px rgba(0, 255, 136, 0.6)' :
+                        product.status === 'pending' ? '0 0 8px rgba(0, 212, 255, 0.6)' : 'none',
                     }}></span>
                     <span style={styles.statusText}>
                       {product.status === 'ongoing' ? '竞拍中' :
@@ -367,10 +369,11 @@ const LiveAuctionPage: React.FC = () => {
                   <div style={styles.productAction}>
                     <button style={{
                       ...styles.bidBtn,
-                      background: product.status === 'ended' ? 'rgba(255,255,255,0.05)' :
-                        product.status === 'ongoing' ? 'var(--gradient-gold)' : 'rgba(255,255,255,0.1)',
-                      color: product.status === 'ended' ? 'var(--text-muted)' :
-                        product.status === 'ongoing' ? '#000' : 'var(--text-secondary)',
+                      background: product.status === 'ended' ? 'rgba(255,255,255,0.1)' :
+                        product.status === 'ongoing' ? 'linear-gradient(135deg, #ffd700 0%, #ff8c00 100%)' : 'rgba(255,255,255,0.15)',
+                      color: product.status === 'ended' ? 'rgba(255,255,255,0.5)' :
+                        product.status === 'ongoing' ? '#000' : 'rgba(255,255,255,0.8)',
+                      fontWeight: product.status === 'ongoing' ? 700 : 500,
                     }}>
                       {getButtonText(product)}
                     </button>
@@ -402,10 +405,14 @@ const LiveAuctionPage: React.FC = () => {
                 <div style={styles.countdownSection}>
                   <div style={{
                     ...styles.countdownDisplay,
-                    color: (countdown[selectedProduct.id] || 0) < 30000 ? 'var(--neon-red)' : 'var(--neon-blue)',
+                    color: (countdown[selectedProduct.id] || 0) < 30000 ? '#ff4d4f' : '#00d4ff',
+                    textShadow: (countdown[selectedProduct.id] || 0) < 30000
+                      ? '0 0 20px rgba(255, 77, 79, 0.8)'
+                      : '0 0 20px rgba(0, 212, 255, 0.8)',
                   }}>
                     {formatCountdown(countdown[selectedProduct.id] || 0)}
                   </div>
+                  <div style={styles.countdownHint}>剩余时间</div>
                 </div>
               )}
 
@@ -423,8 +430,10 @@ const LiveAuctionPage: React.FC = () => {
                       <div style={styles.bidPriceLabel}>我的出价</div>
                       <div style={{
                         ...styles.bidPriceValue,
-                        color: selectedProduct.myBid ? 'var(--neon-green)' : 'var(--text-muted)',
-                        fontSize: selectedProduct.myBid ? '20px' : '14px',
+                        color: selectedProduct.myBid ? '#00ff88' : 'rgba(255,255,255,0.4)',
+                        fontSize: selectedProduct.myBid ? '22px' : '14px',
+                        fontWeight: selectedProduct.myBid ? 700 : 400,
+                        textShadow: selectedProduct.myBid ? '0 0 10px rgba(0, 255, 136, 0.5)' : 'none',
                       }}>
                         {selectedProduct.myBid ? `¥${selectedProduct.myBid.toLocaleString()}` : '暂未出价'}
                       </div>
@@ -814,12 +823,20 @@ const styles: { [key: string]: React.CSSProperties } = {
   countdownSection: {
     textAlign: 'center',
     marginBottom: '20px',
+    padding: '16px',
+    background: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: '16px',
   },
   countdownDisplay: {
     fontFamily: "'Outfit', sans-serif",
-    fontSize: '36px',
+    fontSize: '42px',
     fontWeight: 800,
-    textShadow: '0 0 20px currentColor',
+    letterSpacing: '2px',
+  },
+  countdownHint: {
+    fontSize: '12px',
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: '8px',
   },
   bidProduct: {
     display: 'flex',
