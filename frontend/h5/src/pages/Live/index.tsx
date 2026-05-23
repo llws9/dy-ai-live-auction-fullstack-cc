@@ -612,14 +612,15 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
+    color: 'white',
   },
   ongoingBadge: {
     padding: '2px 8px',
-    background: 'rgba(0, 255, 136, 0.2)',
+    background: 'rgba(0, 255, 136, 0.25)',
     borderRadius: '10px',
     fontSize: '11px',
-    color: 'var(--neon-green)',
-    fontWeight: 500,
+    color: '#00ff88',
+    fontWeight: 600,
   },
   previewPrice: {
     fontSize: '16px',
@@ -631,7 +632,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   previewPriceLabel: {
     fontSize: '11px',
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,255,255,0.7)',
     fontWeight: 400,
   },
   previewCountdown: {
@@ -645,7 +646,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   countdownLabel: {
     fontSize: '10px',
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,255,255,0.6)',
   },
   sheetContent: {
     padding: '0 16px 100px',
@@ -664,6 +665,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
+    color: 'white',
   },
   sheetCount: {
     fontSize: '13px',
@@ -693,12 +695,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     bottom: '4px',
     left: '4px',
     right: '4px',
-    padding: '2px 6px',
-    background: 'rgba(0,0,0,0.7)',
+    padding: '3px 6px',
+    background: 'rgba(0,0,0,0.8)',
     borderRadius: '6px',
-    fontSize: '10px',
-    fontWeight: 600,
-    color: 'var(--neon-blue)',
+    fontSize: '11px',
+    fontWeight: 700,
+    color: '#00d4ff',
     textAlign: 'center',
   },
   productInfo: {
@@ -715,6 +717,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     WebkitLineClamp: 2,
     WebkitBoxOrient: 'vertical',
     overflow: 'hidden',
+    color: 'white',
   },
   productStatus: {
     display: 'flex',
@@ -730,14 +733,15 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   statusText: {
     fontSize: '12px',
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.9)',
   },
   bidCountTag: {
-    padding: '2px 6px',
-    background: 'rgba(255, 215, 0, 0.15)',
+    padding: '2px 8px',
+    background: 'rgba(255, 215, 0, 0.25)',
     borderRadius: '8px',
-    fontSize: '10px',
-    color: 'var(--neon-gold)',
+    fontSize: '11px',
+    color: '#ffd700',
+    fontWeight: 600,
   },
   productPrice: {
     display: 'flex',
@@ -746,7 +750,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   priceLabel: {
     fontSize: '11px',
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,255,255,0.7)',
   },
   priceValue: {
     fontFamily: "'Outfit', sans-serif",
@@ -790,6 +794,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '18px',
     fontWeight: 700,
     margin: 0,
+    color: 'white',
   },
   bidSheetClose: {
     width: '32px',
@@ -840,6 +845,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '15px',
     fontWeight: 600,
     marginBottom: '8px',
+    color: 'white',
   },
   bidPriceRow: {
     display: 'flex',
@@ -850,7 +856,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   bidPriceLabel: {
     fontSize: '11px',
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,255,255,0.7)',
     marginBottom: '2px',
   },
   bidPriceValue: {
@@ -864,7 +870,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   rankingTitle: {
     fontSize: '13px',
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,255,255,0.7)',
     marginBottom: '12px',
   },
   rankingList: {
@@ -893,6 +899,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   rankingName: {
     flex: 1,
     fontSize: '14px',
+    color: 'white',
   },
   rankingAmount: {
     fontFamily: "'Outfit', sans-serif",
@@ -908,7 +915,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   bidInputLabel: {
     fontSize: '13px',
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,255,255,0.7)',
     marginBottom: '8px',
   },
   bidInputWrapper: {
@@ -930,7 +937,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   bidIncrementHint: {
     fontSize: '12px',
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,255,255,0.6)',
     textAlign: 'center',
     marginTop: '8px',
   },
