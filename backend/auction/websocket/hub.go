@@ -10,6 +10,10 @@ type Hub struct {
 	rooms     map[int64]*Room
 	roomsLock sync.RWMutex
 
+	// 用户房间管理 - 支持按用户ID推送通知
+	UserRooms   map[int64]map[*Client]bool // userID -> clients
+	userRoomsMu sync.RWMutex
+
 	Register   chan *Client
 	Unregister chan *Client
 	broadcast  chan *BroadcastMessage
@@ -29,6 +33,7 @@ type BroadcastMessage struct {
 func NewHub() *Hub {
 	return &Hub{
 		rooms:      make(map[int64]*Room),
+		UserRooms:  make(map[int64]map[*Client]bool),
 		Register:   make(chan *Client, 256),
 		Unregister: make(chan *Client, 256),
 		broadcast:  make(chan *BroadcastMessage, 1024),
@@ -90,6 +95,11 @@ func (h *Hub) registerClient(client *Client) {
 
 	room.Register <- client
 	log.Printf("Client registered: auction_id=%d, client_id=%s", client.AuctionID, client.ID)
+
+	// 用户连接时，如果有userID，自动加入用户房间
+	if client.UserID > 0 {
+		h.JoinUserRoom(client.UserID, client)
+	}
 }
 
 // unregisterClient 注销客户端
@@ -101,6 +111,11 @@ func (h *Hub) unregisterClient(client *Client) {
 	if exists {
 		room.Unregister <- client
 		log.Printf("Client unregistered: auction_id=%d, client_id=%s", client.AuctionID, client.ID)
+	}
+
+	// 用户断开时，从用户房间移除
+	if client.UserID > 0 {
+		h.LeaveUserRoom(client.UserID, client)
 	}
 }
 
@@ -140,4 +155,62 @@ func (h *Hub) GetClientCount() int {
 		count += room.GetClientCount()
 	}
 	return count
+}
+
+// JoinUserRoom - 用户加入个人房间
+func (h *Hub) JoinUserRoom(userID int64, client *Client) {
+	h.userRoomsMu.Lock()
+	defer h.userRoomsMu.Unlock()
+
+	if h.UserRooms[userID] == nil {
+		h.UserRooms[userID] = make(map[*Client]bool)
+	}
+	h.UserRooms[userID][client] = true
+	log.Printf("Client joined user room: user_id=%d, client_id=%s", userID, client.ID)
+}
+
+// LeaveUserRoom - 用户离开个人房间
+func (h *Hub) LeaveUserRoom(userID int64, client *Client) {
+	h.userRoomsMu.Lock()
+	defer h.userRoomsMu.Unlock()
+
+	if h.UserRooms[userID] != nil {
+		delete(h.UserRooms[userID], client)
+		if len(h.UserRooms[userID]) == 0 {
+			delete(h.UserRooms, userID)
+		}
+		log.Printf("Client left user room: user_id=%d, client_id=%s", userID, client.ID)
+	}
+}
+
+// BroadcastToUserRoom - 向用户房间广播消息
+func (h *Hub) BroadcastToUserRoom(userID int64, message *Message) {
+	h.userRoomsMu.RLock()
+	clients := h.UserRooms[userID]
+	h.userRoomsMu.RUnlock()
+
+	if clients == nil {
+		return
+	}
+
+	for client := range clients {
+		select {
+		case client.Send <- message:
+		default:
+			// 发送缓冲区满，关闭连接
+			close(client.Send)
+			delete(h.UserRooms[userID], client)
+		}
+	}
+}
+
+// GetUserRoomClientCount 获取用户房间客户端数量
+func (h *Hub) GetUserRoomClientCount(userID int64) int {
+	h.userRoomsMu.RLock()
+	defer h.userRoomsMu.RUnlock()
+
+	if h.UserRooms[userID] == nil {
+		return 0
+	}
+	return len(h.UserRooms[userID])
 }
