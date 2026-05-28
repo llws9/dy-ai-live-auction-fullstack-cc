@@ -19,10 +19,10 @@ type SkyLampSubscription struct {
 	UserID              int64         `json:"user_id" gorm:"not null;index:idx_auction_user;index:idx_user_status"`
 	Status              SkyLampStatus `json:"status" gorm:"type:tinyint;default:1"`
 	InitialPrice        float64       `json:"initial_price" gorm:"type:decimal(10,2);not null"`       // 开启时的当前价格
-	InitialBidAmount    float64       `json:"initial_bid_amount" gorm:"type:decimal(10,2);not null"`    // 首次出价金额
+	InitialBidAmount    float64       `json:"initial_bid_amount" gorm:"type:decimal(10,2);not null"`   // 首次出价金额
 	MaxPriceLimit       float64       `json:"max_price_limit" gorm:"type:decimal(10,2);not null"`      // 天灯上限金额
 	CurrentAutoBidCount int           `json:"current_auto_bid_count" gorm:"default:0"`                 // 已自动跟价次数
-	TotalBidAmount      float64       `json:"total_bid_amount" gorm:"type:decimal(10,2);default:0"`     // 累计出价金额
+	TotalBidAmount      float64       `json:"total_bid_amount" gorm:"type:decimal(10,2);default:0"`    // 累计出价金额
 	CreatedAt           time.Time     `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt           time.Time     `json:"updated_at" gorm:"autoUpdateTime"`
 	StoppedAt           *time.Time    `json:"stopped_at"` // 停止时间
@@ -47,7 +47,7 @@ func (s *SkyLampSubscription) CanAutoBid(currentPrice float64) bool {
 	return currentPrice <= s.MaxPriceLimit
 }
 
-// GetNextBidAmount 计算下次出价金额（按当前价的10%递增）
-func (s *SkyLampSubscription) GetNextBidAmount(currentPrice float64) float64 {
-	return currentPrice * 1.1
+// GetNextBidAmount 计算下次出价金额（按最低加价幅度）
+func (s *SkyLampSubscription) GetNextBidAmount(currentPrice, increment float64) float64 {
+	return currentPrice + increment
 }
