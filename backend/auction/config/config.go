@@ -3,6 +3,8 @@ package config
 import (
 	"os"
 	"strconv"
+
+	"auction-service/pkg/nacos"
 )
 
 // Config 应用配置
@@ -25,17 +27,18 @@ type ServerConfig struct {
 
 // DatabaseConfig 数据库配置
 type DatabaseConfig struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	Database string
+	Host         string
+	Port         int
+	User         string
+	Password     string
+	Name         string
+	MaxIdleConns int
+	MaxOpenConns int
 }
 
 // RedisConfig Redis配置
 type RedisConfig struct {
-	Host     string
-	Port     string
+	Addr     string
 	Password string
 	DB       int
 }
@@ -73,15 +76,16 @@ func DefaultConfig() *Config {
 			WriteTimeout: 10,
 		},
 		Database: DatabaseConfig{
-			Host:     "localhost",
-			Port:     "3306",
-			User:     "root",
-			Password: "",
-			Database: "auction",
+			Host:         "localhost",
+			Port:         3306,
+			User:         "root",
+			Password:     "",
+			Name:         "auction",
+			MaxIdleConns: 10,
+			MaxOpenConns: 100,
 		},
 		Redis: RedisConfig{
-			Host:     "localhost",
-			Port:     "6379",
+			Addr:     "localhost:6379",
 			Password: "",
 			DB:       0,
 		},
@@ -126,14 +130,21 @@ func LoadFromEnv() *Config {
 
 	// 数据库配置
 	cfg.Database.Host = getEnvOrDefault("DB_HOST", cfg.Database.Host)
-	cfg.Database.Port = getEnvOrDefault("DB_PORT", cfg.Database.Port)
+	if v := getEnvInt("DB_PORT"); v != nil {
+		cfg.Database.Port = *v
+	}
 	cfg.Database.User = getEnvOrDefault("DB_USER", cfg.Database.User)
 	cfg.Database.Password = getEnvOrDefault("DB_PASSWORD", cfg.Database.Password)
-	cfg.Database.Database = getEnvOrDefault("DB_NAME", cfg.Database.Database)
+	cfg.Database.Name = getEnvOrDefault("DB_NAME", cfg.Database.Name)
+	if v := getEnvInt("DB_MAX_IDLE_CONNS"); v != nil {
+		cfg.Database.MaxIdleConns = *v
+	}
+	if v := getEnvInt("DB_MAX_OPEN_CONNS"); v != nil {
+		cfg.Database.MaxOpenConns = *v
+	}
 
 	// Redis配置
-	cfg.Redis.Host = getEnvOrDefault("REDIS_HOST", cfg.Redis.Host)
-	cfg.Redis.Port = getEnvOrDefault("REDIS_PORT", cfg.Redis.Port)
+	cfg.Redis.Addr = getEnvOrDefault("REDIS_ADDR", cfg.Redis.Addr)
 	cfg.Redis.Password = getEnvOrDefault("REDIS_PASSWORD", cfg.Redis.Password)
 	if v := getEnvInt("REDIS_DB"); v != nil {
 		cfg.Redis.DB = *v
@@ -195,4 +206,28 @@ func getEnvBool(key string) *bool {
 		}
 	}
 	return nil
+}
+
+// LoadFromNacosWithFallback 从 Nacos 加载配置，失败时使用环境变量
+func LoadFromNacosWithFallback() (*Config, *nacos.ConfigLoader) {
+	// 检查是否启用 Nacos
+	if os.Getenv("NACOS_ENABLED") == "true" {
+		// 创建 Nacos 客户端
+		nacosCfg := nacos.GetConfigFromEnv()
+		client, err := nacos.NewNacosClient(nacosCfg)
+		if err == nil {
+			// 创建配置加载器
+			group, dataId := nacos.GetServiceConfigInfo()
+			loader := nacos.NewConfigLoader(client, group, dataId)
+
+			// 加载配置
+			cfg := DefaultConfig()
+			if err := loader.Load(cfg); err == nil {
+				return cfg, loader
+			}
+		}
+	}
+
+	// Nacos 未启用或加载失败，使用环境变量
+	return LoadFromEnv(), nil
 }

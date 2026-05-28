@@ -217,7 +217,7 @@ func startWebSocketServer(hub *websocket.Hub, wsHandler *handler.WSHandler, port
 }
 
 // registerRoutes 注册路由
-func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bidHandler *handler.BidHandler, wsHandler *handler.WSHandler, userHandler *handler.UserHandler, authHandler *handler.AuthHandler, notificationHandler *handler.NotificationHandler, followHandler *handler.FollowHandler) {
+func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bidHandler *handler.BidHandler, wsHandler *handler.WSHandler, userHandler *handler.UserHandler, authHandler *handler.AuthHandler, notificationHandler *handler.NotificationHandler, followHandler *handler.FollowHandler, productReminderHandler *handler.ProductReminderHandler) {
 	v1 := h.Group("/api/v1")
 
 	// ========== 认证相关路由 ==========
@@ -253,4 +253,9 @@ func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bid
 	v1.DELETE("/live-streams/:id/follow", followHandler.UnfollowHandler)
 	v1.GET("/user/followed-live-streams", followHandler.GetUserFollowsHandler)
 	v1.PUT("/live-streams/:id/notification", followHandler.ToggleNotificationHandler)
+
+	// ========== 商品提醒订阅相关路由 ==========
+	v1.POST("/products/:id/remind", productReminderHandler.SubscribeProductReminder)
+	v1.DELETE("/products/:id/remind", productReminderHandler.UnsubscribeProductReminder)
+	v1.GET("/users/me/reminders", productReminderHandler.GetUserReminders)
 }
