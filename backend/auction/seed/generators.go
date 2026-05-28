@@ -218,6 +218,9 @@ func GenerateNotifications(cfg *SeedConfig, userIDs []int64, auctionIDs []int64)
 		model.NotificationTypeAuctionWon,
 		model.NotificationTypeAuctionLost,
 		model.NotificationTypeBidOutbid,
+		model.NotificationTypeAuctionStarting,
+		model.NotificationTypeLiveStreamStartingSoon,
+		model.NotificationTypeLiveStreamNowLive,
 	}
 
 	for i := 0; i < cfg.NotificationsCount; i++ {
@@ -236,6 +239,15 @@ func GenerateNotifications(cfg *SeedConfig, userIDs []int64, auctionIDs []int64)
 		case model.NotificationTypeBidOutbid:
 			title = "出价被超越"
 			content = fmt.Sprintf("您的出价已被超越，当前竞拍 #%d", auctionID)
+		case model.NotificationTypeAuctionStarting:
+			title = "竞拍即将开始"
+			content = fmt.Sprintf("竞拍 #%d 将在5分钟后开始，请做好准备", auctionID)
+		case model.NotificationTypeLiveStreamStartingSoon:
+			title = "即将开播"
+			content = "您关注的直播间将在10分钟后开播"
+		case model.NotificationTypeLiveStreamNowLive:
+			title = "正在直播"
+			content = "您关注的直播间已开始直播，快来参与竞拍吧！"
 		}
 
 		notification := model.Notification{
@@ -267,6 +279,7 @@ func GenerateSkyLampSubscriptions(cfg *SeedConfig, auctionIDs []int64, userIDs [
 		model.SkyLampStatusActive,
 		model.SkyLampStatusStopped,
 		model.SkyLampStatusCancelled,
+		model.SkyLampStatusEnded,
 	}
 
 	for i := 0; i < cfg.SkyLampCount; i++ {

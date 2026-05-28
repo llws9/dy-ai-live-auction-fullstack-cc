@@ -40,9 +40,15 @@ func main() {
 	log.Printf("获取到 %d 个用户", len(userIDs))
 
 	db.Table("live_streams").Pluck("id", &liveStreamIDs)
+	if len(liveStreamIDs) == 0 {
+		log.Fatal("请先运行product-service的seed脚本生成直播间数据")
+	}
 	log.Printf("获取到 %d 个直播间", len(liveStreamIDs))
 
 	db.Table("products").Where("status = ?", 1).Pluck("id", &productIDs)
+	if len(productIDs) == 0 {
+		log.Fatal("请先运行product-service的seed脚本生成已发布的商品数据")
+	}
 	log.Printf("获取到 %d 个已发布商品", len(productIDs))
 
 	log.Println("生成竞拍数据...")
