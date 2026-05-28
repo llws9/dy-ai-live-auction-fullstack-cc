@@ -6,12 +6,13 @@
 2. [快速部署](#快速部署)
 3. [Docker部署](#docker部署)
 4. [手动部署](#手动部署)
-5. [配置说明](#配置说明)
-6. [服务管理](#服务管理)
-7. [监控与日志](#监控与日志)
-8. [故障排查](#故障排查)
-9. [GrowthBook A/B 测试平台](#growthbook-ab-测试平台)
-10. [Nacos 配置中心](#nacos-配置中心)
+5. [数据初始化](#数据初始化)
+6. [配置说明](#配置说明)
+7. [服务管理](#服务管理)
+8. [监控与日志](#监控与日志)
+9. [故障排查](#故障排查)
+10. [GrowthBook A/B 测试平台](#growthbook-ab-测试平台)
+11. [Nacos 配置中心](#nacos-配置中心)
 
 ---
 
@@ -705,6 +706,43 @@ sudo systemctl daemon-reload
 sudo systemctl enable auction-product
 sudo systemctl start auction-product
 ```
+
+---
+
+## 数据初始化
+
+### 1. 创建数据库
+
+```bash
+mysql -u root -p < scripts/init.sql
+```
+
+### 2. 执行迁移脚本
+
+```bash
+# 按顺序执行迁移脚本
+for f in scripts/migrations/*.sql; do
+  mysql -u root -p live_auction < "$f"
+done
+```
+
+### 3. 生成种子数据（可选）
+
+用于开发环境快速填充测试数据：
+
+```bash
+cd backend/seed
+go run main.go --size medium
+```
+
+### 4. 配置环境变量
+
+确保数据库连接配置正确：
+- DB_HOST: 数据库地址
+- DB_PORT: 数据库端口
+- DB_USER: 数据库用户
+- DB_PASSWORD: 数据库密码
+- DB_NAME: 数据库名称
 
 ---
 
