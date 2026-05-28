@@ -107,6 +107,13 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.GET("/notifications/unread-count", auctionProxy.Forward)
 	authGroup.PUT("/notifications/:id/read", auctionProxy.Forward)
 	authGroup.PUT("/notifications/read-all", auctionProxy.Forward)
+	authGroup.POST("/notifications/hot-pull", auctionProxy.Forward)
+
+	// ========== 点天灯订阅路由 ==========
+	authGroup.POST("/sky-lamp/subscriptions", auctionProxy.Forward)
+	authGroup.PUT("/sky-lamp/subscriptions/:id/stop", auctionProxy.Forward)
+	authGroup.GET("/sky-lamp/subscriptions", auctionProxy.Forward)
+	authGroup.GET("/sky-lamp/subscriptions/:id", auctionProxy.Forward)
 
 	// ========== 统计服务路由（需要管理员权限） ==========
 	authGroup.GET("/statistics/overview", middleware.RequireAdmin(), productProxy.Forward)

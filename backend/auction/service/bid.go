@@ -20,8 +20,14 @@ type BidService struct {
 	userDAO            *dao.UserDAO
 	hub                *websocket.Hub
 	rankThrottle       *RankingThrottle
-	notificationSender NotificationSender // 通知发送接口
-	metrics            *metrics.AuctionMetrics // 新增：指标收集器
+	notificationSender NotificationSender       // 通知发送接口
+	metrics            *metrics.AuctionMetrics  // 新增：指标收集器
+	skyLampTrigger     SkyLampTrigger           // 点天灯触发接口
+}
+
+// SkyLampTrigger 点天灯触发接口
+type SkyLampTrigger interface {
+	TriggerAutoBid(ctx context.Context, auctionID int64, currentPrice float64, increment float64) error
 }
 
 // NewBidService 创建出价服务
@@ -48,6 +54,11 @@ func (s *BidService) SetHub(hub *websocket.Hub) {
 // SetNotificationSender 设置通知发送服务
 func (s *BidService) SetNotificationSender(sender NotificationSender) {
 	s.notificationSender = sender
+}
+
+// SetSkyLampTrigger 设置点天灯触发服务
+func (s *BidService) SetSkyLampTrigger(trigger SkyLampTrigger) {
+	s.skyLampTrigger = trigger
 }
 
 // PlaceBidRequest 出价请求
@@ -192,6 +203,14 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 					"new_bid":    req.Amount,
 				},
 			})
+		}()
+	}
+
+	// 11.2 触发点天灯自动跟价
+	if s.skyLampTrigger != nil {
+		go func() {
+			// 异步触发，不阻塞主流程
+			_ = s.skyLampTrigger.TriggerAutoBid(ctx, req.AuctionID, req.Amount, rule.Increment)
 		}()
 	}
 

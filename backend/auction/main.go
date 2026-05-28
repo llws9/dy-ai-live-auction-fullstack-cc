@@ -54,6 +54,7 @@ func main() {
 		&model.Bid{},
 		&model.UserLiveStreamFollow{},
 		&model.UserProductReminder{},
+		&model.SkyLampSubscription{},
 	); err != nil {
 		log.Printf("Warning: AutoMigrate failed (tables may already exist): %v", err)
 	}
@@ -66,6 +67,7 @@ func main() {
 	notificationDAO := dao.NewNotificationDAO(db, dao.GetRedis())
 	userLiveStreamFollowDAO := dao.NewUserLiveStreamFollowDAO(db)
 	userProductReminderDAO := dao.NewUserProductReminderDAO(db)
+	skyLampDAO := dao.NewSkyLampDAO(db)
 
 	// 初始化 WebSocket Hub
 	hub := websocket.NewHub()
@@ -83,9 +85,11 @@ func main() {
 	followService := service.NewFollowService(userLiveStreamFollowDAO)
 	productReminderService := service.NewProductReminderService(userProductReminderDAO)
 	productReminderService.SetAuctionDAO(auctionDAO)
+	skyLampService := service.NewSkyLampService(skyLampDAO, bidService)
 
 	// 设置出价服务的通知发送器
 	bidService.SetNotificationSender(notificationService)
+	bidService.SetSkyLampTrigger(skyLampService)
 
 	// 初始化 RabbitMQ 连接
 	if cfg.RabbitMQ.Host != "" && cfg.RabbitMQ.User != "" {
@@ -126,6 +130,7 @@ func main() {
 	notificationHandler := handler.NewNotificationHandler(notificationService)
 	followHandler := handler.NewFollowHandler(followService)
 	productReminderHandler := handler.NewProductReminderHandler(productReminderService)
+	skyLampHandler := handler.NewSkyLampHandler(skyLampService)
 
 	// 初始化认证 Handler
 	jwtExpire := 24 // 24小时
@@ -165,7 +170,7 @@ func main() {
 	)
 
 	// 注册路由
-	registerRoutes(h, auctionHandler, bidHandler, wsHandler, userHandler, authHandler, notificationHandler, followHandler, productReminderHandler)
+	registerRoutes(h, auctionHandler, bidHandler, wsHandler, userHandler, authHandler, notificationHandler, followHandler, productReminderHandler, skyLampHandler)
 
 	// 启动服务
 	log.Printf("Auction service starting on %s (HTTP) and %s (WebSocket)", cfg.Server.HTTPPort, cfg.Server.WSPort)
@@ -217,7 +222,7 @@ func startWebSocketServer(hub *websocket.Hub, wsHandler *handler.WSHandler, port
 }
 
 // registerRoutes 注册路由
-func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bidHandler *handler.BidHandler, wsHandler *handler.WSHandler, userHandler *handler.UserHandler, authHandler *handler.AuthHandler, notificationHandler *handler.NotificationHandler, followHandler *handler.FollowHandler, productReminderHandler *handler.ProductReminderHandler) {
+func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bidHandler *handler.BidHandler, wsHandler *handler.WSHandler, userHandler *handler.UserHandler, authHandler *handler.AuthHandler, notificationHandler *handler.NotificationHandler, followHandler *handler.FollowHandler, productReminderHandler *handler.ProductReminderHandler, skyLampHandler *handler.SkyLampHandler) {
 	v1 := h.Group("/api/v1")
 
 	// ========== 认证相关路由 ==========
@@ -258,4 +263,10 @@ func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bid
 	v1.POST("/products/:id/remind", productReminderHandler.SubscribeProductReminder)
 	v1.DELETE("/products/:id/remind", productReminderHandler.UnsubscribeProductReminder)
 	v1.GET("/users/me/reminders", productReminderHandler.GetUserReminders)
+
+	// ========== 点天灯订阅相关路由 ==========
+	v1.POST("/sky-lamp/subscriptions", skyLampHandler.StartSubscription)
+	v1.PUT("/sky-lamp/subscriptions/:id/stop", skyLampHandler.StopSubscription)
+	v1.GET("/sky-lamp/subscriptions", skyLampHandler.GetUserSubscriptions)
+	v1.GET("/sky-lamp/subscriptions/:id", skyLampHandler.GetSubscriptionDetail)
 }
