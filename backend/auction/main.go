@@ -8,14 +8,18 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"auction-service/config"
 	"auction-service/dao"
 	"auction-service/handler"
 	"auction-service/model"
 	"auction-service/mq"
+	"auction-service/pkg/metrics"
 	"auction-service/service"
+	"auction-service/service/cron"
 	"auction-service/websocket"
 )
 
@@ -47,6 +51,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect redis: %v", err)
 	}
+
+	// 初始化 Prometheus 指标收集器（统一注册）
+	metrics.InitRegistry()
+	log.Println("Prometheus metrics initialized successfully")
 
 	// 自动迁移表结构（如果表已存在，忽略错误）
 	if err := db.AutoMigrate(
@@ -87,9 +95,19 @@ func main() {
 	productReminderService.SetAuctionDAO(auctionDAO)
 	skyLampService := service.NewSkyLampService(skyLampDAO, bidService)
 
-	// 设置出价服务的通知发送器
+	// 设置出价服务的通知发送器和指标收集器
 	bidService.SetNotificationSender(notificationService)
 	bidService.SetSkyLampTrigger(skyLampService)
+	bidService.SetMetrics(metrics.GetMetrics())
+	bidService.SetHub(hub)
+	auctionService.SetBidDAO(bidDAO)
+	auctionService.SetNotificationSender(notificationService)
+	auctionService.SetSkyLampDAO(skyLampDAO)
+
+	// 设置通知服务和点天灯服务的指标收集器
+	notificationService.SetMetrics(metrics.GetNotificationMetrics())
+	notificationService.SetHub(hub)
+	skyLampService.SetMetrics(metrics.GetSkyLampMetrics())
 
 	// 初始化 RabbitMQ 连接
 	if cfg.RabbitMQ.Host != "" && cfg.RabbitMQ.User != "" {
@@ -140,6 +158,10 @@ func main() {
 	wsHandler.SetHub(hub)
 	wsHandler.SetJWTSecret(cfg.JWT.Secret)
 
+	// 设置 WebSocket Hub 到 NotificationService（用于实时推送）
+	notificationService.SetHub(hub)
+	notificationService.SetFollowDAO(userLiveStreamFollowDAO) // 用于热拉Redis失败时DB兜底
+
 	// 启动状态转换定时任务
 	scheduler := service.NewScheduler(auctionService)
 	scheduler.SetHub(hub)
@@ -151,6 +173,13 @@ func main() {
 	coldPushScheduler := service.NewColdPushScheduler(notificationService, userLiveStreamFollowDAO, dao.GetRedis())
 	go coldPushScheduler.Run(ctx)
 	log.Println("Cold push scheduler started")
+
+	// 启动热度自动更新定时任务
+	liveStreamStatsService := service.NewLiveStreamStatsService()
+	statsCron := cron.NewStatsCron(userLiveStreamFollowDAO, liveStreamStatsService)
+	statsCron.Start(ctx)
+	defer statsCron.Stop()
+	log.Println("Stats cron started for auto-updating hotness")
 
 	// 监听配置变更（如果 Nacos 可用）
 	if nacosLoader != nil {
@@ -171,6 +200,22 @@ func main() {
 
 	// 注册路由
 	registerRoutes(h, auctionHandler, bidHandler, wsHandler, userHandler, authHandler, notificationHandler, followHandler, productReminderHandler, skyLampHandler)
+
+	// 注册 Prometheus metrics 端点
+	h.GET("/metrics", func(ctx context.Context, c *app.RequestContext) {
+		c.Response.Header.Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+		// 直接采集 metrics
+		mfs, err := prometheus.DefaultGatherer.Gather()
+		if err != nil {
+			c.Response.Header.Set("Content-Type", "text/plain")
+			c.Response.SetBody([]byte(fmt.Sprintf("Error gathering metrics: %v", err)))
+			return
+		}
+		// 将 metrics 写入响应
+		for _, mf := range mfs {
+			c.Response.AppendBody([]byte(fmt.Sprintf("%s\n", mf.String())))
+		}
+	})
 
 	// 启动服务
 	log.Printf("Auction service starting on %s (HTTP) and %s (WebSocket)", cfg.Server.HTTPPort, cfg.Server.WSPort)
