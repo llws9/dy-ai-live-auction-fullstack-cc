@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
@@ -11,16 +13,56 @@ import (
 	"gateway-service/dao"
 	"gateway-service/middleware"
 	"gateway-service/router"
+	"gateway-service/pkg/metrics"
+	"gateway-service/pkg/growthbook"
 )
 
 func main() {
-	// 加载配置
-	cfg := config.Load()
+	// 从 Nacos 加载配置（失败时使用环境变量）
+	cfg, nacosLoader := config.LoadFromNacosWithFallback()
+
+	// 初始化 Prometheus 指标
+	m := metrics.Init("gateway")
+	log.Println("Metrics initialized for gateway service")
+
+	// 初始化 GrowthBook A/B 测试客户端
+	ctx := context.Background()
+	gbClient := growthbook.NewClient(
+		cfg.GrowthBook.APIHost,
+		cfg.GrowthBook.ClientKey,
+		cfg.GrowthBook.SecretKey,
+		cfg.GrowthBook.Enabled,
+		m,
+	)
+
+	// 启动定时刷新特性配置（每5分钟）
+	if cfg.GrowthBook.Enabled {
+		gbClient.StartRefreshLoop(ctx, 5*time.Minute)
+		// 首次加载特性配置
+		if err := gbClient.RefreshFeatures(ctx); err != nil {
+			log.Printf("Warning: Failed to load GrowthBook features: %v", err)
+		} else {
+			log.Println("GrowthBook features loaded successfully")
+		}
+	}
+	log.Printf("GrowthBook client initialized (enabled: %v)", cfg.GrowthBook.Enabled)
 
 	// 初始化 Redis 连接
-	redisClient, err := dao.InitRedisFromEnv()
+	redisClient, err := dao.InitRedis(cfg.Redis.Addr, cfg.Redis.Password)
 	if err != nil {
 		log.Printf("Warning: Redis connection failed: %v, rate limiting disabled", err)
+	}
+
+	// 监听配置变更（如果 Nacos 可用）
+	if nacosLoader != nil {
+		go func() {
+			// 配置变更时的回调
+			_ = nacosLoader.LoadAndListen(cfg, func(newCfg interface{}) {
+				log.Printf("Gateway config updated from Nacos")
+				// 可以在这里处理配置热更新逻辑
+				// 例如更新 Redis 连接、重新初始化 GrowthBook 等
+			})
+		}()
 	}
 
 	// 创建 Hertz 服务器
@@ -44,13 +86,30 @@ func main() {
 	}
 
 	// 请求日志中间件
-	h.Use(middleware.RequestLogger())
+	h.Use(middleware.RequestLogger(middleware.LoggerConfig{
+		ServiceName: "gateway-service",
+	}))
 
-	// JWT 认证中间件（可选，某些路由不需要）
-	// h.Use(middleware.JWTAuth(cfg.JWT.Secret))
+	// Metrics 中间件
+	h.Use(middleware.MetricsMiddleware("gateway", m))
 
-	// 注册路由
-	router.RegisterRoutes(h, cfg)
+	// 注册路由（包含 GrowthBook 客户端）
+	router.RegisterRoutes(h, cfg, gbClient)
+
+	// 前端埋点 API
+	h.POST("/api/track", metrics.TrackEvent(m))
+
+	// 启动 Prometheus 指标服务（独立端口 9090）
+	go func() {
+		promServer := &http.Server{
+			Addr:    ":9090",
+			Handler: metrics.Handler(),
+		}
+		log.Printf("Prometheus metrics server starting on :9090")
+		if err := promServer.ListenAndServe(); err != nil {
+			log.Printf("Prometheus server error: %v", err)
+		}
+	}()
 
 	// 启动服务
 	log.Printf("Gateway service starting on %s", cfg.Server.Port)

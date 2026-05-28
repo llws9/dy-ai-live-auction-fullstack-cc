@@ -1,0 +1,20 @@
+# Product Service Configuration
+server:
+  port: ":8081"
+
+database:
+  host: "mysql"
+  port: 3306
+  user: "root"
+  password: "root"
+  name: "auction"
+  max_idle_conns: 10
+  max_open_conns: 100
+
+redis:
+  addr: "redis:6379"
+  password: ""
+  pool_size: 50
+
+services:
+  auction_service_url: "http://auction:8082"

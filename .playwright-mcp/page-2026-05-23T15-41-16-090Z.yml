@@ -1,0 +1,27 @@
+- generic [ref=e8]:
+  - paragraph [ref=e9]: /admin/login
+  - generic [ref=e10]:
+    - generic [ref=e11]: WHUT
+    - generic [ref=e12]:
+      - heading "综合测评管理系统" [level=1] [ref=e13]
+      - paragraph [ref=e14]: 管理员登录
+  - generic [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]: 用户名
+      - textbox "用户名" [ref=e18]:
+        - /placeholder: 请输入用户名
+    - generic [ref=e19]:
+      - generic [ref=e20]: 密码
+      - generic [ref=e21]:
+        - textbox "密码 显示" [ref=e22]:
+          - /placeholder: 请输入密码
+        - button "显示" [ref=e23] [cursor=pointer]
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - checkbox "记住我" [ref=e26]
+        - generic [ref=e27]: 记住我
+      - button "忘记密码？" [ref=e28] [cursor=pointer]
+    - generic [ref=e29]:
+      - button "登录" [disabled] [ref=e30] [cursor=pointer]
+      - button "查看异常页" [ref=e31] [cursor=pointer]
+  - paragraph [ref=e32]: 还没有账号？请联系超级管理员分配权限。

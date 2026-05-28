@@ -1,0 +1,78 @@
+[     175ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://modao.cc/agent-py/static/source/js/tailwindcss.js:62
+[     243ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:3006/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:21550
+[     269ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3006/agent-py/static/source/images/placeholder.svg:0
+[     392ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3006/favicon.ico:0
+[   55617ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3006/api/v1/auctions?page=1&page_size=20:0
+[   55618ms] [ERROR] API Error: 请求的资源不存在 @ http://localhost:3006/src/shared/api/request.ts:19
+[   55618ms] [ERROR] 获取竞拍列表失败: ApiError: 请求的资源不存在
+    at handleErrorResponse (http://localhost:3006/src/shared/api/request.ts:46:17)
+    at async request (http://localhost:3006/src/shared/api/request.ts:94:7)
+    at async fetchAuctions (http://localhost:3006/src/mobile/pages/Home.tsx?t=1779893540061:32:26) @ http://localhost:3006/src/mobile/pages/Home.tsx?t=1779893540061:34
+[   55619ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3006/api/v1/auctions?page=1&page_size=20:0
+[   55619ms] [ERROR] API Error: 请求的资源不存在 @ http://localhost:3006/src/shared/api/request.ts:19
+[   55619ms] [ERROR] 获取竞拍列表失败: ApiError: 请求的资源不存在
+    at handleErrorResponse (http://localhost:3006/src/shared/api/request.ts:46:17)
+    at async request (http://localhost:3006/src/shared/api/request.ts:94:7)
+    at async fetchAuctions (http://localhost:3006/src/mobile/pages/Home.tsx?t=1779893540061:32:26) @ http://localhost:3006/src/mobile/pages/Home.tsx?t=1779893540061:34
+[ 2735001ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3006/api/v1/auctions?page=1&page_size=20:0
+[ 2735001ms] [ERROR] API Error: 请求的资源不存在 @ http://localhost:3006/src/shared/api/request.ts:19
+[ 2735002ms] [ERROR] 获取竞拍列表失败: ApiError: 请求的资源不存在
+    at handleErrorResponse (http://localhost:3006/src/shared/api/request.ts:46:17)
+    at async request (http://localhost:3006/src/shared/api/request.ts:94:7)
+    at async fetchAuctions (http://localhost:3006/src/mobile/pages/Home.tsx?t=1779896219437:32:26) @ http://localhost:3006/src/mobile/pages/Home.tsx?t=1779896219437:34
+[ 2735992ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://modao.cc/agent-py/static/source/js/tailwindcss.js:62
+[ 2736043ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:3006/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:21550
+[ 2736068ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3006/api/v1/auctions?page=1&page_size=20:0
+[ 2736069ms] [ERROR] API Error: 请求的资源不存在 @ http://localhost:3006/src/shared/api/request.ts:19
+[ 2736069ms] [ERROR] 获取竞拍列表失败: ApiError: 请求的资源不存在
+    at handleErrorResponse (http://localhost:3006/src/shared/api/request.ts:46:17)
+    at async request (http://localhost:3006/src/shared/api/request.ts:94:7)
+    at async fetchAuctions (http://localhost:3006/src/mobile/pages/Home.tsx?t=1779896219437:32:26) @ http://localhost:3006/src/mobile/pages/Home.tsx?t=1779896219437:34
+[ 2736069ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3006/api/v1/auctions?page=1&page_size=20:0
+[ 2736069ms] [ERROR] API Error: 请求的资源不存在 @ http://localhost:3006/src/shared/api/request.ts:19
+[ 2736069ms] [ERROR] 获取竞拍列表失败: ApiError: 请求的资源不存在
+    at handleErrorResponse (http://localhost:3006/src/shared/api/request.ts:46:17)
+    at async request (http://localhost:3006/src/shared/api/request.ts:94:7)
+    at async fetchAuctions (http://localhost:3006/src/mobile/pages/Home.tsx?t=1779896219437:32:26) @ http://localhost:3006/src/mobile/pages/Home.tsx?t=1779896219437:34
+[ 2760127ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://modao.cc/agent-py/static/source/js/tailwindcss.js:62
+[ 2760178ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:3006/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:21550
+[ 2760192ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3006/api/v1/auctions?page=1&page_size=20:0
+[ 2760192ms] [ERROR] API Error: 请求的资源不存在 @ http://localhost:3006/src/shared/api/request.ts:19
+[ 2760193ms] [ERROR] 获取竞拍列表失败: ApiError: 请求的资源不存在
+    at handleErrorResponse (http://localhost:3006/src/shared/api/request.ts:46:17)
+    at async request (http://localhost:3006/src/shared/api/request.ts:94:7)
+    at async fetchAuctions (http://localhost:3006/src/mobile/pages/Home.tsx?t=1779896219437:32:26) @ http://localhost:3006/src/mobile/pages/Home.tsx?t=1779896219437:34
+[ 2760195ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3006/api/v1/auctions?page=1&page_size=20:0
+[ 2760195ms] [ERROR] API Error: 请求的资源不存在 @ http://localhost:3006/src/shared/api/request.ts:19
+[ 2760195ms] [ERROR] 获取竞拍列表失败: ApiError: 请求的资源不存在
+    at handleErrorResponse (http://localhost:3006/src/shared/api/request.ts:46:17)
+    at async request (http://localhost:3006/src/shared/api/request.ts:94:7)
+    at async fetchAuctions (http://localhost:3006/src/mobile/pages/Home.tsx?t=1779896219437:32:26) @ http://localhost:3006/src/mobile/pages/Home.tsx?t=1779896219437:34
+[ 2777658ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://modao.cc/agent-py/static/source/js/tailwindcss.js:62
+[ 2777695ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:3006/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:21550
+[ 2777714ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3006/api/v1/auctions?page=1&page_size=20:0
+[ 2777714ms] [ERROR] API Error: 请求的资源不存在 @ http://localhost:3006/src/shared/api/request.ts:19
+[ 2777714ms] [ERROR] 获取竞拍列表失败: ApiError: 请求的资源不存在
+    at handleErrorResponse (http://localhost:3006/src/shared/api/request.ts:46:17)
+    at async request (http://localhost:3006/src/shared/api/request.ts:94:7)
+    at async fetchAuctions (http://localhost:3006/src/mobile/pages/Home.tsx?t=1779896261996:32:26) @ http://localhost:3006/src/mobile/pages/Home.tsx?t=1779896261996:34
+[ 2777715ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3006/api/v1/auctions?page=1&page_size=20:0
+[ 2777715ms] [ERROR] API Error: 请求的资源不存在 @ http://localhost:3006/src/shared/api/request.ts:19
+[ 2777715ms] [ERROR] 获取竞拍列表失败: ApiError: 请求的资源不存在
+    at handleErrorResponse (http://localhost:3006/src/shared/api/request.ts:46:17)
+    at async request (http://localhost:3006/src/shared/api/request.ts:94:7)
+    at async fetchAuctions (http://localhost:3006/src/mobile/pages/Home.tsx?t=1779896261996:32:26) @ http://localhost:3006/src/mobile/pages/Home.tsx?t=1779896261996:34
+[ 2844754ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://modao.cc/agent-py/static/source/js/tailwindcss.js:62
+[ 2844827ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:3006/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:21550
+[ 2844843ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3006/api/v1/auctions?page=1&page_size=20:0
+[ 2844843ms] [ERROR] API Error: 请求的资源不存在 @ http://localhost:3006/src/shared/api/request.ts:19
+[ 2844843ms] [ERROR] 获取竞拍列表失败: ApiError: 请求的资源不存在
+    at handleErrorResponse (http://localhost:3006/src/shared/api/request.ts:46:17)
+    at async request (http://localhost:3006/src/shared/api/request.ts:94:7)
+    at async fetchAuctions (http://localhost:3006/src/mobile/pages/Home.tsx?t=1779896261996:32:26) @ http://localhost:3006/src/mobile/pages/Home.tsx?t=1779896261996:34
+[ 2844843ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3006/api/v1/auctions?page=1&page_size=20:0
+[ 2844843ms] [ERROR] API Error: 请求的资源不存在 @ http://localhost:3006/src/shared/api/request.ts:19
+[ 2844843ms] [ERROR] 获取竞拍列表失败: ApiError: 请求的资源不存在
+    at handleErrorResponse (http://localhost:3006/src/shared/api/request.ts:46:17)
+    at async request (http://localhost:3006/src/shared/api/request.ts:94:7)
+    at async fetchAuctions (http://localhost:3006/src/mobile/pages/Home.tsx?t=1779896261996:32:26) @ http://localhost:3006/src/mobile/pages/Home.tsx?t=1779896261996:34

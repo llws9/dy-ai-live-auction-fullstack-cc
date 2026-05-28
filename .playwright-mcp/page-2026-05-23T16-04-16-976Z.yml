@@ -1,0 +1,6 @@
+- generic [ref=e4]:
+  - heading "管理员登录" [level=2] [ref=e5]
+  - generic [ref=e6]:
+    - textbox "邮箱" [ref=e7]
+    - textbox "密码" [ref=e8]
+    - button "登录" [ref=e9] [cursor=pointer]

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useWebSocket } from './useWebSocket';
 
 interface NotificationItem {
   id: number;
@@ -27,8 +26,6 @@ export const useNotification = () => {
     loading: false,
     error: null,
   });
-
-  const { lastMessage } = useWebSocket();
 
   // 获取通知列表
   const fetchNotifications = useCallback(async (page = 1, pageSize = 20) => {
@@ -146,24 +143,25 @@ export const useNotification = () => {
   }, []);
 
   // 处理WebSocket通知消息
-  useEffect(() => {
-    if (lastMessage && lastMessage.type === 'notification') {
-      const notification = lastMessage.data as NotificationItem;
-
-      setState((prev) => ({
-        ...prev,
-        notifications: [notification, ...prev.notifications].slice(0, 50),
-        unreadCount: prev.unreadCount + 1,
-      }));
-
-      // 显示浏览器通知（如果支持）
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(notification.title, {
-          body: notification.content,
-        });
-      }
-    }
-  }, [lastMessage]);
+  // TODO: 集成 WebSocket 通知推送
+  // useEffect(() => {
+  //   if (lastMessage && lastMessage.type === 'notification') {
+  //     const notification = lastMessage.data as NotificationItem;
+  //
+  //     setState((prev) => ({
+  //       ...prev,
+  //       notifications: [notification, ...prev.notifications].slice(0, 50),
+  //       unreadCount: prev.unreadCount + 1,
+  //     }));
+  //
+  //     // 显示浏览器通知（如果支持）
+  //     if ('Notification' in window && Notification.permission === 'granted') {
+  //       new Notification(notification.title, {
+  //         body: notification.content,
+  //       });
+  //     }
+  //   }
+  // }, [lastMessage]);
 
   // 初始化加载
   useEffect(() => {

@@ -1,0 +1,25 @@
+# Gateway Service Configuration
+server:
+  port: ":8080"
+
+services:
+  product_url: "http://product:8081"
+  auction_url: "http://auction:8082"
+
+jwt:
+  secret: "your-secret-key-change-in-production"
+  expire_time: "24h"
+
+redis:
+  addr: "redis:6379"
+  password: ""
+  pool_size: 100
+
+rate_limit:
+  requests_per_second: 1000
+
+growthbook:
+  api_host: "http://growthbook:3200"
+  client_key: "dev-client-key"
+  secret_key: "dev-secret-key"
+  enabled: true

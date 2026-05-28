@@ -9,11 +9,10 @@ interface UseCountdownOptions {
 }
 
 export function useCountdown(options: UseCountdownOptions) {
-  const { endTime, onEnd, syncInterval = 10000 } = options;
+  const { endTime, onEnd } = options;
   const [countdown, setCountdown] = useState<number>(0);
   const [isEnded, setIsEnded] = useState(false);
   const frameRef = useRef<number>();
-  const lastSyncRef = useRef<number>(Date.now());
 
   const updateCountdown = useCallback(() => {
     const now = Date.now();

@@ -275,7 +275,7 @@ curl -X POST http://localhost:8081/api/v1/products/6/rules \
 
 ---
 
-**启动时间**: 2026-05-21 20:50
+**启动时间**: 2026-05-28
 **状态**: ✅ 所有服务正常运行
 **访问地址**:
 - H5用户端: http://localhost:5173

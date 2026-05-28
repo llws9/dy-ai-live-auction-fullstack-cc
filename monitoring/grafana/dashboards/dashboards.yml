@@ -1,0 +1,13 @@
+apiVersion: 1
+
+providers:
+  - name: 'Live Auction Dashboards'
+    orgId: 1
+    folder: 'Live Auction'
+    folderUid: 'live-auction'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards

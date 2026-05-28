@@ -1,63 +1,128 @@
 package service
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"net/http"
-	"os"
 	"time"
 
 	"product-service/dao"
 	"product-service/model"
 )
 
-// ProductService 商品服务
-type ProductService struct {
-	productDAO *dao.ProductDAO
-	ruleDAO    *dao.AuctionRuleDAO
-}
-
-// NewProductService 创建商品服务
-func NewProductService(productDAO *dao.ProductDAO, ruleDAO *dao.AuctionRuleDAO) *ProductService {
-	return &ProductService{
-		productDAO: productDAO,
-		ruleDAO:    ruleDAO,
-	}
-}
-
 // CreateProductRequest 创建商品请求
 type CreateProductRequest struct {
-	Name        string   `json:"name" binding:"required,max=128"`
-	Description string   `json:"description"`
-	Images      []string `json:"images"`
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	Images      []string       `json:"images"`
+	Status      model.ProductStatus `json:"status,omitempty"`
 }
 
 // UpdateProductRequest 更新商品请求
 type UpdateProductRequest struct {
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	Images      []string `json:"images"`
+	Name        string         `json:"name,omitempty"`
+	Description string         `json:"description,omitempty"`
+	Images      []string       `json:"images,omitempty"`
+	Status      model.ProductStatus `json:"status,omitempty"`
 }
 
-// CreateProduct 创建商品
-func (s *ProductService) CreateProduct(ctx context.Context, req *CreateProductRequest) (*model.Product, error) {
-	if req.Name == "" {
-		return nil, errors.New("商品名称不能为空")
+// CreateAuctionRuleRequest 创建竞拍规则请求
+type CreateAuctionRuleRequest struct {
+	ProductID         int64   `json:"product_id"`
+	StartPrice        float64 `json:"start_price"`
+	Increment         float64 `json:"increment"`
+	CapPrice          float64 `json:"cap_price,omitempty"`
+	Duration          int     `json:"duration"`
+	DelayDuration     int     `json:"delay_duration,omitempty"`
+	MaxDelayTime      int     `json:"max_delay_time,omitempty"`
+	TriggerDelayBefore int    `json:"trigger_delay_before,omitempty"`
+}
+
+// ProductService 商品服务
+type ProductService struct {
+	productDAO       *dao.ProductDAO
+	ruleDAO          *dao.AuctionRuleDAO
+	liveStreamDAO    *dao.LiveStreamDAO
+	liveStreamService *LiveStreamService
+}
+
+// NewProductService 创建商品服务
+func NewProductService(productDAO *dao.ProductDAO, ruleDAO *dao.AuctionRuleDAO, liveStreamDAO *dao.LiveStreamDAO) *ProductService {
+	liveStreamService := NewLiveStreamService(liveStreamDAO)
+	return &ProductService{
+		productDAO:       productDAO,
+		ruleDAO:          ruleDAO,
+		liveStreamDAO:    liveStreamDAO,
+		liveStreamService: liveStreamService,
+	}
+}
+
+// PublishProduct 发布商品到直播间
+func (s *ProductService) PublishProduct(ctx context.Context, productID, creatorID int64, startTime *time.Time) (*model.Product, *model.LiveStream, error) {
+	// 1. 验证商品状态为草稿
+	product, err := s.productDAO.GetByID(ctx, productID)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	product := &model.Product{
-		Name:        req.Name,
-		Description: req.Description,
-		Images:      req.Images,
-		Status:      model.ProductStatusDraft,
+	if product.Status != model.ProductStatusDraft {
+		return nil, nil, errors.New("商品状态不正确，只有草稿状态的商品可以发布")
 	}
 
-	if err := s.productDAO.Create(ctx, product); err != nil {
+	// 2. 获取或创建直播间
+	liveStream, err := s.liveStreamDAO.GetOrCreateByCreatorID(ctx, creatorID, "")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// 3. 检查直播间状态
+	if !liveStream.IsActive() {
+		return nil, nil, errors.New("直播间已被禁用，无法发布商品")
+	}
+
+	// 4. 获取竞拍规则（已配置则验证，未配置将使用默认规则）
+	_, err = s.ruleDAO.GetByProductID(ctx, productID)
+	if err != nil {
+		// 未配置规则不影响发布，auction-service会使用默认规则
+	}
+
+	// 5. 设置竞拍开始时间
+	if startTime == nil {
+		defaultStartTime := time.Now().Add(30 * time.Minute) // 默认30分钟后开始
+		startTime = &defaultStartTime
+	}
+
+	// 6. 更新商品状态
+	product.Status = model.ProductStatusPublished
+	if err := s.productDAO.Update(ctx, product); err != nil {
+		return nil, nil, err
+	}
+
+	// 注意：实际的竞拍记录创建将在 auction-service 中完成
+	// 这里通过 HTTP 调用或消息队列通知 auction-service
+
+	return product, liveStream, nil
+}
+
+// UnpublishProduct 下架商品
+func (s *ProductService) UnpublishProduct(ctx context.Context, productID, creatorID int64, reason string) (*model.Product, error) {
+	// 1. 验证商品状态为已发布
+	product, err := s.productDAO.GetByID(ctx, productID)
+	if err != nil {
 		return nil, err
 	}
+
+	if product.Status != model.ProductStatusPublished {
+		return nil, errors.New("商品状态不正确，只有已发布的商品可以下架")
+	}
+
+	// 2. 更新商品状态
+	product.Status = model.ProductStatusUnpublished
+	if err := s.productDAO.Update(ctx, product); err != nil {
+		return nil, err
+	}
+
+	// 注意：取消竞拍记录和发送通知将在 auction-service 中完成
+	// 这里通过 HTTP 调用或消息队列通知 auction-service
 
 	return product, nil
 }
@@ -78,27 +143,41 @@ func (s *ProductService) ListProducts(ctx context.Context, status *model.Product
 	return s.productDAO.List(ctx, status, page, pageSize)
 }
 
+// CreateProduct 创建商品
+func (s *ProductService) CreateProduct(ctx context.Context, req *CreateProductRequest) (*model.Product, error) {
+	product := &model.Product{
+		Name:        req.Name,
+		Description: req.Description,
+		Images:      req.Images,
+		Status:      model.ProductStatusDraft,
+	}
+	if err := s.productDAO.Create(ctx, product); err != nil {
+		return nil, err
+	}
+	return product, nil
+}
+
 // UpdateProduct 更新商品
 func (s *ProductService) UpdateProduct(ctx context.Context, id int64, req *UpdateProductRequest) (*model.Product, error) {
 	product, err := s.productDAO.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-
 	if req.Name != "" {
 		product.Name = req.Name
 	}
 	if req.Description != "" {
 		product.Description = req.Description
 	}
-	if req.Images != nil {
+	if len(req.Images) > 0 {
 		product.Images = req.Images
 	}
-
+	if req.Status != 0 {
+		product.Status = req.Status
+	}
 	if err := s.productDAO.Update(ctx, product); err != nil {
 		return nil, err
 	}
-
 	return product, nil
 }
 
@@ -107,103 +186,24 @@ func (s *ProductService) DeleteProduct(ctx context.Context, id int64) error {
 	return s.productDAO.Delete(ctx, id)
 }
 
-// PublishProduct 发布商品
-func (s *ProductService) PublishProduct(ctx context.Context, id int64) error {
-	return s.productDAO.UpdateStatus(ctx, id, model.ProductStatusPublished)
-}
-
-// CreateAuctionRuleRequest 创建竞拍规则请求
-type CreateAuctionRuleRequest struct {
-	ProductID         int64    `json:"product_id"`
-	StartPrice        float64  `json:"start_price"`                     // 默认 0
-	Increment         float64  `json:"increment" binding:"required,gt=0"` // 加价幅度
-	CapPrice         *float64  `json:"cap_price"`                       // 封顶价
-	Duration          int      `json:"duration" binding:"required,gt=0"` // 竞拍时长（秒）
-	DelayDuration     int      `json:"delay_duration"`                  // 单次延时时长，默认30秒
-	MaxDelayTime      int      `json:"max_delay_time"`                  // 最大延时时长，默认180秒
-	TriggerDelayBefore int      `json:"trigger_delay_before"`            // 延时触发时间，默认30秒
-}
-
 // CreateAuctionRule 创建竞拍规则
 func (s *ProductService) CreateAuctionRule(ctx context.Context, req *CreateAuctionRuleRequest) (*model.AuctionRule, error) {
-	// 设置默认值
-	if req.DelayDuration == 0 {
-		req.DelayDuration = 30
-	}
-	if req.MaxDelayTime == 0 {
-		req.MaxDelayTime = 180
-	}
-	if req.TriggerDelayBefore == 0 {
-		req.TriggerDelayBefore = 30
-	}
-
 	rule := &model.AuctionRule{
-		ProductID:          req.ProductID,
-		StartPrice:         req.StartPrice,
-		Increment:          req.Increment,
-		CapPrice:          req.CapPrice,
-		Duration:           req.Duration,
-		DelayDuration:      req.DelayDuration,
-		MaxDelayTime:       req.MaxDelayTime,
+		ProductID:         req.ProductID,
+		StartPrice:        req.StartPrice,
+		Increment:         req.Increment,
+		Duration:          req.Duration,
+		DelayDuration:     req.DelayDuration,
+		MaxDelayTime:      req.MaxDelayTime,
 		TriggerDelayBefore: req.TriggerDelayBefore,
 	}
-
+	if req.CapPrice > 0 {
+		rule.CapPrice = &req.CapPrice
+	}
 	if err := s.ruleDAO.Create(ctx, rule); err != nil {
 		return nil, err
 	}
-
-	// 自动创建竞拍场次
-	go s.createAuctionAsync(rule)
-
 	return rule, nil
-}
-
-// createAuctionAsync 异步创建竞拍场次
-func (s *ProductService) createAuctionAsync(rule *model.AuctionRule) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// 调用 auction-service 创建竞拍场次
-	auctionServiceURL := os.Getenv("AUCTION_SERVICE_URL")
-	if auctionServiceURL == "" {
-		auctionServiceURL = "http://localhost:8082"
-	}
-
-	auctionReq := map[string]interface{}{
-		"product_id":    rule.ProductID,
-		"start_price":   rule.StartPrice,
-		"increment":     rule.Increment,
-		"duration":      rule.Duration,
-	}
-
-	body, err := json.Marshal(auctionReq)
-	if err != nil {
-		fmt.Printf("Failed to marshal auction request: %v\n", err)
-		return
-	}
-
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", auctionServiceURL+"/api/v1/auctions", bytes.NewReader(body))
-	if err != nil {
-		fmt.Printf("Failed to create auction request: %v\n", err)
-		return
-	}
-
-	httpReq.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Do(httpReq)
-	if err != nil {
-		fmt.Printf("Failed to create auction: %v\n", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
-		fmt.Printf("Failed to create auction, status: %d\n", resp.StatusCode)
-		return
-	}
-
-	fmt.Printf("Successfully created auction for product %d\n", rule.ProductID)
 }
 
 // GetAuctionRule 获取竞拍规则

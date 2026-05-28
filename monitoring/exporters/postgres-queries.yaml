@@ -1,0 +1,287 @@
+# PostgreSQL Exporter 自定义查询配置
+
+# 慢查询统计
+pg_stat_statements:
+  query: |
+    SELECT
+      queryid as query_id,
+      calls,
+      total_exec_time / 1000 as total_exec_time_seconds,
+      mean_exec_time / 1000 as mean_exec_time_seconds,
+      min_exec_time / 1000 as min_exec_time_seconds,
+      max_exec_time / 1000 as max_exec_time_seconds,
+      rows,
+      shared_blks_hit,
+      shared_blks_read
+    FROM pg_stat_statements
+    WHERE dbid = (SELECT oid FROM pg_database WHERE datname = current_database())
+    ORDER BY total_exec_time DESC
+    LIMIT 20
+  metrics:
+    - query_id:
+        usage: "LABEL"
+        description: "Query identifier"
+    - calls:
+        usage: "COUNTER"
+        description: "Number of times the query has been executed"
+    - total_exec_time_seconds:
+        usage: "COUNTER"
+        description: "Total time spent executing the query in seconds"
+    - mean_exec_time_seconds:
+        usage: "GAUGE"
+        description: "Mean time spent executing the query in seconds"
+    - min_exec_time_seconds:
+        usage: "GAUGE"
+        description: "Minimum time spent executing the query in seconds"
+    - max_exec_time_seconds:
+        usage: "GAUGE"
+        description: "Maximum time spent executing the query in seconds"
+    - rows:
+        usage: "COUNTER"
+        description: "Total number of rows retrieved or affected by the query"
+    - shared_blks_hit:
+        usage: "COUNTER"
+        description: "Total number of shared block cache hits by the query"
+    - shared_blks_read:
+        usage: "COUNTER"
+        description: "Total number of shared blocks read from disk by the query"
+
+# 表统计信息
+pg_table_stats:
+  query: |
+    SELECT
+      schemaname as schema,
+      relname as table_name,
+      n_live_tup as live_rows,
+      n_dead_tup as dead_rows,
+      n_tup_ins as rows_inserted,
+      n_tup_upd as rows_updated,
+      n_tup_del as rows_deleted,
+      last_vacuum,
+      last_autovacuum,
+      last_analyze,
+      last_autoanalyze
+    FROM pg_stat_user_tables
+    ORDER BY n_live_tup DESC
+    LIMIT 50
+  metrics:
+    - schema:
+        usage: "LABEL"
+        description: "Schema name"
+    - table_name:
+        usage: "LABEL"
+        description: "Table name"
+    - live_rows:
+        usage: "GAUGE"
+        description: "Number of live rows"
+    - dead_rows:
+        usage: "GAUGE"
+        description: "Number of dead rows"
+    - rows_inserted:
+        usage: "COUNTER"
+        description: "Number of rows inserted"
+    - rows_updated:
+        usage: "COUNTER"
+        description: "Number of rows updated"
+    - rows_deleted:
+        usage: "COUNTER"
+        description: "Number of rows deleted"
+    - last_vacuum:
+        usage: "GAUGE"
+        description: "Time of last vacuum"
+    - last_autovacuum:
+        usage: "GAUGE"
+        description: "Time of last autovacuum"
+    - last_analyze:
+        usage: "GAUGE"
+        description: "Time of last analyze"
+    - last_autoanalyze:
+        usage: "GAUGE"
+        description: "Time of last autoanalyze"
+
+# 索引使用统计
+pg_index_stats:
+  query: |
+    SELECT
+      schemaname as schema,
+      relname as table_name,
+      indexrelname as index_name,
+      idx_scan as index_scans,
+      idx_tup_read as tuples_read,
+      idx_tup_fetch as tuples_fetched,
+      pg_relation_size(indexrelid) as index_size_bytes
+    FROM pg_stat_user_indexes
+    ORDER BY idx_scan DESC
+  metrics:
+    - schema:
+        usage: "LABEL"
+        description: "Schema name"
+    - table_name:
+        usage: "LABEL"
+        description: "Table name"
+    - index_name:
+        usage: "LABEL"
+        description: "Index name"
+    - index_scans:
+        usage: "COUNTER"
+        description: "Number of index scans"
+    - tuples_read:
+        usage: "COUNTER"
+        description: "Number of tuples read"
+    - tuples_fetched:
+        usage: "COUNTER"
+        description: "Number of tuples fetched"
+    - index_size_bytes:
+        usage: "GAUGE"
+        description: "Index size in bytes"
+
+# 数据库大小
+pg_database_size:
+  query: |
+    SELECT
+      datname as database,
+      pg_database_size(datname) as size_bytes
+    FROM pg_database
+    WHERE datistemplate = false
+  metrics:
+    - database:
+        usage: "LABEL"
+        description: "Database name"
+    - size_bytes:
+        usage: "GAUGE"
+        description: "Database size in bytes"
+
+# 表大小
+pg_table_size:
+  query: |
+    SELECT
+      schemaname as schema,
+      relname as table_name,
+      pg_total_relation_size(schemaname || '.' || relname) as total_size_bytes,
+      pg_relation_size(schemaname || '.' || relname) as table_size_bytes,
+      pg_indexes_size(schemaname || '.' || relname) as indexes_size_bytes,
+      pg_total_relation_size(schemaname || '.' || relname) - pg_relation_size(schemaname || '.' || relname) - pg_indexes_size(schemaname || '.' || relname) as toast_size_bytes
+    FROM pg_stat_user_tables
+    ORDER BY pg_total_relation_size(schemaname || '.' || relname) DESC
+    LIMIT 50
+  metrics:
+    - schema:
+        usage: "LABEL"
+        description: "Schema name"
+    - table_name:
+        usage: "LABEL"
+        description: "Table name"
+    - total_size_bytes:
+        usage: "GAUGE"
+        description: "Total table size in bytes"
+    - table_size_bytes:
+        usage: "GAUGE"
+        description: "Table size without indexes in bytes"
+    - indexes_size_bytes:
+        usage: "GAUGE"
+        description: "Indexes size in bytes"
+    - toast_size_bytes:
+        usage: "GAUGE"
+        description: "TOAST table size in bytes"
+
+# 活跃查询
+pg_active_queries:
+  query: |
+    SELECT
+      state,
+      count(*) as count,
+      max(extract(epoch from (now() - query_start))) as max_duration_seconds
+    FROM pg_stat_activity
+    WHERE state != 'idle'
+    GROUP BY state
+  metrics:
+    - state:
+        usage: "LABEL"
+        description: "Query state"
+    - count:
+        usage: "GAUGE"
+        description: "Number of queries in this state"
+    - max_duration_seconds:
+        usage: "GAUGE"
+        description: "Maximum query duration in seconds"
+
+# 锁等待
+pg_lock_waits:
+  query: |
+    SELECT
+      locktype as lock_type,
+      mode,
+      count(*) as count,
+      max(extract(epoch from (now() - query_start))) as max_wait_seconds
+    FROM pg_locks l
+    JOIN pg_stat_activity a ON l.pid = a.pid
+    WHERE NOT l.granted
+    GROUP BY locktype, mode
+  metrics:
+    - lock_type:
+        usage: "LABEL"
+        description: "Lock type"
+    - mode:
+        usage: "LABEL"
+        description: "Lock mode"
+    - count:
+        usage: "GAUGE"
+        description: "Number of locks waiting"
+    - max_wait_seconds:
+        usage: "GAUGE"
+        description: "Maximum wait time in seconds"
+
+# 复制延迟
+pg_replication_lag:
+  query: |
+    SELECT
+      client_addr as replica_host,
+      state,
+      sync_state,
+      EXTRACT(EPOCH FROM replay_lag) as lag_seconds
+    FROM pg_stat_replication
+  metrics:
+    - replica_host:
+        usage: "LABEL"
+        description: "Replica host address"
+    - state:
+        usage: "LABEL"
+        description: "Replication state"
+    - sync_state:
+        usage: "LABEL"
+        description: "Sync state"
+    - lag_seconds:
+        usage: "GAUGE"
+        description: "Replication lag in seconds"
+
+# 用户连接统计
+pg_user_connections:
+  query: |
+    SELECT
+      usename as username,
+      count(*) as connections,
+      count(*) FILTER (WHERE state = 'active') as active_connections,
+      count(*) FILTER (WHERE state = 'idle') as idle_connections,
+      count(*) FILTER (WHERE state = 'idle in transaction') as idle_in_transaction,
+      count(*) FILTER (WHERE wait_event IS NOT NULL) as waiting_connections
+    FROM pg_stat_activity
+    GROUP BY usename
+  metrics:
+    - username:
+        usage: "LABEL"
+        description: "Database username"
+    - connections:
+        usage: "GAUGE"
+        description: "Total connections"
+    - active_connections:
+        usage: "GAUGE"
+        description: "Active connections"
+    - idle_connections:
+        usage: "GAUGE"
+        description: "Idle connections"
+    - idle_in_transaction:
+        usage: "GAUGE"
+        description: "Idle in transaction connections"
+    - waiting_connections:
+        usage: "GAUGE"
+        description: "Waiting connections"

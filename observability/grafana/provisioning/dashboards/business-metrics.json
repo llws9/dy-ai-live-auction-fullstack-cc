@@ -1,0 +1,557 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto"},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(increase(live_room_enter_total[1h]))",
+        "legendFormat": "进入次数",
+        "refId": "A"
+      }],
+      "title": "直播间进入次数 (1小时)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "id": 2,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto"},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "live_room_current_viewers",
+        "legendFormat": "当前观看",
+        "refId": "A"
+      }],
+      "title": "当前观看人数",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "id": 3,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto"},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(increase(order_completed_total[1h]))",
+        "legendFormat": "成交次数",
+        "refId": "A"
+      }],
+      "title": "成交次数 (1小时)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "id": 4,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto"},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(gmv_total)",
+        "legendFormat": "GMV",
+        "refId": "A"
+      }],
+      "title": "GMV（成交总额）",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "id": 5,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum by (service) (rate(http_requests_total[5m]))",
+        "legendFormat": "{{service}}",
+        "refId": "A"
+      }],
+      "title": "请求速率 (QPS)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "id": 6,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "histogram_quantile(0.95, sum by (le, service) (rate(http_request_duration_seconds_bucket[5m])))",
+        "legendFormat": "{{service}} P95",
+        "refId": "A"
+      }],
+      "title": "请求延迟 P95",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 12},
+      "id": 7,
+      "options": {"legend": {"calcs": [], "displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(increase(live_room_enter_total[5m]))",
+        "legendFormat": "进入次数",
+        "refId": "A"
+      }],
+      "title": "直播间进入趋势",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 12},
+      "id": 8,
+      "options": {"legend": {"calcs": [], "displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(increase(auction_bid_total[5m]))",
+        "legendFormat": "出价次数",
+        "refId": "A"
+      }, {
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(increase(auction_completed_total[5m]))",
+        "legendFormat": "竞拍完成",
+        "refId": "B"
+      }],
+      "title": "竞拍活动趋势",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 12},
+      "id": 9,
+      "options": {"legend": {"calcs": [], "displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(increase(order_completed_total[5m]))",
+        "legendFormat": "成交次数",
+        "refId": "A"
+      }, {
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(gmv_total)",
+        "legendFormat": "GMV",
+        "refId": "B"
+      }],
+      "title": "成交趋势",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 18},
+      "id": 10,
+      "options": {"legend": {"calcs": [], "displayMode": "list", "placement": "bottom"}, "pieType": "pie", "tooltip": {"mode": "single"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum by (status) (increase(auction_bid_total[1h]))",
+        "legendFormat": "{{status}}",
+        "refId": "A"
+      }],
+      "title": "出价结果分布",
+      "type": "piechart"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 18},
+      "id": 11,
+      "options": {"legend": {"calcs": [], "displayMode": "list", "placement": "bottom"}, "pieType": "pie", "tooltip": {"mode": "single"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "histogram_quantile(0.50, sum by (le) (rate(auction_bid_amount_bucket[1h])))",
+        "legendFormat": "P50",
+        "refId": "A"
+      }, {
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "histogram_quantile(0.90, sum by (le) (rate(auction_bid_amount_bucket[1h])))",
+        "legendFormat": "P90",
+        "refId": "B"
+      }],
+      "title": "出价金额分布",
+      "type": "gauge"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 18},
+      "id": 12,
+      "options": {"orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "showUnfilled": true},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "websocket_connections",
+        "legendFormat": "WebSocket连接",
+        "refId": "A"
+      }],
+      "title": "WebSocket 连接数",
+      "type": "gauge"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 24},
+      "id": 13,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "right"}, "tooltip": {"mode": "multi"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(increase(payment_initiated_total[1h]))",
+        "legendFormat": "发起支付",
+        "refId": "A"
+      }, {
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(increase(payment_completed_total[1h]))",
+        "legendFormat": "支付成功",
+        "refId": "B"
+      }, {
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(increase(payment_failed_total[1h]))",
+        "legendFormat": "支付失败",
+        "refId": "C"
+      }],
+      "title": "支付统计",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 24},
+      "id": 14,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "right"}, "tooltip": {"mode": "multi"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(increase(user_register_total[1h]))",
+        "legendFormat": "注册",
+        "refId": "A"
+      }, {
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(increase(user_login_total[1h]))",
+        "legendFormat": "登录",
+        "refId": "B"
+      }],
+      "title": "用户统计",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 30},
+      "id": 15,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "histogram_quantile(0.50, sum by (le, service) (rate(sql_query_duration_seconds_bucket[5m])))",
+        "legendFormat": "{{service}} P50",
+        "refId": "A"
+      }, {
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "histogram_quantile(0.95, sum by (le, service) (rate(sql_query_duration_seconds_bucket[5m])))",
+        "legendFormat": "{{service}} P95",
+        "refId": "B"
+      }],
+      "title": "SQL 查询耗时分布",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 30},
+      "id": 16,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum by (service, operation) (rate(sql_query_total[5m]))",
+        "legendFormat": "{{service}} - {{operation}}",
+        "refId": "A"
+      }],
+      "title": "SQL 查询速率 (QPS)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 38},
+      "id": 17,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto"},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(rate(sql_query_total[5m]))",
+        "legendFormat": "查询总数",
+        "refId": "A"
+      }],
+      "title": "SQL 查询总数 (QPS)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 38},
+      "id": 18,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto"},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(rate(sql_query_errors_total[5m]))",
+        "legendFormat": "错误数",
+        "refId": "A"
+      }],
+      "title": "SQL 查询错误率",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 38},
+      "id": 19,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto"},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "histogram_quantile(0.95, sum by (le) (rate(sql_query_duration_seconds_bucket[5m])))",
+        "legendFormat": "P95",
+        "refId": "A"
+      }],
+      "title": "SQL 耗时 P95 (秒)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 38},
+      "id": 20,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto"},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "histogram_quantile(0.50, sum by (le) (rate(sql_query_duration_seconds_bucket[5m])))",
+        "legendFormat": "P50",
+        "refId": "A"
+      }],
+      "title": "SQL 耗时 P50 (秒)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 42},
+      "id": 21,
+      "options": {"legend": {"calcs": [], "displayMode": "table", "placement": "bottom"}, "pieType": "pie", "tooltip": {"mode": "single"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum by (operation) (increase(sql_query_total[1h]))",
+        "legendFormat": "{{operation}}",
+        "refId": "A"
+      }],
+      "title": "SQL 操作类型分布",
+      "type": "piechart"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 42},
+      "id": 22,
+      "options": {"legend": {"calcs": [], "displayMode": "table", "placement": "bottom"}, "pieType": "pie", "tooltip": {"mode": "single"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum by (table) (increase(sql_query_total[1h]))",
+        "legendFormat": "{{table}}",
+        "refId": "A"
+      }],
+      "title": "SQL 表访问分布",
+      "type": "piechart"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 48},
+      "id": 23,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto"},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "histogram_quantile(0.95, sum by (le) (rate(auction_bid_latency_seconds_bucket[5m])))",
+        "legendFormat": "P95",
+        "refId": "A"
+      }],
+      "title": "出价响应延迟 P95 (秒)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 48},
+      "id": 24,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto"},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "histogram_quantile(0.50, sum by (le) (rate(auction_bid_latency_seconds_bucket[5m])))",
+        "legendFormat": "P50",
+        "refId": "A"
+      }],
+      "title": "出价响应延迟 P50 (秒)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 48},
+      "id": 25,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto"},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "auction_concurrent_bids_peak",
+        "legendFormat": "峰值",
+        "refId": "A"
+      }],
+      "title": "并发出价峰值",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 48},
+      "id": 26,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto"},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(increase(auction_delay_triggered_total[1h]))",
+        "legendFormat": "触发次数",
+        "refId": "A"
+      }],
+      "title": "延时触发次数 (1小时)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 52},
+      "id": 27,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "histogram_quantile(0.50, sum by (le) (rate(auction_bid_latency_seconds_bucket[5m])))",
+        "legendFormat": "P50",
+        "refId": "A"
+      }, {
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "histogram_quantile(0.95, sum by (le) (rate(auction_bid_latency_seconds_bucket[5m])))",
+        "legendFormat": "P95",
+        "refId": "B"
+      }],
+      "title": "出价响应延迟趋势",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 52},
+      "id": 28,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "histogram_quantile(0.50, sum by (le) (rate(auction_duration_seconds_bucket[5m])))",
+        "legendFormat": "P50",
+        "refId": "A"
+      }, {
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "histogram_quantile(0.95, sum by (le) (rate(auction_duration_seconds_bucket[5m])))",
+        "legendFormat": "P95",
+        "refId": "B"
+      }],
+      "title": "竞拍时长分布",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 52},
+      "id": 29,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "auction_premium_rate",
+        "legendFormat": "溢价率",
+        "refId": "A"
+      }],
+      "title": "竞拍溢价率",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 58},
+      "id": 30,
+      "options": {"legend": {"calcs": [], "displayMode": "table", "placement": "bottom"}, "pieType": "pie", "tooltip": {"mode": "single"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum by (has_winner) (increase(auction_completed_total[1h]))",
+        "legendFormat": "{{has_winner}}",
+        "refId": "A"
+      }],
+      "title": "竞拍成交率分布",
+      "type": "piechart"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 58},
+      "id": 31,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "auction_concurrent_bids_peak",
+        "legendFormat": "峰值",
+        "refId": "A"
+      }],
+      "title": "并发出价峰值趋势",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 64},
+      "id": 32,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto"},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "watch_user_count",
+        "legendFormat": "观看人数",
+        "refId": "A"
+      }],
+      "title": "当前观看用户数",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 64},
+      "id": 33,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto"},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(increase(bid_user_count_total[1h]))",
+        "legendFormat": "出价用户",
+        "refId": "A"
+      }],
+      "title": "出价用户数 (1小时)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 64},
+      "id": 34,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto"},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(rate(websocket_messages_total[5m]))",
+        "legendFormat": "消息速率",
+        "refId": "A"
+      }],
+      "title": "WebSocket 消息速率",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 64},
+      "id": 35,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto"},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum(increase(websocket_errors_total[1h]))",
+        "legendFormat": "错误数",
+        "refId": "A"
+      }],
+      "title": "WebSocket 错误数 (1小时)",
+      "type": "stat"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["prometheus", "metrics", "auction", "sql", "livestream"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "直播竞拍业务监控仪表板",
+  "uid": "business-metrics",
+  "version": 2
+}

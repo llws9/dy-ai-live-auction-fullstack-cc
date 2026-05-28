@@ -1,0 +1,89 @@
+# Prometheus数据源配置
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      httpMethod: POST
+      manageAlerts: true
+      prometheusType: Prometheus
+      prometheusVersion: "2.45.0"
+      cacheLevel: 'High'
+      incrementalQuerying: true
+      incrementalQueryOverlapWindow: 10m
+      disableRecordingRules: false
+      exemplarTraceIdDestinations:
+        - name: traceID
+          datasourceUid: jaeger
+    version: 1
+
+  - name: PostgreSQL
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    database: live_auction
+    user: ${POSTGRES_USER}
+    jsonData:
+      sslmode: disable
+      maxOpenConns: 10
+      maxIdleConns: 5
+      connMaxLifetime: 14400
+      postgresVersion: 1500
+      timescaledb: false
+    secureJsonData:
+      password: ${POSTGRES_PASSWORD}
+    version: 1
+
+  - name: Redis
+    type: redis-datasource
+    access: proxy
+    url: redis://redis:6379
+    jsonData:
+      client: standalone
+      poolSize: 5
+      timeout: 10
+      pingInterval: 0
+      pipelineWindow: 0
+    version: 1
+
+  - name: Jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: 'loki'
+        spanStartTimeShift: '-1h'
+        spanEndTimeShift: '1h'
+        filterByTraceID: true
+        filterBySpanID: true
+        customQuery: true
+        query: 'method="${__span.name}"'
+      nodeGraph:
+        enabled: true
+      traceQuery:
+        timeShiftEnabled: true
+        spanStartTimeShift: '-1h'
+        spanEndTimeShift: '1h'
+      spanBar:
+        type: 'Tag'
+        tag: 'http.path'
+    version: 1
+
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        - name: 'TraceID'
+          matcherRegex: '"traceId":"(\\w+)"'
+          url: '$${__value.raw}'
+          datasourceUid: jaeger
+    version: 1

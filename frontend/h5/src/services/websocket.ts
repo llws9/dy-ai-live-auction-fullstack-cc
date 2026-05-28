@@ -1,5 +1,7 @@
 // services/websocket.ts
 
+import { MessageTypeThrottlers } from '../utils/throttle';
+
 type MessageHandler = (data: any) => void;
 
 interface Message {
@@ -31,6 +33,7 @@ class WebSocketService {
   private isManualClose = false;
   private lastMessage: Message | null = null;
   private notificationCallbacks: Set<(notification: NotificationMessage) => void> = new Set();
+  private messageThrottlers: MessageTypeThrottlers;
 
   // 指数退避延迟序列（秒）
   private reconnectDelays = [1, 2, 4, 8, 16, 30, 30, 30, 30, 30];
@@ -38,6 +41,29 @@ class WebSocketService {
   constructor(auctionId: number, token?: string) {
     this.auctionId = auctionId;
     this.token = token || null;
+    this.messageThrottlers = new MessageTypeThrottlers(200);
+    this.setupThrottlers();
+  }
+
+  /**
+   * 设置消息节流器
+   */
+  private setupThrottlers(): void {
+    // 排名更新节流: 200ms内只处理最新一条
+    this.messageThrottlers.createThrottler('rank_update', (data) => {
+      const handlers = this.handlers.get('rank_update');
+      if (handlers) {
+        handlers.forEach((handler) => handler(data));
+      }
+    }, 200);
+
+    // 价格更新节流: 100ms内只处理最新一条
+    this.messageThrottlers.createThrottler('bid_placed', (data) => {
+      const handlers = this.handlers.get('bid_placed');
+      if (handlers) {
+        handlers.forEach((handler) => handler(data));
+      }
+    }, 100);
   }
 
   connect(): Promise<void> {
@@ -100,6 +126,7 @@ class WebSocketService {
     this.isManualClose = true;
     this.stopPing();
     this.stopReconnect();
+    this.messageThrottlers.clearAll();
     if (this.ws) {
       this.ws.close();
       this.ws = null;
@@ -144,9 +171,16 @@ class WebSocketService {
       });
     }
 
-    const handlers = this.handlers.get(message.type);
-    if (handlers) {
-      handlers.forEach((handler) => handler(message.data || message));
+    // 使用节流器处理特定消息类型
+    const throttledTypes = ['rank_update', 'bid_placed'];
+    if (throttledTypes.includes(message.type)) {
+      this.messageThrottlers.processMessage(message.type, message.data || message);
+    } else {
+      // 其他消息类型直接处理
+      const handlers = this.handlers.get(message.type);
+      if (handlers) {
+        handlers.forEach((handler) => handler(message.data || message));
+      }
     }
   }
 

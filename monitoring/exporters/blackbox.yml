@@ -1,0 +1,154 @@
+modules:
+  http_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: []
+      method: GET
+      follow_redirects: true
+      fail_if_ssl: false
+      fail_if_not_ssl: false
+      tls_config:
+        insecure_skip_verify: false
+      preferred_ip_protocol: "ip4"
+
+  http_post_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      method: POST
+      headers:
+        Content-Type: application/json
+      body: '{}'
+      valid_status_codes: [200, 201]
+      preferred_ip_protocol: "ip4"
+
+  http_401:
+    prober: http
+    timeout: 5s
+    http:
+      valid_status_codes: [401]
+      preferred_ip_protocol: "ip4"
+
+  http_ssl:
+    prober: http
+    timeout: 5s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      fail_if_ssl: false
+      fail_if_not_ssl: true
+      tls_config:
+        insecure_skip_verify: false
+      preferred_ip_protocol: "ip4"
+
+  tcp_connect:
+    prober: tcp
+    timeout: 5s
+
+  tcp_connect_ssl:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      preferred_ip_protocol: "ip4"
+      tls: true
+      tls_config:
+        insecure_skip_verify: false
+
+  icmp:
+    prober: icmp
+    timeout: 5s
+    icmp:
+      preferred_ip_protocol: "ip4"
+      payload_size: 56
+
+  dns_tcp:
+    prober: dns
+    timeout: 5s
+    dns:
+      transport_protocol: "tcp"
+      preferred_ip_protocol: "ip4"
+      query_name: "github.com"
+      query_type: "A"
+
+  dns_udp:
+    prober: dns
+    timeout: 5s
+    dns:
+      transport_protocol: "udp"
+      preferred_ip_protocol: "ip4"
+      query_name: "github.com"
+      query_type: "A"
+
+  pop3s_banner:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      preferred_ip_protocol: "ip4"
+      tls: true
+      tls_config:
+        insecure_skip_verify: false
+      query_response:
+        - expect: "^\\+OK"
+
+  ssh_banner:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      preferred_ip_protocol: "ip4"
+      query_response:
+        - expect: "^SSH-2.0-"
+
+  irc_banner:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      preferred_ip_protocol: "ip4"
+      query_response:
+        - send: "NICK prober"
+        - send: "USER prober prober prober :prober"
+        - expect: "PING :([^ ]+)"
+          send: "PONG ${1}"
+        - expect: "^:[^ ]+ 001"
+
+  mongodb:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      preferred_ip_protocol: "ip4"
+      query_response:
+        - send: "\x3a\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xd4\x07\x00\x00\x00\x00\x00\x00admin.$cmd\x00\x00\x00\x00\x00\xff\xff\xff\xff\x13\x00\x00\x00\x10isMaster\x00\x01\x00\x00\x00\x00"
+        - expect: "ismaster"
+
+  mysql:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      preferred_ip_protocol: "ip4"
+      query_response:
+        - send: "\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+
+  postgres:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      preferred_ip_protocol: "ip4"
+      query_response:
+        - send: "\x00\x00\x00\x08\x04\xd2\x16\x2f"
+
+  redis:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      preferred_ip_protocol: "ip4"
+      query_response:
+        - send: "PING\n"
+        - expect: "\\+PONG"
+
+  grpc:
+    prober: grpc
+    timeout: 5s
+    grpc:
+      preferred_ip_protocol: "ip4"
+      service: "grpc.health.v1.Health"

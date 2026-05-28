@@ -7,6 +7,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 
+	"auction-service/dao"
 	"auction-service/model"
 	"auction-service/service"
 )
@@ -200,20 +201,62 @@ func (h *AuctionHandler) Get(ctx context.Context, c *app.RequestContext) {
 func (h *AuctionHandler) List(ctx context.Context, c *app.RequestContext) {
 	// 解析查询参数
 	statusStr := c.Query("status")
-	var status *model.AuctionStatus
-	if statusStr != "" {
-		s, err := strconv.Atoi(statusStr)
-		if err == nil {
-			st := model.AuctionStatus(s)
-			status = &st
-		}
-	}
+	liveStreamIDStr := c.Query("live_stream_id")
+	liveStreamName := c.Query("live_stream_name")
+	search := c.Query("search")
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 
+	// 构建筛选条件
+	var filters *dao.AuctionFilters
+	if statusStr != "" || liveStreamIDStr != "" || liveStreamName != "" || search != "" {
+		filters = &dao.AuctionFilters{}
+
+		// 状态筛选
+		if statusStr != "" {
+			s, err := strconv.Atoi(statusStr)
+			if err == nil {
+				st := model.AuctionStatus(s)
+				filters.Status = &st
+			}
+		}
+
+		// 直播间ID筛选
+		if liveStreamIDStr != "" {
+			liveStreamID, err := strconv.ParseInt(liveStreamIDStr, 10, 64)
+			if err == nil {
+				filters.LiveStreamID = &liveStreamID
+			}
+		}
+
+		// 直播间名称搜索
+		filters.LiveStreamName = liveStreamName
+
+		// 关键词搜索
+		filters.Search = search
+	}
+
+	var auctions []model.Auction
+	var total int64
+	var err error
+
 	// 获取竞拍列表
-	auctions, total, err := h.auctionService.ListAuctions(ctx, status, page, pageSize)
+	if filters != nil {
+		auctions, total, err = h.auctionService.ListAuctionsWithFilters(ctx, filters, page, pageSize)
+	} else {
+		// 兼容旧API：只按状态筛选
+		var status *model.AuctionStatus
+		if statusStr != "" {
+			s, err := strconv.Atoi(statusStr)
+			if err == nil {
+				st := model.AuctionStatus(s)
+				status = &st
+			}
+		}
+		auctions, total, err = h.auctionService.ListAuctions(ctx, status, page, pageSize)
+	}
+
 	if err != nil {
 		c.JSON(500, map[string]interface{}{
 			"code":    500,
@@ -224,11 +267,51 @@ func (h *AuctionHandler) List(ctx context.Context, c *app.RequestContext) {
 
 	// 构建响应
 	response := map[string]interface{}{
-		"auctions":   auctions,
-		"total":      total,
-		"page":       page,
-		"page_size":  pageSize,
+		"code":    200,
+		"message": "success",
+		"data": map[string]interface{}{
+			"items":     auctions,
+			"total":     total,
+			"page":      page,
+			"page_size": pageSize,
+		},
 	}
 
 	c.JSON(200, response)
+}
+
+// GetBids 获取竞拍出价记录
+// @Summary 获取竞拍出价记录
+// @Description 获取指定竞拍的所有出价记录
+// @Tags auction
+// @Produce json
+// @Param id path int true "竞拍ID"
+// @Param limit query int false "返回数量限制" default(100)
+// @Success 200 {array} model.Bid
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /auctions/{id}/bids [get]
+func (h *AuctionHandler) GetBids(ctx context.Context, c *app.RequestContext) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(400, map[string]interface{}{
+			"code":    400,
+			"message": "无效的竞拍ID",
+		})
+		return
+	}
+
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
+
+	bids, err := h.auctionService.GetAuctionBids(ctx, id, limit)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{
+			"code":    500,
+			"message": "获取出价记录失败: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(200, bids)
 }

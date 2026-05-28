@@ -1,0 +1,25 @@
+- generic [ref=e6]:
+  - generic [ref=e7]:
+    - img [ref=e9]
+    - heading "直播竞拍后台系统" [level=1] [ref=e15]
+    - paragraph [ref=e16]: 高端典雅 · 专业高效
+  - generic [ref=e17]:
+    - generic [ref=e18]:
+      - heading "欢迎回来" [level=3] [ref=e19]
+      - paragraph [ref=e20]: 请输入您的账号和密码进行登录
+    - generic [ref=e21]:
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - button "邮箱登录" [ref=e24]
+          - button "手机登录" [ref=e25]
+        - generic [ref=e27]:
+          - img [ref=e28]
+          - textbox "邮箱地址" [ref=e31]
+        - generic [ref=e33]:
+          - img [ref=e34]
+          - textbox "密码" [ref=e37]
+        - button "立即登录" [ref=e38]:
+          - text: 立即登录
+          - img [ref=e39]
+      - paragraph [ref=e42]: 忘记密码？请联系系统管理员
+  - paragraph [ref=e44]: © 2026 直播竞拍管理系统. All Rights Reserved.

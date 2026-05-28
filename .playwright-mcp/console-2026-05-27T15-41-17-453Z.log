@@ -1,0 +1,92 @@
+[     124ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://modao.cc/agent-py/static/source/js/tailwindcss.js:62
+[     562ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:21550
+[     682ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3007/api/v1/auctions?page=1&page_size=20:0
+[     682ms] [ERROR] API Error: 请求的资源不存在 @ http://localhost:3007/src/shared/api/request.ts:19
+[     682ms] [ERROR] 获取竞拍列表失败: ApiError: 请求的资源不存在
+    at handleErrorResponse (http://localhost:3007/src/shared/api/request.ts:46:17)
+    at async request (http://localhost:3007/src/shared/api/request.ts:94:7)
+    at async fetchAuctions (http://localhost:3007/src/mobile/pages/Home.tsx:32:26) @ http://localhost:3007/src/mobile/pages/Home.tsx:34
+[     688ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3007/api/v1/auctions?page=1&page_size=20:0
+[     689ms] [ERROR] API Error: 请求的资源不存在 @ http://localhost:3007/src/shared/api/request.ts:19
+[     689ms] [ERROR] 获取竞拍列表失败: ApiError: 请求的资源不存在
+    at handleErrorResponse (http://localhost:3007/src/shared/api/request.ts:46:17)
+    at async request (http://localhost:3007/src/shared/api/request.ts:94:7)
+    at async fetchAuctions (http://localhost:3007/src/mobile/pages/Home.tsx:32:26) @ http://localhost:3007/src/mobile/pages/Home.tsx:34
+[     844ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3007/favicon.ico:0
+[   68485ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3007/api/v1/auctions?status=1&page=1&page_size=20:0
+[   68486ms] [ERROR] API Error: 请求的资源不存在 @ http://localhost:3007/src/shared/api/request.ts:19
+[   68486ms] [ERROR] 获取竞拍列表失败: ApiError: 请求的资源不存在
+    at handleErrorResponse (http://localhost:3007/src/shared/api/request.ts:46:17)
+    at async request (http://localhost:3007/src/shared/api/request.ts:94:7)
+    at async fetchAuctions (http://localhost:3007/src/mobile/pages/Home.tsx:32:26) @ http://localhost:3007/src/mobile/pages/Home.tsx:34
+[   69104ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3007/api/v1/auctions?status=3&page=1&page_size=20:0
+[   69105ms] [ERROR] API Error: 请求的资源不存在 @ http://localhost:3007/src/shared/api/request.ts:19
+[   69105ms] [ERROR] 获取竞拍列表失败: ApiError: 请求的资源不存在
+    at handleErrorResponse (http://localhost:3007/src/shared/api/request.ts:46:17)
+    at async request (http://localhost:3007/src/shared/api/request.ts:94:7)
+    at async fetchAuctions (http://localhost:3007/src/mobile/pages/Home.tsx:32:26) @ http://localhost:3007/src/mobile/pages/Home.tsx:34
+[   70843ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3007/api/v1/auctions?status=1&page=1&page_size=20:0
+[   70843ms] [ERROR] API Error: 请求的资源不存在 @ http://localhost:3007/src/shared/api/request.ts:19
+[   70843ms] [ERROR] 获取竞拍列表失败: ApiError: 请求的资源不存在
+    at handleErrorResponse (http://localhost:3007/src/shared/api/request.ts:46:17)
+    at async request (http://localhost:3007/src/shared/api/request.ts:94:7)
+    at async fetchAuctions (http://localhost:3007/src/mobile/pages/Home.tsx:32:26) @ http://localhost:3007/src/mobile/pages/Home.tsx:34
+[   71971ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3007/api/v1/auctions?page=1&page_size=20:0
+[   71971ms] [ERROR] API Error: 请求的资源不存在 @ http://localhost:3007/src/shared/api/request.ts:19
+[   71972ms] [ERROR] 获取竞拍列表失败: ApiError: 请求的资源不存在
+    at handleErrorResponse (http://localhost:3007/src/shared/api/request.ts:46:17)
+    at async request (http://localhost:3007/src/shared/api/request.ts:94:7)
+    at async fetchAuctions (http://localhost:3007/src/mobile/pages/Home.tsx:32:26) @ http://localhost:3007/src/mobile/pages/Home.tsx:34
+[   72673ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3007/api/v1/auctions?status=3&page=1&page_size=20:0
+[   72674ms] [ERROR] API Error: 请求的资源不存在 @ http://localhost:3007/src/shared/api/request.ts:19
+[   72674ms] [ERROR] 获取竞拍列表失败: ApiError: 请求的资源不存在
+    at handleErrorResponse (http://localhost:3007/src/shared/api/request.ts:46:17)
+    at async request (http://localhost:3007/src/shared/api/request.ts:94:7)
+    at async fetchAuctions (http://localhost:3007/src/mobile/pages/Home.tsx:32:26) @ http://localhost:3007/src/mobile/pages/Home.tsx:34
+[   86570ms] Error: useAuth must be used within an AuthProvider
+    at useAuth (http://localhost:3007/src/shared/auth/AuthContext.tsx:84:11)
+    at Notifications (http://localhost:3007/src/mobile/pages/Notifications.tsx:26:20)
+    at renderWithHooks (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:11548:26)
+    at mountIndeterminateComponent (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:14926:21)
+    at beginWork (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:15914:22)
+    at HTMLUnknownElement.callCallback2 (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:3674:22)
+    at Object.invokeGuardedCallbackDev (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:3699:24)
+    at invokeGuardedCallback (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:3733:39)
+    at beginWork$1 (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:19765:15)
+    at performUnitOfWork (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:19198:20)
+[   86570ms] Error: useAuth must be used within an AuthProvider
+    at useAuth (http://localhost:3007/src/shared/auth/AuthContext.tsx:84:11)
+    at Notifications (http://localhost:3007/src/mobile/pages/Notifications.tsx:26:20)
+    at renderWithHooks (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:11548:26)
+    at mountIndeterminateComponent (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:14926:21)
+    at beginWork (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:15914:22)
+    at HTMLUnknownElement.callCallback2 (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:3674:22)
+    at Object.invokeGuardedCallbackDev (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:3699:24)
+    at invokeGuardedCallback (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:3733:39)
+    at beginWork$1 (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:19765:15)
+    at performUnitOfWork (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:19198:20)
+[   86548ms] [ERROR] The above error occurred in the <Notifications> component:
+
+    at Notifications (http://localhost:3007/src/mobile/pages/Notifications.tsx:24:20)
+    at RenderedRoute (http://localhost:3007/node_modules/.vite/deps/react-router-dom.js?v=8fa3fb44:6626:26)
+    at Routes (http://localhost:3007/node_modules/.vite/deps/react-router-dom.js?v=8fa3fb44:7561:3)
+    at div
+    at div
+    at MobileContainer (http://localhost:3007/src/mobile/components/MobileContainer.tsx:18:28)
+    at Router (http://localhost:3007/node_modules/.vite/deps/react-router-dom.js?v=8fa3fb44:7500:13)
+    at BrowserRouter (http://localhost:3007/node_modules/.vite/deps/react-router-dom.js?v=8fa3fb44:10787:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries. @ http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:14031
+[   86571ms] Error: useAuth must be used within an AuthProvider
+    at useAuth (http://localhost:3007/src/shared/auth/AuthContext.tsx:84:11)
+    at Notifications (http://localhost:3007/src/mobile/pages/Notifications.tsx:26:20)
+    at renderWithHooks (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:11548:26)
+    at mountIndeterminateComponent (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:14926:21)
+    at beginWork (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:15914:22)
+    at beginWork$1 (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:19753:22)
+    at performUnitOfWork (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:19198:20)
+    at workLoopSync (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:19137:13)
+    at renderRootSync (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:19116:15)
+    at recoverFromConcurrentError (http://localhost:3007/node_modules/.vite/deps/chunk-NUMECXU6.js?v=8fa3fb44:18736:28)

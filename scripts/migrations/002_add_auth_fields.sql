@@ -7,7 +7,7 @@ ALTER TABLE users
 ADD COLUMN email VARCHAR(128) NULL UNIQUE COMMENT '邮箱地址',
 ADD COLUMN phone VARCHAR(20) NULL UNIQUE COMMENT '手机号码',
 ADD COLUMN password VARCHAR(256) NOT NULL DEFAULT '' COMMENT '密码哈希(bcrypt)',
-ADD COLUMN role TINYINT DEFAULT 0 COMMENT '角色: 0=普通用户, 1=管理员',
+ADD COLUMN role TINYINT DEFAULT 0 COMMENT '角色: 0=普通用户, 1=主播, 2=平台管理员',
 ADD COLUMN status TINYINT DEFAULT 1 COMMENT '状态: 0=禁用, 1=正常',
 ADD COLUMN last_login_at TIMESTAMP NULL COMMENT '最后登录时间',
 ADD INDEX idx_email (email),
@@ -29,12 +29,12 @@ CREATE TABLE IF NOT EXISTS login_logs (
 -- 注意：这里的密码哈希是 'admin123' 使用bcrypt成本因子10生成的
 -- 在生产环境中，应该通过应用程序创建管理员账号
 INSERT INTO users (id, name, email, password, role, status, created_at) VALUES
-(999, '系统管理员', 'admin@example.com', '$2a$10$N9qo8yLOickgx2ZMRZoMyeIjZRGdjGn/n6.Pk7bFkLKHnFZJYQKCe', 1, 1, NOW())
+(999, '系统管理员', 'admin@example.com', '$2a$10$P767XYZO9ntqyLwbxTfwnOM0HEvWp0b/RJdojahFCvGojW4joj3vS', 2, 1, NOW())
 ON DUPLICATE KEY UPDATE
     name = '系统管理员',
     email = 'admin@example.com',
-    password = '$2a$10$N9qo8yLOickgx2ZMRZoMyeIjZRGdjGn/n6.Pk7bFkLKHnFZJYQKCe',
-    role = 1,
+    password = '$2a$10$P767XYZO9ntqyLwbxTfwnOM0HEvWp0b/RJdojahFCvGojW4joj3vS',
+    role = 2,
     status = 1;
 
 -- 为现有用户设置默认密码（空密码，需要用户重新设置）

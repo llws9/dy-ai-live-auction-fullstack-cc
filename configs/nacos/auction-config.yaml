@@ -1,0 +1,28 @@
+# Auction Service Configuration
+server:
+  http_port: ":8082"
+  ws_port: ":8083"
+
+database:
+  host: "mysql"
+  port: 3306
+  user: "root"
+  password: "root"
+  name: "auction"
+  max_idle_conns: 10
+  max_open_conns: 100
+
+redis:
+  addr: "redis:6379"
+  password: ""
+  pool_size: 100
+
+rabbitmq:
+  host: "rabbitmq"
+  port: 5672
+  user: "guest"
+  password: "guest"
+  vhost: "/"
+
+jwt:
+  secret: "your-secret-key-change-in-production"

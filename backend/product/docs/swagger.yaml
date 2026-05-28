@@ -134,6 +134,9 @@ definitions:
     - OrderStatusCompleted
   model.Product:
     properties:
+      category_id:
+        description: 逻辑外键关联Category
+        type: integer
       created_at:
         type: string
       description:
@@ -153,16 +156,20 @@ definitions:
     enum:
     - 0
     - 1
+    - 2
     type: integer
     x-enum-comments:
       ProductStatusDraft: 草稿
       ProductStatusPublished: 已发布
+      ProductStatusUnpublished: 已下架
     x-enum-descriptions:
     - 草稿
     - 已发布
+    - 已下架
     x-enum-varnames:
     - ProductStatusDraft
     - ProductStatusPublished
+    - ProductStatusUnpublished
   service.CreateProductRequest:
     properties:
       description:
@@ -172,10 +179,9 @@ definitions:
           type: string
         type: array
       name:
-        maxLength: 128
         type: string
-    required:
-    - name
+      status:
+        $ref: '#/definitions/model.ProductStatus'
     type: object
   service.UpdateProductRequest:
     properties:
@@ -187,6 +193,8 @@ definitions:
         type: array
       name:
         type: string
+      status:
+        $ref: '#/definitions/model.ProductStatus'
     type: object
 info:
   contact: {}

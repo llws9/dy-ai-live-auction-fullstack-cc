@@ -17,8 +17,26 @@ type RedisConfig struct {
 	DB       int
 }
 
-// InitRedis 初始化 Redis 连接
-func InitRedis(cfg *RedisConfig) (*redis.Client, error) {
+// InitRedis 初始化 Redis 连接（从参数）
+func InitRedis(addr, password string) (*redis.Client, error) {
+	client := redis.NewClient(&redis.Options{
+		Addr:     addr,
+		Password: password,
+		DB:       0,
+	})
+
+	ctx := context.Background()
+	if err := client.Ping(ctx).Err(); err != nil {
+		return nil, fmt.Errorf("failed to connect redis: %w", err)
+	}
+
+	RedisClient = client
+	log.Printf("Redis connected successfully: %s", addr)
+	return client, nil
+}
+
+// InitRedisWithConfig 初始化 Redis 连接（从配置结构体）
+func InitRedisWithConfig(cfg *RedisConfig) (*redis.Client, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     cfg.Addr,
 		Password: cfg.Password,
@@ -31,7 +49,7 @@ func InitRedis(cfg *RedisConfig) (*redis.Client, error) {
 	}
 
 	RedisClient = client
-	log.Println("Redis connected successfully")
+	log.Printf("Redis connected successfully: %s", cfg.Addr)
 	return client, nil
 }
 
@@ -42,10 +60,7 @@ func GetRedis() *redis.Client {
 
 // InitRedisFromEnv 从环境变量初始化 Redis 连接
 func InitRedisFromEnv() (*redis.Client, error) {
-	cfg := &RedisConfig{
-		Addr:     getEnvOrDefault("REDIS_ADDR", "localhost:6379"),
-		Password: getEnvOrDefault("REDIS_PASSWORD", ""),
-		DB:       0,
-	}
-	return InitRedis(cfg)
+	addr := getEnvOrDefault("REDIS_ADDR", "localhost:6379")
+	password := getEnvOrDefault("REDIS_PASSWORD", "")
+	return InitRedis(addr, password)
 }

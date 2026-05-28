@@ -2,11 +2,11 @@
   "lockfile_version": 1,
   "generated_by": {
     "tool": "ttadk",
-    "version": "1.0.10"
+    "version": "1.0.13"
   },
   "manifest_digest": "6bb4801d714297e59237d3549ed22d5576cbb0c297dacac2c0a84cc93cd56af5",
   "resolved_plugins": {
-    "pkg:plugin:ttadk-plugin:ttadk/backend-sdk@master#a3f544e605c4": {
+    "pkg:plugin:ttadk-plugin:ttadk/backend-sdk@master#b7710a7442d0": {
       "name": "ttadk/backend-sdk",
       "install_order": 11,
       "origin": "package",
@@ -19,7 +19,7 @@
           "type": "branch",
           "value": "master"
         },
-        "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+        "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
         "content_fingerprint": {
           "type": "git-object",
           "path": "plugins/ttadk/backend-sdk",
@@ -28,7 +28,7 @@
       },
       "integrity": "sha256-3+5yvqlCv49Z77BG/4O/JKWQHMYq0jjYH/qTtnkJ0ew="
     },
-    "pkg:plugin:ttadk-plugin:ttadk/backend-test@master#a3f544e605c4": {
+    "pkg:plugin:ttadk-plugin:ttadk/backend-test@master#b7710a7442d0": {
       "name": "ttadk/backend-test",
       "install_order": 12,
       "origin": "package",
@@ -41,16 +41,16 @@
           "type": "branch",
           "value": "master"
         },
-        "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+        "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
         "content_fingerprint": {
           "type": "git-object",
           "path": "plugins/ttadk/backend-test",
-          "object_id": "1ed51044e84b2b827a0b17e0944ee9429b5003f6"
+          "object_id": "62f4b0d5f9744efde6e19daf8fec0368d883a801"
         }
       },
-      "integrity": "sha256-xinfB75k2nNo4NHE2dSpnaZ9iAmv9EAC0//bA27+WNY="
+      "integrity": "sha256-ul4ndsGOBxq3ccpo7MJPKIpKTDIrLE0bDBWoU258nhA="
     },
-    "pkg:plugin:ttadk-plugin:ttadk/bits-unit-test-gen@master#a3f544e605c4": {
+    "pkg:plugin:ttadk-plugin:ttadk/bits-unit-test-gen@master#b7710a7442d0": {
       "name": "ttadk/bits-unit-test-gen",
       "install_order": 6,
       "origin": "package",
@@ -63,7 +63,7 @@
           "type": "branch",
           "value": "master"
         },
-        "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+        "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
         "content_fingerprint": {
           "type": "git-object",
           "path": "plugins/ttadk/bits-unit-test-gen",
@@ -72,7 +72,7 @@
       },
       "integrity": "sha256-7p/eHFrSA7btuGqI9u+FH6hvdk+MKkuLiqoEAsmxyN4="
     },
-    "pkg:plugin:ttadk-plugin:ttadk/common-test@master#a3f544e605c4": {
+    "pkg:plugin:ttadk-plugin:ttadk/common-test@master#b7710a7442d0": {
       "name": "ttadk/common-test",
       "install_order": 2,
       "origin": "package",
@@ -85,7 +85,7 @@
           "type": "branch",
           "value": "master"
         },
-        "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+        "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
         "content_fingerprint": {
           "type": "git-object",
           "path": "plugins/ttadk/common-test",
@@ -94,7 +94,7 @@
       },
       "integrity": "sha256-ZMHjoLjKCAScIc/Vjdj5bCvYHLQvN0vhVB24OS7i9As="
     },
-    "pkg:plugin:ttadk-plugin:ttadk/core@master#a3f544e605c4": {
+    "pkg:plugin:ttadk-plugin:ttadk/core@master#b7710a7442d0": {
       "name": "ttadk/core",
       "install_order": 0,
       "origin": "package",
@@ -107,16 +107,16 @@
           "type": "branch",
           "value": "master"
         },
-        "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+        "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
         "content_fingerprint": {
           "type": "git-object",
           "path": "plugins/ttadk/core",
-          "object_id": "fb323b8c7f68443a5a59556c26212443143e5b36"
+          "object_id": "c0e998f81961d6bb449779b7859b50a07815a3b0"
         }
       },
-      "integrity": "sha256-V/0nFULx4dWlZD2tYFEjBtQYNRDII43fhsV4sSyxJvA="
+      "integrity": "sha256-si1CkL9VUGjxmsroLwu/JJrhgs3qo9JBQre6BL4VX1g="
     },
-    "pkg:plugin:ttadk-plugin:ttadk/frontend-platform@master#a3f544e605c4": {
+    "pkg:plugin:ttadk-plugin:ttadk/frontend-platform@master#b7710a7442d0": {
       "name": "ttadk/frontend-platform",
       "install_order": 1,
       "origin": "package",
@@ -129,7 +129,7 @@
           "type": "branch",
           "value": "master"
         },
-        "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+        "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
         "content_fingerprint": {
           "type": "git-object",
           "path": "plugins/ttadk/frontend-platform",
@@ -138,7 +138,7 @@
       },
       "integrity": "sha256-JIyCsHUMym9UJ44mPI8zTycpodasFkHSqoghIW+0KB0="
     },
-    "pkg:plugin:ttadk-plugin:ttadk/frontend-test@master#a3f544e605c4": {
+    "pkg:plugin:ttadk-plugin:ttadk/frontend-test@master#b7710a7442d0": {
       "name": "ttadk/frontend-test",
       "install_order": 3,
       "origin": "package",
@@ -151,7 +151,7 @@
           "type": "branch",
           "value": "master"
         },
-        "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+        "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
         "content_fingerprint": {
           "type": "git-object",
           "path": "plugins/ttadk/frontend-test",
@@ -160,7 +160,7 @@
       },
       "integrity": "sha256-zXgH97BHuk7eSBuBdsMboGAuS3BSrii8O0ZRpyXlHQY="
     },
-    "pkg:plugin:ttadk-plugin:ttadk/gdp@master#a3f544e605c4": {
+    "pkg:plugin:ttadk-plugin:ttadk/gdp@master#b7710a7442d0": {
       "name": "ttadk/gdp",
       "install_order": 7,
       "origin": "package",
@@ -173,7 +173,7 @@
           "type": "branch",
           "value": "master"
         },
-        "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+        "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
         "content_fingerprint": {
           "type": "git-object",
           "path": "plugins/ttadk/gdp",
@@ -182,7 +182,7 @@
       },
       "integrity": "sha256-FWW7ORB4ATdt2pq7cwn3yYfKGwKHY4CU29DzMOoZMSU="
     },
-    "pkg:plugin:ttadk-plugin:ttadk/gdpa@master#a3f544e605c4": {
+    "pkg:plugin:ttadk-plugin:ttadk/gdpa@master#b7710a7442d0": {
       "name": "ttadk/gdpa",
       "install_order": 14,
       "origin": "package",
@@ -195,7 +195,7 @@
           "type": "branch",
           "value": "master"
         },
-        "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+        "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
         "content_fingerprint": {
           "type": "git-object",
           "path": "plugins/ttadk/gdpa",
@@ -204,7 +204,7 @@
       },
       "integrity": "sha256-1UXjXq3qKAG0+EHNZXbwpPhgfxCs6O84UyBDM5122c4="
     },
-    "pkg:plugin:ttadk-plugin:ttadk/goofy@master#a3f544e605c4": {
+    "pkg:plugin:ttadk-plugin:ttadk/goofy@master#b7710a7442d0": {
       "name": "ttadk/goofy",
       "install_order": 4,
       "origin": "package",
@@ -217,7 +217,7 @@
           "type": "branch",
           "value": "master"
         },
-        "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+        "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
         "content_fingerprint": {
           "type": "git-object",
           "path": "plugins/ttadk/goofy",
@@ -226,7 +226,7 @@
       },
       "integrity": "sha256-muJqEHKksdA3KkTi7J2KuQHYYsKx+gKqsBwHjCfYPFo="
     },
-    "pkg:plugin:ttadk-plugin:ttadk/hertz@master#a3f544e605c4": {
+    "pkg:plugin:ttadk-plugin:ttadk/hertz@master#b7710a7442d0": {
       "name": "ttadk/hertz",
       "install_order": 8,
       "origin": "package",
@@ -239,7 +239,7 @@
           "type": "branch",
           "value": "master"
         },
-        "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+        "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
         "content_fingerprint": {
           "type": "git-object",
           "path": "plugins/ttadk/hertz",
@@ -248,7 +248,7 @@
       },
       "integrity": "sha256-QPIrr/HejKsc75UTCUyyiriemWZyR7YNRtfdMT6w1cM="
     },
-    "pkg:plugin:ttadk-plugin:ttadk/ios@master#a3f544e605c4": {
+    "pkg:plugin:ttadk-plugin:ttadk/ios@master#b7710a7442d0": {
       "name": "ttadk/ios",
       "install_order": 16,
       "origin": "package",
@@ -261,7 +261,7 @@
           "type": "branch",
           "value": "master"
         },
-        "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+        "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
         "content_fingerprint": {
           "type": "git-object",
           "path": "plugins/ttadk/ios",
@@ -270,7 +270,7 @@
       },
       "integrity": "sha256-UPhSG4Q3oTTBoGPa7LDABANPcOPzZf27pcBPNe8hG0I="
     },
-    "pkg:plugin:ttadk-plugin:ttadk/kitex@master#a3f544e605c4": {
+    "pkg:plugin:ttadk-plugin:ttadk/kitex@master#b7710a7442d0": {
       "name": "ttadk/kitex",
       "install_order": 9,
       "origin": "package",
@@ -283,7 +283,7 @@
           "type": "branch",
           "value": "master"
         },
-        "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+        "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
         "content_fingerprint": {
           "type": "git-object",
           "path": "plugins/ttadk/kitex",
@@ -292,7 +292,7 @@
       },
       "integrity": "sha256-PlbeLVaZQyjCTLsRMU55dqxtaKSnEiNjyrLUOYWew0c="
     },
-    "pkg:plugin:ttadk-plugin:ttadk/lark_cli@master#a3f544e605c4": {
+    "pkg:plugin:ttadk-plugin:ttadk/lark_cli@master#b7710a7442d0": {
       "name": "ttadk/lark_cli",
       "install_order": 5,
       "origin": "package",
@@ -305,7 +305,7 @@
           "type": "branch",
           "value": "master"
         },
-        "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+        "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
         "content_fingerprint": {
           "type": "git-object",
           "path": "plugins/ttadk/lark_cli",
@@ -314,7 +314,7 @@
       },
       "integrity": "sha256-m17thorjY8GXLdT5tgSv2e5+1sExl9jJ1cNSUAMJOvY="
     },
-    "pkg:plugin:ttadk-plugin:ttadk/mobile-core@master#a3f544e605c4": {
+    "pkg:plugin:ttadk-plugin:ttadk/mobile-core@master#b7710a7442d0": {
       "name": "ttadk/mobile-core",
       "install_order": 15,
       "origin": "package",
@@ -327,7 +327,7 @@
           "type": "branch",
           "value": "master"
         },
-        "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+        "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
         "content_fingerprint": {
           "type": "git-object",
           "path": "plugins/ttadk/mobile-core",
@@ -336,7 +336,7 @@
       },
       "integrity": "sha256-DeONxhu/c4FjqBfKT5y9BddiePHcfBQbTKJ6WzBTeWY="
     },
-    "pkg:plugin:ttadk-plugin:ttadk/overpass@master#a3f544e605c4": {
+    "pkg:plugin:ttadk-plugin:ttadk/overpass@master#b7710a7442d0": {
       "name": "ttadk/overpass",
       "install_order": 10,
       "origin": "package",
@@ -349,7 +349,7 @@
           "type": "branch",
           "value": "master"
         },
-        "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+        "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
         "content_fingerprint": {
           "type": "git-object",
           "path": "plugins/ttadk/overpass",
@@ -358,7 +358,7 @@
       },
       "integrity": "sha256-cKzwIVTsMg15wb+RxhUoGuMbLC2ytHPtPNaendULNzg="
     },
-    "pkg:plugin:ttadk-plugin:ttadk/tiktok-guidelines@master#a3f544e605c4": {
+    "pkg:plugin:ttadk-plugin:ttadk/tiktok-guidelines@master#b7710a7442d0": {
       "name": "ttadk/tiktok-guidelines",
       "install_order": 13,
       "origin": "package",
@@ -371,7 +371,7 @@
           "type": "branch",
           "value": "master"
         },
-        "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+        "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
         "content_fingerprint": {
           "type": "git-object",
           "path": "plugins/ttadk/tiktok-guidelines",
@@ -392,7 +392,7 @@
             "type": "branch",
             "value": "master"
           },
-          "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+          "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
           "content_fingerprint": {
             "type": "git-object",
             "path": "presets/ttadk/backend.json",
@@ -426,7 +426,7 @@
             "type": "branch",
             "value": "master"
           },
-          "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+          "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
           "content_fingerprint": {
             "type": "git-object",
             "path": "presets/ttadk/frontend.json",
@@ -455,7 +455,7 @@
             "type": "branch",
             "value": "master"
           },
-          "commit": "a3f544e605c45e3bd03fdfc43e6f19960308b2d9",
+          "commit": "b7710a7442d0e18a12b1f41e59b5b742ba90d265",
           "content_fingerprint": {
             "type": "git-object",
             "path": "presets/ttadk/ios.json",

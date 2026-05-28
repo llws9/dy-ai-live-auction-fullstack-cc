@@ -149,3 +149,78 @@ func (d *AuctionDAO) ListAll(ctx context.Context) ([]model.Auction, error) {
 		Find(&auctions).Error
 	return auctions, err
 }
+
+// ListWithFilters 获取竞拍列表（支持多条件筛选）
+func (d *AuctionDAO) ListWithFilters(ctx context.Context, filters *AuctionFilters, page, pageSize int) ([]model.Auction, int64, error) {
+	var auctions []model.Auction
+	var total int64
+
+	query := d.db.WithContext(ctx).Model(&model.Auction{})
+
+	// 状态筛选
+	if filters.Status != nil {
+		query = query.Where("status = ?", *filters.Status)
+	}
+
+	// 直播间ID筛选
+	if filters.LiveStreamID != nil {
+		query = query.Where("live_stream_id = ?", *filters.LiveStreamID)
+	}
+
+	// 直播间名称搜索（需要JOIN live_streams表）
+	if filters.LiveStreamName != "" {
+		query = query.Joins("JOIN live_streams ON live_streams.id = auctions.live_stream_id").
+			Where("live_streams.name LIKE ?", "%"+filters.LiveStreamName+"%")
+	}
+
+	// 关键词搜索（商品名称或直播间名称）
+	if filters.Search != "" {
+		query = query.Joins("JOIN products ON products.id = auctions.product_id").
+			Joins("LEFT JOIN live_streams ON live_streams.id = auctions.live_stream_id").
+			Where("products.name LIKE ? OR live_streams.name LIKE ?", "%"+filters.Search+"%", "%"+filters.Search+"%")
+	}
+
+	// 获取总数
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// 分页查询
+	offset := (page - 1) * pageSize
+	err := query.Order("auctions.id DESC").
+		Offset(offset).
+		Limit(pageSize).
+		Find(&auctions).Error
+
+	return auctions, total, err
+}
+
+// AuctionFilters 竞拍筛选条件
+type AuctionFilters struct {
+	Status         *model.AuctionStatus
+	LiveStreamID   *int64
+	LiveStreamName string
+	Search         string
+}
+
+// GetByLiveStreamID 根据直播间ID获取竞拍列表
+func (d *AuctionDAO) GetByLiveStreamID(ctx context.Context, liveStreamID int64, page, pageSize int) ([]model.Auction, int64, error) {
+	var auctions []model.Auction
+	var total int64
+
+	query := d.db.WithContext(ctx).Model(&model.Auction{}).Where("live_stream_id = ?", liveStreamID)
+
+	// 获取总数
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// 分页查询
+	offset := (page - 1) * pageSize
+	err := query.Order("id DESC").
+		Offset(offset).
+		Limit(pageSize).
+		Find(&auctions).Error
+
+	return auctions, total, err
+}

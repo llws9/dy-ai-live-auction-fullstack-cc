@@ -1,0 +1,99 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e7]
+      - generic [ref=e13]: 直播竞拍后台
+    - navigation [ref=e14]:
+      - generic [ref=e15]:
+        - link "经营总览" [ref=e17] [cursor=pointer]:
+          - /url: "#/dashboard"
+          - img [ref=e18]
+          - generic [ref=e23]: 经营总览
+        - generic [ref=e24]:
+          - button "商品管理" [ref=e25]:
+            - generic [ref=e26]:
+              - img [ref=e27]
+              - generic [ref=e31]: 商品管理
+            - img [ref=e32]
+          - generic [ref=e34]:
+            - link "商品列表" [ref=e35] [cursor=pointer]:
+              - /url: "#/goods/list"
+            - link "创建商品" [ref=e36] [cursor=pointer]:
+              - /url: "#/goods/create"
+        - button "竞拍管理" [ref=e38]:
+          - generic [ref=e39]:
+            - img [ref=e40]
+            - generic [ref=e46]: 竞拍管理
+          - img [ref=e47]
+        - button "直播间管理" [ref=e50]:
+          - generic [ref=e51]:
+            - img [ref=e52]
+            - generic [ref=e55]: 直播间管理
+          - img [ref=e56]
+        - button "订单管理" [ref=e59]:
+          - generic [ref=e60]:
+            - img [ref=e61]
+            - generic [ref=e64]: 订单管理
+          - img [ref=e65]
+        - button "数据统计" [ref=e68]:
+          - generic [ref=e69]:
+            - img [ref=e70]
+            - generic [ref=e72]: 数据统计
+          - img [ref=e73]
+        - button "系统设置" [ref=e76]:
+          - generic [ref=e77]:
+            - img [ref=e78]
+            - generic [ref=e81]: 系统设置
+          - img [ref=e82]
+    - button "退出登录" [ref=e85]:
+      - img [ref=e86]
+      - generic [ref=e89]: 退出登录
+  - generic [ref=e90]:
+    - banner [ref=e91]:
+      - generic [ref=e93]:
+        - img [ref=e94]
+        - textbox "搜索商品、订单、竞拍..." [ref=e97]
+      - generic [ref=e98]:
+        - button [ref=e99]:
+          - img [ref=e100]
+        - generic [ref=e105]:
+          - paragraph [ref=e106]: 管理员
+          - paragraph [ref=e107]: 高级运营人员
+    - main [ref=e109]:
+      - generic [ref=e111]:
+        - generic [ref=e112]:
+          - generic [ref=e113]:
+            - heading "商品管理" [level=1] [ref=e114]
+            - paragraph [ref=e115]: 管理您的所有竞拍商品
+          - button "新增商品" [ref=e116]:
+            - img [ref=e117]
+            - text: 新增商品
+        - generic [ref=e119]:
+          - generic [ref=e120]:
+            - tablist [ref=e122]:
+              - tab "全部" [selected] [ref=e123]
+              - tab "未发布" [ref=e124]
+              - tab "已发布" [ref=e125]
+              - tab "已下架" [ref=e126]
+            - generic [ref=e127]:
+              - generic [ref=e128]:
+                - img [ref=e129]
+                - textbox "搜索商品名称..." [ref=e132]
+              - button [ref=e133]:
+                - img [ref=e134]
+          - table [ref=e137]:
+            - rowgroup [ref=e138]:
+              - row "商品信息 类别 状态 创建时间 操作" [ref=e139]:
+                - columnheader "商品信息" [ref=e140]
+                - columnheader "类别" [ref=e141]
+                - columnheader "状态" [ref=e142]
+                - columnheader "创建时间" [ref=e143]
+                - columnheader "操作" [ref=e144]
+            - rowgroup [ref=e145]:
+              - row "暂无商品数据" [ref=e146]:
+                - cell "暂无商品数据" [ref=e147]
+          - generic [ref=e148]:
+            - paragraph [ref=e149]: 显示 1 到 0，共 0 条商品
+            - generic [ref=e150]:
+              - button "上一页" [disabled]
+              - button "下一页" [disabled]

@@ -160,6 +160,57 @@ const docTemplate = `{
             }
         },
         "/auctions/{id}/bids": {
+            "get": {
+                "description": "获取指定竞拍的所有出价记录",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auction"
+                ],
+                "summary": "获取竞拍出价记录",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "竞拍ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 100,
+                        "description": "返回数量限制",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Bid"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -628,6 +679,10 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "live_stream_id": {
+                    "description": "直播间ID（新增字段）",
+                    "type": "integer"
+                },
                 "product_id": {
                     "type": "integer"
                 },
@@ -672,6 +727,26 @@ const docTemplate = `{
                 "AuctionStatusEnded",
                 "AuctionStatusCancelled"
             ]
+        },
+        "model.Bid": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "auction_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
         },
         "model.JSONMap": {
             "type": "object",
@@ -734,15 +809,23 @@ const docTemplate = `{
                 "auction_lost",
                 "order_paid",
                 "order_shipped",
-                "order_completed"
+                "order_completed",
+                "new_product",
+                "auction_starting",
+                "product_unpublished",
+                "auction_ended"
             ],
             "x-enum-comments": {
+                "NotificationTypeAuctionEnded": "竞拍已结束",
                 "NotificationTypeAuctionLost": "竞拍未中标",
+                "NotificationTypeAuctionStarting": "竞拍即将开始",
                 "NotificationTypeAuctionWon": "竞拍中标",
                 "NotificationTypeBidOutbid": "出价被超越",
+                "NotificationTypeNewProduct": "新商品发布",
                 "NotificationTypeOrderCompleted": "订单已完成",
                 "NotificationTypeOrderPaid": "订单已支付",
-                "NotificationTypeOrderShipped": "订单已发货"
+                "NotificationTypeOrderShipped": "订单已发货",
+                "NotificationTypeProductUnpublished": "商品已下架"
             },
             "x-enum-descriptions": [
                 "出价被超越",
@@ -750,7 +833,11 @@ const docTemplate = `{
                 "竞拍未中标",
                 "订单已支付",
                 "订单已发货",
-                "订单已完成"
+                "订单已完成",
+                "新商品发布",
+                "竞拍即将开始",
+                "商品已下架",
+                "竞拍已结束"
             ],
             "x-enum-varnames": [
                 "NotificationTypeBidOutbid",
@@ -758,7 +845,11 @@ const docTemplate = `{
                 "NotificationTypeAuctionLost",
                 "NotificationTypeOrderPaid",
                 "NotificationTypeOrderShipped",
-                "NotificationTypeOrderCompleted"
+                "NotificationTypeOrderCompleted",
+                "NotificationTypeNewProduct",
+                "NotificationTypeAuctionStarting",
+                "NotificationTypeProductUnpublished",
+                "NotificationTypeAuctionEnded"
             ]
         },
         "model.UnreadCountResponse": {

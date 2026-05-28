@@ -1,71 +1,97 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-
-interface User {
-  id: number;
-  name: string;
-  avatar?: string;
-  email?: string;
-  phone?: string;
-  role: number;
-}
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { authService, User } from '../services/auth';
 
 interface AuthContextType {
+  isAuthenticated: boolean;
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (token: string, user: User) => void;
+  login: (email: string, password: string) => Promise<void>;
+  setAuth: (token: string, user: User) => void;
   logout: () => void;
-  isAuthenticated: boolean;
+  isAdmin: () => boolean;
+  isMerchant: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // 初始化时从localStorage加载认证状态
   useEffect(() => {
-    // 从localStorage加载token和用户信息
-    const storedToken = localStorage.getItem('auth_token');
-    const storedUser = localStorage.getItem('auth_user');
+    const storedToken = authService.getToken();
+    const storedUser = authService.getCurrentUser();
 
     if (storedToken && storedUser) {
       setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+      setUser(storedUser);
+      setIsAuthenticated(true);
     }
+
     setLoading(false);
   }, []);
 
-  const login = (newToken: string, newUser: User) => {
-    setToken(newToken);
-    setUser(newUser);
-    localStorage.setItem('auth_token', newToken);
-    localStorage.setItem('auth_user', JSON.stringify(newUser));
+  const login = async (email: string, password: string) => {
+    try {
+      const result = await authService.login(email, password);
+      setToken(result.token);
+      setUser(result.user);
+      setIsAuthenticated(true);
+    } catch (error) {
+      setIsAuthenticated(false);
+      setUser(null);
+      setToken(null);
+      throw error;
+    }
+  };
+
+  const setAuth = (token: string, user: User) => {
+    localStorage.setItem('auth_token', token);
+    localStorage.setItem('auth_user', JSON.stringify(user));
+    setToken(token);
+    setUser(user);
+    setIsAuthenticated(true);
   };
 
   const logout = () => {
-    setToken(null);
+    authService.logout();
+    setIsAuthenticated(false);
     setUser(null);
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
+    setToken(null);
   };
 
-  return (
-    <AuthContext.Provider value={{
-      user,
-      token,
-      loading,
-      login,
-      logout,
-      isAuthenticated: !!token && !!user
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const isAdmin = () => {
+    return authService.isAdmin();
+  };
+
+  const isMerchant = () => {
+    return authService.isMerchant();
+  };
+
+  const value: AuthContextType = {
+    isAuthenticated,
+    user,
+    token,
+    loading,
+    login,
+    setAuth,
+    logout,
+    isAdmin,
+    isMerchant,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');

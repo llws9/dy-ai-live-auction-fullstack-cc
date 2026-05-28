@@ -1,0 +1,28 @@
+{
+  "name": "dy-ai-live-auction-performance-tests",
+  "version": "1.0.0",
+  "description": "性能压测脚本和测试场景",
+  "scripts": {
+    "test:load": "k6 run scripts/performance/load_test.js",
+    "test:stress": "k6 run scripts/performance/stress_test.js",
+    "test:spike": "k6 run scripts/performance/spike_test.js",
+    "test:all": "bash scripts/performance/run_performance_test.sh all",
+    "test:scenarios": "bash scripts/performance/run_performance_test.sh scenarios",
+    "test:login": "bash scripts/performance/run_performance_test.sh scenario:login",
+    "test:register": "bash scripts/performance/run_performance_test.sh scenario:register",
+    "test:bid": "bash scripts/performance/run_performance_test.sh scenario:bid",
+    "test:query": "bash scripts/performance/run_performance_test.sh scenario:query",
+    "test:websocket": "bash scripts/performance/run_performance_test.sh scenario:websocket",
+    "test:product": "bash scripts/performance/run_performance_test.sh scenario:product",
+    "test:wrk": "bash scripts/performance/wrk_test.sh"
+  },
+  "keywords": [
+    "performance",
+    "load-testing",
+    "stress-testing",
+    "k6",
+    "wrk"
+  ],
+  "author": "Your Team",
+  "license": "MIT"
+}

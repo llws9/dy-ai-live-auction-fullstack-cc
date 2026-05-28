@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface AdminUser {
   id: number;
@@ -15,6 +15,7 @@ interface AdminAuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isStaff: boolean; // 商家或管理员
 }
 
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
@@ -30,12 +31,12 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 
     if (storedToken && storedUser) {
       const parsedUser = JSON.parse(storedUser);
-      // 验证是否为管理员
-      if (parsedUser.role === 1) {
+      // 验证是否为商家(role=1)或管理员(role=2)
+      if (parsedUser.role >= 1) {
         setToken(storedToken);
         setUser(parsedUser);
       } else {
-        // 清除非管理员token
+        // 清除无效token
         localStorage.removeItem('admin_auth_token');
         localStorage.removeItem('admin_auth_user');
       }
@@ -44,8 +45,8 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = (newToken: string, newUser: AdminUser) => {
-    if (newUser.role !== 1) {
-      throw new Error('非管理员账号');
+    if (newUser.role < 1) {
+      throw new Error('权限不足');
     }
     setToken(newToken);
     setUser(newUser);
@@ -68,7 +69,8 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       isAuthenticated: !!token && !!user,
-      isAdmin: user?.role === 1
+      isAdmin: user?.role === 2,
+      isStaff: (user?.role === 1 || user?.role === 2) // 商家或管理员都可以访问
     }}>
       {children}
     </AdminAuthContext.Provider>

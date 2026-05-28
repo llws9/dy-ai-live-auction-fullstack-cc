@@ -24,6 +24,8 @@
 - [ ] 磁盘使用率
 - [ ] 错误日志数量
 - [ ] API响应时间
+- [ ] Prometheus指标端点可用性（`curl http://localhost:9090/metrics`）
+- [ ] Gateway QPS正常范围（无异常峰值）
 
 #### 每周检查（手动）
 
@@ -181,8 +183,8 @@ global:
 scrape_configs:
   - job_name: 'auction-gateway'
     static_configs:
-      - targets: ['localhost:8080']
-    
+      - targets: ['localhost:9090']  # Gateway Prometheus 指标端口
+      
   - job_name: 'auction-product'
     static_configs:
       - targets: ['localhost:8081']
@@ -198,6 +200,143 @@ scrape_configs:
   - job_name: 'redis'
     static_configs:
       - targets: ['localhost:9121']
+```
+
+### Gateway 指标端点
+
+Gateway 服务在独立端口 **9090** 提供 Prometheus 指标数据：
+
+```bash
+# 访问指标端点
+curl http://localhost:9090/metrics
+
+# 或在浏览器打开
+open http://localhost:9090/metrics
+```
+
+#### 可用的 HTTP 指标
+
+| 指标名称 | 类型 | 说明 | 标签 |
+|----------|------|------|------|
+| `http_requests_total` | Counter | HTTP请求总数 | `service`, `method`, `path`, `status` |
+| `http_request_duration_seconds` | Histogram | HTTP请求耗时分布 | `service`, `method`, `path` |
+
+#### 可用的业务指标
+
+| 指标名称 | 类型 | 说明 | 标签 |
+|----------|------|------|------|
+| `live_room_enter_total` | Counter | 直播间进入次数 | `room_id`, `user_type` |
+| `live_room_current_viewers` | Gauge | 直播间当前观看人数 | - |
+| `live_room_peak_viewers` | Gauge | 直播间峰值观看人数 | `room_id` |
+| `auction_created_total` | Counter | 竞拍创建总数 | `product_id`, `status` |
+| `auction_bid_total` | Counter | 出价次数统计 | `auction_id`, `status` |
+| `auction_bid_amount` | Histogram | 出价金额分布 | `auction_id` |
+| `auction_completed_total` | Counter | 竞拍完成总数 | `auction_id`, `has_winner` |
+| `order_created_total` | Counter | 订单创建总数 | `auction_id`, `product_id` |
+| `order_completed_total` | Counter | 订单完成总数 | `auction_id`, `product_id` |
+| `order_amount` | Histogram | 订单金额分布 | `status` |
+| `user_register_total` | Counter | 用户注册总数 | `source` |
+| `user_login_total` | Counter | 用户登录总数 | `method` |
+| `websocket_connections` | Gauge | WebSocket当前连接数 | - |
+| `websocket_messages_total` | Counter | WebSocket消息总数 | `type`, `direction` |
+| `payment_initiated_total` | Counter | 发起支付次数 | `method` |
+| `payment_completed_total` | Counter | 支付完成次数 | `method` |
+| `payment_failed_total` | Counter | 支付失败次数 | `method`, `error_code` |
+
+#### PromQL 查询示例
+
+**QPS 计算（每秒请求数）**：
+```promql
+# 全局 QPS
+rate(http_requests_total[1m])
+
+# 按路径分组的 QPS
+sum by (path) (rate(http_requests_total[1m]))
+
+# 按服务分组的 QPS
+sum by (service) (rate(http_requests_total[1m]))
+
+# 按状态码分组的 QPS（只看成功请求）
+sum by (status) (rate(http_requests_total{status="200"}[1m]))
+
+# 错误请求 QPS（5xx）
+sum(rate(http_requests_total{status=~"5.."}[1m]))
+```
+
+**响应时间分析**：
+```promql
+# P50 响应时间
+histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))
+
+# P99 响应时间
+histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))
+
+# 平均响应时间
+rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m])
+```
+
+**业务指标查询**：
+```promql
+# 每秒竞拍创建数
+rate(auction_created_total[1m])
+
+# 每秒出价数（成功）
+rate(auction_bid_total{status="success"}[1m])
+
+# 出价金额分布（平均）
+rate(auction_bid_amount_sum[5m]) / rate(auction_bid_amount_count[5m])
+
+# WebSocket 连接数
+websocket_connections
+
+# 支付成功率
+rate(payment_completed_total[5m]) / rate(payment_initiated_total[5m])
+```
+
+#### 指标中间件实现
+
+指标通过 Gateway 中间件自动采集：
+
+```go
+// backend/gateway/middleware/metrics.go
+func MetricsMiddleware(serviceName string, m *metrics.Metrics) app.HandlerFunc {
+    return func(ctx context.Context, c *app.RequestContext) {
+        start := time.Now()
+        c.Next(ctx)
+        
+        duration := time.Since(start).Seconds()
+        method := string(c.Method())
+        path := string(c.URI().Path())
+        status := c.Response.StatusCode()
+        
+        // 记录请求计数和耗时
+        m.RequestsTotal.WithLabelValues(serviceName, method, path, strconv.Itoa(status)).Inc()
+        m.RequestDuration.WithLabelValues(serviceName, method, path).Observe(duration)
+    }
+}
+```
+
+指标初始化位置：
+
+```go
+// backend/gateway/main.go
+func main() {
+    // 初始化 Prometheus 指标
+    m := metrics.Init("gateway")
+    
+    // 应用指标中间件
+    h.Use(middleware.MetricsMiddleware("gateway", m))
+    
+    // 启动独立 Prometheus 服务（端口 9090）
+    go func() {
+        promServer := &http.Server{
+            Addr:    ":9090",
+            Handler: metrics.Handler(),
+        }
+        log.Printf("Prometheus metrics server starting on :9090")
+        promServer.ListenAndServe()
+    }()
+}
 ```
 
 ### 告警规则
@@ -263,23 +402,64 @@ groups:
 
 导入以下Dashboard：
 
-1. **服务概览**
-   - 请求数/秒
-   - 响应时间分布
-   - 错误率
-   - 活跃连接数
+#### 1. Gateway QPS Dashboard（核心）
 
-2. **数据库监控**
-   - 连接数
-   - 慢查询数
-   - 查询QPS
-   - 缓存命中率
+| 面板名称 | PromQL 查询 | 说明 |
+|----------|-------------|------|
+| **总 QPS** | `sum(rate(http_requests_total[1m]))` | 全局每秒请求数 |
+| **按路径 QPS** | `sum by (path) (rate(http_requests_total[1m]))` | 各路径请求量 |
+| **成功率** | `sum(rate(http_requests_total{status="200"}[5m])) / sum(rate(http_requests_total[5m])) * 100` | HTTP 成功请求占比 |
+| **P50 响应时间** | `histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))` | 50% 请求响应时间 |
+| **P99 响应时间** | `histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))` | 99% 请求响应时间 |
+| **错误 QPS** | `sum(rate(http_requests_total{status=~"5.."}[1m]))` | 5xx 错误每秒数 |
 
-3. **Redis监控**
-   - 内存使用
-   - 命令统计
-   - 键空间
-   - 连接数
+#### 2. 服务概览 Dashboard
+
+- 请求数/秒（各服务）
+- 响应时间分布
+- 错误率
+- 活跃连接数
+
+#### 3. 业务指标 Dashboard
+
+| 面板名称 | PromQL 查询 | 说明 |
+|----------|-------------|------|
+| **竞拍创建速率** | `rate(auction_created_total[5m])` | 每分钟竞拍创建数 |
+| **出价成功率** | `rate(auction_bid_total{status="success"}[5m]) / rate(auction_bid_total[5m])` | 出价成功比例 |
+| **WebSocket 连接数** | `websocket_connections` | 当前 WS 连接数 |
+| **支付成功率** | `rate(payment_completed_total[5m]) / rate(payment_initiated_total[5m])` | 支付成功比例 |
+
+#### 4. SQL 查询监控（新增）
+
+| 面板名称 | PromQL 查询 | 说明 |
+|----------|-------------|------|
+| **SQL 耗时 P50** | `histogram_quantile(0.50, sum by (le, service) (rate(sql_query_duration_seconds_bucket[5m])))` | 50% SQL 查询耗时 |
+| **SQL 耗时 P95** | `histogram_quantile(0.95, sum by (le, service) (rate(sql_query_duration_seconds_bucket[5m])))` | 95% SQL 查询耗时 |
+| **SQL QPS** | `sum by (service, operation) (rate(sql_query_total[5m]))` | 每秒 SQL 查询数 |
+| **SQL 错误率** | `sum(rate(sql_query_errors_total[5m]))` | SQL 查询错误数 |
+| **操作分布** | `sum by (operation) (increase(sql_query_total[1h]))` | SELECT/INSERT/UPDATE/DELETE 分布 |
+| **表热点** | `sum by (table) (increase(sql_query_total[1h]))` | 各表查询频率 |
+
+**SQL 查询耗时分布 Buckets**:
+- 0.001s, 0.005s, 0.01s, 0.05s, 0.1s, 0.5s, 1s, 2s, 5s
+
+**SQL 指标 Labels**:
+- `service`: auction-service, product-service
+- `operation`: query, create, update, delete, row
+- `table`: auctions, bids, products, orders 等
+
+#### 5. 数据库连接监控
+
+- 连接数: `SHOW PROCESSLIST`
+- 慢查询数: MySQL slow_log 表
+- 缓存命中率: Redis `hit_rate`
+
+#### 6. Redis监控
+
+- 内存使用
+- 命令统计
+- 键空间
+- 连接数
 
 ### 告警通知配置
 
@@ -823,6 +1003,119 @@ tail -f /var/log/auction/*.log
 
 ---
 
+## GrowthBook A/B 测试平台
+
+### GrowthBook 服务部署
+
+GrowthBook 服务运行在端口 3200：
+
+```bash
+# 启动 GrowthBook 服务
+docker-compose up -d growthbook growthbook-db
+
+# 访问 Dashboard
+open http://localhost:3200
+
+# 检查服务状态
+curl http://localhost:3200/api/health
+```
+
+### 实验指标监控
+
+**Prometheus 指标端点**：http://localhost:9090/metrics
+
+**实验相关指标**：
+
+| 指标名称 | 说明 | PromQL 查询 |
+|----------|------|-------------|
+| `experiment_assigned_total` | 实验分配总数 | `rate(experiment_assigned_total[1h])` |
+| `experiment_viewed_total` | 实验查看总数 | `rate(experiment_viewed_total[1h])` |
+| `experiment_completed_total` | 实验完成总数 | `rate(experiment_completed_total[1h])` |
+
+**实验转化率查询**：
+```promql
+# 实验完成率（分配 → 完成）
+sum(rate(experiment_completed_total[24h])) 
+/ sum(rate(experiment_assigned_total[24h])) * 100
+```
+
+**按实验分组的指标**：
+```promql
+# 各实验的分配速率
+sum by (experiment) (rate(experiment_assigned_total[1h]))
+
+# 各变体的分配速率
+sum by (experiment, variation) (rate(experiment_assigned_total[1h]))
+```
+
+### SQL 查询耗时监控
+
+**SQL 查询指标**：
+
+| 指标名称 | 说明 | PromQL 查询 |
+|----------|------|-------------|
+| `sql_query_duration_seconds` | SQL 查询耗时分布 | `rate(sql_query_duration_seconds_sum[5m]) / rate(sql_query_duration_seconds_count[5m])` |
+| `sql_query_total` | SQL 查询总数 | `rate(sql_query_total[1m])` |
+| `sql_query_errors_total` | SQL 查询错误总数 | `rate(sql_query_errors_total[5m])` |
+
+**各服务 SQL 查询速率**：
+```promql
+# 按服务分组的查询速率
+sum by (service) (rate(sql_query_total[1m]))
+
+# 按操作类型分组的查询速率
+sum by (service, operation) (rate(sql_query_total[1m]))
+```
+
+**SQL 查询 P99 响应时间**：
+```promql
+histogram_quantile(0.99, 
+  sum by (le, service) (rate(sql_query_duration_seconds_bucket[5m]))
+)
+```
+
+**慢查询检测**：
+```promql
+# 查询耗时超过 1 秒的数量
+sum(rate(sql_query_duration_seconds_bucket{le="1", service="product-service"}[5m]))
+```
+
+### 实验管理
+
+**创建新实验**：
+
+1. 访问 GrowthBook Dashboard (http://localhost:3200)
+2. 创建新 Feature Flag
+3. 配置实验变体和流量分配
+4. 设置 Layer（避免实验碰撞）
+
+**父子实验配置**：
+
+```
+UI Layer (ui-layer):
+- new-auction-ui-theme
+- bid-button-color
+- admin-ui-style
+
+Business Layer (business-layer):
+- new-bidding-algorithm
+- price-suggestion-strategy
+- auction-sorting
+```
+
+### 前端集成验证
+
+```javascript
+// 检查 GrowthBook SDK 是否正常初始化
+console.log(window.GrowthBook?.getAttributes());
+
+// 手动检查特性开关
+const isOn = useFeatureIsOnByKey('new-auction-ui-theme');
+console.log(`Feature status: ${isOn}`);
+```
+
+---
+
 ## 联系方式
 
 - **运维团队**: ops@example.com
@@ -832,5 +1125,52 @@ tail -f /var/log/auction/*.log
 
 ---
 
-**最后更新**: 2026-05-21
+**最后更新**: 2026-05-28
 **维护人员**: DevOps Team
+
+	#### 直播竞拍核心业务指标
+
+	以下是直播竞拍平台新增的关键业务指标：
+
+	| 指标名称 | 类型 | 说明 | 建议阈值 |
+	|----------|------|------|----------|
+	| `auction_bid_latency_seconds` | Histogram | 出价响应延迟 | P95 < 100ms |
+	| `auction_delay_triggered_total` | Counter | 延时触发次数 | 监控频率 |
+	| `auction_duration_seconds` | Histogram | 竞拍时长分布 | 监控异常值 |
+	| `auction_premium_rate` | Gauge | 竞拍溢价率（成交价/起拍价） | 监控趋势 |
+	| `auction_concurrent_bids_peak` | Gauge | 并发出价峰值 | 监控容量 |
+	| `gmv_total` | Gauge | GMV（成交总额） | 核心业务指标 |
+	| `bid_user_count_total` | Counter | 出价用户数 | 参与度指标 |
+	| `watch_user_count` | Gauge | 观看用户数 | 用户活跃度 |
+	| `websocket_message_latency_seconds` | Histogram | WebSocket消息推送延迟 | P95 < 200ms |
+
+	**直播竞拍核心指标 PromQL 查询**：
+
+	```promql
+	# 出价响应延迟 P95（核心体验指标）
+	histogram_quantile(0.95, sum(rate(auction_bid_latency_seconds_bucket[5m])) by (le))
+
+	# 竞拍参与率（出价用户数 / 观看用户数）
+	sum(increase(bid_user_count_total[1h])) / watch_user_count
+
+	# 竞拍成功率（成交场次 / 总场次）
+	sum(increase(auction_completed_total{has_winner="true"}[1h])) / sum(increase(auction_completed_total[1h]))
+
+	# 平均竞拍时长（分钟）
+	histogram_quantile(0.50, sum(rate(auction_duration_seconds_bucket[1h])) by (le)) / 60
+
+	# 竞拍溢价率
+	auction_premium_rate
+
+	# GMV 总额
+	sum(gmv_total)
+
+	# 延时触发频率
+	rate(auction_delay_triggered_total[5m])
+
+	# 并发出价峰值（容量监控）
+	auction_concurrent_bids_peak
+
+	# WebSocket 消息推送延迟 P95
+	histogram_quantile(0.95, sum(rate(websocket_message_latency_seconds_bucket[5m])) by (le))
+	```

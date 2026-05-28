@@ -8,20 +8,24 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+
+	"product-service/pkg/dbmetrics"
 )
 
 var DB *gorm.DB
 
 // Config 数据库配置
 type Config struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	Database string
+	Host         string
+	Port         string
+	User         string
+	Password     string
+	Database     string
+	MaxIdleConns int
+	MaxOpenConns int
 }
 
-// InitDB 初始化数据库连接
+// InitDB 初始化数据库连接（从参数）
 func InitDB(cfg *Config) (*gorm.DB, error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		cfg.User,
@@ -44,11 +48,27 @@ func InitDB(cfg *Config) (*gorm.DB, error) {
 	}
 
 	// 设置连接池参数
-	sqlDB.SetMaxIdleConns(10)
-	sqlDB.SetMaxOpenConns(100)
+	maxIdle := cfg.MaxIdleConns
+	if maxIdle <= 0 {
+		maxIdle = 10
+	}
+	maxOpen := cfg.MaxOpenConns
+	if maxOpen <= 0 {
+		maxOpen = 100
+	}
+	sqlDB.SetMaxIdleConns(maxIdle)
+	sqlDB.SetMaxOpenConns(maxOpen)
+
+	// 注册 SQL 查询耗时监控插件
+	sqlMetrics := dbmetrics.InitSQLMetrics("product-service")
+	if err := db.Use(dbmetrics.NewGormMetricsPlugin("product-service", sqlMetrics)); err != nil {
+		log.Printf("Warning: Failed to register GORM metrics plugin: %v", err)
+	} else {
+		log.Println("GORM metrics plugin registered successfully")
+	}
 
 	DB = db
-	log.Println("Database connected successfully")
+	log.Printf("Database connected successfully: %s@%s:%s/%s", cfg.User, cfg.Host, cfg.Port, cfg.Database)
 	return db, nil
 }
 

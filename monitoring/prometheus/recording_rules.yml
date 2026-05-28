@@ -1,0 +1,139 @@
+groups:
+  - name: recording_rules
+    interval: 15s
+    rules:
+      # 系统指标记录规则
+      - record: instance:cpu_usage:rate5m
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+
+      - record: instance:memory_usage:percentage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100
+
+      - record: instance:disk_usage:percentage
+        expr: (1 - (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"})) * 100
+
+      - record: instance:disk_io:rate5m
+        expr: sum(irate(node_disk_io_time_seconds_total[5m])) by (instance)
+
+      - record: instance:network_traffic:rate5m
+        expr: sum(irate(node_network_receive_bytes_total[5m])) by (instance) + sum(irate(node_network_transmit_bytes_total[5m])) by (instance)
+
+      # 应用指标记录规则
+      - record: service:http_requests:rate5m
+        expr: sum(rate(http_requests_total[5m])) by (service)
+
+      - record: service:http_errors:rate5m
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+
+      - record: service:http_error_rate:percentage
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+          /
+          sum(rate(http_requests_total[5m])) by (service) * 100
+
+      - record: service:latency:p50_5m
+        expr: histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))
+
+      - record: service:latency:p95_5m
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))
+
+      - record: service:latency:p99_5m
+        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))
+
+      - record: service:latency:mean_5m
+        expr: |
+          sum(rate(http_request_duration_seconds_sum[5m])) by (service)
+          /
+          sum(rate(http_request_duration_seconds_count[5m])) by (service)
+
+      - record: service:concurrent_connections:current
+        expr: sum(node_netstat_Tcp_CurrEstab) by (instance)
+
+      # 业务指标记录规则
+      - record: live_auction:online_users:current
+        expr: live_auction_online_users
+
+      - record: live_auction:active_auctions:current
+        expr: live_auction_active_auctions
+
+      - record: live_auction:bids:rate5m
+        expr: rate(live_auction_bids_total[5m])
+
+      - record: live_auction:orders:rate5m
+        expr: rate(live_auction_orders_total[5m])
+
+      - record: live_auction:conversion_rate:percentage
+        expr: |
+          sum(rate(live_auction_orders_total[1h]))
+          /
+          sum(rate(live_auction_bids_total[1h])) * 100
+
+      - record: live_auction:revenue:rate5m
+        expr: rate(live_auction_revenue_total[5m])
+
+      # 数据库指标记录规则
+      - record: postgres:connections:percentage
+        expr: pg_stat_activity_count / pg_settings_max_connections * 100
+
+      - record: postgres:query_time:mean
+        expr: pg_stat_statements_mean_exec_time_seconds
+
+      - record: postgres:replication_lag:seconds
+        expr: pg_replication_lag_seconds
+
+      - record: redis:memory_usage:percentage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes * 100
+
+      - record: redis:hit_rate:percentage
+        expr: |
+          rate(redis_keyspace_hits_total[5m])
+          /
+          (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m])) * 100
+
+      - record: redis:connections:percentage
+        expr: redis_connected_clients / redis_config_maxclients * 100
+
+      # 容器指标记录规则
+      - record: container:cpu_usage:rate5m
+        expr: |
+          sum(rate(container_cpu_usage_seconds_total{container!=""}[5m])) by (container_label_com_docker_compose_service)
+
+      - record: container:memory_usage:percentage
+        expr: |
+          sum(container_memory_usage_bytes{container!=""}) by (container_label_com_docker_compose_service)
+          /
+          sum(container_spec_memory_limit_bytes) by (container_label_com_docker_compose_service) * 100
+
+      - record: container:network_traffic:rate5m
+        expr: |
+          sum(rate(container_network_receive_bytes_total{container!=""}[5m])) by (container_label_com_docker_compose_service)
+          +
+          sum(rate(container_network_transmit_bytes_total{container!=""}[5m])) by (container_label_com_docker_compose_service)
+
+      # 可用性指标记录规则
+      - record: service:availability:percentage_5m
+        expr: |
+          sum(avg_over_time(up[5m])) by (job) * 100
+
+      - record: service:uptime:hours_24h
+        expr: |
+          sum(increase(up[24h])) by (job) / 2 / 3600
+
+      # SLA指标记录规则
+      - record: sla:availability:monthly
+        expr: |
+          (
+            count_over_time(up{job="backend-api"}[30d])
+            -
+            count_over_time(up{job="backend-api",value="0"}[30d])
+          ) / count_over_time(up{job="backend-api"}[30d]) * 100
+
+      - record: sla:error_budget:remaining_percentage
+        expr: |
+          (
+            (
+              count_over_time(up{job="backend-api"}[30d])
+              -
+              count_over_time(up{job="backend-api",value="0"}[30d])
+            ) / count_over_time(up{job="backend-api"}[30d]) * 100
+          ) - 99.9

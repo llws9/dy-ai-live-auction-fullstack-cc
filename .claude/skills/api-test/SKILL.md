@@ -1,6 +1,6 @@
 ---
 name: api-test
-description: Automatically manage the lifecycle of API testing. Supports stateful re-entrancy: Generate from scratch, Modify existing cases, Execute, Full-Pipeline, or Resume interrupted workflows.
+description: Automatically manage the lifecycle of API testing. Supports stateful re-entrancy. Generate from scratch, Modify existing cases, Execute, Full-Pipeline, or Resume interrupted workflows.
 ---
 
 ## User Input

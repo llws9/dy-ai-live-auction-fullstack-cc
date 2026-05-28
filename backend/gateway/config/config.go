@@ -1,38 +1,62 @@
 package config
 
-import "os"
+import (
+	"log"
+	"os"
+
+	"gopkg.in/yaml.v3"
+
+	nacospkg "gateway-service/pkg/nacos"
+)
 
 // Config 网关配置
 type Config struct {
-	Server    ServerConfig
-	Services  ServicesConfig
-	RateLimit RateLimitConfig
-	JWT       JWTConfig
+	Server     ServerConfig     `yaml:"server"`
+	Services   ServicesConfig   `yaml:"services"`
+	RateLimit  RateLimitConfig  `yaml:"rate_limit"`
+	JWT        JWTConfig        `yaml:"jwt"`
+	Redis      RedisConfig      `yaml:"redis"`
+	GrowthBook GrowthBookConfig `yaml:"growthbook"`
+}
+
+// GrowthBookConfig A/B测试配置
+type GrowthBookConfig struct {
+	APIHost   string `yaml:"api_host"`
+	ClientKey string `yaml:"client_key"`
+	SecretKey string `yaml:"secret_key"`
+	Enabled   bool   `yaml:"enabled"`
 }
 
 // ServerConfig 服务器配置
 type ServerConfig struct {
-	Port string
+	Port string `yaml:"port"`
 }
 
 // ServicesConfig 后端服务配置
 type ServicesConfig struct {
-	ProductURL string
-	AuctionURL string
+	ProductURL string `yaml:"product_url"`
+	AuctionURL string `yaml:"auction_url"`
 }
 
 // RateLimitConfig 限流配置
 type RateLimitConfig struct {
-	RequestsPerSecond int
+	RequestsPerSecond int `yaml:"requests_per_second"`
 }
 
 // JWTConfig JWT 配置
 type JWTConfig struct {
-	Secret     string
-	ExpireTime int // 小时
+	Secret     string `yaml:"secret"`
+	ExpireTime string `yaml:"expire_time"`
 }
 
-// Load 加载配置
+// RedisConfig Redis 配置
+type RedisConfig struct {
+	Addr     string `yaml:"addr"`
+	Password string `yaml:"password"`
+	PoolSize int    `yaml:"pool_size"`
+}
+
+// Load 从环境变量加载配置（本地开发）
 func Load() *Config {
 	return &Config{
 		Server: ServerConfig{
@@ -47,9 +71,66 @@ func Load() *Config {
 		},
 		JWT: JWTConfig{
 			Secret:     getEnvOrDefault("JWT_SECRET", "your-secret-key-change-in-production"),
-			ExpireTime: 24,
+			ExpireTime: "24h",
+		},
+		Redis: RedisConfig{
+			Addr:     getEnvOrDefault("REDIS_ADDR", "localhost:6379"),
+			Password: getEnvOrDefault("REDIS_PASSWORD", ""),
+			PoolSize: 100,
+		},
+		GrowthBook: GrowthBookConfig{
+			APIHost:   getEnvOrDefault("GROWTHBOOK_API_HOST", "http://localhost:3200"),
+			ClientKey: getEnvOrDefault("GROWTHBOOK_CLIENT_KEY", "dev-client-key"),
+			SecretKey: getEnvOrDefault("GROWTHBOOK_SECRET_KEY", "dev-secret-key"),
+			Enabled:   getEnvOrDefault("GROWTHBOOK_ENABLED", "true") == "true",
 		},
 	}
+}
+
+// LoadFromNacos 从 Nacos 配置中心加载配置
+func LoadFromNacos() (*Config, *nacospkg.ConfigLoader, error) {
+	// 从环境变量获取 Nacos 连接信息
+	nacosCfg := nacospkg.GetConfigFromEnv()
+	group, dataId := nacospkg.GetServiceConfigInfo()
+
+	// 创建 Nacos 客户端
+	client, err := nacospkg.NewNacosClient(nacosCfg)
+	if err != nil {
+		log.Printf("Failed to connect Nacos, falling back to env config: %v", err)
+		return Load(), nil, err
+	}
+
+	// 创建配置加载器
+	loader := nacospkg.NewConfigLoader(client, group, dataId)
+
+	// 加载配置
+	cfg := &Config{}
+	if err := loader.Load(cfg); err != nil {
+		log.Printf("Failed to load config from Nacos, falling back to env config: %v", err)
+		return Load(), nil, err
+	}
+
+	log.Printf("Config loaded from Nacos: [group=%s, dataId=%s]", group, dataId)
+	return cfg, loader, nil
+}
+
+// LoadFromNacosWithFallback 从 Nacos 加载配置，失败时使用环境变量
+func LoadFromNacosWithFallback() (*Config, *nacospkg.ConfigLoader) {
+	cfg, loader, err := LoadFromNacos()
+	if err != nil {
+		log.Printf("Using fallback config from environment variables")
+		return Load(), nil
+	}
+	return cfg, loader
+}
+
+// LoadFromYAML 从 YAML 内容加载配置
+func LoadFromYAML(content string) (*Config, error) {
+	cfg := &Config{}
+	if err := yaml.Unmarshal([]byte(content), cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
 
 func getEnvOrDefault(key, defaultValue string) string {

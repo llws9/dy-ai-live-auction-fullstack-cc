@@ -1,0 +1,1 @@
+[      43ms] The requested module '/src/shared/auth/index.ts' does not provide an export named 'authApi'

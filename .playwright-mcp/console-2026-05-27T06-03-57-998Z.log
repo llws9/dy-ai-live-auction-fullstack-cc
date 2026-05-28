@@ -1,0 +1,27 @@
+[     962ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://modao.cc/agent-py/static/source/js/tailwindcss.js:62
+[    1045ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:3000/node_modules/.vite/deps/chunk-XPR23Y44.js?v=16163634:21548
+[    1053ms] [WARNING] No routes matched location "/mobile.html"  @ http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=16163634:646
+[    1053ms] [WARNING] No routes matched location "/mobile.html"  @ http://localhost:3000/node_modules/.vite/deps/react-router-dom.js?v=16163634:646
+[    1087ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/favicon.ico:0
+[   19520ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[   57312ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[   77325ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_TIMED_OUT @ https://api.unisvg.com/solar.json?icons=cup-linear%2Chome-2-linear%2Cuser-circle-linear%2Cvideocamera-record-linear:0
+[  130242ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[  148346ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[  150217ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[  181193ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[  185845ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[  187409ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[  190001ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[  191104ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[  191945ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[  192771ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[  193937ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[  202043ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[  206966ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[  222889ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[  224333ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[  224421ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_TIMED_OUT @ https://api.unisvg.com/solar.json?icons=alt-arrow-right-linear%2Chamburger-menu-bold-duotone%2Cheart-bold-duotone%2Cmap-point-bold-duotone%2Csettings-bold-duotone%2Cshield-keyhole-bold-duotone%2Cuser-circle-bold-duotone:0
+[  225300ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[  226529ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0
+[ 1489873ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/agent-py/static/source/images/placeholder.svg:0

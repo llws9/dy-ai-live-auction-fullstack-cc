@@ -9,20 +9,21 @@ import { Page } from '@playwright/test';
  */
 export async function adminLogin(
   page: Page,
-  username: string = 'admin',
+  email: string = 'admin@example.com',
   password: string = 'Admin@123456'
 ) {
-  await page.goto('/login');
+  await page.goto('/admin-login');
   await page.waitForLoadState('networkidle');
 
-  await page.fill('input[placeholder*="用户名"]', username);
+  await page.fill('input[placeholder*="邮箱"]', email);
   await page.fill('input[placeholder*="密码"]', password);
   await page.click('button:has-text("登录")');
 
-  await page.waitForURL(/.*\//, { timeout: 10000 });
+  // 等待登录成功后跳转
+  await page.waitForURL(/.*dashboard/, { timeout: 10000 });
 
   // 验证登录成功
-  const token = await page.evaluate(() => localStorage.getItem('token'));
+  const token = await page.evaluate(() => localStorage.getItem('admin_auth_token'));
   return token !== null;
 }
 
@@ -31,9 +32,9 @@ export async function adminLogin(
  */
 export async function logout(page: Page) {
   await page.click('button:has-text("退出"), [data-testid="logout-button"]');
-  await page.waitForURL(/.*login/, { timeout: 10000 });
+  await page.waitForURL(/.*admin-login/, { timeout: 10000 });
 
-  const token = await page.evaluate(() => localStorage.getItem('token'));
+  const token = await page.evaluate(() => localStorage.getItem('admin_auth_token'));
   return token === null;
 }
 
@@ -116,10 +117,14 @@ export async function waitForAPI(page: Page, urlPattern: string | RegExp, timeou
  * 清除存储
  */
 export async function clearStorage(page: Page) {
-  await page.evaluate(() => {
-    localStorage.clear();
-    sessionStorage.clear();
-  });
+  try {
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+  } catch {
+    // 如果页面还没有加载完成或无法访问 localStorage，忽略错误
+  }
 }
 
 /**

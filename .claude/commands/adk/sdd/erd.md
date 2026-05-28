@@ -286,6 +286,7 @@ Based on the user's selection:
 After writing the file, perform **static syntax validation** on ALL Mermaid code blocks:
 
 - **DO NOT use mermaid-cli** - it may not be installed and has version compatibility issues
+- **⚠️ CRITICAL — NO LITERAL `\n`**: All line breaks inside mermaid code blocks MUST be actual newline characters (line feed `LF`). **Never** write the two-character sequence `\n` (backslash + n) anywhere in a mermaid block. This applies to node labels, entity attribute comments, sequence diagram messages, and every other field. If a value needs a line break, split it into a new line in the source.
 - For each `mermaid` code block, manually verify against this checklist:
 
 ### Validation Checklist
@@ -313,6 +314,7 @@ After writing the file, perform **static syntax validation** on ALL Mermaid code
 
 - ✅ Uses `erDiagram` keyword (not `er-diagram` or `ERDiagram`)
 - ✅ Data types use simple names: `decimal` not `decimal(10,2)`, `string` not `varchar(255)`
+- ✅ **NO literal `\n`**: Every line in the erDiagram block must end with an actual newline character — never write `\n` as text
 - ✅ **Relationship format**: `ENTITY1 SYMBOL ENTITY2 : "label"` (label in quotes, colon required)
 - ✅ **Valid relationship symbols** (left-to-right only):
   - `||--||` (one-to-one)
@@ -346,6 +348,7 @@ After writing the file, perform **static syntax validation** on ALL Mermaid code
 - ER relationship without label → Add label: `A ||--o{ B` → `A ||--o{ B : "1:N"`
 - ER invalid symbol → Fix direction: `{o--||` → `||--o{`
 - ER decimal type → Simplify: `decimal(10,2)` → `decimal`
+- Literal `\n` in any mermaid block → Replace with an actual line break in the source file
 
 ---
 

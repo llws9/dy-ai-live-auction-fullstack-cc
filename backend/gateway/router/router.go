@@ -5,21 +5,30 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
-	docs "gateway-service/docs"
 
 	"gateway-service/config"
 	"gateway-service/handler"
 	"gateway-service/middleware"
+	"gateway-service/pkg/growthbook"
 )
 
+// RouterConfig 路由配置
+type RouterConfig struct {
+	Config    *config.Config
+	GBClient  *growthbook.Client
+}
+
 // RegisterRoutes 注册所有路由
-func RegisterRoutes(h *server.Hertz, cfg *config.Config) {
+func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Client) {
 	// 创建代理处理器
 	productProxy := handler.NewProxyHandler(cfg.Services.ProductURL)
 	auctionProxy := handler.NewProxyHandler(cfg.Services.AuctionURL)
 
+	// 创建实验处理器
+	experimentHandler := handler.NewExperimentHandler(gbClient)
+
 	// ========== Swagger 文档 ==========
-	docs.Register(h)
+	// docs.Register(h) // 暂时注释掉swagger
 
 	v1 := h.Group("/api/v1")
 
@@ -38,6 +47,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config) {
 	// ========== 需要JWT认证的路由 ==========
 	authGroup := v1.Group("")
 	authGroup.Use(middleware.JWTAuth(cfg.JWT.Secret))
+	authGroup.Use(middleware.ExperimentMiddleware(gbClient))  // 实验中间件
 
 	// 用户信息
 	authGroup.GET("/users/me", auctionProxy.Forward)
@@ -51,6 +61,10 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config) {
 	v1.POST("/products/:id/rules", productProxy.Forward)
 	v1.GET("/products/:id/rules", productProxy.Forward)
 
+	// 商品发布/下架需要商家或管理员权限
+	authGroup.POST("/products/:id/publish", middleware.RequireMerchant(), productProxy.Forward)
+	authGroup.POST("/products/:id/unpublish", middleware.RequireMerchant(), productProxy.Forward)
+
 	// ========== 竞拍服务路由 ==========
 	v1.GET("/auctions", auctionProxy.Forward)
 	v1.GET("/auctions/:id", auctionProxy.Forward)
@@ -62,7 +76,14 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config) {
 
 	// 出价需要认证
 	authGroup.POST("/auctions/:id/bids", auctionProxy.Forward)
+	v1.GET("/auctions/:id/bids", auctionProxy.Forward)
 	v1.GET("/auctions/:id/ranking", auctionProxy.Forward)
+
+	// ========== 直播间关注路由 ==========
+	authGroup.POST("/live-streams/:id/follow", auctionProxy.Forward)
+	authGroup.DELETE("/live-streams/:id/follow", auctionProxy.Forward)
+	authGroup.GET("/user/followed-live-streams", auctionProxy.Forward)
+	authGroup.PUT("/live-streams/:id/notification", auctionProxy.Forward)
 
 	// ========== WebSocket 路由 ==========
 	v1.GET("/ws", func(ctx context.Context, c *app.RequestContext) {
@@ -74,6 +95,12 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config) {
 	v1.GET("/orders", productProxy.Forward)
 	v1.GET("/orders/:id", productProxy.Forward)
 	v1.POST("/orders/:id/pay", productProxy.Forward)
+	v1.PUT("/orders/:id/ship", productProxy.Forward)          // T007: 订单发货
+	v1.GET("/orders/history", productProxy.Forward)           // T008: 用户订单历史
+
+	// ========== 直播间路由 ==========
+	authGroup.GET("/admin/live-streams", middleware.RequireAdmin(), productProxy.Forward) // T009: 管理端直播间列表
+	v1.GET("/live-streams/:id", productProxy.Forward)                                       // T010: 直播间详情
 
 	// ========== 通知服务路由 ==========
 	authGroup.GET("/notifications", auctionProxy.Forward)
@@ -86,6 +113,17 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config) {
 	authGroup.GET("/statistics/auctions", middleware.RequireAdmin(), productProxy.Forward)
 	authGroup.GET("/statistics/revenue", middleware.RequireAdmin(), productProxy.Forward)
 	authGroup.GET("/statistics/users", middleware.RequireAdmin(), productProxy.Forward)
+
+	// ========== 类别服务路由 ==========
+	v1.GET("/categories", productProxy.Forward)                                                // T018: 类别列表（公开）
+	authGroup.POST("/categories", middleware.RequireAdmin(), productProxy.Forward)            // T019: 类别创建（管理员）
+	authGroup.PUT("/categories/:id", middleware.RequireAdmin(), productProxy.Forward)         // T020: 类别更新（管理员）
+	authGroup.DELETE("/categories/:id", middleware.RequireAdmin(), productProxy.Forward)      // T021: 类别删除（管理员）
+
+	// ========== A/B 测试实验路由 ==========
+	authGroup.GET("/experiments/features", experimentHandler.GetFeatures)       // 获取用户特性开关
+	authGroup.POST("/experiments/viewed", experimentHandler.TrackViewed)        // 记录实验查看
+	authGroup.POST("/experiments/completed", experimentHandler.TrackCompleted)  // 记录实验完成
 }
 
 // checkService 检查服务是否可用

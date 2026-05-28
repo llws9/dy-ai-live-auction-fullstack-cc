@@ -1,0 +1,28 @@
+[      88ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5175/node_modules/.vite/deps/chunk-NUMECXU6.js?v=25df36a3:21550
+[     117ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5175/api/v1/statistics/overview:0
+[     118ms] [ERROR] 获取统计数据失败: ApiError: 未提供认证令牌
+    at handleErrorResponse (http://localhost:5175/src/shared/api/request.ts:49:17)
+    at async request (http://localhost:5175/src/shared/api/request.ts:97:7)
+    at async fetchData (http://localhost:5175/src/pages-new/Dashboard.tsx?t=1779901118754:73:30) @ http://localhost:5175/src/pages-new/Dashboard.tsx?t=1779901118754:90
+[     119ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:5175/node_modules/.vite/deps/recharts.js?v=b4038a76:9027
+[     120ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:5175/node_modules/.vite/deps/recharts.js?v=b4038a76:9027
+[     120ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:5175/node_modules/.vite/deps/recharts.js?v=b4038a76:9027
+[     120ms] [WARNING] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. @ http://localhost:5175/node_modules/.vite/deps/recharts.js?v=b4038a76:9027
+[     152ms] [ERROR] API Error: 网络连接失败，请检查网络设置 @ http://localhost:5175/src/shared/api/request.ts:22
+[     152ms] [ERROR] 获取统计数据失败: ApiError: 网络连接失败，请检查网络设置
+    at request (http://localhost:5175/src/shared/api/request.ts:126:28)
+    at async fetchData (http://localhost:5175/src/pages-new/Dashboard.tsx?t=1779901118754:73:30) @ http://localhost:5175/src/pages-new/Dashboard.tsx?t=1779901118754:90
+[     174ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5175/node_modules/.vite/deps/chunk-NUMECXU6.js?v=25df36a3:21550
+[     290ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5175/login#/admin-login:0

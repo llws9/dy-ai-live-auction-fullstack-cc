@@ -1,0 +1,136 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: 🎯
+      - heading "竞拍管理后台" [level=2] [ref=e8]
+    - list [ref=e10]:
+      - listitem [ref=e11]:
+        - link "📊 数据大屏" [ref=e12] [cursor=pointer]:
+          - /url: "#/dashboard"
+          - generic [ref=e13]: 📊
+          - generic [ref=e14]: 数据大屏
+      - listitem [ref=e15]:
+        - link "📦 商品管理" [ref=e16] [cursor=pointer]:
+          - /url: "#/products"
+          - generic [ref=e17]: 📦
+          - generic [ref=e18]: 商品管理
+      - listitem [ref=e19]:
+        - link "🎯 竞拍管理" [active] [ref=e20] [cursor=pointer]:
+          - /url: "#/auctions"
+          - generic [ref=e21]: 🎯
+          - generic [ref=e22]: 竞拍管理
+      - listitem [ref=e23]:
+        - link "📺 直播间管理" [ref=e24] [cursor=pointer]:
+          - /url: "#/live-streams"
+          - generic [ref=e25]: 📺
+          - generic [ref=e26]: 直播间管理
+      - listitem [ref=e27]:
+        - link "🧾 订单管理" [ref=e28] [cursor=pointer]:
+          - /url: "#/orders"
+          - generic [ref=e29]: 🧾
+          - generic [ref=e30]: 订单管理
+      - listitem [ref=e31]:
+        - link "📈 数据统计" [ref=e32] [cursor=pointer]:
+          - /url: "#/statistics"
+          - generic [ref=e33]: 📈
+          - generic [ref=e34]: 数据统计
+  - main [ref=e35]:
+    - generic [ref=e251]:
+      - generic [ref=e253]:
+        - heading "🎯 竞拍管理" [level=1] [ref=e254]
+        - paragraph [ref=e255]: 实时监控所有竞拍状态，管理竞拍流程
+      - generic [ref=e256]:
+        - generic [ref=e257]:
+          - generic [ref=e259]: 🎯
+          - generic [ref=e260]: "4"
+          - generic [ref=e261]: 竞拍总数
+        - generic [ref=e262]:
+          - generic [ref=e264]: ⏰
+          - generic [ref=e265]: "1"
+          - generic [ref=e266]: 待开始
+        - generic [ref=e267]:
+          - generic [ref=e269]: ⚡
+          - generic [ref=e270]: "2"
+          - generic [ref=e271]: 进行中
+        - generic [ref=e272]:
+          - generic [ref=e274]: 🏆
+          - generic [ref=e275]: "1"
+          - generic [ref=e276]: 已成交
+      - generic [ref=e277]:
+        - generic [ref=e279]:
+          - button "全部" [ref=e280] [cursor=pointer]
+          - button "待开始" [ref=e281] [cursor=pointer]
+          - button "进行中" [ref=e282] [cursor=pointer]
+          - button "已结束" [ref=e283] [cursor=pointer]
+        - table [ref=e284]:
+          - rowgroup [ref=e285]:
+            - row "竞拍ID 商品名称 当前价 出价次数 状态 剩余时间 中标者 操作" [ref=e286]:
+              - columnheader "竞拍ID" [ref=e287]
+              - columnheader "商品名称" [ref=e288]
+              - columnheader "当前价" [ref=e289]
+              - columnheader "出价次数" [ref=e290]
+              - columnheader "状态" [ref=e291]
+              - columnheader "剩余时间" [ref=e292]
+              - columnheader "中标者" [ref=e293]
+              - columnheader "操作" [ref=e294]
+          - rowgroup [ref=e295]:
+            - row "#1 稀有珠宝 ¥150 12 次 进行中 59分钟 - 查看详情 取消竞拍" [ref=e296]:
+              - cell "#1" [ref=e297]
+              - cell "稀有珠宝" [ref=e298]
+              - cell "¥150" [ref=e299]:
+                - generic [ref=e300]: ¥150
+              - cell "12 次" [ref=e301]:
+                - generic [ref=e302]: 12 次
+              - cell "进行中" [ref=e303]
+              - cell "59分钟" [ref=e304]
+              - cell "-" [ref=e305]
+              - cell "查看详情 取消竞拍" [ref=e306]:
+                - generic [ref=e307]:
+                  - link "查看详情" [ref=e308] [cursor=pointer]:
+                    - /url: "#/auctions/1"
+                    - button "查看详情" [ref=e309]
+                  - button "取消竞拍" [ref=e310] [cursor=pointer]
+            - row "#2 签名版限量球鞋 ¥0 0 次 待开始 05/24 01:06 开始 - 查看详情 取消竞拍" [ref=e311]:
+              - cell "#2" [ref=e312]
+              - cell "签名版限量球鞋" [ref=e313]
+              - cell "¥0" [ref=e314]:
+                - generic [ref=e315]: ¥0
+              - cell "0 次" [ref=e316]:
+                - generic [ref=e317]: 0 次
+              - cell "待开始" [ref=e318]
+              - cell "05/24 01:06 开始" [ref=e319]
+              - cell "-" [ref=e320]
+              - cell "查看详情 取消竞拍" [ref=e321]:
+                - generic [ref=e322]:
+                  - link "查看详情" [ref=e323] [cursor=pointer]:
+                    - /url: "#/auctions/2"
+                    - button "查看详情" [ref=e324]
+                  - button "取消竞拍" [ref=e325] [cursor=pointer]
+            - row "#3 古董怀表收藏品 ¥520 25 次 已结束 - 用户A 查看详情" [ref=e326]:
+              - cell "#3" [ref=e327]
+              - cell "古董怀表收藏品" [ref=e328]
+              - cell "¥520" [ref=e329]:
+                - generic [ref=e330]: ¥520
+              - cell "25 次" [ref=e331]:
+                - generic [ref=e332]: 25 次
+              - cell "已结束" [ref=e333]
+              - cell "-" [ref=e334]
+              - cell "用户A" [ref=e335]
+              - cell "查看详情" [ref=e336]:
+                - link "查看详情" [ref=e338] [cursor=pointer]:
+                  - /url: "#/auctions/3"
+                  - button "查看详情" [ref=e339]
+            - row "#4 限定款奢侈品包包 ¥800 15 次 延时中 1分钟 - 查看详情" [ref=e340]:
+              - cell "#4" [ref=e341]
+              - cell "限定款奢侈品包包" [ref=e342]
+              - cell "¥800" [ref=e343]:
+                - generic [ref=e344]: ¥800
+              - cell "15 次" [ref=e345]:
+                - generic [ref=e346]: 15 次
+              - cell "延时中" [ref=e347]
+              - cell "1分钟" [ref=e348]
+              - cell "-" [ref=e349]
+              - cell "查看详情" [ref=e350]:
+                - link "查看详情" [ref=e352] [cursor=pointer]:
+                  - /url: "#/auctions/4"
+                  - button "查看详情" [ref=e353]

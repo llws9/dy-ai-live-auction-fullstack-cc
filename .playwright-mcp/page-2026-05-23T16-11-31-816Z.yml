@@ -1,0 +1,112 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: 🎯
+      - heading "竞拍管理后台" [level=2] [ref=e8]
+    - list [ref=e10]:
+      - listitem [ref=e11]:
+        - link "📊数据大屏" [ref=e12] [cursor=pointer]:
+          - /url: "#/dashboard"
+      - listitem [ref=e13]:
+        - link "📦商品管理" [ref=e14] [cursor=pointer]:
+          - /url: "#/products"
+      - listitem [ref=e15]:
+        - link "🎯竞拍管理" [ref=e16] [cursor=pointer]:
+          - /url: "#/auctions"
+      - listitem [ref=e17]:
+        - link "📺直播间管理" [ref=e18] [cursor=pointer]:
+          - /url: "#/live-streams"
+      - listitem [ref=e19]:
+        - link "🧾订单管理" [ref=e20] [cursor=pointer]:
+          - /url: "#/orders"
+      - listitem [ref=e21]:
+        - link "📈数据统计" [ref=e22] [cursor=pointer]:
+          - /url: "#/statistics"
+  - main [ref=e23]:
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - heading "数据大屏" [level=1] [ref=e27]
+          - paragraph [ref=e28]: 实时查看系统运营数据概览
+        - link "查看详细报表 →" [ref=e29] [cursor=pointer]:
+          - /url: "#/statistics"
+      - generic [ref=e30]:
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: 🎯
+            - generic [ref=e34]:
+              - text: ↑
+              - generic [ref=e35]: 12.5%
+          - generic [ref=e36]: "0"
+          - generic [ref=e37]:
+            - text: 总竞拍数
+            - generic [ref=e38]: (累计场次)
+          - generic [ref=e39]: 较上周
+        - generic [ref=e40]:
+          - generic [ref=e42]: ⚡
+          - generic [ref=e43]: "0"
+          - generic [ref=e44]:
+            - text: 进行中竞拍
+            - generic [ref=e45]: (当前活跃)
+        - generic [ref=e46]:
+          - generic [ref=e47]:
+            - generic [ref=e48]: 💰
+            - generic [ref=e49]:
+              - text: ↑
+              - generic [ref=e50]: 18.3%
+          - generic [ref=e51]: ¥0.00
+          - generic [ref=e52]:
+            - text: 总收入
+            - generic [ref=e53]: (累计金额)
+          - generic [ref=e54]: 较上月
+        - generic [ref=e55]:
+          - generic [ref=e57]: 📈
+          - generic [ref=e58]: ¥0.00
+          - generic [ref=e59]:
+            - text: 今日收入
+            - generic [ref=e60]: (今日成交)
+        - generic [ref=e61]:
+          - generic [ref=e62]:
+            - generic [ref=e63]: 👥
+            - generic [ref=e64]:
+              - text: ↑
+              - generic [ref=e65]: 8.7%
+          - generic [ref=e66]: "0"
+          - generic [ref=e67]:
+            - text: 总用户数
+            - generic [ref=e68]: (注册用户)
+          - generic [ref=e69]: 较上周
+        - generic [ref=e70]:
+          - generic [ref=e72]: 🆕
+          - generic [ref=e73]: "0"
+          - generic [ref=e74]:
+            - text: 今日新增
+            - generic [ref=e75]: (新用户)
+        - generic [ref=e76]:
+          - generic [ref=e78]: ✅
+          - generic [ref=e79]: 0.0%
+          - generic [ref=e80]:
+            - text: 竞拍成功率
+            - generic [ref=e81]: (成交率)
+        - generic [ref=e82]:
+          - generic [ref=e84]: 💎
+          - generic [ref=e85]: ¥0.00
+          - generic [ref=e86]:
+            - text: 平均出价
+            - generic [ref=e87]: (平均金额)
+      - generic [ref=e88]:
+        - generic [ref=e89]:
+          - heading "📈 收入趋势（最近7天）" [level=3] [ref=e91]
+          - generic [ref=e94]: 暂无数据
+        - generic [ref=e95]:
+          - heading "🏷️ 类目收入分布" [level=3] [ref=e97]
+          - generic [ref=e100]: 暂无数据
+      - generic [ref=e101]:
+        - heading "📊 详细报表" [level=3] [ref=e103]
+        - generic [ref=e105]:
+          - link "🎯 竞拍统计" [ref=e106] [cursor=pointer]:
+            - /url: "#/statistics/auction"
+          - link "💰 收入统计" [ref=e107] [cursor=pointer]:
+            - /url: "#/statistics/revenue"
+          - link "👥 用户统计" [ref=e108] [cursor=pointer]:
+            - /url: "#/statistics/user"

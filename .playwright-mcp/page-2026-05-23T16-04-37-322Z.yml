@@ -1,0 +1,7 @@
+- generic [ref=e4]:
+  - heading "管理员登录" [level=2] [ref=e5]
+  - generic [ref=e10]: 查询用户失败
+  - generic [ref=e6]:
+    - textbox "邮箱" [ref=e7]: admin@test.com
+    - textbox "密码" [ref=e8]: "123456"
+    - button "登录" [ref=e9] [cursor=pointer]

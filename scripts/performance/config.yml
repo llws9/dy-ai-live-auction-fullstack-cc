@@ -1,0 +1,217 @@
+# K6 性能测试配置文件
+
+# 测试执行配置
+execution:
+  # 本地执行配置
+  local:
+    max_vus: 3000
+    max_duration: "30m"
+
+  # 分布式执行配置 (需要k6 cloud)
+  distributed:
+    max_vus: 10000
+    max_duration: "1h"
+    instances: 5
+
+# 测试场景配置
+scenarios:
+  # 用户认证场景
+  authentication:
+    login:
+      target_rps: 100
+      max_vus: 200
+      duration: "5m"
+      thresholds:
+        p50: 100
+        p99: 200
+        error_rate: 0.01
+
+    registration:
+      target_rps: 50
+      max_vus: 100
+      duration: "5m"
+      thresholds:
+        p50: 150
+        p99: 300
+        error_rate: 0.05
+
+  # 竞拍核心场景
+  auction:
+    bidding:
+      target_rps: 1000
+      max_vus: 2000
+      duration: "10m"
+      thresholds:
+        p50: 100
+        p99: 500
+        error_rate: 0.01
+
+    list_query:
+      target_rps: 500
+      max_vus: 500
+      duration: "5m"
+      thresholds:
+        p50: 100
+        p99: 200
+        error_rate: 0.01
+
+    detail_query:
+      target_rps: 800
+      max_vus: 800
+      duration: "5m"
+      thresholds:
+        p50: 100
+        p99: 200
+        error_rate: 0.01
+
+  # WebSocket场景
+  websocket:
+    connections:
+      target_connections: 1000
+      duration: "10m"
+      message_rate: 10000
+      thresholds:
+        connect_p99: 500
+        message_p99: 200
+        error_rate: 0.05
+
+  # 商品管理场景
+  product:
+    list_query:
+      target_rps: 500
+      max_vus: 500
+      duration: "5m"
+      thresholds:
+        p50: 100
+        p99: 200
+        error_rate: 0.01
+
+    creation:
+      target_rps: 100
+      max_vus: 200
+      duration: "5m"
+      thresholds:
+        p50: 150
+        p99: 300
+        error_rate: 0.01
+
+# 环境配置
+environments:
+  development:
+    base_url: "http://localhost:8080"
+    timeout: 30
+    verify_ssl: false
+
+  staging:
+    base_url: "https://staging.example.com"
+    timeout: 60
+    verify_ssl: true
+
+  production:
+    base_url: "https://api.example.com"
+    timeout: 60
+    verify_ssl: true
+
+# 监控配置
+monitoring:
+  # 系统资源监控
+  system:
+    enabled: true
+    interval: "5s"
+    metrics:
+      - cpu
+      - memory
+      - network
+      - disk
+
+  # 应用监控
+  application:
+    enabled: true
+    interval: "10s"
+    endpoints:
+      - "/metrics"
+      - "/health"
+
+# 告警配置
+alerts:
+  # 性能告警
+  performance:
+    p99_threshold: 1000
+    error_rate_threshold: 0.05
+    rps_drop_threshold: 0.5
+
+  # 系统告警
+  system:
+    cpu_threshold: 0.8
+    memory_threshold: 0.85
+
+  # 通知配置
+  notifications:
+    email:
+      enabled: false
+      recipients: []
+
+    slack:
+      enabled: false
+      webhook_url: ""
+
+# 报告配置
+reporting:
+  # 输出格式
+  formats:
+    - json
+    - html
+    - csv
+
+  # 报告存储
+  storage:
+    local:
+      enabled: true
+      path: "./reports"
+
+    s3:
+      enabled: false
+      bucket: ""
+      region: ""
+
+  # 报告保留
+  retention:
+    days: 30
+    max_reports: 100
+
+# 数据生成配置
+data:
+  # 测试数据生成
+  generation:
+    users:
+      count: 10000
+      prefix: "test_user"
+
+    auctions:
+      count: 1000
+      price_range:
+        min: 100
+        max: 10000
+
+    products:
+      count: 5000
+      categories: 10
+
+  # 数据清理
+  cleanup:
+    enabled: true
+    after_test: true
+
+# 日志配置
+logging:
+  level: "info"
+  format: "json"
+  output:
+    - "stdout"
+    - "file"
+
+  file:
+    path: "./logs/performance_test.log"
+    max_size: "100MB"
+    max_backups: 5
+    max_age: 30

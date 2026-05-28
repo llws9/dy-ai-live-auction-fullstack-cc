@@ -1,0 +1,115 @@
+[      51ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5183/node_modules/.vite/deps/chunk-OOIH53S6.js?v=66b230fb:21548
+[      56ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5183/node_modules/.vite/deps/react-router-dom.js?v=a5cb008e:4433
+[      56ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5183/node_modules/.vite/deps/react-router-dom.js?v=a5cb008e:4433
+[      68ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:5183/#/admin-login:0
+[   14164ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/statistics/overview:0
+[   14166ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/statistics/overview:0
+[   14166ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/statistics/revenue?start_date=2026-05-17&end_date=2026-05-23&group_by=day:0
+[   14167ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/statistics/revenue?group_by=category:0
+[   14168ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/statistics/revenue?start_date=2026-05-17&end_date=2026-05-23&group_by=day:0
+[   14169ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/statistics/revenue?group_by=category:0
+[   43311ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5183/node_modules/.vite/deps/chunk-OOIH53S6.js?v=66b230fb:21548
+[   43316ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5183/node_modules/.vite/deps/react-router-dom.js?v=a5cb008e:4433
+[   43316ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5183/node_modules/.vite/deps/react-router-dom.js?v=a5cb008e:4433
+[   43345ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/statistics/overview:0
+[   43347ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/statistics/revenue?start_date=2026-05-17&end_date=2026-05-23&group_by=day:0
+[   43347ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/statistics/overview:0
+[   43349ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/statistics/revenue?group_by=category:0
+[   43349ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/statistics/revenue?start_date=2026-05-17&end_date=2026-05-23&group_by=day:0
+[   43352ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/statistics/revenue?group_by=category:0
+[   53385ms] [ERROR] 获取竞拍列表失败: Error
+    at fetchAuctions (http://localhost:5183/src/pages/Auction/List.tsx:69:15) @ http://localhost:5183/src/pages/Auction/List.tsx:71
+[   53394ms] [ERROR] 获取竞拍列表失败: Error
+    at fetchAuctions (http://localhost:5183/src/pages/Auction/List.tsx:69:15) @ http://localhost:5183/src/pages/Auction/List.tsx:71
+[   54167ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/admin/live-streams:0
+[   54167ms] [ERROR] 获取直播间列表失败: Error: 获取直播间列表失败
+    at fetchLiveStreams (http://localhost:5183/src/pages/LiveStream/List.tsx:44:15) @ http://localhost:5183/src/pages/LiveStream/List.tsx:46
+[   54169ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/admin/live-streams:0
+[   54169ms] [ERROR] 获取直播间列表失败: Error: 获取直播间列表失败
+    at fetchLiveStreams (http://localhost:5183/src/pages/LiveStream/List.tsx:44:15) @ http://localhost:5183/src/pages/LiveStream/List.tsx:46
+[   55430ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/orders:0
+[   55430ms] [ERROR] 获取订单列表失败: SyntaxError: Unexpected token 'N', "Not Found" is not valid JSON @ http://localhost:5183/src/pages/Order/List.tsx:33
+[   55434ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/orders:0
+[   55435ms] [ERROR] 获取订单列表失败: SyntaxError: Unexpected token 'N', "Not Found" is not valid JSON @ http://localhost:5183/src/pages/Order/List.tsx:33
+[   59803ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/admin/live-streams:0
+[   59803ms] [ERROR] 获取直播间列表失败: Error: 获取直播间列表失败
+    at fetchLiveStreams (http://localhost:5183/src/pages/LiveStream/List.tsx:44:15) @ http://localhost:5183/src/pages/LiveStream/List.tsx:46
+[   59809ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/admin/live-streams:0
+[   59809ms] [ERROR] 获取直播间列表失败: Error: 获取直播间列表失败
+    at fetchLiveStreams (http://localhost:5183/src/pages/LiveStream/List.tsx:44:15) @ http://localhost:5183/src/pages/LiveStream/List.tsx:46
+[   60303ms] [ERROR] 获取竞拍列表失败: Error
+    at fetchAuctions (http://localhost:5183/src/pages/Auction/List.tsx:69:15) @ http://localhost:5183/src/pages/Auction/List.tsx:71
+[   60308ms] [ERROR] 获取竞拍列表失败: Error
+    at fetchAuctions (http://localhost:5183/src/pages/Auction/List.tsx:69:15) @ http://localhost:5183/src/pages/Auction/List.tsx:71
+[   61803ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/statistics/overview:0
+[   61806ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/statistics/overview:0
+[   61807ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/statistics/revenue?start_date=2026-05-17&end_date=2026-05-23&group_by=day:0
+[   61809ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/statistics/revenue?start_date=2026-05-17&end_date=2026-05-23&group_by=day:0
+[   61810ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/statistics/revenue?group_by=category:0
+[   61814ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/statistics/revenue?group_by=category:0
+[   62437ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/admin/live-streams:0
+[   62438ms] [ERROR] 获取直播间列表失败: Error: 获取直播间列表失败
+    at fetchLiveStreams (http://localhost:5183/src/pages/LiveStream/List.tsx:44:15) @ http://localhost:5183/src/pages/LiveStream/List.tsx:46
+[   62442ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/admin/live-streams:0
+[   62442ms] [ERROR] 获取直播间列表失败: Error: 获取直播间列表失败
+    at fetchLiveStreams (http://localhost:5183/src/pages/LiveStream/List.tsx:44:15) @ http://localhost:5183/src/pages/LiveStream/List.tsx:46
+[   63987ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/orders:0
+[   63987ms] [ERROR] 获取订单列表失败: SyntaxError: Unexpected token 'N', "Not Found" is not valid JSON @ http://localhost:5183/src/pages/Order/List.tsx:33
+[   63990ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/orders:0
+[   63990ms] [ERROR] 获取订单列表失败: SyntaxError: Unexpected token 'N', "Not Found" is not valid JSON @ http://localhost:5183/src/pages/Order/List.tsx:33
+[   71368ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/admin/live-streams:0
+[   71368ms] [ERROR] 获取直播间列表失败: Error: 获取直播间列表失败
+    at fetchLiveStreams (http://localhost:5183/src/pages/LiveStream/List.tsx:44:15) @ http://localhost:5183/src/pages/LiveStream/List.tsx:46
+[   71373ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/admin/live-streams:0
+[   71373ms] [ERROR] 获取直播间列表失败: Error: 获取直播间列表失败
+    at fetchLiveStreams (http://localhost:5183/src/pages/LiveStream/List.tsx:44:15) @ http://localhost:5183/src/pages/LiveStream/List.tsx:46
+[  240801ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5183/@vite/client:559
+[  240910ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5183/node_modules/.vite/deps/chunk-OOIH53S6.js?v=66b230fb:21548
+[  240920ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5183/node_modules/.vite/deps/react-router-dom.js?v=a5cb008e:4433
+[  240920ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5183/node_modules/.vite/deps/react-router-dom.js?v=a5cb008e:4433
+[  240943ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/admin/live-streams:0
+[  240943ms] [ERROR] 获取直播间列表失败: Error: 获取直播间列表失败
+    at fetchLiveStreams (http://localhost:5183/src/pages/LiveStream/List.tsx:44:15) @ http://localhost:5183/src/pages/LiveStream/List.tsx:46
+[  240950ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/admin/live-streams:0
+[  240950ms] [ERROR] 获取直播间列表失败: Error: 获取直播间列表失败
+    at fetchLiveStreams (http://localhost:5183/src/pages/LiveStream/List.tsx:44:15) @ http://localhost:5183/src/pages/LiveStream/List.tsx:46
+[ 2875234ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5183/@vite/client:559
+[ 2875476ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5183/node_modules/.vite/deps/chunk-OOIH53S6.js?v=66b230fb:21548
+[ 2875489ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5183/node_modules/.vite/deps/react-router-dom.js?v=a5cb008e:4433
+[ 2875489ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5183/node_modules/.vite/deps/react-router-dom.js?v=a5cb008e:4433
+[ 2875513ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/admin/live-streams:0
+[ 2875513ms] [ERROR] 获取直播间列表失败: Error: 获取直播间列表失败
+    at fetchLiveStreams (http://localhost:5183/src/pages/LiveStream/List.tsx:44:15) @ http://localhost:5183/src/pages/LiveStream/List.tsx:46
+[ 2875519ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/admin/live-streams:0
+[ 2875519ms] [ERROR] 获取直播间列表失败: Error: 获取直播间列表失败
+    at fetchLiveStreams (http://localhost:5183/src/pages/LiveStream/List.tsx:44:15) @ http://localhost:5183/src/pages/LiveStream/List.tsx:46
+[ 2888923ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5183/@vite/client:559
+[ 2889012ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5183/node_modules/.vite/deps/chunk-OOIH53S6.js?v=66b230fb:21548
+[ 2889017ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5183/node_modules/.vite/deps/react-router-dom.js?v=a5cb008e:4433
+[ 2889017ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5183/node_modules/.vite/deps/react-router-dom.js?v=a5cb008e:4433
+[ 2889039ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/admin/live-streams:0
+[ 2889039ms] [ERROR] 获取直播间列表失败: Error: 获取直播间列表失败
+    at fetchLiveStreams (http://localhost:5183/src/pages/LiveStream/List.tsx:44:15) @ http://localhost:5183/src/pages/LiveStream/List.tsx:46
+[ 2889040ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/admin/live-streams:0
+[ 2889041ms] [ERROR] 获取直播间列表失败: Error: 获取直播间列表失败
+    at fetchLiveStreams (http://localhost:5183/src/pages/LiveStream/List.tsx:44:15) @ http://localhost:5183/src/pages/LiveStream/List.tsx:46
+[ 6009112ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5183/@vite/client:559
+[ 6009285ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5183/node_modules/.vite/deps/chunk-OOIH53S6.js?v=66b230fb:21548
+[ 6009315ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5183/node_modules/.vite/deps/react-router-dom.js?v=a5cb008e:4433
+[ 6009315ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5183/node_modules/.vite/deps/react-router-dom.js?v=a5cb008e:4433
+[ 6009349ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/admin/live-streams:0
+[ 6009349ms] [ERROR] 获取直播间列表失败: Error: 获取直播间列表失败
+    at fetchLiveStreams (http://localhost:5183/src/pages/LiveStream/List.tsx:44:15) @ http://localhost:5183/src/pages/LiveStream/List.tsx:46
+[ 6009352ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/admin/live-streams:0
+[ 6009352ms] [ERROR] 获取直播间列表失败: Error: 获取直播间列表失败
+    at fetchLiveStreams (http://localhost:5183/src/pages/LiveStream/List.tsx:44:15) @ http://localhost:5183/src/pages/LiveStream/List.tsx:46
+[296980421ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5183/@vite/client:559
+[296980622ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5183/node_modules/.vite/deps/chunk-OOIH53S6.js?v=66b230fb:21548
+[296980651ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5183/node_modules/.vite/deps/react-router-dom.js?v=a5cb008e:4433
+[296980652ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5183/node_modules/.vite/deps/react-router-dom.js?v=a5cb008e:4433
+[296980686ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/admin/live-streams:0
+[296980686ms] [ERROR] 获取直播间列表失败: Error: 获取直播间列表失败
+    at fetchLiveStreams (http://localhost:5183/src/pages/LiveStream/List.tsx:44:15) @ http://localhost:5183/src/pages/LiveStream/List.tsx:46
+[296980689ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5183/api/v1/admin/live-streams:0
+[296980689ms] [ERROR] 获取直播间列表失败: Error: 获取直播间列表失败
+    at fetchLiveStreams (http://localhost:5183/src/pages/LiveStream/List.tsx:44:15) @ http://localhost:5183/src/pages/LiveStream/List.tsx:46

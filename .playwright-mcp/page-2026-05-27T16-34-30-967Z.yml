@@ -1,0 +1,314 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: 🎯
+      - heading "竞拍管理后台" [level=2] [ref=e8]
+    - list [ref=e10]:
+      - listitem [ref=e11]:
+        - link "📊 数据大屏" [ref=e12] [cursor=pointer]:
+          - /url: "#/dashboard"
+          - generic [ref=e13]: 📊
+          - generic [ref=e14]: 数据大屏
+      - listitem [ref=e15]:
+        - link "📦 商品管理" [ref=e16] [cursor=pointer]:
+          - /url: "#/products"
+          - generic [ref=e17]: 📦
+          - generic [ref=e18]: 商品管理
+      - listitem [ref=e19]:
+        - link "🎯 竞拍管理" [active] [ref=e20] [cursor=pointer]:
+          - /url: "#/auctions"
+          - generic [ref=e21]: 🎯
+          - generic [ref=e22]: 竞拍管理
+      - listitem [ref=e23]:
+        - link "📺 直播间管理" [ref=e24] [cursor=pointer]:
+          - /url: "#/live-streams"
+          - generic [ref=e25]: 📺
+          - generic [ref=e26]: 直播间管理
+      - listitem [ref=e27]:
+        - link "🧾 订单管理" [ref=e28] [cursor=pointer]:
+          - /url: "#/orders"
+          - generic [ref=e29]: 🧾
+          - generic [ref=e30]: 订单管理
+      - listitem [ref=e31]:
+        - link "📈 数据统计" [ref=e32] [cursor=pointer]:
+          - /url: "#/statistics"
+          - generic [ref=e33]: 📈
+          - generic [ref=e34]: 数据统计
+  - main [ref=e35]:
+    - generic [ref=e251]:
+      - generic [ref=e253]:
+        - heading "🎯 竞拍管理" [level=1] [ref=e254]
+        - paragraph [ref=e255]: 实时监控所有竞拍状态，管理竞拍流程
+      - generic [ref=e256]:
+        - generic [ref=e257]:
+          - generic [ref=e259]: 🎯
+          - generic [ref=e260]: "18"
+          - generic [ref=e261]: 竞拍总数
+        - generic [ref=e262]:
+          - generic [ref=e264]: ⏰
+          - generic [ref=e265]: "0"
+          - generic [ref=e266]: 待开始
+        - generic [ref=e267]:
+          - generic [ref=e269]: ⚡
+          - generic [ref=e270]: "3"
+          - generic [ref=e271]: 进行中
+        - generic [ref=e272]:
+          - generic [ref=e274]: 🏆
+          - generic [ref=e275]: "13"
+          - generic [ref=e276]: 已成交
+      - generic [ref=e277]:
+        - generic [ref=e279]:
+          - button "全部" [ref=e280] [cursor=pointer]
+          - button "待开始" [ref=e281] [cursor=pointer]
+          - button "进行中" [ref=e282] [cursor=pointer]
+          - button "已结束" [ref=e283] [cursor=pointer]
+        - table [ref=e284]:
+          - rowgroup [ref=e285]:
+            - row "竞拍ID 商品名称 当前价 出价次数 状态 剩余时间 中标者 操作" [ref=e286]:
+              - columnheader "竞拍ID" [ref=e287]
+              - columnheader "商品名称" [ref=e288]
+              - columnheader "当前价" [ref=e289]
+              - columnheader "出价次数" [ref=e290]
+              - columnheader "状态" [ref=e291]
+              - columnheader "剩余时间" [ref=e292]
+              - columnheader "中标者" [ref=e293]
+              - columnheader "操作" [ref=e294]
+          - rowgroup [ref=e295]:
+            - row "#19 ¥0 次 已结束 - - 查看详情" [ref=e296]:
+              - cell "#19" [ref=e297]
+              - cell [ref=e298]
+              - cell "¥0" [ref=e299]:
+                - generic [ref=e300]: ¥0
+              - cell "次" [ref=e301]
+              - cell "已结束" [ref=e302]
+              - cell "-" [ref=e303]
+              - cell "-" [ref=e304]
+              - cell "查看详情" [ref=e305]:
+                - link "查看详情" [ref=e307] [cursor=pointer]:
+                  - /url: "#/auctions/19"
+                  - button "查看详情" [ref=e308]
+            - row "#18 ¥0 次 已结束 - - 查看详情" [ref=e309]:
+              - cell "#18" [ref=e310]
+              - cell [ref=e311]
+              - cell "¥0" [ref=e312]:
+                - generic [ref=e313]: ¥0
+              - cell "次" [ref=e314]
+              - cell "已结束" [ref=e315]
+              - cell "-" [ref=e316]
+              - cell "-" [ref=e317]
+              - cell "查看详情" [ref=e318]:
+                - link "查看详情" [ref=e320] [cursor=pointer]:
+                  - /url: "#/auctions/18"
+                  - button "查看详情" [ref=e321]
+            - row "#17 ¥0 次 已结束 - - 查看详情" [ref=e322]:
+              - cell "#17" [ref=e323]
+              - cell [ref=e324]
+              - cell "¥0" [ref=e325]:
+                - generic [ref=e326]: ¥0
+              - cell "次" [ref=e327]
+              - cell "已结束" [ref=e328]
+              - cell "-" [ref=e329]
+              - cell "-" [ref=e330]
+              - cell "查看详情" [ref=e331]:
+                - link "查看详情" [ref=e333] [cursor=pointer]:
+                  - /url: "#/auctions/17"
+                  - button "查看详情" [ref=e334]
+            - row "#16 ¥0 次 已结束 - - 查看详情" [ref=e335]:
+              - cell "#16" [ref=e336]
+              - cell [ref=e337]
+              - cell "¥0" [ref=e338]:
+                - generic [ref=e339]: ¥0
+              - cell "次" [ref=e340]
+              - cell "已结束" [ref=e341]
+              - cell "-" [ref=e342]
+              - cell "-" [ref=e343]
+              - cell "查看详情" [ref=e344]:
+                - link "查看详情" [ref=e346] [cursor=pointer]:
+                  - /url: "#/auctions/16"
+                  - button "查看详情" [ref=e347]
+            - row "#15 ¥0 次 已结束 - - 查看详情" [ref=e348]:
+              - cell "#15" [ref=e349]
+              - cell [ref=e350]
+              - cell "¥0" [ref=e351]:
+                - generic [ref=e352]: ¥0
+              - cell "次" [ref=e353]
+              - cell "已结束" [ref=e354]
+              - cell "-" [ref=e355]
+              - cell "-" [ref=e356]
+              - cell "查看详情" [ref=e357]:
+                - link "查看详情" [ref=e359] [cursor=pointer]:
+                  - /url: "#/auctions/15"
+                  - button "查看详情" [ref=e360]
+            - row "#14 ¥0 次 已结束 - - 查看详情" [ref=e361]:
+              - cell "#14" [ref=e362]
+              - cell [ref=e363]
+              - cell "¥0" [ref=e364]:
+                - generic [ref=e365]: ¥0
+              - cell "次" [ref=e366]
+              - cell "已结束" [ref=e367]
+              - cell "-" [ref=e368]
+              - cell "-" [ref=e369]
+              - cell "查看详情" [ref=e370]:
+                - link "查看详情" [ref=e372] [cursor=pointer]:
+                  - /url: "#/auctions/14"
+                  - button "查看详情" [ref=e373]
+            - row "#13 ¥100 次 延时中 已结束 - 查看详情" [ref=e374]:
+              - cell "#13" [ref=e375]
+              - cell [ref=e376]
+              - cell "¥100" [ref=e377]:
+                - generic [ref=e378]: ¥100
+              - cell "次" [ref=e379]
+              - cell "延时中" [ref=e380]
+              - cell "已结束" [ref=e381]
+              - cell "-" [ref=e382]
+              - cell "查看详情" [ref=e383]:
+                - link "查看详情" [ref=e385] [cursor=pointer]:
+                  - /url: "#/auctions/13"
+                  - button "查看详情" [ref=e386]
+            - row "#12 ¥10 次 进行中 已结束 - 查看详情 取消竞拍" [ref=e387]:
+              - cell "#12" [ref=e388]
+              - cell [ref=e389]
+              - cell "¥10" [ref=e390]:
+                - generic [ref=e391]: ¥10
+              - cell "次" [ref=e392]
+              - cell "进行中" [ref=e393]
+              - cell "已结束" [ref=e394]
+              - cell "-" [ref=e395]
+              - cell "查看详情 取消竞拍" [ref=e396]:
+                - generic [ref=e397]:
+                  - link "查看详情" [ref=e398] [cursor=pointer]:
+                    - /url: "#/auctions/12"
+                    - button "查看详情" [ref=e399]
+                  - button "取消竞拍" [ref=e400] [cursor=pointer]
+            - row "#11 ¥110 次 已结束 - - 查看详情" [ref=e401]:
+              - cell "#11" [ref=e402]
+              - cell [ref=e403]
+              - cell "¥110" [ref=e404]:
+                - generic [ref=e405]: ¥110
+              - cell "次" [ref=e406]
+              - cell "已结束" [ref=e407]
+              - cell "-" [ref=e408]
+              - cell "-" [ref=e409]
+              - cell "查看详情" [ref=e410]:
+                - link "查看详情" [ref=e412] [cursor=pointer]:
+                  - /url: "#/auctions/11"
+                  - button "查看详情" [ref=e413]
+            - row "#10 ¥1,000 次 已结束 - - 查看详情" [ref=e414]:
+              - cell "#10" [ref=e415]
+              - cell [ref=e416]
+              - cell "¥1,000" [ref=e417]:
+                - generic [ref=e418]: ¥1,000
+              - cell "次" [ref=e419]
+              - cell "已结束" [ref=e420]
+              - cell "-" [ref=e421]
+              - cell "-" [ref=e422]
+              - cell "查看详情" [ref=e423]:
+                - link "查看详情" [ref=e425] [cursor=pointer]:
+                  - /url: "#/auctions/10"
+                  - button "查看详情" [ref=e426]
+            - row "#9 ¥0 次 已取消 - - 查看详情" [ref=e427]:
+              - cell "#9" [ref=e428]
+              - cell [ref=e429]
+              - cell "¥0" [ref=e430]:
+                - generic [ref=e431]: ¥0
+              - cell "次" [ref=e432]
+              - cell "已取消" [ref=e433]
+              - cell "-" [ref=e434]
+              - cell "-" [ref=e435]
+              - cell "查看详情" [ref=e436]:
+                - link "查看详情" [ref=e438] [cursor=pointer]:
+                  - /url: "#/auctions/9"
+                  - button "查看详情" [ref=e439]
+            - row "#7 ¥0 次 已取消 - - 查看详情" [ref=e440]:
+              - cell "#7" [ref=e441]
+              - cell [ref=e442]
+              - cell "¥0" [ref=e443]:
+                - generic [ref=e444]: ¥0
+              - cell "次" [ref=e445]
+              - cell "已取消" [ref=e446]
+              - cell "-" [ref=e447]
+              - cell "-" [ref=e448]
+              - cell "查看详情" [ref=e449]:
+                - link "查看详情" [ref=e451] [cursor=pointer]:
+                  - /url: "#/auctions/7"
+                  - button "查看详情" [ref=e452]
+            - row "#6 ¥200 次 已结束 - - 查看详情" [ref=e453]:
+              - cell "#6" [ref=e454]
+              - cell [ref=e455]
+              - cell "¥200" [ref=e456]:
+                - generic [ref=e457]: ¥200
+              - cell "次" [ref=e458]
+              - cell "已结束" [ref=e459]
+              - cell "-" [ref=e460]
+              - cell "-" [ref=e461]
+              - cell "查看详情" [ref=e462]:
+                - link "查看详情" [ref=e464] [cursor=pointer]:
+                  - /url: "#/auctions/6"
+                  - button "查看详情" [ref=e465]
+            - row "#5 ¥0 次 已结束 - - 查看详情" [ref=e466]:
+              - cell "#5" [ref=e467]
+              - cell [ref=e468]
+              - cell "¥0" [ref=e469]:
+                - generic [ref=e470]: ¥0
+              - cell "次" [ref=e471]
+              - cell "已结束" [ref=e472]
+              - cell "-" [ref=e473]
+              - cell "-" [ref=e474]
+              - cell "查看详情" [ref=e475]:
+                - link "查看详情" [ref=e477] [cursor=pointer]:
+                  - /url: "#/auctions/5"
+                  - button "查看详情" [ref=e478]
+            - row "#4 ¥50 次 已结束 - - 查看详情" [ref=e479]:
+              - cell "#4" [ref=e480]
+              - cell [ref=e481]
+              - cell "¥50" [ref=e482]:
+                - generic [ref=e483]: ¥50
+              - cell "次" [ref=e484]
+              - cell "已结束" [ref=e485]
+              - cell "-" [ref=e486]
+              - cell "-" [ref=e487]
+              - cell "查看详情" [ref=e488]:
+                - link "查看详情" [ref=e490] [cursor=pointer]:
+                  - /url: "#/auctions/4"
+                  - button "查看详情" [ref=e491]
+            - row "#3 ¥0 次 已结束 - - 查看详情" [ref=e492]:
+              - cell "#3" [ref=e493]
+              - cell [ref=e494]
+              - cell "¥0" [ref=e495]:
+                - generic [ref=e496]: ¥0
+              - cell "次" [ref=e497]
+              - cell "已结束" [ref=e498]
+              - cell "-" [ref=e499]
+              - cell "-" [ref=e500]
+              - cell "查看详情" [ref=e501]:
+                - link "查看详情" [ref=e503] [cursor=pointer]:
+                  - /url: "#/auctions/3"
+                  - button "查看详情" [ref=e504]
+            - row "#2 ¥140 次 进行中 已结束 - 查看详情 取消竞拍" [ref=e505]:
+              - cell "#2" [ref=e506]
+              - cell [ref=e507]
+              - cell "¥140" [ref=e508]:
+                - generic [ref=e509]: ¥140
+              - cell "次" [ref=e510]
+              - cell "进行中" [ref=e511]
+              - cell "已结束" [ref=e512]
+              - cell "-" [ref=e513]
+              - cell "查看详情 取消竞拍" [ref=e514]:
+                - generic [ref=e515]:
+                  - link "查看详情" [ref=e516] [cursor=pointer]:
+                    - /url: "#/auctions/2"
+                    - button "查看详情" [ref=e517]
+                  - button "取消竞拍" [ref=e518] [cursor=pointer]
+            - row "#1 ¥170 次 已结束 - - 查看详情" [ref=e519]:
+              - cell "#1" [ref=e520]
+              - cell [ref=e521]
+              - cell "¥170" [ref=e522]:
+                - generic [ref=e523]: ¥170
+              - cell "次" [ref=e524]
+              - cell "已结束" [ref=e525]
+              - cell "-" [ref=e526]
+              - cell "-" [ref=e527]
+              - cell "查看详情" [ref=e528]:
+                - link "查看详情" [ref=e530] [cursor=pointer]:
+                  - /url: "#/auctions/1"
+                  - button "查看详情" [ref=e531]

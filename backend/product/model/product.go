@@ -11,8 +11,9 @@ import (
 type ProductStatus int
 
 const (
-	ProductStatusDraft     ProductStatus = 0 // 草稿
-	ProductStatusPublished ProductStatus = 1 // 已发布
+	ProductStatusDraft       ProductStatus = 0 // 草稿
+	ProductStatusPublished   ProductStatus = 1 // 已发布
+	ProductStatusUnpublished ProductStatus = 2 // 已下架
 )
 
 // Product 商品信息模型
@@ -21,6 +22,7 @@ type Product struct {
 	Name        string        `json:"name" gorm:"type:varchar(128);not null"`
 	Description string        `json:"description" gorm:"type:text"`
 	Images      JSONArray     `json:"images" gorm:"type:json"`
+	CategoryID  *int64        `json:"category_id" gorm:"index"` // 逻辑外键关联Category
 	Status      ProductStatus `json:"status" gorm:"type:tinyint;default:0"`
 	CreatedAt   time.Time     `json:"created_at" gorm:"autoCreateTime"`
 }

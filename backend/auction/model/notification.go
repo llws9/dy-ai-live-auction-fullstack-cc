@@ -17,6 +17,11 @@ const (
 	NotificationTypeOrderPaid      NotificationType = "order_paid"       // 订单已支付
 	NotificationTypeOrderShipped   NotificationType = "order_shipped"    // 订单已发货
 	NotificationTypeOrderCompleted NotificationType = "order_completed"  // 订单已完成
+	// 新增：直播间竞拍相关通知
+	NotificationTypeNewProduct       NotificationType = "new_product"        // 新商品发布
+	NotificationTypeAuctionStarting  NotificationType = "auction_starting"   // 竞拍即将开始
+	NotificationTypeProductUnpublished NotificationType = "product_unpublished" // 商品已下架
+	NotificationTypeAuctionEnded     NotificationType = "auction_ended"      // 竞拍已结束
 )
 
 // Notification 用户通知实体

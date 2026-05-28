@@ -17,7 +17,7 @@ class MockWebSocket {
   send = jest.fn();
   close = jest.fn();
 
-  constructor(url: string) {
+  constructor(_url: string) {
     setTimeout(() => {
       if (this.onopen) this.onopen();
     }, 10);

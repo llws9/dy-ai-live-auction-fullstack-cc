@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 
@@ -210,5 +211,126 @@ func (h *ProductHandler) Delete(ctx context.Context, c *app.RequestContext) {
 	c.JSON(200, map[string]interface{}{
 		"code":    200,
 		"message": "删除成功",
+	})
+}
+
+// PublishRequest 发布商品请求
+type PublishRequest struct {
+	StartTime *string `json:"start_time"` // ISO 8601 格式
+	RuleID    *int64  `json:"rule_id"`
+}
+
+// PublishHandler 发布商品到直播间
+func (h *ProductHandler) PublishHandler(ctx context.Context, c *app.RequestContext) {
+	productIDStr := c.Param("id")
+	productID, err := strconv.ParseInt(productIDStr, 10, 64)
+	if err != nil {
+		c.JSON(400, map[string]interface{}{
+			"code":    400,
+			"message": "无效的商品ID",
+		})
+		return
+	}
+
+	var req PublishRequest
+	if err := c.BindJSON(&req); err != nil {
+		req.StartTime = nil
+		req.RuleID = nil
+	}
+
+	userID := c.GetInt64("user_id")
+	userRole := c.GetInt("user_role")
+
+	if userRole != 1 && userRole != 2 {
+		c.JSON(403, map[string]interface{}{
+			"code":    403,
+			"message": "权限不足：需要商家或管理员权限",
+		})
+		return
+	}
+
+	var startTime *time.Time
+	if req.StartTime != nil {
+		t, err := time.Parse(time.RFC3339, *req.StartTime)
+		if err != nil {
+			c.JSON(400, map[string]interface{}{
+				"code":    400,
+				"message": "时间格式错误，请使用ISO 8601格式",
+			})
+			return
+		}
+		startTime = &t
+	}
+
+	product, liveStream, err := h.productService.PublishProduct(ctx, productID, userID, startTime)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{
+			"code":    500,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{
+		"code":    200,
+		"message": "发布成功",
+		"data": map[string]interface{}{
+			"product": product,
+			"live_stream": map[string]interface{}{
+				"id":   liveStream.ID,
+				"name": liveStream.Name,
+			},
+		},
+	})
+}
+
+// UnpublishRequest 下架商品请求
+type UnpublishRequest struct {
+	Reason string `json:"reason"`
+}
+
+// UnpublishHandler 下架商品
+func (h *ProductHandler) UnpublishHandler(ctx context.Context, c *app.RequestContext) {
+	productIDStr := c.Param("id")
+	productID, err := strconv.ParseInt(productIDStr, 10, 64)
+	if err != nil {
+		c.JSON(400, map[string]interface{}{
+			"code":    400,
+			"message": "无效的商品ID",
+		})
+		return
+	}
+
+	var req UnpublishRequest
+	_ = c.BindJSON(&req)
+
+	userID := c.GetInt64("user_id")
+	userRole := c.GetInt("user_role")
+
+	if userRole != 1 && userRole != 2 {
+		c.JSON(403, map[string]interface{}{
+			"code":    403,
+			"message": "权限不足：需要商家或管理员权限",
+		})
+		return
+	}
+
+	product, err := h.productService.UnpublishProduct(ctx, productID, userID, req.Reason)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{
+			"code":    500,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{
+		"code":    200,
+		"message": "下架成功",
+		"data": map[string]interface{}{
+			"product_id":  product.ID,
+			"status":      product.Status,
+			"unpublished": true,
+		},
 	})
 }

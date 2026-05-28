@@ -29,8 +29,9 @@ const AdminLoginPage: React.FC = () => {
       const result = await response.json();
 
       if (response.ok && result.data) {
-        if (result.data.user.role !== 1) {
-          setError('非管理员账号，无法登录');
+        // 允许商家(role=1)和管理员(role=2)登录
+        if (result.data.user.role < 1) {
+          setError('权限不足，无法登录');
           return;
         }
         login(result.data.token, result.data.user);

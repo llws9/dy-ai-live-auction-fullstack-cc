@@ -11,11 +11,8 @@ import (
 
 var RedisClient *redis.Client
 
-// InitRedisFromEnv 从环境变量初始化 Redis 连接
-func InitRedisFromEnv() (*redis.Client, error) {
-	addr := getEnvOrDefault("REDIS_ADDR", "localhost:6379")
-	password := getEnvOrDefault("REDIS_PASSWORD", "")
-
+// InitRedis 初始化 Redis 连接（从参数）
+func InitRedis(addr, password string) (*redis.Client, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Password: password,
@@ -28,8 +25,15 @@ func InitRedisFromEnv() (*redis.Client, error) {
 	}
 
 	RedisClient = client
-	log.Println("Redis connected successfully")
+	log.Printf("Redis connected successfully: %s", addr)
 	return client, nil
+}
+
+// InitRedisFromEnv 从环境变量初始化 Redis 连接
+func InitRedisFromEnv() (*redis.Client, error) {
+	addr := getEnvOrDefault("REDIS_ADDR", "localhost:6379")
+	password := getEnvOrDefault("REDIS_PASSWORD", "")
+	return InitRedis(addr, password)
 }
 
 func getEnvOrDefault(key, defaultValue string) string {

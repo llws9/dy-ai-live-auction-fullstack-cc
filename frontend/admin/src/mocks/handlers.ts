@@ -69,21 +69,108 @@ const mockOrders = [
 ];
 
 export const handlers = [
-  // 管理员登录
-  http.post('/api/v1/admin/login', async () => {
+  // 管理员登录 (匹配实际登录页面使用的 /api/v1/auth/login)
+  http.post('/api/v1/auth/login', async () => {
     await delay(100);
     return HttpResponse.json({
-      success: true,
-      token: 'mock-admin-jwt-token',
-      user: {
-        id: 1,
-        username: 'admin',
-        role: 'admin',
+      code: 0,
+      message: 'success',
+      data: {
+        token: 'mock-admin-jwt-token',
+        user: {
+          id: 1,
+          name: 'Admin',
+          email: 'admin@example.com',
+          role: 2, // 管理员角色
+        },
       },
     });
   }),
 
-  // 获取统计数据
+  // 兼容旧路径
+  http.post('/api/v1/admin/login', async () => {
+    await delay(100);
+    return HttpResponse.json({
+      code: 0,
+      message: 'success',
+      data: {
+        token: 'mock-admin-jwt-token',
+        user: {
+          id: 1,
+          name: 'Admin',
+          email: 'admin@example.com',
+          role: 2,
+        },
+      },
+    });
+  }),
+
+  // 获取统计概览数据 (Dashboard 使用)
+  http.get('/api/v1/statistics/overview', async () => {
+    await delay(100);
+    return HttpResponse.json({
+      code: 0,
+      message: 'success',
+      data: {
+        totalAuctions: 100,
+        activeAuctions: 15,
+        totalRevenue: 12500000,
+        todayRevenue: 125000,
+        totalUsers: 500,
+        newUsersToday: 45,
+        successRate: 85.5,
+        avgBidPrice: 15000,
+      },
+    });
+  }),
+
+  // 收入趋势数据
+  http.get('/api/v1/statistics/revenue', async ({ request }) => {
+    await delay(100);
+    const url = new URL(request.url);
+    const groupBy = url.searchParams.get('group_by');
+
+    if (groupBy === 'day') {
+      return HttpResponse.json({
+        code: 0,
+        message: 'success',
+        data: {
+          daily_stats: [
+            { date: '2024-05-20', revenue: 15000, orders: 25 },
+            { date: '2024-05-21', revenue: 18000, orders: 30 },
+            { date: '2024-05-22', revenue: 22000, orders: 35 },
+            { date: '2024-05-23', revenue: 19000, orders: 28 },
+            { date: '2024-05-24', revenue: 25000, orders: 40 },
+            { date: '2024-05-25', revenue: 21000, orders: 32 },
+            { date: '2024-05-26', revenue: 28000, orders: 45 },
+          ],
+        },
+      });
+    }
+
+    if (groupBy === 'category') {
+      return HttpResponse.json({
+        code: 0,
+        message: 'success',
+        data: {
+          category_stats: [
+            { category: '奢侈品', revenue: 50000, count: 15 },
+            { category: '数码产品', revenue: 35000, count: 20 },
+            { category: '服装', revenue: 25000, count: 30 },
+            { category: '艺术品', revenue: 80000, count: 8 },
+          ],
+        },
+      });
+    }
+
+    return HttpResponse.json({
+      code: 0,
+      message: 'success',
+      data: {},
+    });
+  }),
+
+  // 获取统计数据 (旧路径兼容)
   http.get('/api/v1/admin/statistics', async () => {
     await delay(100);
     return HttpResponse.json({

@@ -1,0 +1,30 @@
+// utils/__tests__/errorMessages.test.ts
+
+import { describe, it, expect } from '@jest/globals';
+import { getErrorMessage, formatErrorMessage, ERROR_MESSAGES } from '../errorMessages';
+
+describe('errorMessages', () => {
+  it('should return correct error message for 401 status', () => {
+    const error = { status: 401 };
+    const result = getErrorMessage(error);
+    expect(result).toEqual(ERROR_MESSAGES[401]);
+  });
+
+  it('should return correct error message for network error', () => {
+    const error = { name: 'TypeError', message: 'Failed to fetch' };
+    const result = getErrorMessage(error);
+    expect(result.message).toBe('网络连接失败，请检查网络设置');
+  });
+
+  it('should return custom error message for business error', () => {
+    const error = { code: 'PRODUCT_NOT_FOUND' };
+    const result = getErrorMessage(error);
+    expect(result).toEqual(ERROR_MESSAGES.PRODUCT_NOT_FOUND);
+  });
+
+  it('should format error message to string', () => {
+    const error = { status: 404 };
+    const result = formatErrorMessage(error);
+    expect(result).toBe('请求的资源不存在');
+  });
+});

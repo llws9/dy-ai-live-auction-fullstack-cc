@@ -1,0 +1,7 @@
+- generic [ref=e113]:
+  - heading "管理员登录" [level=2] [ref=e114]
+  - generic [ref=e119]: 网络错误，请重试
+  - generic [ref=e115]:
+    - textbox "邮箱" [ref=e116]: merchant@test.com
+    - textbox "密码" [ref=e117]: "123456"
+    - button "登录" [ref=e118] [cursor=pointer]

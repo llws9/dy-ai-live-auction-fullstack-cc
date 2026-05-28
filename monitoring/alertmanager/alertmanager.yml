@@ -1,0 +1,228 @@
+global:
+  # SMTP配置
+  smtp_smarthost: 'smtp.example.com:587'
+  smtp_from: 'alertmanager@example.com'
+  smtp_auth_username: 'alertmanager@example.com'
+  smtp_auth_password: 'password'
+  smtp_require_tls: true
+
+  # Slack配置
+  slack_api_url: 'https://hooks.slack.com/services/YOUR/WEBHOOK/URL'
+
+  # 默认路由
+  resolve_timeout: 5m
+
+# 模板
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# 路由配置
+route:
+  # 默认接收者
+  receiver: 'team-default'
+
+  # 分组依据
+  group_by: ['alertname', 'cluster', 'service']
+
+  # 首次通知等待时间
+  group_wait: 30s
+
+  # 同组新告警等待时间
+  group_interval: 5m
+
+  # 重复告警等待时间
+  repeat_interval: 4h
+
+  # 子路由
+  routes:
+    # 严重告警 - 立即通知
+    - match:
+        severity: critical
+      receiver: 'team-critical'
+      continue: true
+
+    # 系统告警
+    - match:
+        category: system
+      receiver: 'team-system'
+      group_by: ['alertname', 'instance']
+
+    # 应用告警
+    - match:
+        category: application
+      receiver: 'team-application'
+      group_by: ['alertname', 'service']
+
+    # 数据库告警
+    - match:
+        category: database
+      receiver: 'team-database'
+      group_by: ['alertname', 'db_type']
+
+    # 业务告警
+    - match:
+        category: business
+      receiver: 'team-business'
+      group_by: ['alertname']
+
+    # 容器告警
+    - match:
+        category: container
+      receiver: 'team-ops'
+      group_by: ['alertname', 'container_label_com_docker_compose_service']
+
+# 接收者配置
+receivers:
+  # 默认接收者
+  - name: 'team-default'
+    webhook_configs:
+      - url: 'http://backend:3000/api/webhooks/alerts'
+        send_resolved: true
+
+  # 严重告警接收者 - 多通道通知
+  - name: 'team-critical'
+    email_configs:
+      - to: 'critical-team@example.com'
+        send_resolved: true
+        html: '<h2>🚨 严重告警</h2><p>{{ .GroupLabels.alertname }}</p><p>{{ range .Alerts }}{{ .Annotations.description }}{{ end }}</p>'
+    slack_configs:
+      - channel: '#critical-alerts'
+        send_resolved: true
+        title: '🚨 {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+    pagerduty_configs:
+      - service_key: 'YOUR_PAGERDUTY_SERVICE_KEY'
+        description: '{{ .GroupLabels.alertname }}'
+        severity: critical
+    webhook_configs:
+      - url: 'http://backend:3000/api/webhooks/alerts/critical'
+        send_resolved: true
+
+  # 系统团队接收者
+  - name: 'team-system'
+    email_configs:
+      - to: 'system-team@example.com'
+        send_resolved: true
+    slack_configs:
+      - channel: '#system-alerts'
+        send_resolved: true
+        title: '🖥️ {{ .GroupLabels.alertname }} - {{ .GroupLabels.instance }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
+    webhook_configs:
+      - url: 'http://backend:3000/api/webhooks/alerts/system'
+        send_resolved: true
+
+  # 应用团队接收者
+  - name: 'team-application'
+    email_configs:
+      - to: 'app-team@example.com'
+        send_resolved: true
+    slack_configs:
+      - channel: '#app-alerts'
+        send_resolved: true
+        title: '📱 {{ .GroupLabels.alertname }} - {{ .GroupLabels.service }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
+    webhook_configs:
+      - url: 'http://backend:3000/api/webhooks/alerts/application'
+        send_resolved: true
+
+  # 数据库团队接收者
+  - name: 'team-database'
+    email_configs:
+      - to: 'db-team@example.com'
+        send_resolved: true
+    slack_configs:
+      - channel: '#db-alerts'
+        send_resolved: true
+        title: '🗄️ {{ .GroupLabels.alertname }} - {{ .GroupLabels.db_type }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
+    webhook_configs:
+      - url: 'http://backend:3000/api/webhooks/alerts/database'
+        send_resolved: true
+
+  # 业务团队接收者
+  - name: 'team-business'
+    email_configs:
+      - to: 'business-team@example.com'
+        send_resolved: true
+    slack_configs:
+      - channel: '#business-alerts'
+        send_resolved: true
+        title: '📊 {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
+    webhook_configs:
+      - url: 'http://backend:3000/api/webhooks/alerts/business'
+        send_resolved: true
+
+  # 运维团队接收者
+  - name: 'team-ops'
+    email_configs:
+      - to: 'ops-team@example.com'
+        send_resolved: true
+    slack_configs:
+      - channel: '#ops-alerts'
+        send_resolved: true
+        title: '🐳 {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
+    webhook_configs:
+      - url: 'http://backend:3000/api/webhooks/alerts/ops'
+        send_resolved: true
+
+# 抑制规则
+inhibit_rules:
+  # 如果节点宕机,抑制该节点的其他告警
+  - source_match:
+      alertname: 'NodeDown'
+    target_match_re:
+      alertname: '.*'
+    equal: ['instance']
+
+  # 如果服务不可用,抑制该服务的其他告警
+  - source_match:
+      alertname: 'ServiceDown'
+    target_match_re:
+      alertname: '.*'
+    equal: ['service']
+
+  # 如果主库宕机,抑制复制延迟告警
+  - source_match:
+      alertname: 'PostgreSQLDown'
+      role: 'master'
+    target_match:
+      alertname: 'PostgresReplicationLag'
+    equal: ['service']
+
+  # 如果严重告警,抑制相同告警的警告级别
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
+
+# 时间窗口配置 (静默时间)
+time_intervals:
+  - name: 'business_hours'
+    time_intervals:
+      - times:
+          - start_time: '09:00'
+            end_time: '18:00'
+        weekdays: ['monday:friday']
+        location: 'Asia/Shanghai'
+
+  - name: 'off_hours'
+    time_intervals:
+      - times:
+          - start_time: '00:00'
+            end_time: '09:00'
+          - start_time: '18:00'
+            end_time: '24:00'
+        weekdays: ['monday:friday']
+        location: 'Asia/Shanghai'
+      - weekdays: ['saturday', 'sunday']
+        location: 'Asia/Shanghai'

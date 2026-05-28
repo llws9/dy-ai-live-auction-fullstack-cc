@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"product-service/dao"
 	"product-service/model"
+	"product-service/pkg/logger"
 )
 
 // NotificationCallback 通知回调接口（用于Mock触发通知）
@@ -21,9 +23,10 @@ type NotificationCallback interface {
 
 // OrderService 订单服务
 type OrderService struct {
-	orderDAO           *dao.OrderDAO
-	historyDAO         *dao.HistoryDAO
+	orderDAO             *dao.OrderDAO
+	historyDAO           *dao.HistoryDAO
 	notificationCallback NotificationCallback // 通知回调（Mock触发）
+	logger               *logger.Logger
 }
 
 // NewOrderService 创建订单服务
@@ -31,6 +34,7 @@ func NewOrderService(orderDAO *dao.OrderDAO, historyDAO *dao.HistoryDAO) *OrderS
 	return &OrderService{
 		orderDAO:   orderDAO,
 		historyDAO: historyDAO,
+		logger:     logger.NewLogger("product-service"),
 	}
 }
 
@@ -68,16 +72,25 @@ func (s *OrderService) ListOrders(ctx context.Context, userID *int64, page, page
 
 // PayOrder 支付订单（模拟）
 func (s *OrderService) PayOrder(ctx context.Context, id int64) (*model.Order, error) {
+	start := time.Now()
+
 	order, err := s.orderDAO.GetByID(ctx, id)
 	if err != nil {
+		s.logger.LogOperation(ctx, logger.OperationPay, logger.ObjectOrder, fmt.Sprintf("%d", id), false, err)
 		return nil, err
 	}
 
 	if order.Status != model.OrderStatusPending {
-		return nil, errors.New("订单状态不允许支付")
+		err := errors.New("订单状态不允许支付")
+		s.logger.LogOperationWithData(ctx, logger.OperationPay, logger.ObjectOrder, fmt.Sprintf("%d", id),
+			false, err, map[string]interface{}{
+				"current_status": order.Status,
+			}, nil)
+		return nil, err
 	}
 
 	if err := s.orderDAO.UpdateStatus(ctx, id, model.OrderStatusPaid); err != nil {
+		s.logger.LogOperation(ctx, logger.OperationPay, logger.ObjectOrder, fmt.Sprintf("%d", id), false, err)
 		return nil, err
 	}
 
@@ -88,21 +101,40 @@ func (s *OrderService) PayOrder(ctx context.Context, id int64) (*model.Order, er
 		}()
 	}
 
+	s.logger.LogOperationWithData(ctx, logger.OperationPay, logger.ObjectOrder, fmt.Sprintf("%d", id),
+		true, nil, map[string]interface{}{
+			"order_id":     id,
+			"auction_id":   order.AuctionID,
+			"product_id":   order.ProductID,
+			"winner_id":    order.WinnerID,
+			"final_price":  order.FinalPrice,
+			"duration_ms":  time.Since(start).Milliseconds(),
+		}, nil)
+
 	return s.orderDAO.GetByID(ctx, id)
 }
 
 // ShipOrder 发货（模拟）
 func (s *OrderService) ShipOrder(ctx context.Context, id int64) (*model.Order, error) {
+	start := time.Now()
+
 	order, err := s.orderDAO.GetByID(ctx, id)
 	if err != nil {
+		s.logger.LogOperation(ctx, logger.OperationShip, logger.ObjectOrder, fmt.Sprintf("%d", id), false, err)
 		return nil, err
 	}
 
 	if order.Status != model.OrderStatusPaid {
-		return nil, errors.New("订单状态不允许发货")
+		err := errors.New("订单状态不允许发货")
+		s.logger.LogOperationWithData(ctx, logger.OperationShip, logger.ObjectOrder, fmt.Sprintf("%d", id),
+			false, err, map[string]interface{}{
+				"current_status": order.Status,
+			}, nil)
+		return nil, err
 	}
 
 	if err := s.orderDAO.UpdateStatus(ctx, id, model.OrderStatusShipped); err != nil {
+		s.logger.LogOperation(ctx, logger.OperationShip, logger.ObjectOrder, fmt.Sprintf("%d", id), false, err)
 		return nil, err
 	}
 
@@ -113,21 +145,39 @@ func (s *OrderService) ShipOrder(ctx context.Context, id int64) (*model.Order, e
 		}()
 	}
 
+	s.logger.LogOperationWithData(ctx, logger.OperationShip, logger.ObjectOrder, fmt.Sprintf("%d", id),
+		true, nil, map[string]interface{}{
+			"order_id":     id,
+			"auction_id":   order.AuctionID,
+			"product_id":   order.ProductID,
+			"winner_id":    order.WinnerID,
+			"duration_ms":  time.Since(start).Milliseconds(),
+		}, nil)
+
 	return s.orderDAO.GetByID(ctx, id)
 }
 
 // CompleteOrder 完成订单（模拟）
 func (s *OrderService) CompleteOrder(ctx context.Context, id int64) (*model.Order, error) {
+	start := time.Now()
+
 	order, err := s.orderDAO.GetByID(ctx, id)
 	if err != nil {
+		s.logger.LogOperation(ctx, logger.OperationComplete, logger.ObjectOrder, fmt.Sprintf("%d", id), false, err)
 		return nil, err
 	}
 
 	if order.Status != model.OrderStatusShipped {
-		return nil, errors.New("订单状态不允许完成")
+		err := errors.New("订单状态不允许完成")
+		s.logger.LogOperationWithData(ctx, logger.OperationComplete, logger.ObjectOrder, fmt.Sprintf("%d", id),
+			false, err, map[string]interface{}{
+				"current_status": order.Status,
+			}, nil)
+		return nil, err
 	}
 
 	if err := s.orderDAO.UpdateStatus(ctx, id, model.OrderStatusCompleted); err != nil {
+		s.logger.LogOperation(ctx, logger.OperationComplete, logger.ObjectOrder, fmt.Sprintf("%d", id), false, err)
 		return nil, err
 	}
 
@@ -137,6 +187,16 @@ func (s *OrderService) CompleteOrder(ctx context.Context, id int64) (*model.Orde
 			_ = s.notificationCallback.OnOrderCompleted(ctx, order.WinnerID, id)
 		}()
 	}
+
+	s.logger.LogOperationWithData(ctx, logger.OperationComplete, logger.ObjectOrder, fmt.Sprintf("%d", id),
+		true, nil, map[string]interface{}{
+			"order_id":     id,
+			"auction_id":   order.AuctionID,
+			"product_id":   order.ProductID,
+			"winner_id":    order.WinnerID,
+			"final_price":  order.FinalPrice,
+			"duration_ms":  time.Since(start).Milliseconds(),
+		}, nil)
 
 	return s.orderDAO.GetByID(ctx, id)
 }

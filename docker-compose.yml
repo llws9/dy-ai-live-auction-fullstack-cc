@@ -1,6 +1,8 @@
 version: '3.8'
 
 services:
+  # ==================== 应用服务 ====================
+
   # API Gateway
   gateway:
     build:
@@ -9,15 +11,19 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - PRODUCT_SERVICE_ADDR=product:8081
-      - AUCTION_SERVICE_ADDR=auction:8082
-      - REDIS_ADDR=redis:6379
+      - NACOS_SERVER_ADDR=nacos:8848
+      - NACOS_NAMESPACE=auction-dev
+      - NACOS_GROUP=gateway
+      - NACOS_DATA_ID=gateway-config.yaml
     depends_on:
+      - nacos
       - product
       - auction
       - redis
     networks:
       - auction-network
+    labels:
+      - "service_name=gateway"
 
   # Product Service
   product:
@@ -27,17 +33,18 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_USER=root
-      - DB_PASSWORD=root
-      - DB_NAME=auction
-      - REDIS_ADDR=redis:6379
+      - NACOS_SERVER_ADDR=nacos:8848
+      - NACOS_NAMESPACE=auction-dev
+      - NACOS_GROUP=product
+      - NACOS_DATA_ID=product-config.yaml
     depends_on:
+      - nacos
       - mysql
       - redis
     networks:
       - auction-network
+    labels:
+      - "service_name=product"
 
   # Auction Service
   auction:
@@ -48,17 +55,18 @@ services:
       - "8082:8082"  # HTTP
       - "8083:8083"  # WebSocket
     environment:
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_USER=root
-      - DB_PASSWORD=root
-      - DB_NAME=auction
-      - REDIS_ADDR=redis:6379
+      - NACOS_SERVER_ADDR=nacos:8848
+      - NACOS_NAMESPACE=auction-dev
+      - NACOS_GROUP=auction
+      - NACOS_DATA_ID=auction-config.yaml
     depends_on:
+      - nacos
       - mysql
       - redis
     networks:
       - auction-network
+    labels:
+      - "service_name=auction"
 
   # Redis
   redis:
@@ -69,6 +77,29 @@ services:
       - redis-data:/data
     networks:
       - auction-network
+
+  # RabbitMQ - 消息队列
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - auction-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    labels:
+      - "service_name=rabbitmq"
 
   # MySQL
   mysql:
@@ -85,6 +116,57 @@ services:
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - auction-network
+
+  # ==================== 配置中心 (Nacos) ====================
+
+  # Nacos - 配置中心
+  nacos:
+    image: nacos/nacos-server:v2.2.3
+    container_name: nacos
+    ports:
+      - "8848:8848"  # HTTP API
+      - "9848:9848"  # gRPC (config push)
+    environment:
+      - MODE=standalone
+      - SPRING_DATASOURCE_PLATFORM=mysql
+      - MYSQL_SERVICE_HOST=nacos-mysql
+      - MYSQL_SERVICE_PORT=3306
+      - MYSQL_SERVICE_DB_NAME=nacos
+      - MYSQL_SERVICE_USER=nacos
+      - MYSQL_SERVICE_PASSWORD=nacos123
+      - NACOS_AUTH_ENABLE=false
+    depends_on:
+      - nacos-mysql
+    networks:
+      - auction-network
+    volumes:
+      - nacos-logs:/home/nacos/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8848/nacos/v1/ns/service/list?pageNo=1&pageSize=10 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    labels:
+      - "service_name=nacos"
+
+  # Nacos MySQL - 配置数据存储
+  nacos-mysql:
+    image: mysql:8
+    container_name: nacos-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=nacos
+      - MYSQL_USER=nacos
+      - MYSQL_PASSWORD=nacos123
+    ports:
+      - "3307:3306"
+    volumes:
+      - nacos-mysql-data:/var/lib/mysql
+      - ./scripts/nacos-init.sql:/docker-entrypoint-initdb.d/nacos-init.sql
+    networks:
+      - auction-network
+    restart: unless-stopped
 
   # H5 Frontend
   frontend-h5:
@@ -106,6 +188,118 @@ services:
     networks:
       - auction-network
 
+  # ==================== 日志平台 (Observability) ====================
+
+  # Loki - 日志存储
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: loki
+    ports:
+      - "3100:3100"
+      - "9096:9096"
+    volumes:
+      - ./observability/loki/loki-config.yaml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auction-network
+    restart: unless-stopped
+
+  # Promtail - 日志采集
+  promtail:
+    image: grafana/promtail:2.9.4
+    container_name: promtail
+    volumes:
+      - ./observability/promtail/promtail-config.yaml:/etc/promtail/config.yaml
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yaml
+    depends_on:
+      loki:
+        condition: service_healthy
+    networks:
+      - auction-network
+    restart: unless-stopped
+
+  # Grafana - 日志可视化
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: grafana
+    ports:
+      - "3002:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3002
+    depends_on:
+      - loki
+      - prometheus
+    networks:
+      - auction-network
+    restart: unless-stopped
+
+  # ==================== 监控平台 (Metrics) ====================
+
+  # Prometheus - 指标收集
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    networks:
+      - auction-network
+    restart: unless-stopped
+
+  # ==================== A/B 测试平台 (GrowthBook) ====================
+
+  # GrowthBook - A/B Testing Dashboard
+  growthbook:
+    image: growthbook/growthbook:latest
+    container_name: growthbook
+    ports:
+      - "3200:3200"  # API & Dashboard
+    environment:
+      - PORT=3200
+      - DATABASE_URL=postgres://growthbook:growthbook123@growthbook-db:5432/growthbook
+      - APP_ORIGIN=http://localhost:3200
+    depends_on:
+      - growthbook-db
+    networks:
+      - auction-network
+    restart: unless-stopped
+    labels:
+      - "service_name=growthbook"
+
+  # GrowthBook PostgreSQL - 实验数据存储
+  growthbook-db:
+    image: postgres:13-alpine
+    container_name: growthbook-db
+    environment:
+      - POSTGRES_USER=growthbook
+      - POSTGRES_PASSWORD=growthbook123
+      - POSTGRES_DB=growthbook
+    volumes:
+      - growthbook-data:/var/lib/postgresql/data
+    networks:
+      - auction-network
+    restart: unless-stopped
+
 networks:
   auction-network:
     driver: bridge
@@ -113,3 +307,10 @@ networks:
 volumes:
   mysql-data:
   redis-data:
+  rabbitmq-data:
+  nacos-logs:
+  nacos-mysql-data:
+  loki-data:
+  grafana-data:
+  prometheus-data:
+  growthbook-data:

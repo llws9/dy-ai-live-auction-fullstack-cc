@@ -47,10 +47,67 @@ const ProductList: React.FC = () => {
     }
   };
 
+  const handlePublish = async (id: number) => {
+    if (!window.confirm('确定要发布这个商品吗？发布后将创建竞拍记录。')) return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/v1/products/${id}/publish`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+      });
+
+      if (!response.ok) {
+        throw new Error('发布失败');
+      }
+
+      alert('发布成功！');
+      fetchProducts();
+    } catch (error) {
+      console.error('发布商品失败:', error);
+      alert('发布失败，请重试');
+    }
+  };
+
+  const handleUnpublish = async (id: number) => {
+    const reason = prompt('请输入下架原因（可选）：');
+    if (!window.confirm('确定要下架这个商品吗？这将中断正在进行的拍卖。')) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/v1/products/${id}/unpublish`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason: reason || '' }),
+      });
+
+      if (!response.ok) {
+        throw new Error('下架失败');
+      }
+
+      alert('下架成功！');
+      fetchProducts();
+    } catch (error) {
+      console.error('下架商品失败:', error);
+      alert('下架失败，请重试');
+    }
+  };
+
   const getStatusConfig = (status: ProductStatus) => {
-    return status === ProductStatus.Published
-      ? { text: '已发布', class: 'success' }
-      : { text: '草稿', class: 'default' };
+    switch (status) {
+      case ProductStatus.Published:
+        return { text: '已发布', class: 'success' };
+      case ProductStatus.Unpublished:
+        return { text: '已下架', class: 'warning' };
+      default:
+        return { text: '草稿', class: 'default' };
+    }
   };
 
   const totalPages = Math.ceil(total / 10);
@@ -150,6 +207,25 @@ const ProductList: React.FC = () => {
                   <td>{new Date(product.created_at).toLocaleString('zh-CN')}</td>
                   <td>
                     <div className="action-buttons">
+                      {product.status === ProductStatus.Draft && (
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => handlePublish(product.id)}
+                        >
+                          发布
+                        </button>
+                      )}
+                      {product.status === ProductStatus.Published && (
+                        <button
+                          className="btn btn-warning btn-sm"
+                          onClick={() => handleUnpublish(product.id)}
+                        >
+                          下架
+                        </button>
+                      )}
+                      <Link to={`/products/${product.id}/edit`}>
+                        <button className="btn btn-secondary btn-sm">编辑</button>
+                      </Link>
                       <Link to={`/products/${product.id}/rules`}>
                         <button className="btn btn-secondary btn-sm">配置规则</button>
                       </Link>

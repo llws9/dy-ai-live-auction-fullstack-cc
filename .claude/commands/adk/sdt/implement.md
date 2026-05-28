@@ -130,6 +130,15 @@ This command is **re-entrant**. Re-running `/adk:sdt:implement` after a previous
 ### 4: Execute Tasks Based on Dependencies in test/task.md
 - **Follow the Parallelization Plan from Step 3**: Dispatch parallel groups concurrently, run sequential tasks one by one
 - **Phase-by-phase execution**: Complete each phase before moving to the next
+- **Backend Phase 1 — Cluster Selection (injected into T000)**:
+  After the user confirms in T000 that they **want to deploy** (for Backend tasks only — skip this for Frontend tasks), immediately present a multi-select question using the host-compatible structured question tool:
+  > "Please select the target clusters to deploy to simultaneously (multi-select):"
+  > Options: `SG1`, `My2`, `My3`, `My`, `Maliva`, `US-TTP`, `US-TTP2`
+
+  - Store the result as `DEPLOY_CLUSTERS`.
+  - If the user selects **zero clusters**, ask for confirmation: "No clusters selected — skip deployment entirely?" If confirmed, mark T001 ~ T004 as `[x]` (skipped) and proceed to Phase 2.
+  - In **T002 (execute deployment)**: trigger one deploy call per cluster in `DEPLOY_CLUSTERS`, all in **parallel**. Treat each `(PSM, cluster)` pair as a separate sub-task with its own Deploy Task ID recorded in the T002 result table.
+  - In **T003 (poll deployment status)**: poll all Deploy Task IDs from T002 across every cluster; a cluster is considered ready only when ALL its PSMs reach terminal state (`success`). Any cluster with a `failure` terminal state should be reported individually without blocking other clusters.
 - **Never skip pending tasks**: If a task is marked as `[ ]`, do not skip it, except when a documented task-level skip condition in `test/task.md` applies and you immediately mark it `[x]` with the skip reason recorded.
 - **Reuse generated cases on rerun**: In Rerun after fix mode, do not execute case-generation tasks that were preserved as `[x]`; proceed directly to the first pending deploy/test task according to dependencies.
 - **Respect dependencies**: Run sequential tasks in order, parallel tasks [P] can run together

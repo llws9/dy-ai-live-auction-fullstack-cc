@@ -4,7 +4,7 @@ import { useAuth } from '../../store/authContext';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { setAuth } = useAuth();
   const [isRegister, setIsRegister] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -46,7 +46,8 @@ const LoginPage: React.FC = () => {
       const result = await response.json();
 
       if (response.ok && result.data) {
-        login(result.data.token, result.data.user);
+        // 设置认证状态
+        setAuth(result.data.token, result.data.user);
         navigate('/');
       } else {
         setError(result.message || '操作失败');

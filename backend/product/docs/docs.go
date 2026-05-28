@@ -846,6 +846,10 @@ const docTemplate = `{
         "model.Product": {
             "type": "object",
             "properties": {
+                "category_id": {
+                    "description": "逻辑外键关联Category",
+                    "type": "integer"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -873,26 +877,27 @@ const docTemplate = `{
             "type": "integer",
             "enum": [
                 0,
-                1
+                1,
+                2
             ],
             "x-enum-comments": {
                 "ProductStatusDraft": "草稿",
-                "ProductStatusPublished": "已发布"
+                "ProductStatusPublished": "已发布",
+                "ProductStatusUnpublished": "已下架"
             },
             "x-enum-descriptions": [
                 "草稿",
-                "已发布"
+                "已发布",
+                "已下架"
             ],
             "x-enum-varnames": [
                 "ProductStatusDraft",
-                "ProductStatusPublished"
+                "ProductStatusPublished",
+                "ProductStatusUnpublished"
             ]
         },
         "service.CreateProductRequest": {
             "type": "object",
-            "required": [
-                "name"
-            ],
             "properties": {
                 "description": {
                     "type": "string"
@@ -904,8 +909,10 @@ const docTemplate = `{
                     }
                 },
                 "name": {
-                    "type": "string",
-                    "maxLength": 128
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/model.ProductStatus"
                 }
             }
         },
@@ -923,6 +930,9 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/model.ProductStatus"
                 }
             }
         }

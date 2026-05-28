@@ -1,0 +1,37 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: 🎯
+      - heading "竞拍管理后台" [level=2] [ref=e8]
+    - list [ref=e10]:
+      - listitem [ref=e11]:
+        - link "📊 数据大屏" [ref=e12] [cursor=pointer]:
+          - /url: "#/dashboard"
+          - generic [ref=e13]: 📊
+          - generic [ref=e14]: 数据大屏
+      - listitem [ref=e15]:
+        - link "📦 商品管理" [ref=e16] [cursor=pointer]:
+          - /url: "#/products"
+          - generic [ref=e17]: 📦
+          - generic [ref=e18]: 商品管理
+      - listitem [ref=e19]:
+        - link "🎯 竞拍管理" [ref=e20] [cursor=pointer]:
+          - /url: "#/auctions"
+          - generic [ref=e21]: 🎯
+          - generic [ref=e22]: 竞拍管理
+      - listitem [ref=e23]:
+        - link "📺 直播间管理" [ref=e24] [cursor=pointer]:
+          - /url: "#/live-streams"
+          - generic [ref=e25]: 📺
+          - generic [ref=e26]: 直播间管理
+      - listitem [ref=e27]:
+        - link "🧾 订单管理" [ref=e28] [cursor=pointer]:
+          - /url: "#/orders"
+          - generic [ref=e29]: 🧾
+          - generic [ref=e30]: 订单管理
+      - listitem [ref=e31]:
+        - link "📈 数据统计" [ref=e32] [cursor=pointer]:
+          - /url: "#/statistics"
+          - generic [ref=e33]: 📈
+          - generic [ref=e34]: 数据统计
+  - main [ref=e35]

@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 
+	"product-service/config"
 	"product-service/dao"
 	"product-service/handler"
 	"product-service/model"
@@ -12,8 +14,24 @@ import (
 )
 
 func main() {
+	// 从 Nacos 加载配置（失败时使用环境变量）
+	cfg, nacosLoader := config.LoadFromNacosWithFallback()
+
 	// 初始化数据库连接
-	db, err := dao.InitDBFromEnv()
+	dbCfg := &dao.Config{
+		Host:         cfg.Database.Host,
+		Port:         "3306",
+		User:         cfg.Database.User,
+		Password:     cfg.Database.Password,
+		Database:     cfg.Database.Name,
+		MaxIdleConns: cfg.Database.MaxIdleConns,
+		MaxOpenConns: cfg.Database.MaxOpenConns,
+	}
+	if cfg.Database.Port > 0 {
+		dbCfg.Port = fmt.Sprintf("%d", cfg.Database.Port)
+	}
+
+	db, err := dao.InitDB(dbCfg)
 	if err != nil {
 		log.Fatalf("Failed to connect database: %v", err)
 	}
@@ -22,8 +40,10 @@ func main() {
 	if err := db.AutoMigrate(
 		&model.User{},
 		&model.Product{},
+		&model.Category{},
 		&model.AuctionRule{},
 		&model.Order{},
+		&model.LiveStream{},
 	); err != nil {
 		log.Printf("Warning: AutoMigrate failed (tables may already exist): %v", err)
 	}
@@ -34,33 +54,49 @@ func main() {
 	orderDAO := dao.NewOrderDAO(db)
 	historyDAO := dao.NewHistoryDAO(db)
 	statisticsDAO := dao.NewStatisticsDAO(db)
+	liveStreamDAO := dao.NewLiveStreamDAO(db)
+	categoryDAO := dao.NewCategoryDAO(db)
 
 	// 初始化 Service 层
-	productService := service.NewProductService(productDAO, ruleDAO)
+	productService := service.NewProductService(productDAO, ruleDAO, liveStreamDAO)
 	orderService := service.NewOrderService(orderDAO, historyDAO)
 	statisticsService := service.NewStatisticsService(statisticsDAO)
+	liveStreamService := service.NewLiveStreamService(liveStreamDAO)
+	categoryService := service.NewCategoryService(categoryDAO)
 
 	// 初始化 Handler 层
 	productHandler := handler.NewProductHandler(productService)
 	ruleHandler := handler.NewRuleHandler(productService)
 	orderHandler := handler.NewOrderHandler(orderService)
 	statisticsHandler := handler.NewStatisticsHandler(statisticsService)
+	productPublishHandler := handler.NewProductHandler(productService)
+	liveStreamHandler := handler.NewLiveStreamHandler(liveStreamService)
+	categoryHandler := handler.NewCategoryHandler(categoryService)
+
+	// 监听配置变更（如果 Nacos 可用）
+	if nacosLoader != nil {
+		go func() {
+			_ = nacosLoader.LoadAndListen(cfg, func(newCfg interface{}) {
+				log.Printf("Product config updated from Nacos")
+			})
+		}()
+	}
 
 	// 创建 Hertz 服务器
 	h := server.Default(
-		server.WithHostPorts(":8081"),
+		server.WithHostPorts(cfg.Server.Port),
 	)
 
 	// 注册路由
-	registerRoutes(h, productHandler, ruleHandler, orderHandler, statisticsHandler)
+	registerRoutes(h, productHandler, ruleHandler, orderHandler, statisticsHandler, productPublishHandler, liveStreamHandler, categoryHandler)
 
 	// 启动服务
-	log.Println("Product service starting on :8081")
+	log.Printf("Product service starting on %s", cfg.Server.Port)
 	h.Spin()
 }
 
 // registerRoutes 注册路由
-func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, ruleHandler *handler.RuleHandler, orderHandler *handler.OrderHandler, statisticsHandler *handler.StatisticsHandler) {
+func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, ruleHandler *handler.RuleHandler, orderHandler *handler.OrderHandler, statisticsHandler *handler.StatisticsHandler, productPublishHandler *handler.ProductHandler, liveStreamHandler *handler.LiveStreamHandler, categoryHandler *handler.CategoryHandler) {
 	v1 := h.Group("/api/v1")
 
 	// 商品相关路由
@@ -69,6 +105,10 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	v1.POST("/products", productHandler.Create)
 	v1.PUT("/products/:id", productHandler.Update)
 	v1.DELETE("/products/:id", productHandler.Delete)
+
+	// 商品发布/下架路由
+	v1.POST("/products/:id/publish", productPublishHandler.PublishHandler)
+	v1.POST("/products/:id/unpublish", productPublishHandler.UnpublishHandler)
 
 	// 竞拍规则相关路由
 	v1.POST("/products/:id/rules", ruleHandler.Create)
@@ -82,9 +122,19 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	v1.PUT("/orders/:id/ship", orderHandler.Ship)
 	v1.GET("/orders/history", orderHandler.GetUserHistory)
 
-	// ========== 统计相关路由 ==========
+	// 直播间相关路由
+	v1.GET("/admin/live-streams", liveStreamHandler.ListAdmin)
+	v1.GET("/live-streams/:id", liveStreamHandler.GetDetail)
+
+	// 统计相关路由
 	v1.GET("/statistics/overview", statisticsHandler.GetOverview)
 	v1.GET("/statistics/auctions", statisticsHandler.GetAuctionStatistics)
 	v1.GET("/statistics/revenue", statisticsHandler.GetRevenueStatistics)
 	v1.GET("/statistics/users", statisticsHandler.GetUserStatistics)
+
+	// 类别相关路由
+	v1.GET("/categories", categoryHandler.List)
+	v1.POST("/categories", categoryHandler.Create)
+	v1.PUT("/categories/:id", categoryHandler.Update)
+	v1.DELETE("/categories/:id", categoryHandler.Delete)
 }

@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
 import { AuthProvider, useAuth } from './store/authContext'
 import { AuctionProvider } from './store/auctionContext'
+import { GrowthBookContextProvider } from './store/growthbookContext'
 import ErrorBoundary from './components/ErrorBoundary'
 import { ToastProvider, useToast } from './components/Toast'
 import { setToastFunction } from './services/api'
@@ -63,29 +64,31 @@ function App() {
         <ToastInitializer />
         <AuthProvider>
           <ErrorMonitorInitializer />
-          <AuctionProvider>
-            <div className="app">
-              <Suspense fallback={<LoadingSpinner />}>
-                <Routes>
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/" element={<Home />} />
-                  <Route path="/live" element={<Live />} />
-                  <Route path="/auction/:id" element={<Auction />} />
-                  <Route path="/result/:id" element={<Result />} />
-                  <Route path="/follow" element={
-                    <PrivateRoute>
-                      <Follow />
-                    </PrivateRoute>
-                  } />
-                  <Route path="/history" element={
-                    <PrivateRoute>
-                      <History />
-                    </PrivateRoute>
-                  } />
-                </Routes>
-              </Suspense>
-            </div>
-          </AuctionProvider>
+          <GrowthBookContextProvider>
+            <AuctionProvider>
+              <div className="app">
+                <Suspense fallback={<LoadingSpinner />}>
+                  <Routes>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/" element={<Home />} />
+                    <Route path="/live" element={<Live />} />
+                    <Route path="/auction/:id" element={<Auction />} />
+                    <Route path="/result/:id" element={<Result />} />
+                    <Route path="/follow" element={
+                      <PrivateRoute>
+                        <Follow />
+                      </PrivateRoute>
+                    } />
+                    <Route path="/history" element={
+                      <PrivateRoute>
+                        <History />
+                      </PrivateRoute>
+                    } />
+                  </Routes>
+                </Suspense>
+              </div>
+            </AuctionProvider>
+          </GrowthBookContextProvider>
         </AuthProvider>
       </ToastProvider>
     </ErrorBoundary>

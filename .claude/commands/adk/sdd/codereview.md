@@ -159,12 +159,33 @@ If a reviewer flags any file in these directories for cleanup or removal, discar
 
 Compute the diff range, file list, and diff. Minimize permission prompts by combining into as few commands as possible.
 
+**Excluded paths:** Before computing diff, filter out files matching these patterns:
+- `.ttadk/`, `.claude/`, `.codex/` — tooling/config directories
+- `node_modules/`, `vendor/` — dependency directories
+- `.venv/`, `venv/`, `__pycache__/` — Python artifacts
+- `dist/`, `build/` — build outputs
+- `.git/` — Git internals
+- `*.lock`, `*-lock.json`, `*.sum` — lock files
+
+Use `git diff` with pathspec exclusions or pipe through `grep -vE` to filter.
+
 **If `base:` argument is provided (fast path):**
 
 ```
 BASE_ARG="{base_arg}"
 BASE=$(git merge-base HEAD "$BASE_ARG" 2>/dev/null) || BASE="$BASE_ARG"
-echo "BASE:$BASE" && echo "FILES:" && git diff --name-only $BASE && echo "DIFF:" && git diff -U10 $BASE && echo "UNTRACKED:" && git ls-files --others --exclude-standard
+EXCLUDE_PATTERN="^(\.ttadk/|\.claude/|\.codex/|node_modules/|vendor/|\.venv/|venv/|__pycache__/|dist/|build/|\.git/)|\.lock$|-lock\.json$|\.sum$|-lock\.yaml$"
+ALL_FILES=$(git diff --name-only $BASE)
+FILES=$(echo "$ALL_FILES" | grep -vE "$EXCLUDE_PATTERN" || true)
+echo "BASE:$BASE"
+echo "FILES:"
+echo "$FILES"
+echo "EXCLUDED:"
+echo "$ALL_FILES" | grep -E "$EXCLUDE_PATTERN" || echo "(none)"
+echo "DIFF:"
+for f in $FILES; do git diff -U10 $BASE -- "$f" 2>/dev/null; done
+echo "UNTRACKED:"
+git ls-files --others --exclude-standard | grep -vE "$EXCLUDE_PATTERN" || echo "(none)"
 ```
 
 Do not combine `base:` with a Bits-Code MR number or branch target. If both are present, stop with: `Cannot use base: with a Bits-Code MR number or branch target — base: implies the current checkout is already the correct branch.`
@@ -243,7 +264,18 @@ If checkout switching is allowed:
 Detect the review base branch and compute the merge-base using `.ttadk/plugins/ttadk/core/resources/codereview/resolve-base.sh`, then produce:
 
 ```
-echo "BASE:$BASE" && echo "FILES:" && git diff --name-only $BASE && echo "DIFF:" && git diff -U10 $BASE && echo "UNTRACKED:" && git ls-files --others --exclude-standard
+EXCLUDE_PATTERN="^(\.ttadk/|\.claude/|\.codex/|node_modules/|vendor/|\.venv/|venv/|__pycache__/|dist/|build/|\.git/)|\.lock$|-lock\.json$|\.sum$|-lock\.yaml$"
+ALL_FILES=$(git diff --name-only $BASE)
+FILES=$(echo "$ALL_FILES" | grep -vE "$EXCLUDE_PATTERN" || true)
+echo "BASE:$BASE"
+echo "FILES:"
+echo "$FILES"
+echo "EXCLUDED:"
+echo "$ALL_FILES" | grep -E "$EXCLUDE_PATTERN" || echo "(none)"
+echo "DIFF:"
+for f in $FILES; do git diff -U10 $BASE -- "$f" 2>/dev/null; done
+echo "UNTRACKED:"
+git ls-files --others --exclude-standard | grep -vE "$EXCLUDE_PATTERN" || echo "(none)"
 ```
 
 If the runtime can query Bits-Code / Codebase, first attempt MR auto-detection for the current branch:

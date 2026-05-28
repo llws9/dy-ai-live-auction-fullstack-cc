@@ -4,6 +4,7 @@
 export enum ProductStatus {
   Draft = 0,
   Published = 1,
+  Unpublished = 2,
 }
 
 // 商品

@@ -1,0 +1,6 @@
+[     228ms] The requested module '/node_modules/.vite/deps/recharts.js?v=4f0c0e05' does not provide an export named 'Loader2'
+[   31305ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5175/@vite/client:559
+[   31306ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5175/:0
+[   32310ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5175/:0
+[   33312ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5175/:0
+[   34928ms] The requested module '/node_modules/.vite/deps/recharts.js?v=6433e7bc' does not provide an export named 'Loader2'

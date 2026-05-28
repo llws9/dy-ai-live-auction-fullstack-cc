@@ -1,0 +1,5 @@
+[      61ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5175/node_modules/.vite/deps/chunk-NUMECXU6.js?v=97e752d6:21550
+[      94ms] [ERROR] 获取商品列表失败: TypeError: Cannot read properties of undefined (reading 'list')
+    at http://localhost:5175/src/pages-new/GoodsList.tsx:68:28 @ http://localhost:5175/src/pages-new/GoodsList.tsx:70
+[      99ms] [ERROR] 获取商品列表失败: TypeError: Cannot read properties of undefined (reading 'list')
+    at http://localhost:5175/src/pages-new/GoodsList.tsx:68:28 @ http://localhost:5175/src/pages-new/GoodsList.tsx:70

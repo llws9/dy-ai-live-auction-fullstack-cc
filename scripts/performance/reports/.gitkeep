@@ -1,0 +1,36 @@
+# 测试报告目录
+
+此目录用于存储性能测试生成的报告文件。
+
+## 报告类型
+
+- **JSON报告**: 包含详细的测试数据和指标
+- **HTML报告**: 可视化的测试报告,包含图表和分析
+- **文本报告**: wrk工具生成的原始输出
+
+## 报告命名规则
+
+- `load_test_YYYYMMDD_HHMMSS.json` - 负载测试JSON报告
+- `stress_test_YYYYMMDD_HHMMSS.json` - 压力测试JSON报告
+- `spike_test_YYYYMMDD_HHMMSS.json` - 峰值测试JSON报告
+- `scenario_*_YYYYMMDD_HHMMSS.json` - 测试场景JSON报告
+- `wrk_*_YYYYMMDD_HHMMSS.txt` - wrk测试文本报告
+
+## 查看报告
+
+```bash
+# 查看HTML报告
+open reports/load_test_report.html
+
+# 查看JSON报告
+cat reports/load_test_summary.json | jq .
+
+# 查看wrk报告
+cat reports/wrk_*.txt
+```
+
+## 注意事项
+
+- 报告文件可能包含敏感信息,请勿提交到版本控制
+- 定期清理旧的报告文件以节省磁盘空间
+- 建议保留最近一个月的测试报告用于对比分析

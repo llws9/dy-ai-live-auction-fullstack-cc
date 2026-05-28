@@ -3,10 +3,12 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"auction-service/dao"
 	"auction-service/lock"
 	"auction-service/model"
+	"auction-service/pkg/metrics"
 	"auction-service/websocket"
 )
 
@@ -19,6 +21,7 @@ type BidService struct {
 	hub                *websocket.Hub
 	rankThrottle       *RankingThrottle
 	notificationSender NotificationSender // 通知发送接口
+	metrics            *metrics.AuctionMetrics // 新增：指标收集器
 }
 
 // NewBidService 创建出价服务
@@ -30,6 +33,11 @@ func NewBidService(auctionDAO *dao.AuctionDAO, bidDAO *dao.BidDAO, ruleDAO *dao.
 		userDAO:      userDAO,
 		rankThrottle: NewRankingThrottle(),
 	}
+}
+
+// SetMetrics 设置指标收集器
+func (s *BidService) SetMetrics(m *metrics.AuctionMetrics) {
+	s.metrics = m
 }
 
 // SetHub 设置 WebSocket Hub
@@ -60,6 +68,19 @@ type PlaceBidResult struct {
 
 // PlaceBid 出价
 func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*PlaceBidResult, error) {
+	start := time.Now()
+
+	// 记录并发出价计数（新增）
+	if s.metrics != nil {
+		s.metrics.IncConcurrentBids()
+	}
+	var concurrentDecreased bool
+	defer func() {
+		if !concurrentDecreased && s.metrics != nil {
+			s.metrics.DecConcurrentBids()
+		}
+	}()
+
 	// 1. 校验用户是否存在（逻辑外键校验）
 	if s.userDAO != nil {
 		exists, err := s.userDAO.Exists(ctx, req.UserID)
@@ -195,6 +216,10 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 						s.auctionDAO.UpdateStatus(ctx, req.AuctionID, model.AuctionStatusDelayed)
 					}
 					fmt.Printf("Auction %d delayed by %d seconds\n", req.AuctionID, actualDelay)
+					// 记录延时触发指标（新增）
+					if s.metrics != nil {
+						s.metrics.RecordDelayTriggered(req.AuctionID)
+					}
 				}
 			}
 		}
@@ -210,6 +235,14 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 	s.broadcastRanking(ctx, req.AuctionID)
 
 	// 14. 返回成功结果
+	// 记录出价成功指标（新增）
+	if s.metrics != nil {
+		s.metrics.RecordBidLatency(req.AuctionID, start, true)
+		s.metrics.RecordBid(req.AuctionID, req.Amount, true)
+		s.metrics.RecordBidUser(req.AuctionID)
+	}
+	concurrentDecreased = true // 标记已处理
+
 	return &PlaceBidResult{
 		Success:      true,
 		Message:      "出价成功",
