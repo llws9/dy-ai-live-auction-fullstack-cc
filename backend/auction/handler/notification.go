@@ -191,3 +191,45 @@ func (h *NotificationHandler) MarkAllAsRead(ctx context.Context, c *app.RequestC
 		"message": "success",
 	})
 }
+
+// HotPullNotifications 热拉通知接口
+// @Summary 热拉通知接口
+// @Description 用户登录/切换前台时主动拉取热门直播间通知
+// @Tags notification
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /notifications/hot-pull [post]
+func (h *NotificationHandler) HotPullNotifications(ctx context.Context, c *app.RequestContext) {
+	// 从JWT获取用户ID
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, map[string]interface{}{
+			"code":    401,
+			"message": "未认证，请先登录",
+		})
+		return
+	}
+	userID := userIDInterface.(int64)
+
+	// 热拉通知
+	notifications, err := h.notificationService.HotPullNotifications(ctx, userID)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{
+			"code":    500,
+			"message": "热拉通知失败: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{
+		"code":    0,
+		"message": "success",
+		"data": map[string]interface{}{
+			"notifications": notifications,
+			"count":         len(notifications),
+		},
+	})
+}

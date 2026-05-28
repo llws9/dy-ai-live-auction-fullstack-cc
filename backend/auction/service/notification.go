@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 
@@ -41,15 +42,15 @@ type EventHandler func(ctx context.Context, event interface{}) error
 // NotificationService 通知服务
 type NotificationService struct {
 	notificationDAO *dao.NotificationDAO
-	hub            *websocket.Hub
-	redis          *redis.Client
+	hub             *websocket.Hub
+	redis           *redis.Client
 }
 
 // NewNotificationService 创建通知服务
 func NewNotificationService(notificationDAO *dao.NotificationDAO, redis *redis.Client) *NotificationService {
 	return &NotificationService{
 		notificationDAO: notificationDAO,
-		redis:          redis,
+		redis:           redis,
 	}
 }
 
@@ -161,8 +162,8 @@ func (s *NotificationService) SendAuctionWonNotification(ctx context.Context, us
 		Title:   "竞拍中标",
 		Content: fmt.Sprintf("恭喜！您以 %.2f 元中标了竞拍", finalPrice),
 		Data: map[string]interface{}{
-			"auction_id":   auctionID,
-			"final_price":  finalPrice,
+			"auction_id":  auctionID,
+			"final_price": finalPrice,
 		},
 	})
 }
@@ -265,6 +266,101 @@ func (s *NotificationService) SyncUnreadNotifications(ctx context.Context, userI
 	}
 
 	return nil
+}
+
+// HotPullNotifications - 热拉通知
+// 用户登录/切换前台时主动拉取热门直播间通知
+// 1. Redis获取用户关注的直播间集合 SMEMBERS user:{uid}:followed_live_streams
+// 2. ZRANGEBYSCORE live_stream:hot:start_time (now, now+1hour) 获取即将开播的热门直播间
+// 3. SMEMBERS live_stream:hot:live_now 获取正在直播的热门直播间
+// 4. 过滤：只返回用户关注的热门直播间
+// 5. 生成通知，返回结果
+func (s *NotificationService) HotPullNotifications(ctx context.Context, userID int64) ([]*model.Notification, error) {
+	if s.redis == nil {
+		return nil, fmt.Errorf("redis client not initialized")
+	}
+
+	// 1. 获取用户关注的直播间集合
+	followedLiveStreams, err := dao.GetUserFollowedLiveStreams(ctx, userID)
+	if err != nil {
+		log.Printf("HotPull: failed to get user followed live streams: %v", err)
+		return nil, fmt.Errorf("failed to get user followed live streams: %w", err)
+	}
+
+	if len(followedLiveStreams) == 0 {
+		// 用户没有关注任何直播间，返回空列表
+		return []*model.Notification{}, nil
+	}
+
+	// 创建关注直播间的Set便于快速查找
+	followedSet := make(map[int64]bool)
+	for _, id := range followedLiveStreams {
+		followedSet[id] = true
+	}
+
+	now := time.Now()
+	oneHourLater := now.Add(1 * time.Hour)
+
+	notifications := make([]*model.Notification, 0)
+
+	// 2. 获取即将开播的热门直播间 (now, now+1hour)
+	startingSoon, err := dao.GetHotLiveStreamsStartingSoon(ctx, now, oneHourLater)
+	if err != nil {
+		log.Printf("HotPull: failed to get hot live streams starting soon: %v", err)
+		// 继续处理，不返回错误
+	}
+
+	// 4. 过滤：只返回用户关注的热门直播间，生成即将开播通知
+	for _, liveStreamID := range startingSoon {
+		if followedSet[liveStreamID] {
+			notification := &model.Notification{
+				UserID:  userID,
+				Type:    model.NotificationTypeLiveStreamStartingSoon,
+				Title:   "即将开播",
+				Content: fmt.Sprintf("您关注的直播间 #%d 即将开播，请准时收看！", liveStreamID),
+				Data: map[string]interface{}{
+					"live_stream_id": liveStreamID,
+					"triggered_at":   now.Format(time.RFC3339),
+				},
+			}
+			notifications = append(notifications, notification)
+
+			// 实时推送
+			s.pushNotification(ctx, notification)
+		}
+	}
+
+	// 3. 获取正在直播的热门直播间
+	liveNow, err := dao.GetHotLiveNowSet(ctx)
+	if err != nil {
+		log.Printf("HotPull: failed to get hot live now set: %v", err)
+		// 继续处理，不返回错误
+	}
+
+	// 4. 过滤：只返回用户关注的热门直播间，生成正在直播通知
+	for _, liveStreamID := range liveNow {
+		if followedSet[liveStreamID] {
+			notification := &model.Notification{
+				UserID:  userID,
+				Type:    model.NotificationTypeLiveStreamNowLive,
+				Title:   "正在直播",
+				Content: fmt.Sprintf("您关注的直播间 #%d 正在直播，快来看看！", liveStreamID),
+				Data: map[string]interface{}{
+					"live_stream_id": liveStreamID,
+					"triggered_at":   now.Format(time.RFC3339),
+				},
+			}
+			notifications = append(notifications, notification)
+
+			// 实时推送
+			s.pushNotification(ctx, notification)
+		}
+	}
+
+	log.Printf("HotPull: user=%d, followed=%d, starting_soon=%d, live_now=%d, notifications=%d",
+		userID, len(followedLiveStreams), len(startingSoon), len(liveNow), len(notifications))
+
+	return notifications, nil
 }
 
 // Ensure NotificationService implements NotificationSender

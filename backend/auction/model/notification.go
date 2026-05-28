@@ -11,17 +11,20 @@ import (
 type NotificationType string
 
 const (
-	NotificationTypeBidOutbid      NotificationType = "bid_outbid"       // 出价被超越
-	NotificationTypeAuctionWon     NotificationType = "auction_won"      // 竞拍中标
-	NotificationTypeAuctionLost    NotificationType = "auction_lost"     // 竞拍未中标
-	NotificationTypeOrderPaid      NotificationType = "order_paid"       // 订单已支付
-	NotificationTypeOrderShipped   NotificationType = "order_shipped"    // 订单已发货
-	NotificationTypeOrderCompleted NotificationType = "order_completed"  // 订单已完成
+	NotificationTypeBidOutbid      NotificationType = "bid_outbid"      // 出价被超越
+	NotificationTypeAuctionWon     NotificationType = "auction_won"     // 竞拍中标
+	NotificationTypeAuctionLost    NotificationType = "auction_lost"    // 竞拍未中标
+	NotificationTypeOrderPaid      NotificationType = "order_paid"      // 订单已支付
+	NotificationTypeOrderShipped   NotificationType = "order_shipped"   // 订单已发货
+	NotificationTypeOrderCompleted NotificationType = "order_completed" // 订单已完成
 	// 新增：直播间竞拍相关通知
-	NotificationTypeNewProduct       NotificationType = "new_product"        // 新商品发布
-	NotificationTypeAuctionStarting  NotificationType = "auction_starting"   // 竞拍即将开始
+	NotificationTypeNewProduct         NotificationType = "new_product"         // 新商品发布
+	NotificationTypeAuctionStarting    NotificationType = "auction_starting"    // 竞拍即将开始
 	NotificationTypeProductUnpublished NotificationType = "product_unpublished" // 商品已下架
-	NotificationTypeAuctionEnded     NotificationType = "auction_ended"      // 竞拍已结束
+	NotificationTypeAuctionEnded       NotificationType = "auction_ended"       // 竞拍已结束
+	// 新增：热门直播间通知
+	NotificationTypeLiveStreamStartingSoon NotificationType = "live_stream_starting_soon" // 即将开播
+	NotificationTypeLiveStreamNowLive      NotificationType = "live_stream_now_live"      // 正在直播
 )
 
 // Notification 用户通知实体

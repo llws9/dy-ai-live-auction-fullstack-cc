@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -52,6 +53,7 @@ func main() {
 		&model.Auction{},
 		&model.Bid{},
 		&model.UserLiveStreamFollow{},
+		&model.UserProductReminder{},
 	); err != nil {
 		log.Printf("Warning: AutoMigrate failed (tables may already exist): %v", err)
 	}
@@ -63,6 +65,7 @@ func main() {
 	userDAO := dao.NewUserDAO(db)
 	notificationDAO := dao.NewNotificationDAO(db, dao.GetRedis())
 	userLiveStreamFollowDAO := dao.NewUserLiveStreamFollowDAO(db)
+	userProductReminderDAO := dao.NewUserProductReminderDAO(db)
 
 	// 初始化 WebSocket Hub
 	hub := websocket.NewHub()
@@ -134,6 +137,12 @@ func main() {
 	scheduler.SetHub(hub)
 	scheduler.Start()
 	defer scheduler.Stop()
+
+	// 启动冷推定时任务
+	ctx := context.Background()
+	coldPushScheduler := service.NewColdPushScheduler(notificationService, userLiveStreamFollowDAO, dao.GetRedis())
+	go coldPushScheduler.Run(ctx)
+	log.Println("Cold push scheduler started")
 
 	// 监听配置变更（如果 Nacos 可用）
 	if nacosLoader != nil {
@@ -234,6 +243,7 @@ func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bid
 	v1.GET("/notifications/unread-count", notificationHandler.GetUnreadCount)
 	v1.PUT("/notifications/:id/read", notificationHandler.MarkAsRead)
 	v1.PUT("/notifications/read-all", notificationHandler.MarkAllAsRead)
+	v1.POST("/notifications/hot-pull", notificationHandler.HotPullNotifications)
 
 	// ========== 直播间关注相关路由 ==========
 	v1.POST("/live-streams/:id/follow", followHandler.FollowHandler)
