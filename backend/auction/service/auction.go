@@ -253,3 +253,16 @@ func (s *AuctionService) GetAuctionsByStatus(ctx context.Context, status int) ([
 	slice, _, err := s.auctionDAO.List(ctx, (*model.AuctionStatus)(&status), 1, 1000)
 	return slice, err
 }
+
+// ListAuctionsWithFilters 获取竞拍列表（支持多条件筛选）
+func (s *AuctionService) ListAuctionsWithFilters(ctx context.Context, filters *dao.AuctionFilters, page, pageSize int) ([]model.Auction, int64, error) {
+	return s.auctionDAO.ListWithFilters(ctx, filters, page, pageSize)
+}
+
+// GetAuctionBids 获取竞拍的出价记录
+func (s *AuctionService) GetAuctionBids(ctx context.Context, auctionID int64, limit int) ([]model.Bid, error) {
+	if s.bidDAO == nil {
+		return nil, errors.New("bidDAO not initialized")
+	}
+	return s.bidDAO.ListByAuctionID(ctx, auctionID, limit)
+}
