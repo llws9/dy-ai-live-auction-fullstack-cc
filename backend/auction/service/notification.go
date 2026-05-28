@@ -136,7 +136,7 @@ func (s *NotificationService) pushNotification(ctx context.Context, notification
 	}
 
 	// 发送到用户房间（用户ID作为房间ID）
-	s.hub.BroadcastToRoom(notification.UserID, msg)
+	s.hub.BroadcastToUserRoom(notification.UserID, msg)
 }
 
 // SendBidOutbidNotification 发送出价被超越通知

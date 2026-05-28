@@ -40,6 +40,12 @@ func (s *FollowService) Follow(ctx context.Context, userID, liveStreamID int64) 
 		return nil, fmt.Errorf("关注失败: %w", err)
 	}
 
+	// 同步到Redis（用于热拉通知过滤）
+	if err := dao.AddUserFollowedLiveStream(ctx, userID, liveStreamID); err != nil {
+		// Redis同步失败不影响主流程，仅记录日志
+		fmt.Printf("Warning: failed to sync follow to Redis: %v\n", err)
+	}
+
 	return follow, nil
 }
 
@@ -48,6 +54,12 @@ func (s *FollowService) Unfollow(ctx context.Context, userID, liveStreamID int64
 	// 删除关注记录
 	if err := s.followDAO.Delete(ctx, userID, liveStreamID); err != nil {
 		return fmt.Errorf("取消关注失败: %w", err)
+	}
+
+	// 同步到Redis（用于热拉通知过滤）
+	if err := dao.RemoveUserFollowedLiveStream(ctx, userID, liveStreamID); err != nil {
+		// Redis同步失败不影响主流程，仅记录日志
+		fmt.Printf("Warning: failed to sync unfollow to Redis: %v\n", err)
 	}
 
 	return nil
