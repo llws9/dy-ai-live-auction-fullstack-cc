@@ -231,6 +231,19 @@ export const useNotification = () => {
     };
   }, [hotPullNotifications]);
 
+  // 监听登录成功事件 - 登录成功后触发热拉
+  useEffect(() => {
+    const handleLoginSuccess = () => {
+      console.log('[HotPull] Triggered by login success');
+      hotPullNotifications();
+    };
+
+    window.addEventListener('login-success', handleLoginSuccess);
+    return () => {
+      window.removeEventListener('login-success', handleLoginSuccess);
+    };
+  }, [hotPullNotifications]);
+
   return {
     notifications: state.notifications,
     unreadCount: state.unreadCount,

@@ -48,6 +48,8 @@ const LoginPage: React.FC = () => {
       if (response.ok && result.data) {
         // 设置认证状态
         setAuth(result.data.token, result.data.user);
+        // 触发登录成功事件，用于通知系统热拉
+        window.dispatchEvent(new CustomEvent('login-success'));
         navigate('/');
       } else {
         setError(result.message || '操作失败');

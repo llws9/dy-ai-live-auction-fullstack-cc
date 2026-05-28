@@ -81,6 +81,8 @@ func main() {
 	notificationService := service.NewNotificationService(notificationDAO, dao.GetRedis())
 	batchNotificationService := service.NewBatchNotificationService(userLiveStreamFollowDAO, notificationDAO, notificationService)
 	followService := service.NewFollowService(userLiveStreamFollowDAO)
+	productReminderService := service.NewProductReminderService(userProductReminderDAO)
+	productReminderService.SetAuctionDAO(auctionDAO)
 
 	// 设置出价服务的通知发送器
 	bidService.SetNotificationSender(notificationService)
@@ -123,6 +125,7 @@ func main() {
 	userHandler := handler.NewUserHandler(userDAO)
 	notificationHandler := handler.NewNotificationHandler(notificationService)
 	followHandler := handler.NewFollowHandler(followService)
+	productReminderHandler := handler.NewProductReminderHandler(productReminderService)
 
 	// 初始化认证 Handler
 	jwtExpire := 24 // 24小时
@@ -162,7 +165,7 @@ func main() {
 	)
 
 	// 注册路由
-	registerRoutes(h, auctionHandler, bidHandler, wsHandler, userHandler, authHandler, notificationHandler, followHandler)
+	registerRoutes(h, auctionHandler, bidHandler, wsHandler, userHandler, authHandler, notificationHandler, followHandler, productReminderHandler)
 
 	// 启动服务
 	log.Printf("Auction service starting on %s (HTTP) and %s (WebSocket)", cfg.Server.HTTPPort, cfg.Server.WSPort)
