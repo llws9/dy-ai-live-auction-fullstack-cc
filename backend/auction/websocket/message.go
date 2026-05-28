@@ -1,5 +1,7 @@
 package websocket
 
+import "time"
+
 // MessageType WebSocket 消息类型
 type MessageType string
 
@@ -19,6 +21,11 @@ const (
 	MessageTypeSyncResponse   MessageType = "sync_response"
 	MessageTypeError          MessageType = "error"
 	MessageTypeNotification   MessageType = "notification" // 通知消息类型
+
+	// 天灯相关消息类型
+	MessageTypeSkyLampActivated MessageType = "sky_lamp_activated" // 天灯开启
+	MessageTypeSkyLampAutoBid   MessageType = "sky_lamp_auto_bid"   // 自动跟价
+	MessageTypeSkyLampStopped   MessageType = "sky_lamp_stopped"    // 天灯停止
 )
 
 // Message WebSocket 消息基础结构
@@ -115,6 +122,32 @@ type NotificationData struct {
 	CreatedAt int64                  `json:"created_at"`
 }
 
+// SkyLampActivatedData 天灯开启通知
+type SkyLampActivatedData struct {
+	AuctionID        int64   `json:"auction_id"`
+	UserID           int64   `json:"user_id"`
+	SubscriptionID   int64   `json:"subscription_id"`
+	InitialBidAmount float64 `json:"initial_bid_amount"`
+	MaxPriceLimit    float64 `json:"max_price_limit"`
+}
+
+// SkyLampAutoBidData 自动跟价通知
+type SkyLampAutoBidData struct {
+	AuctionID       int64   `json:"auction_id"`
+	UserID          int64   `json:"user_id"`
+	Amount          float64 `json:"amount"`
+	RemainingBudget float64 `json:"remaining_budget"`
+	AutoBidCount    int     `json:"auto_bid_count"`
+}
+
+// SkyLampStoppedData 天灯停止通知
+type SkyLampStoppedData struct {
+	AuctionID     int64  `json:"auction_id"`
+	UserID        int64  `json:"user_id"`
+	Reason        string `json:"reason"` // "limit_reached" | "cancelled" | "auction_ended" | "max_count_reached"
+	TotalBidCount int    `json:"total_bid_count"`
+}
+
 // NewMessage 创建消息
 func NewMessage(msgType MessageType, data interface{}) *Message {
 	return &Message{
@@ -193,4 +226,48 @@ func NewRankUpdateMessage(auctionID int64, ranking []RankItem) *Message {
 // NewNotificationMessage 创建通知消息
 func NewNotificationMessage(data *NotificationData) *Message {
 	return NewMessage(MessageTypeNotification, data)
+}
+
+// NewSkyLampActivatedMessage 创建天灯开启消息
+func NewSkyLampActivatedMessage(auctionID, userID, subscriptionID int64, initialBidAmount, maxPriceLimit float64) *Message {
+	return &Message{
+		Type:      MessageTypeSkyLampActivated,
+		Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
+		Data: SkyLampActivatedData{
+			AuctionID:        auctionID,
+			UserID:           userID,
+			SubscriptionID:   subscriptionID,
+			InitialBidAmount: initialBidAmount,
+			MaxPriceLimit:    maxPriceLimit,
+		},
+	}
+}
+
+// NewSkyLampAutoBidMessage 创建自动跟价消息
+func NewSkyLampAutoBidMessage(auctionID, userID int64, amount, remainingBudget float64, autoBidCount int) *Message {
+	return &Message{
+		Type:      MessageTypeSkyLampAutoBid,
+		Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
+		Data: SkyLampAutoBidData{
+			AuctionID:       auctionID,
+			UserID:          userID,
+			Amount:          amount,
+			RemainingBudget: remainingBudget,
+			AutoBidCount:    autoBidCount,
+		},
+	}
+}
+
+// NewSkyLampStoppedMessage 创建天灯停止消息
+func NewSkyLampStoppedMessage(auctionID, userID int64, reason string, totalBidCount int) *Message {
+	return &Message{
+		Type:      MessageTypeSkyLampStopped,
+		Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
+		Data: SkyLampStoppedData{
+			AuctionID:     auctionID,
+			UserID:        userID,
+			Reason:        reason,
+			TotalBidCount: totalBidCount,
+		},
+	}
 }
