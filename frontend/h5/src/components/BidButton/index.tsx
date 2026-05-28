@@ -18,6 +18,14 @@ const BidButton: React.FC<BidButtonProps> = ({
 }) => {
   const { token, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [skyLampLoading, setSkyLampLoading] = useState(false);
+  const [skyLampStatus, setSkyLampStatus] = useState<{
+    active: boolean;
+    subscription_id: number;
+    max_price_limit: number;
+    auto_bid_count: number;
+    total_bid_amount: number;
+  } | null>(null);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [customAmount, setCustomAmount] = useState<string>('');
 
@@ -92,8 +100,44 @@ const BidButton: React.FC<BidButtonProps> = ({
     }
   };
 
+  const handleSkyLamp = async () => {
+    if (!isAuthenticated) {
+      setMessage({ text: '请先登录', type: 'error' });
+      return;
+    }
+
+    setSkyLampLoading(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch(`/api/v1/auctions/${auctionId}/sky-lamp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMessage({ text: '🏮 点天灯成功！', type: 'success' });
+        if (result.data) {
+          setSkyLampStatus(result.data);
+        }
+      } else {
+        setMessage({ text: result.message || '点天灯失败', type: 'error' });
+      }
+    } catch (error) {
+      setMessage({ text: '网络错误，请重试', type: 'error' });
+      console.error('点天灯失败:', error);
+    } finally {
+      setSkyLampLoading(false);
+    }
+  };
+
   const minBid = currentPrice + increment;
-  const doubleBid = currentPrice + increment * 2;
 
   return (
     <div style={styles.container}>
@@ -109,6 +153,26 @@ const BidButton: React.FC<BidButtonProps> = ({
 
       {/* 快捷出价按钮 */}
       <div style={styles.quickBidSection}>
+        {/* 左列：点天灯按钮 */}
+        <button
+          onClick={handleSkyLamp}
+          disabled={skyLampLoading || skyLampStatus?.active}
+          style={{
+            ...styles.bidButton,
+            ...styles.bidButtonSkyLamp,
+            opacity: skyLampStatus?.active ? 0.6 : 1,
+          }}
+        >
+          <span style={styles.buttonIcon}>🏮</span>
+          <span style={styles.buttonText}>
+            {skyLampStatus?.active ? '天灯亮着' : '点天灯'}
+          </span>
+          <span style={styles.buttonHint}>
+            {skyLampStatus?.active ? `${skyLampStatus.auto_bid_count}次跟价` : '自动跟价'}
+          </span>
+        </button>
+
+        {/* 右列：出价按钮 */}
         <button
           onClick={() => handleBid(1)}
           disabled={loading}
@@ -123,22 +187,6 @@ const BidButton: React.FC<BidButtonProps> = ({
             出价 <span style={styles.buttonAmount}>¥{minBid}</span>
           </span>
           <span style={styles.buttonHint}>+{increment}元</span>
-        </button>
-
-        <button
-          onClick={() => handleBid(2)}
-          disabled={loading}
-          style={{
-            ...styles.bidButton,
-            ...styles.bidButtonHot,
-            opacity: loading ? 0.6 : 1,
-          }}
-        >
-          <span style={styles.buttonIcon}>🔥</span>
-          <span style={styles.buttonText}>
-            加倍 <span style={styles.buttonAmount}>¥{doubleBid}</span>
-          </span>
-          <span style={styles.buttonHint}>+{increment * 2}元</span>
         </button>
       </div>
 
@@ -219,6 +267,10 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   bidButtonHot: {
     background: 'linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%)',
+    color: 'white',
+  },
+  bidButtonSkyLamp: {
+    background: 'linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%)',
     color: 'white',
   },
   buttonIcon: {
