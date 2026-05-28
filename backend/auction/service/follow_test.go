@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
-	"auction-service/dao"
 	"auction-service/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
