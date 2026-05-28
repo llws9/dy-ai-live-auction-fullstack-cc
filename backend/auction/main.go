@@ -93,7 +93,7 @@ func main() {
 	followService := service.NewFollowService(userLiveStreamFollowDAO)
 	productReminderService := service.NewProductReminderService(userProductReminderDAO)
 	productReminderService.SetAuctionDAO(auctionDAO)
-	skyLampService := service.NewSkyLampService(skyLampDAO, bidService)
+	skyLampService := service.NewSkyLampService(skyLampDAO, bidService, cfg.SkyLamp)
 
 	// 设置出价服务的通知发送器和指标收集器
 	bidService.SetNotificationSender(notificationService)
@@ -113,7 +113,7 @@ func main() {
 	if cfg.RabbitMQ.Host != "" && cfg.RabbitMQ.User != "" {
 		rmqConfig := &mq.RabbitMQConfig{
 			Host:     cfg.RabbitMQ.Host,
-			Port:     fmt.Sprintf("%d", cfg.RabbitMQ.Port),
+			Port:     cfg.RabbitMQ.Port,
 			User:     cfg.RabbitMQ.User,
 			Password: cfg.RabbitMQ.Password,
 			VHost:    cfg.RabbitMQ.VHost,
