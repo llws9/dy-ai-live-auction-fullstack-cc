@@ -131,6 +131,114 @@ LiveAuctionClient
 - 不用 middleware 改写竞拍结果事实。
 - 不在 middleware 中产生新的业务事件。
 
+##### 3.1.2.1 统一错误码标准化
+
+`TimeoutMiddleware`、`RetryMiddleware` 和订单探测逻辑必须输出统一错误码，避免 `callback_event.last_error_code`、`callback_delivery_attempt.error_type`、SDK 异常类型各自使用不同字符串。
+
+本地错误码分为三类：
+
+```text
+Retryable
+  可自动重试或继续探测。
+
+Permanent
+  不应自动重试，需要修复配置、签名、请求结构或平台权限。
+
+Needs Manual Review
+  不能简单判定成功或失败，需要人工确认或平台侧修复后重放。
+```
+
+回调投递错误码：
+
+```text
+CALLBACK_TIMEOUT
+  回调请求超时。事件进入 unknown，随后触发订单探测。
+
+CALLBACK_NETWORK_ERROR
+  回调连接中断、DNS/TLS/连接失败。事件进入 unknown 或 retrying。
+
+CALLBACK_HTTP_5XX
+  平台回调接口返回 5xx。事件进入 retrying。
+
+CALLBACK_HTTP_4XX_RETRYABLE
+  平台回调接口返回可重试 4xx，例如 408、409、425、429。
+
+CALLBACK_HTTP_4XX_PERMANENT
+  平台回调接口返回不可恢复 4xx，例如 400、401、403。
+
+CALLBACK_ACCEPTED_WITHOUT_ORDER_ID
+  平台返回 202 ACCEPTED，但未返回 external_order_id。事件进入 probing。
+```
+
+订单探测错误码：
+
+```text
+PROBE_TIMEOUT
+  订单查询接口超时。继续 probing 或进入 retrying。
+
+PROBE_NETWORK_ERROR
+  订单查询接口网络错误。继续 probing 或进入 retrying。
+
+PROBE_RATE_LIMITED
+  订单查询接口返回 429。按 Retry-After 或平台级策略继续 probing。
+
+PROBE_UNAUTHORIZED
+  订单查询接口返回 401/403。进入 failed_permanent，除非平台配置修复后人工重放。
+
+PROBE_ORDER_SERVICE_UNAVAILABLE
+  订单查询接口返回 500/502/503/504。继续 probing 或进入 retrying。
+
+PROBE_UNEXPECTED_STATUS
+  订单查询接口返回未定义 HTTP 状态码。按可重试错误处理。
+
+PROBE_FOUND_WITHOUT_ORDER_ID
+  查询返回 FOUND 但缺少 external_order_id。不能标记 succeeded，需要人工确认。
+
+UNKNOWN_PROBE_CODE
+  平台返回未定义业务 code。按可重试探测错误处理。
+```
+
+本地校验错误码：
+
+```text
+MISSING_IDEMPOTENCY_KEY
+  本地事件缺少 idempotency_key。进入 failed_permanent。
+```
+
+错误码处理分类：
+
+```text
+Retryable:
+  CALLBACK_TIMEOUT
+  CALLBACK_NETWORK_ERROR
+  CALLBACK_HTTP_5XX
+  CALLBACK_HTTP_4XX_RETRYABLE
+  CALLBACK_ACCEPTED_WITHOUT_ORDER_ID
+  PROBE_TIMEOUT
+  PROBE_NETWORK_ERROR
+  PROBE_RATE_LIMITED
+  PROBE_ORDER_SERVICE_UNAVAILABLE
+  PROBE_UNEXPECTED_STATUS
+  UNKNOWN_PROBE_CODE
+
+Permanent:
+  CALLBACK_HTTP_4XX_PERMANENT
+  PROBE_UNAUTHORIZED
+  MISSING_IDEMPOTENCY_KEY
+
+Needs Manual Review:
+  PROBE_FOUND_WITHOUT_ORDER_ID
+  FAILED(retryable=false)
+```
+
+降级规则：
+
+- `CALLBACK_TIMEOUT` 不能直接判失败，必须进入 `unknown -> probing`。
+- `CALLBACK_ACCEPTED_WITHOUT_ORDER_ID` 不能标记成功，必须进入 `probing`。
+- `PROBE_TIMEOUT` 不能生成新事件，只能继续探测或复用同一 `event_id`、`idempotency_key` 重试。
+- `PROBE_FOUND_WITHOUT_ORDER_ID` 不能标记成功，也不应盲目重试回调，应进入人工确认或死信处理。
+- `PROBE_UNAUTHORIZED` 默认不可自动重试，避免错误配置持续冲击平台接口。
+
 #### 3.1.3 Adapter：平台差异隔离
 
 不同直播平台的用户、直播间、商品、订单接口差异很大，应通过 Adapter 隔离，而不是污染竞拍核心。
@@ -788,6 +896,7 @@ APP_UNAUTHORIZED
 IDEMPOTENCY_KEY_INVALID
 RATE_LIMITED
 INTERNAL_ERROR
+ORDER_SERVICE_UNAVAILABLE
 ```
 
 HTTP 状态码建议：
@@ -1018,6 +1127,26 @@ callback_delivery_attempt
 - duration_ms
 ```
 
+`error_type` 必须使用统一错误码：
+
+```text
+CALLBACK_TIMEOUT
+CALLBACK_NETWORK_ERROR
+CALLBACK_HTTP_5XX
+CALLBACK_HTTP_4XX_RETRYABLE
+CALLBACK_HTTP_4XX_PERMANENT
+CALLBACK_ACCEPTED_WITHOUT_ORDER_ID
+PROBE_TIMEOUT
+PROBE_NETWORK_ERROR
+PROBE_RATE_LIMITED
+PROBE_UNAUTHORIZED
+PROBE_ORDER_SERVICE_UNAVAILABLE
+PROBE_UNEXPECTED_STATUS
+PROBE_FOUND_WITHOUT_ORDER_ID
+UNKNOWN_PROBE_CODE
+MISSING_IDEMPOTENCY_KEY
+```
+
 ## 12. 我们侧订单探测代码逻辑
 
 ### 12.1 数据结构
@@ -1052,7 +1181,7 @@ type FailureInfo struct {
 ```go
 func ProbePlatformOrder(ctx context.Context, event CallbackEvent) error {
 	if event.IdempotencyKey == "" {
-		return MarkFailedPermanent(event.EventID, "missing_idempotency_key")
+		return MarkFailedPermanent(event.EventID, "MISSING_IDEMPOTENCY_KEY")
 	}
 
 	MarkEventStatus(event.EventID, "probing")
@@ -1065,7 +1194,7 @@ func ProbePlatformOrder(ctx context.Context, event CallbackEvent) error {
 	switch resp.Code {
 	case "FOUND":
 		if resp.ExternalOrderID == nil || *resp.ExternalOrderID == "" {
-			return MarkProbeRetry(event.EventID, "found_without_external_order_id")
+			return MarkNeedsManualReview(event.EventID, "PROBE_FOUND_WITHOUT_ORDER_ID")
 		}
 
 		return MarkSucceeded(event.EventID, SucceededPatch{
@@ -1103,7 +1232,7 @@ func ProbePlatformOrder(ctx context.Context, event CallbackEvent) error {
 		return MarkFailedPermanent(event.EventID, failureReason(resp))
 
 	default:
-		return MarkProbeRetry(event.EventID, "unknown_probe_code:"+resp.Code)
+		return MarkProbeRetry(event.EventID, "UNKNOWN_PROBE_CODE:"+resp.Code)
 	}
 }
 ```
@@ -1159,16 +1288,16 @@ func (c *PlatformClient) GetOrderByIdempotencyKey(
 		}, nil
 
 	case http.StatusTooManyRequests:
-		return nil, NewRetryableProbeError("rate_limited", retryAfter(res.Header))
+		return nil, NewRetryableProbeError("PROBE_RATE_LIMITED", retryAfter(res.Header))
 
 	case http.StatusInternalServerError, http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
-		return nil, NewRetryableProbeError("platform_order_unavailable", nil)
+		return nil, NewRetryableProbeError("PROBE_ORDER_SERVICE_UNAVAILABLE", nil)
 
 	case http.StatusUnauthorized, http.StatusForbidden:
-		return nil, NewPermanentProbeError("probe_unauthorized")
+		return nil, NewPermanentProbeError("PROBE_UNAUTHORIZED")
 
 	default:
-		return nil, NewRetryableProbeError("unexpected_probe_status", nil)
+		return nil, NewRetryableProbeError("PROBE_UNEXPECTED_STATUS", nil)
 	}
 }
 ```
