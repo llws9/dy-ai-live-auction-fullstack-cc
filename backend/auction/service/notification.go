@@ -65,7 +65,10 @@ func (s *NotificationService) SetFollowDAO(followDAO *dao.UserLiveStreamFollowDA
 	s.followDAO = followDAO
 }
 
-// SetMetrics 设置指标收集器（占位方法，通知服务暂不需要metrics）
+// SetMetrics 设置指标收集器
+// 注意：当前为占位实现，通知服务的metrics功能计划在未来版本中实现。
+// 调用此方法不会产生任何效果，保留是为了接口兼容性。
+// TODO: 实现通知服务的指标收集功能（发送成功/失败计数、延迟等）
 func (s *NotificationService) SetMetrics(metrics interface{}) {
 	// NotificationService目前不需要metrics
 	// 保留此方法以备将来扩展
@@ -87,8 +90,8 @@ func (s *NotificationService) SendNotification(ctx context.Context, req *model.N
 		return fmt.Errorf("保存通知失败: %w", err)
 	}
 
-	// 实时推送（默认立即推送）
-	if req.Immediately || req.Immediately == false {
+	// 实时推送（仅当 Immediately 为 true 时推送）
+	if req.Immediately {
 		s.pushNotification(ctx, notification)
 	}
 
@@ -154,10 +157,11 @@ func (s *NotificationService) pushNotification(ctx context.Context, notification
 // SendBidOutbidNotification 发送出价被超越通知
 func (s *NotificationService) SendBidOutbidNotification(ctx context.Context, userID int64, auctionID int64, oldBid, newBid float64) error {
 	return s.SendNotification(ctx, &model.NotificationRequest{
-		UserID:  userID,
-		Type:    model.NotificationTypeBidOutbid,
-		Title:   "出价被超越",
-		Content: fmt.Sprintf("您在竞拍中的出价 %.2f 元已被超越，当前最高价为 %.2f 元", oldBid, newBid),
+		UserID:     userID,
+		Type:       model.NotificationTypeBidOutbid,
+		Title:      "出价被超越",
+		Content:    fmt.Sprintf("您在竞拍中的出价 %.2f 元已被超越，当前最高价为 %.2f 元", oldBid, newBid),
+		Immediately: true,
 		Data: map[string]interface{}{
 			"auction_id": auctionID,
 			"old_bid":    oldBid,
@@ -169,10 +173,11 @@ func (s *NotificationService) SendBidOutbidNotification(ctx context.Context, use
 // SendAuctionWonNotification 发送竞拍中标通知
 func (s *NotificationService) SendAuctionWonNotification(ctx context.Context, userID int64, auctionID int64, finalPrice float64) error {
 	return s.SendNotification(ctx, &model.NotificationRequest{
-		UserID:  userID,
-		Type:    model.NotificationTypeAuctionWon,
-		Title:   "竞拍中标",
-		Content: fmt.Sprintf("恭喜！您以 %.2f 元中标了竞拍", finalPrice),
+		UserID:     userID,
+		Type:       model.NotificationTypeAuctionWon,
+		Title:      "竞拍中标",
+		Content:    fmt.Sprintf("恭喜！您以 %.2f 元中标了竞拍", finalPrice),
+		Immediately: true,
 		Data: map[string]interface{}{
 			"auction_id":  auctionID,
 			"final_price": finalPrice,
@@ -183,10 +188,11 @@ func (s *NotificationService) SendAuctionWonNotification(ctx context.Context, us
 // SendAuctionLostNotification 发送竞拍未中标通知
 func (s *NotificationService) SendAuctionLostNotification(ctx context.Context, userID int64, auctionID int64, winnerPrice float64) error {
 	return s.SendNotification(ctx, &model.NotificationRequest{
-		UserID:  userID,
-		Type:    model.NotificationTypeAuctionLost,
-		Title:   "竞拍未中标",
-		Content: fmt.Sprintf("很遗憾，您未能中标。最终成交价为 %.2f 元", winnerPrice),
+		UserID:     userID,
+		Type:       model.NotificationTypeAuctionLost,
+		Title:      "竞拍未中标",
+		Content:    fmt.Sprintf("很遗憾，您未能中标。最终成交价为 %.2f 元", winnerPrice),
+		Immediately: true,
 		Data: map[string]interface{}{
 			"auction_id":   auctionID,
 			"winner_price": winnerPrice,
@@ -197,10 +203,11 @@ func (s *NotificationService) SendAuctionLostNotification(ctx context.Context, u
 // SendOrderPaidNotification 发送订单已支付通知（Mock触发）
 func (s *NotificationService) SendOrderPaidNotification(ctx context.Context, userID int64, orderID int64) error {
 	return s.SendNotification(ctx, &model.NotificationRequest{
-		UserID:  userID,
-		Type:    model.NotificationTypeOrderPaid,
-		Title:   "订单已支付",
-		Content: fmt.Sprintf("您的订单 #%d 已支付成功", orderID),
+		UserID:     userID,
+		Type:       model.NotificationTypeOrderPaid,
+		Title:      "订单已支付",
+		Content:    fmt.Sprintf("您的订单 #%d 已支付成功", orderID),
+		Immediately: true,
 		Data: map[string]interface{}{
 			"order_id": orderID,
 		},
@@ -210,10 +217,11 @@ func (s *NotificationService) SendOrderPaidNotification(ctx context.Context, use
 // SendOrderShippedNotification 发送订单已发货通知（Mock触发）
 func (s *NotificationService) SendOrderShippedNotification(ctx context.Context, userID int64, orderID int64) error {
 	return s.SendNotification(ctx, &model.NotificationRequest{
-		UserID:  userID,
-		Type:    model.NotificationTypeOrderShipped,
-		Title:   "订单已发货",
-		Content: fmt.Sprintf("您的订单 #%d 已发货，请留意查收", orderID),
+		UserID:     userID,
+		Type:       model.NotificationTypeOrderShipped,
+		Title:      "订单已发货",
+		Content:    fmt.Sprintf("您的订单 #%d 已发货，请留意查收", orderID),
+		Immediately: true,
 		Data: map[string]interface{}{
 			"order_id": orderID,
 		},
@@ -223,10 +231,11 @@ func (s *NotificationService) SendOrderShippedNotification(ctx context.Context, 
 // SendOrderCompletedNotification 发送订单已完成通知（Mock触发）
 func (s *NotificationService) SendOrderCompletedNotification(ctx context.Context, userID int64, orderID int64) error {
 	return s.SendNotification(ctx, &model.NotificationRequest{
-		UserID:  userID,
-		Type:    model.NotificationTypeOrderCompleted,
-		Title:   "订单已完成",
-		Content: fmt.Sprintf("您的订单 #%d 已完成，感谢您的购买！", orderID),
+		UserID:     userID,
+		Type:       model.NotificationTypeOrderCompleted,
+		Title:      "订单已完成",
+		Content:    fmt.Sprintf("您的订单 #%d 已完成，感谢您的购买！", orderID),
+		Immediately: true,
 		Data: map[string]interface{}{
 			"order_id": orderID,
 		},
@@ -289,13 +298,21 @@ func (s *NotificationService) SyncUnreadNotifications(ctx context.Context, userI
 // 5. 生成通知，返回结果
 func (s *NotificationService) HotPullNotifications(ctx context.Context, userID int64) ([]*model.Notification, error) {
 	if s.redis == nil {
+		// Redis不可用，尝试使用数据库兜底
+		if s.followDAO != nil {
+			return s.hotPullFromDatabase(ctx, userID)
+		}
 		return nil, fmt.Errorf("redis client not initialized")
 	}
 
 	// 1. 获取用户关注的直播间集合
 	followedLiveStreams, err := dao.GetUserFollowedLiveStreams(ctx, userID)
 	if err != nil {
-		log.Printf("HotPull: failed to get user followed live streams: %v", err)
+		log.Printf("HotPull: Redis failed, fallback to database: %v", err)
+		// Redis失败，使用数据库兜底
+		if s.followDAO != nil {
+			return s.hotPullFromDatabase(ctx, userID)
+		}
 		return nil, fmt.Errorf("failed to get user followed live streams: %w", err)
 	}
 
@@ -335,6 +352,13 @@ func (s *NotificationService) HotPullNotifications(ctx context.Context, userID i
 					"triggered_at":   now.Format(time.RFC3339),
 				},
 			}
+
+			// 保存到数据库
+			if err := s.notificationDAO.Create(ctx, notification); err != nil {
+				log.Printf("HotPull: 保存即将开播通知失败: %v", err)
+				continue
+			}
+
 			notifications = append(notifications, notification)
 
 			// 实时推送
@@ -362,6 +386,13 @@ func (s *NotificationService) HotPullNotifications(ctx context.Context, userID i
 					"triggered_at":   now.Format(time.RFC3339),
 				},
 			}
+
+			// 保存到数据库
+			if err := s.notificationDAO.Create(ctx, notification); err != nil {
+				log.Printf("HotPull: 保存正在直播通知失败: %v", err)
+				continue
+			}
+
 			notifications = append(notifications, notification)
 
 			// 实时推送
@@ -371,6 +402,94 @@ func (s *NotificationService) HotPullNotifications(ctx context.Context, userID i
 
 	log.Printf("HotPull: user=%d, followed=%d, starting_soon=%d, live_now=%d, notifications=%d",
 		userID, len(followedLiveStreams), len(startingSoon), len(liveNow), len(notifications))
+
+	return notifications, nil
+}
+
+// hotPullFromDatabase Redis失败时从数据库获取热拉通知（兜底方案）
+func (s *NotificationService) hotPullFromDatabase(ctx context.Context, userID int64) ([]*model.Notification, error) {
+	log.Printf("HotPull: using database fallback for user=%d", userID)
+
+	// 从数据库获取用户关注的直播间ID列表
+	followedLiveStreams, err := s.followDAO.GetUserFollowedLiveStreamIDs(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user followed live streams from DB: %w", err)
+	}
+
+	if len(followedLiveStreams) == 0 {
+		return []*model.Notification{}, nil
+	}
+
+	// 创建关注直播间的Set便于快速查找
+	followedSet := make(map[int64]bool)
+	for _, id := range followedLiveStreams {
+		followedSet[id] = true
+	}
+
+	now := time.Now()
+	notifications := make([]*model.Notification, 0)
+
+	// 尝试从Redis获取热门直播间信息（如果Redis部分可用）
+	if s.redis != nil {
+		// 尝试获取即将开播的热门直播间
+		startingSoon, err := dao.GetHotLiveStreamsStartingSoon(ctx, now, now.Add(1*time.Hour))
+		if err == nil {
+			for _, liveStreamID := range startingSoon {
+				if followedSet[liveStreamID] {
+					notification := &model.Notification{
+						UserID:  userID,
+						Type:    model.NotificationTypeLiveStreamStartingSoon,
+						Title:   "即将开播",
+						Content: fmt.Sprintf("您关注的直播间 #%d 即将开播，请准时收看！", liveStreamID),
+						Data: map[string]interface{}{
+							"live_stream_id": liveStreamID,
+							"triggered_at":   now.Format(time.RFC3339),
+						},
+					}
+
+					// 保存到数据库
+					if err := s.notificationDAO.Create(ctx, notification); err != nil {
+						log.Printf("HotPull (DB fallback): 保存即将开播通知失败: %v", err)
+						continue
+					}
+
+					notifications = append(notifications, notification)
+					s.pushNotification(ctx, notification)
+				}
+			}
+		}
+
+		// 尝试获取正在直播的热门直播间
+		liveNow, err := dao.GetHotLiveNowSet(ctx)
+		if err == nil {
+			for _, liveStreamID := range liveNow {
+				if followedSet[liveStreamID] {
+					notification := &model.Notification{
+						UserID:  userID,
+						Type:    model.NotificationTypeLiveStreamNowLive,
+						Title:   "正在直播",
+						Content: fmt.Sprintf("您关注的直播间 #%d 正在直播，快来看看！", liveStreamID),
+						Data: map[string]interface{}{
+							"live_stream_id": liveStreamID,
+							"triggered_at":   now.Format(time.RFC3339),
+						},
+					}
+
+					// 保存到数据库
+					if err := s.notificationDAO.Create(ctx, notification); err != nil {
+						log.Printf("HotPull (DB fallback): 保存正在直播通知失败: %v", err)
+						continue
+					}
+
+					notifications = append(notifications, notification)
+					s.pushNotification(ctx, notification)
+				}
+			}
+		}
+	}
+
+	log.Printf("HotPull (DB fallback): user=%d, followed=%d, notifications=%d",
+		userID, len(followedLiveStreams), len(notifications))
 
 	return notifications, nil
 }

@@ -93,7 +93,11 @@ func main() {
 	followService := service.NewFollowService(userLiveStreamFollowDAO)
 	productReminderService := service.NewProductReminderService(userProductReminderDAO)
 	productReminderService.SetAuctionDAO(auctionDAO)
-	skyLampService := service.NewSkyLampService(skyLampDAO, bidService, cfg.SkyLamp)
+
+	// 初始化分布式锁服务
+	distributedLockService := service.NewDistributedLockService(dao.GetRedis())
+
+	skyLampService := service.NewSkyLampService(skyLampDAO, bidService, cfg.SkyLamp, distributedLockService)
 
 	// 设置出价服务的通知发送器和指标收集器
 	bidService.SetNotificationSender(notificationService)

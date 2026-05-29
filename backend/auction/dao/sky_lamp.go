@@ -20,6 +20,16 @@ func NewSkyLampDAO(db *gorm.DB) *SkyLampDAO {
 	return &SkyLampDAO{db: db}
 }
 
+// DB 返回底层数据库连接（用于事务）
+func (d *SkyLampDAO) DB() *gorm.DB {
+	return d.db
+}
+
+// WithTx 使用事务创建 DAO 实例
+func (d *SkyLampDAO) WithTx(tx *gorm.DB) *SkyLampDAO {
+	return &SkyLampDAO{db: tx}
+}
+
 // Create 创建订阅
 func (d *SkyLampDAO) Create(ctx context.Context, subscription *model.SkyLampSubscription) error {
 	return d.db.WithContext(ctx).Create(subscription).Error

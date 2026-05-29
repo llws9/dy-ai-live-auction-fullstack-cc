@@ -119,3 +119,13 @@ func (d *UserLiveStreamFollowDAO) GetFollowStats(ctx context.Context, liveStream
 
 	return stats, nil
 }
+
+// GetUserFollowedLiveStreamIDs 获取用户关注的所有直播间ID列表（用于Redis失败时的数据库兜底）
+func (d *UserLiveStreamFollowDAO) GetUserFollowedLiveStreamIDs(ctx context.Context, userID int64) ([]int64, error) {
+	var liveStreamIDs []int64
+	err := d.db.WithContext(ctx).
+		Model(&model.UserLiveStreamFollow{}).
+		Where("user_id = ?", userID).
+		Pluck("live_stream_id", &liveStreamIDs).Error
+	return liveStreamIDs, err
+}
