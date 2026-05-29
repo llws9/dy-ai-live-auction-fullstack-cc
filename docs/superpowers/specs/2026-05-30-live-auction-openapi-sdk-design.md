@@ -157,6 +157,12 @@ CALLBACK_TIMEOUT
 CALLBACK_NETWORK_ERROR
   回调连接中断、DNS/TLS/连接失败。事件进入 unknown 或 retrying。
 
+CALLBACK_SEND_FAILED
+  请求未成功发出，例如 DNS 解析失败、TLS 握手失败、连接建立失败。事件可直接进入 retrying。
+
+CALLBACK_RESPONSE_LOST
+  请求可能已到达平台，但响应读取超时、连接 reset、半开连接断开。事件必须进入 unknown，再通过订单探测确认结果。
+
 CALLBACK_HTTP_5XX
   平台回调接口返回 5xx。事件进入 retrying。
 
@@ -168,6 +174,15 @@ CALLBACK_HTTP_4XX_PERMANENT
 
 CALLBACK_ACCEPTED_WITHOUT_ORDER_ID
   平台返回 202 ACCEPTED，但未返回 external_order_id。事件进入 probing。
+
+CALLBACK_DUPLICATE_CONFIRMED
+  平台返回 DUPLICATE 且包含 external_order_id。视为 succeeded。
+
+CALLBACK_IDEMPOTENCY_CONFLICT
+  平台返回同一 idempotency_key 已存在但 payload_hash 不一致。进入人工确认。
+
+CALLBACK_RESPONSE_INVALID
+  平台回调接口返回 2xx，但响应体无法解析、code 未定义，或 OK/DUPLICATE 缺少 external_order_id。
 ```
 
 订单探测错误码：
@@ -185,6 +200,9 @@ PROBE_RATE_LIMITED
 PROBE_UNAUTHORIZED
   订单查询接口返回 401/403。进入 failed_permanent，除非平台配置修复后人工重放。
 
+PROBE_IDEMPOTENCY_KEY_INVALID
+  订单查询接口返回 400 IDEMPOTENCY_KEY_INVALID。说明本地事件或平台配置存在结构性问题，进入 failed_permanent。
+
 PROBE_ORDER_SERVICE_UNAVAILABLE
   订单查询接口返回 500/502/503/504。继续 probing 或进入 retrying。
 
@@ -194,15 +212,27 @@ PROBE_UNEXPECTED_STATUS
 PROBE_FOUND_WITHOUT_ORDER_ID
   查询返回 FOUND 但缺少 external_order_id。不能标记 succeeded，需要人工确认。
 
+PROBE_RESPONSE_INVALID
+  订单查询接口返回 2xx，但响应体无法解析、code 未定义，或必填字段缺失。
+
+PROBE_CREATING_EXPIRED
+  平台长期返回 CREATING，超过最大探测窗口。进入 dead_letter 或人工确认。
+
 UNKNOWN_PROBE_CODE
   平台返回未定义业务 code。按可重试探测错误处理。
 ```
 
-本地校验错误码：
+本地与调度错误码：
 
 ```text
 MISSING_IDEMPOTENCY_KEY
   本地事件缺少 idempotency_key。进入 failed_permanent。
+
+DISPATCH_LEASE_EXPIRED
+  事件长时间停留 delivering，说明 dispatcher 可能崩溃。恢复为 unknown 或 retrying。
+
+DISPATCH_CONCURRENCY_CONFLICT
+  多 worker 抢占同一事件失败。不是业务错误，只记录并跳过。
 ```
 
 错误码处理分类：
@@ -211,33 +241,90 @@ MISSING_IDEMPOTENCY_KEY
 Retryable:
   CALLBACK_TIMEOUT
   CALLBACK_NETWORK_ERROR
+  CALLBACK_SEND_FAILED
+  CALLBACK_RESPONSE_LOST
   CALLBACK_HTTP_5XX
   CALLBACK_HTTP_4XX_RETRYABLE
   CALLBACK_ACCEPTED_WITHOUT_ORDER_ID
+  CALLBACK_RESPONSE_INVALID
   PROBE_TIMEOUT
   PROBE_NETWORK_ERROR
   PROBE_RATE_LIMITED
   PROBE_ORDER_SERVICE_UNAVAILABLE
   PROBE_UNEXPECTED_STATUS
+  PROBE_RESPONSE_INVALID
   UNKNOWN_PROBE_CODE
+  DISPATCH_LEASE_EXPIRED
 
 Permanent:
   CALLBACK_HTTP_4XX_PERMANENT
   PROBE_UNAUTHORIZED
+  PROBE_IDEMPOTENCY_KEY_INVALID
   MISSING_IDEMPOTENCY_KEY
 
 Needs Manual Review:
+  CALLBACK_IDEMPOTENCY_CONFLICT
   PROBE_FOUND_WITHOUT_ORDER_ID
+  PROBE_CREATING_EXPIRED
   FAILED(retryable=false)
+
+Informational:
+  CALLBACK_DUPLICATE_CONFIRMED
+  DISPATCH_CONCURRENCY_CONFLICT
+```
+
+错误码映射规则：
+
+```text
+Callback delivery:
+  request timeout                         -> CALLBACK_TIMEOUT
+  DNS/TLS/connect failed before send      -> CALLBACK_SEND_FAILED
+  response read timeout/reset after send  -> CALLBACK_RESPONSE_LOST
+  unknown whether request was sent        -> CALLBACK_RESPONSE_LOST
+  HTTP 202 without external_order_id      -> CALLBACK_ACCEPTED_WITHOUT_ORDER_ID
+  HTTP 2xx DUPLICATE with order id        -> CALLBACK_DUPLICATE_CONFIRMED
+  HTTP 2xx OK/DUPLICATE without order id  -> CALLBACK_RESPONSE_INVALID
+  HTTP 409 DUPLICATE with order id        -> CALLBACK_DUPLICATE_CONFIRMED
+  HTTP 409 idempotency conflict           -> CALLBACK_IDEMPOTENCY_CONFLICT
+  HTTP 408/425/429                        -> CALLBACK_HTTP_4XX_RETRYABLE
+  HTTP 400/401/403/404                    -> CALLBACK_HTTP_4XX_PERMANENT
+  HTTP 500/502/503/504                    -> CALLBACK_HTTP_5XX
+  malformed JSON or unknown code          -> CALLBACK_RESPONSE_INVALID
+
+Order probe:
+  request timeout                         -> PROBE_TIMEOUT
+  DNS/TLS/connect/reset error             -> PROBE_NETWORK_ERROR
+  HTTP 429                                -> PROBE_RATE_LIMITED
+  HTTP 400 IDEMPOTENCY_KEY_INVALID        -> PROBE_IDEMPOTENCY_KEY_INVALID
+  HTTP 401/403                            -> PROBE_UNAUTHORIZED
+  HTTP 500/502/503/504                    -> PROBE_ORDER_SERVICE_UNAVAILABLE
+  other undefined HTTP status             -> PROBE_UNEXPECTED_STATUS
+  HTTP 2xx malformed JSON                 -> PROBE_RESPONSE_INVALID
+  HTTP 2xx unknown business code          -> UNKNOWN_PROBE_CODE
+  code FOUND without external_order_id    -> PROBE_FOUND_WITHOUT_ORDER_ID
+  code CREATING beyond max probe window   -> PROBE_CREATING_EXPIRED
+
+Dispatcher:
+  delivering lease timeout                -> DISPATCH_LEASE_EXPIRED
+  failed to acquire event lease           -> DISPATCH_CONCURRENCY_CONFLICT
 ```
 
 降级规则：
 
 - `CALLBACK_TIMEOUT` 不能直接判失败，必须进入 `unknown -> probing`。
+- `CALLBACK_SEND_FAILED` 说明请求未发出，可进入 `retrying`，但仍必须复用同一 `event_id` 和 `idempotency_key`。
+- `CALLBACK_RESPONSE_LOST` 说明请求可能已到达平台，必须进入 `unknown -> probing`，不能直接重试。
 - `CALLBACK_ACCEPTED_WITHOUT_ORDER_ID` 不能标记成功，必须进入 `probing`。
+- `CALLBACK_DUPLICATE_CONFIRMED` 是成功态，应保存平台返回的 `external_order_id`。
+- `CALLBACK_IDEMPOTENCY_CONFLICT` 说明双方幂等事实不一致，必须进入人工确认，不能自动重试。
+- `CALLBACK_RESPONSE_INVALID` 不能标记成功，必须记录响应体并进入重试或人工确认。
 - `PROBE_TIMEOUT` 不能生成新事件，只能继续探测或复用同一 `event_id`、`idempotency_key` 重试。
 - `PROBE_FOUND_WITHOUT_ORDER_ID` 不能标记成功，也不应盲目重试回调，应进入人工确认或死信处理。
+- `PROBE_RESPONSE_INVALID` 不能标记成功，应继续探测；连续出现时进入死信并告警。
+- `PROBE_CREATING_EXPIRED` 不能继续无限探测，应进入 dead_letter 并告警。
 - `PROBE_UNAUTHORIZED` 默认不可自动重试，避免错误配置持续冲击平台接口。
+- `DISPATCH_LEASE_EXPIRED` 应触发恢复扫描，不能生成新事件。
+- `DISPATCH_CONCURRENCY_CONFLICT` 只代表当前 worker 未抢到事件，不应记录为业务失败。
 
 #### 3.1.3 Adapter：平台差异隔离
 
@@ -971,8 +1058,13 @@ timeout
   "callback_timeout_ms": 3000,
   "probe_after_timeout_ms": 5000,
   "probe_max_attempts": 3,
+  "probe_max_window_seconds": 300,
   "probe_interval_ms": 10000,
   "retry_schedule_seconds": [10, 30, 60, 180, 300, 900, 1800, 3600],
+  "retry_jitter_ratio": 0.2,
+  "per_platform_max_concurrency": 20,
+  "dispatcher_lease_seconds": 60,
+  "retry_after_max_seconds": 3600,
   "dead_letter_after_seconds": 86400
 }
 ```
@@ -1021,6 +1113,201 @@ POST /callback-events:replay
 - 结果纠错必须提升 `result_version`，生成新的 `idempotency_key`。
 - 手动重放必须记录 `operator`、`reason`、`time`。
 - 批量重放必须限流。
+
+### 9.4 网络中断与崩溃恢复边界场景
+
+网络中断不能只按“失败重试”处理。核心判断是：请求是否可能已经到达平台订单系统。如果可能到达，就必须先探测订单状态，避免重复建单。
+
+#### 9.4.1 回调请求未发出
+
+场景：
+
+```text
+DNS 解析失败
+TLS 握手失败
+TCP connect 失败
+连接池获取连接失败
+请求体尚未写出前失败
+```
+
+处理：
+
+```text
+error_type = CALLBACK_SEND_FAILED
+callback_event.status = retrying
+next_retry_at = nextRetryTime(attempt_count) + jitter
+```
+
+约束：
+
+- 不生成新 `event_id`。
+- 不更换 `idempotency_key`。
+- 必须记录 `callback_delivery_attempt`。
+
+#### 9.4.2 请求可能已到达但响应丢失
+
+场景：
+
+```text
+请求体已写出后读取响应超时
+平台处理过程中连接 reset
+半开连接断开
+代理层超时但平台服务可能继续执行
+客户端进程收到 EOF，但无法确认平台是否处理
+```
+
+处理：
+
+```text
+error_type = CALLBACK_RESPONSE_LOST
+callback_event.status = unknown
+next_probe_at = now + probe_after_timeout_ms
+```
+
+恢复顺序：
+
+```text
+unknown
+  -> probing by idempotency_key
+  -> FOUND: succeeded
+  -> CREATING: continue probing
+  -> NOT_FOUND after grace window: retrying
+  -> FAILED(retryable=false): failed_permanent/dead_letter
+```
+
+约束：
+
+- 不能直接重试回调。
+- 不能把网络异常判定为订单创建失败。
+- 探测和后续重试必须复用同一个 `event_id`、`idempotency_key`。
+
+#### 9.4.3 平台返回重复消费
+
+场景：
+
+```text
+HTTP 2xx + DUPLICATE + external_order_id
+HTTP 409 + DUPLICATE + external_order_id
+```
+
+处理：
+
+```text
+error_type = CALLBACK_DUPLICATE_CONFIRMED
+callback_event.status = succeeded
+external_order_id = response.external_order_id
+```
+
+说明：
+
+- 该场景不是错误，是可靠重试后的成功闭环。
+- `409` 不能被无条件映射为 `CALLBACK_HTTP_4XX_RETRYABLE`，必须先解析业务 code。
+
+#### 9.4.4 幂等冲突
+
+场景：
+
+```text
+平台返回同一 idempotency_key 已存在
+但 payload_hash、auction_id、winner 或 final_price 不一致
+```
+
+处理：
+
+```text
+error_type = CALLBACK_IDEMPOTENCY_CONFLICT
+callback_event.status = dead_letter
+```
+
+约束：
+
+- 不自动重试。
+- 不自动生成新结果版本。
+- 必须人工确认双方事实源，以决定是否纠错并提升 `result_version`。
+
+#### 9.4.5 平台长期返回 CREATING
+
+场景：
+
+```text
+订单探测接口持续返回 CREATING
+超过 probe_max_window_seconds 或 probe_max_attempts
+```
+
+处理：
+
+```text
+error_type = PROBE_CREATING_EXPIRED
+callback_event.status = dead_letter
+```
+
+约束：
+
+- 不继续无限探测。
+- 不直接重新生成事件。
+- 需要告警并等待平台修复后重放或人工处理。
+
+#### 9.4.6 Dispatcher 崩溃恢复
+
+场景：
+
+```text
+callback_event.status = delivering
+但 locked_until 已过期
+或 updated_at 超过 dispatcher_lease_seconds 未变化
+```
+
+处理：
+
+```text
+error_type = DISPATCH_LEASE_EXPIRED
+if delivery_attempt 已发出请求:
+  callback_event.status = unknown
+  next_probe_at = now + probe_after_timeout_ms
+else:
+  callback_event.status = retrying
+```
+
+约束：
+
+- dispatcher 领取事件必须使用 lease 机制。
+- 推荐使用 `SELECT ... FOR UPDATE SKIP LOCKED` 或等价的条件更新。
+- 恢复扫描不能生成新业务事件。
+
+#### 9.4.7 并发投递抢占
+
+场景：
+
+```text
+多个 worker 同时扫描到同一个 pending/retrying 事件
+其中一个 worker 成功获得 lease
+其他 worker 抢占失败
+```
+
+处理：
+
+```text
+error_type = DISPATCH_CONCURRENCY_CONFLICT
+不改变 callback_event 业务状态
+当前 worker 跳过
+```
+
+说明：
+
+- 该场景不是业务失败。
+- 只记录调度日志或指标，不写入 `last_error_code`。
+
+#### 9.4.8 重试风暴防护
+
+平台不可用时，必须避免所有事件同时重试。
+
+规则：
+
+- 每个平台独立限流，使用 `per_platform_max_concurrency`。
+- 重试时间必须增加 jitter，避免同一时间批量打爆平台。
+- `Retry-After` 只在合理范围内生效，超过 `retry_after_max_seconds` 时按最大值截断。
+- 平台连续 5xx 或超时达到阈值后，开启 platform-level circuit breaker。
+- 熔断期间不丢弃事件，只推迟 `next_retry_at`。
 
 ## 10. 幂等设计
 
@@ -1136,13 +1423,16 @@ CALLBACK_HTTP_5XX
 CALLBACK_HTTP_4XX_RETRYABLE
 CALLBACK_HTTP_4XX_PERMANENT
 CALLBACK_ACCEPTED_WITHOUT_ORDER_ID
+CALLBACK_RESPONSE_INVALID
 PROBE_TIMEOUT
 PROBE_NETWORK_ERROR
 PROBE_RATE_LIMITED
 PROBE_UNAUTHORIZED
+PROBE_IDEMPOTENCY_KEY_INVALID
 PROBE_ORDER_SERVICE_UNAVAILABLE
 PROBE_UNEXPECTED_STATUS
 PROBE_FOUND_WITHOUT_ORDER_ID
+PROBE_RESPONSE_INVALID
 UNKNOWN_PROBE_CODE
 MISSING_IDEMPOTENCY_KEY
 ```
@@ -1277,7 +1567,7 @@ func (c *PlatformClient) GetOrderByIdempotencyKey(
 	case http.StatusOK:
 		var out ProbeOrderResponse
 		if err := json.Unmarshal(body, &out); err != nil {
-			return nil, err
+			return nil, NewRetryableProbeError("PROBE_RESPONSE_INVALID", nil)
 		}
 		return &out, nil
 
@@ -1286,6 +1576,9 @@ func (c *PlatformClient) GetOrderByIdempotencyKey(
 			Code:           "NOT_FOUND",
 			IdempotencyKey: idempotencyKey,
 		}, nil
+
+	case http.StatusBadRequest:
+		return nil, NewPermanentProbeError("PROBE_IDEMPOTENCY_KEY_INVALID")
 
 	case http.StatusTooManyRequests:
 		return nil, NewRetryableProbeError("PROBE_RATE_LIMITED", retryAfter(res.Header))
