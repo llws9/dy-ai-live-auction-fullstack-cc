@@ -39,36 +39,14 @@ const HomePage: React.FC = () => {
         {
           id: 1,
           product_id: 1,
-          product_name: '限定款奢侈品包包',
-          product_image: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400',
+          product_name: '等待加载真实数据...',
+          product_image: '',
           status: 1,
-          current_price: 150,
+          current_price: 0,
           end_time: new Date(Date.now() + 3600000).toISOString(),
           start_time: new Date().toISOString(),
-          bidder_count: 12,
-        },
-        {
-          id: 2,
-          product_id: 2,
-          product_name: '签名版限量球鞋',
-          product_image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
-          status: 1,
-          current_price: 280,
-          end_time: new Date(Date.now() + 1800000).toISOString(),
-          start_time: new Date().toISOString(),
-          bidder_count: 8,
-        },
-        {
-          id: 3,
-          product_id: 3,
-          product_name: '古董怀表收藏品',
-          product_image: 'https://images.unsplash.com/photo-1509048191080-d2984bad6ae5?w=400',
-          status: 3,
-          current_price: 520,
-          end_time: new Date(Date.now() - 3600000).toISOString(),
-          start_time: new Date(Date.now() - 7200000).toISOString(),
-          bidder_count: 25,
-        },
+          bidder_count: 0,
+        }
       ]);
     } finally {
       setLoading(false);
