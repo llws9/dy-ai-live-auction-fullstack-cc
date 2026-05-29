@@ -183,25 +183,43 @@ func (h *Hub) LeaveUserRoom(userID int64, client *Client) {
 	}
 }
 
-// BroadcastToUserRoom - 向用户房间广播消息
+// BroadcastToUserRoom - 向用户房间广播消息（使用读锁优先，仅在需要修改时升级为写锁）
 func (h *Hub) BroadcastToUserRoom(userID int64, message *Message) {
-	h.userRoomsMu.Lock()
-	defer h.userRoomsMu.Unlock()
-
+	// 先用读锁尝试发送
+	h.userRoomsMu.RLock()
 	clients := h.UserRooms[userID]
 	if clients == nil {
+		h.userRoomsMu.RUnlock()
 		return
 	}
 
+	// 尝试发送到所有客户端，记录发送失败的客户端
+	var blockedClients []*Client
 	for client := range clients {
 		select {
 		case client.Send <- message:
+			// 发送成功
 		default:
-			// 发送缓冲区满，关闭连接
+			// 发送缓冲区满，记录需要移除的客户端
+			blockedClients = append(blockedClients, client)
+		}
+	}
+	h.userRoomsMu.RUnlock()
+
+	// 如果没有阻塞的客户端，直接返回
+	if len(blockedClients) == 0 {
+		return
+	}
+
+	// 需要移除阻塞的客户端，获取写锁
+	h.userRoomsMu.Lock()
+	for _, client := range blockedClients {
+		if h.UserRooms[userID] != nil {
 			close(client.Send)
 			delete(h.UserRooms[userID], client)
 		}
 	}
+	h.userRoomsMu.Unlock()
 }
 
 // GetUserRoomClientCount 获取用户房间客户端数量

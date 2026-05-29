@@ -236,16 +236,8 @@ func (s *SkyLampService) TriggerAutoBid(ctx context.Context, auctionID int64, cu
 		sub := &subscriptions[i]
 		autoBidStartTime := time.Now()
 
-		auction, err = s.bidService.auctionDAO.GetByID(ctx, auctionID)
-		if err != nil {
-			log.Printf("SkyLamp自动跟价读取竞拍失败: auction=%d, err=%v", auctionID, err)
-
-			// 记录自动跟价失败指标
-			if s.metrics != nil {
-				s.metrics.RecordAutoBidFailed(auctionID, sub.ID, "auction_fetch_error")
-			}
-			continue
-		}
+		// 使用循环外已获取的 auction，避免 N+1 查询
+		// 注意：auction 在循环开始前已获取，且分布式锁保护了并发修改
 		if !NewStateMachine(auction).CanBid() {
 			// 竞拍不可出价，继续处理下一个订阅
 			continue
