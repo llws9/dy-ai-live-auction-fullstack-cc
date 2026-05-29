@@ -20,6 +20,16 @@ func NewAuctionDAO(db *gorm.DB) *AuctionDAO {
 	return &AuctionDAO{db: db}
 }
 
+// DB 获取底层数据库连接
+func (d *AuctionDAO) DB() *gorm.DB {
+	return d.db
+}
+
+// WithTx 使用事务创建新的 DAO 实例
+func (d *AuctionDAO) WithTx(tx *gorm.DB) *AuctionDAO {
+	return &AuctionDAO{db: tx}
+}
+
 // Create 创建竞拍
 func (d *AuctionDAO) Create(ctx context.Context, auction *model.Auction) error {
 	return d.db.WithContext(ctx).Create(auction).Error

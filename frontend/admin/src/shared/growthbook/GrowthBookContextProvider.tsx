@@ -1,5 +1,5 @@
 import { GrowthBook, GrowthBookProvider as GBProvider } from '@growthbook/growthbook-react';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useAuth } from '../auth';
 
 interface GrowthBookContextProviderProps {
@@ -9,22 +9,16 @@ interface GrowthBookContextProviderProps {
 export function GrowthBookContextProvider({ children }: GrowthBookContextProviderProps) {
   const { user } = useAuth();
 
-  // 组件级实例，避免模块级单例的属性泄漏问题
-  const gbRef = useRef<GrowthBook | null>(null);
-
-  if (!gbRef.current) {
-    gbRef.current = new GrowthBook({
-      apiHost: import.meta.env.VITE_GROWTHBOOK_API_HOST || 'http://localhost:3200',
-      clientKey: import.meta.env.VITE_GROWTHBOOK_CLIENT_KEY || 'dev-client-key',
-      enableDevMode: import.meta.env.DEV,
-      trackingCallback: (experiment, result) => {
-        // 可选：发送实验数据到后端
-        console.log(`Experiment ${experiment.key} assigned variation ${result.variationId}`);
-      },
-    });
-  }
-
-  const gb = gbRef.current;
+  // 使用 useMemo 进行懒初始化，符合 React Hooks 规则
+  const gb = useMemo(() => new GrowthBook({
+    apiHost: import.meta.env.VITE_GROWTHBOOK_API_HOST || 'http://localhost:3200',
+    clientKey: import.meta.env.VITE_GROWTHBOOK_CLIENT_KEY || 'dev-client-key',
+    enableDevMode: import.meta.env.DEV,
+    trackingCallback: (experiment, result) => {
+      // 可选：发送实验数据到后端
+      console.log(`Experiment ${experiment.key} assigned variation ${result.variationId}`);
+    },
+  }), []);
 
   // 更新用户属性
   useEffect(() => {
