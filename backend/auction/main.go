@@ -104,10 +104,9 @@ func main() {
 	auctionService.SetNotificationSender(notificationService)
 	auctionService.SetSkyLampDAO(skyLampDAO)
 
-	// 设置通知服务和点天灯服务的指标收集器
+	// 设置通知服务指标收集器
 	notificationService.SetMetrics(metrics.GetNotificationMetrics())
 	notificationService.SetHub(hub)
-	skyLampService.SetMetrics(metrics.GetSkyLampMetrics())
 
 	// 初始化 RabbitMQ 连接
 	if cfg.RabbitMQ.Host != "" && cfg.RabbitMQ.User != "" {
