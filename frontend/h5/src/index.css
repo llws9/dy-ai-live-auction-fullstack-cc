@@ -18,6 +18,11 @@
   /* 安全区域 */
   --safe-bottom: env(safe-area-inset-bottom, 20px);
   --safe-top: env(safe-area-inset-top, 0px);
+  --mobile-shell-bg: #121212;
+  --mobile-surface-bg: #1a1a1a;
+  --mobile-text-primary: #f5f0e8;
+  --mobile-text-secondary: #a09888;
+  --mobile-accent: #d4af37;
 }
 
 /* 基础重置 */
@@ -36,8 +41,8 @@ html, body {
 
 body {
   font-family: var(--font-body);
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  background: var(--mobile-shell-bg);
+  color: var(--mobile-text-primary);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
@@ -47,6 +52,18 @@ body {
   min-height: 100vh;
   width: 100%;
   overflow-x: hidden;
+}
+
+.gold-gradient {
+  background: linear-gradient(135deg, #c9a96e, #d4af37);
+}
+
+.luxury-shadow {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(201, 169, 110, 0.06);
+}
+
+.scroll-hide::-webkit-scrollbar {
+  display: none;
 }
 
 /* 安全区域底部间距 */

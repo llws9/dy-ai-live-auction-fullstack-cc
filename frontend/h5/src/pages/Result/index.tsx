@@ -1,108 +1,256 @@
-// pages/Result/index.tsx
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { auctionApi, orderApi, productApi } from '@/services/api';
+import { useAuth } from '@/store/authContext';
+import styles from './Result.module.css';
 
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-
-interface AuctionResult {
-  auction_id: number;
-  product_id: number;
-  status: number;
-  final_price: number;
-  winner_id?: number;
-  started_at: string;
-  ended_at: string;
-  delay_used: number;
+interface BidRecord {
+  id?: number;
+  user_id?: number;
+  user_name?: string;
+  amount?: number;
+  created_at?: string;
 }
 
+interface ProductInfo {
+  id?: number;
+  name?: string;
+  images?: string[] | string;
+}
+
+interface OrderInfo {
+  id?: number;
+  status?: number;
+  paid_at?: string;
+}
+
+interface AuctionResult {
+  id?: number;
+  auction_id?: number;
+  product_id?: number;
+  product?: ProductInfo;
+  status?: number;
+  final_price?: number;
+  current_price?: number;
+  winner_id?: number;
+  order_id?: number;
+  order?: OrderInfo;
+  won_bid?: BidRecord;
+  started_at?: string;
+  ended_at?: string;
+  delay_used?: number;
+}
+
+const formatPrice = (value?: number) => `¥${Number(value ?? 0).toLocaleString()}`;
+
+const getFirstImage = (product?: ProductInfo | null) => {
+  if (!product?.images) return '';
+  if (Array.isArray(product.images)) return product.images[0] || '';
+  return product.images;
+};
+
+const getOrderStatusText = (status?: number) => {
+  switch (status) {
+    case 0:
+      return '待支付';
+    case 1:
+      return '已支付';
+    case 2:
+      return '已发货';
+    case 3:
+      return '已完成';
+    default:
+      return '待确认';
+  }
+};
+
 const ResultPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { id: pathId } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const { user } = useAuth();
+  const auctionId = Number(pathId ?? searchParams.get('auction_id') ?? searchParams.get('id'));
+
   const [result, setResult] = useState<AuctionResult | null>(null);
+  const [product, setProduct] = useState<ProductInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
-  useEffect(() => {
-    if (id) {
-      fetchResult();
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    window.setTimeout(() => setToastMessage(''), 2500);
+  };
+
+  const loadResult = useCallback(async () => {
+    if (!auctionId) {
+      setLoading(false);
+      return;
     }
-  }, [id]);
 
-  const fetchResult = async () => {
+    setLoading(true);
     try {
-      const response = await fetch(`/api/v1/auctions/${id}/result`);
-      const data = await response.json();
-      setResult(data);
+      const resultData = await auctionApi.getResult(auctionId);
+      setResult(resultData);
+
+      const embeddedProduct = resultData.product;
+      const productId = resultData.product_id ?? embeddedProduct?.id;
+      if (embeddedProduct) {
+        setProduct(embeddedProduct);
+      } else if (productId) {
+        const productData = await productApi.get(productId).catch(() => null);
+        setProduct(productData);
+      } else {
+        setProduct(null);
+      }
     } catch (error) {
       console.error('获取竞拍结果失败:', error);
+      setResult(null);
+      setProduct(null);
     } finally {
       setLoading(false);
+    }
+  }, [auctionId]);
+
+  useEffect(() => {
+    loadResult();
+  }, [loadResult]);
+
+  const order = result?.order;
+  const orderId = order?.id ?? result?.order_id;
+  const wonBid = result?.won_bid;
+  const auctionNo = result?.auction_id ?? result?.id ?? auctionId;
+  const finalPrice = result?.final_price ?? result?.current_price ?? wonBid?.amount ?? 0;
+  const isWinner = Boolean(user?.id && result?.winner_id === user.id);
+  const productImage = getFirstImage(product);
+  const productName = product?.name || (auctionNo ? `竞拍场次 #${auctionNo}` : '竞拍结果');
+  const statusText = result?.status === 3 ? '已结束' : '结果已生成';
+  const orderStatusText = useMemo(() => getOrderStatusText(order?.status), [order?.status]);
+
+  const handlePay = async () => {
+    if (!orderId || paying) return;
+
+    setPaying(true);
+    try {
+      const paidOrder = await orderApi.pay(orderId);
+      setResult((current) => current ? { ...current, order: paidOrder, order_id: paidOrder?.id ?? orderId } : current);
+      showToast('支付成功，订单已更新');
+    } catch (error: any) {
+      showToast(error?.message || '支付失败，请稍后重试');
+    } finally {
+      setPaying(false);
     }
   };
 
   if (loading) {
-    return <div style={{ padding: '20px', textAlign: 'center' }}>加载中...</div>;
+    return (
+      <section className={styles.page}>
+        <div className={styles.loading} role="status" aria-live="polite">
+          <span className={styles.loadingSpinner} />
+          <span className={styles.loadingText}>加载竞拍结果中...</span>
+        </div>
+      </section>
+    );
   }
 
   if (!result) {
-    return <div style={{ padding: '20px', textAlign: 'center' }}>竞拍结果不存在</div>;
+    return (
+      <section className={styles.page}>
+        <div className={styles.empty}>
+          <span className={styles.emptyIcon}>◇</span>
+          <h1>竞拍结果不存在</h1>
+          <p>需要从已结束的竞拍场次进入结果页。</p>
+          <Link className={styles.primaryLink} to="/">返回首页</Link>
+        </div>
+      </section>
+    );
   }
 
-  const isWinner = result.winner_id === 1; // 简化判断
-
   return (
-    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
-      <h1>竞拍结果</h1>
+    <section className={styles.page}>
+      <header className={styles.header}>
+        <button className={styles.backButton} onClick={() => navigate(-1)} aria-label="返回上一页">‹</button>
+        <h1 className={styles.headerTitle}>竞拍结果</h1>
+        <span className={styles.sharePlaceholder} aria-label="分享暂未开放" title="分享暂未开放">享</span>
+      </header>
 
-      <div style={{
-        padding: '30px',
-        backgroundColor: isWinner ? '#f6ffed' : '#fff2f0',
-        borderRadius: '8px',
-        textAlign: 'center',
-        marginBottom: '20px',
-      }}>
-        <div style={{ fontSize: '48px', marginBottom: '10px' }}>
-          {isWinner ? '🎉' : '😢'}
-        </div>
-        <div style={{
-          fontSize: '24px',
-          fontWeight: 'bold',
-          color: isWinner ? '#52c41a' : '#ff4d4f',
-        }}>
-          {isWinner ? '恭喜中标！' : '未中标'}
-        </div>
-      </div>
+      <main className={styles.content}>
+        <section className={styles.hero}>
+          <div className={`${styles.resultBadge} ${isWinner ? styles.resultBadgeWinner : ''}`}>
+            <span>{isWinner ? '恭喜中标' : '竞拍已结束'}</span>
+          </div>
 
-      <div style={{
-        padding: '20px',
-        backgroundColor: '#f5f5f5',
-        borderRadius: '8px',
-      }}>
-        <h3>成交信息</h3>
-        <p><strong>竞拍ID:</strong> {result.auction_id}</p>
-        <p><strong>成交价格:</strong> ¥{result.final_price.toFixed(2)}</p>
-        <p><strong>中标者ID:</strong> {result.winner_id || '无'}</p>
-        <p><strong>开始时间:</strong> {new Date(result.started_at).toLocaleString()}</p>
-        <p><strong>结束时间:</strong> {new Date(result.ended_at).toLocaleString()}</p>
-        {result.delay_used > 0 && <p><strong>延时时长:</strong> {result.delay_used} 秒</p>}
-      </div>
+          <div className={`${styles.productFrame} ${isWinner ? styles.productFrameWinner : ''}`}>
+            {productImage ? (
+              <img className={styles.productImage} src={productImage} alt={productName} />
+            ) : (
+              <div className={styles.productFallback}>暂无商品图片</div>
+            )}
+            <span className={styles.closedTag}>已成交</span>
+          </div>
 
-      {isWinner && (
-        <div style={{ marginTop: '20px', textAlign: 'center' }}>
-          <button
-            style={{
-              padding: '15px 40px',
-              backgroundColor: '#1890ff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              cursor: 'pointer',
-            }}
-            onClick={() => alert('支付功能开发中...')}
-          >
-            立即支付
-          </button>
+          <p className={styles.lotNo}>LOT {auctionNo}</p>
+          <h2 className={styles.productName}>{productName}</h2>
+        </section>
+
+        <section className={styles.priceCard}>
+          <p className={styles.label}>最终成交价</p>
+          <strong className={styles.finalPrice}>{formatPrice(finalPrice)}</strong>
+          <div className={styles.winnerRow}>
+            <div>
+              <span className={styles.avatar}>{(wonBid?.user_name || '中').slice(0, 1)}</span>
+            </div>
+            <div className={styles.winnerInfo}>
+              <strong>{wonBid?.user_name || (result.winner_id ? `用户${result.winner_id}` : '暂无中标者')}</strong>
+              <span>中标人</span>
+            </div>
+            <div className={styles.bidTime}>
+              <span>出价时间</span>
+              <strong>{wonBid?.created_at ? new Date(wonBid.created_at).toLocaleString() : '---'}</strong>
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.metaCard}>
+          <div>
+            <span>竞拍状态</span>
+            <strong>{statusText}</strong>
+          </div>
+          <div>
+            <span>订单状态</span>
+            <strong>{orderId ? orderStatusText : '订单待生成'}</strong>
+          </div>
+          <div>
+            <span>结束时间</span>
+            <strong>{result.ended_at ? new Date(result.ended_at).toLocaleString() : '---'}</strong>
+          </div>
+          {Number(result.delay_used ?? 0) > 0 && (
+            <div>
+              <span>延时时长</span>
+              <strong>{result.delay_used} 秒</strong>
+            </div>
+          )}
+        </section>
+
+        <div className={styles.actions}>
+          <Link to="/" className={styles.secondaryLink}>返回首页</Link>
+          {isWinner ? (
+            <button
+              className={styles.primaryButton}
+              type="button"
+              onClick={handlePay}
+              disabled={!orderId || paying || order?.status === 1}
+            >
+              {order?.status === 1 ? '已支付' : paying ? '支付中...' : orderId ? '立即支付' : '订单待生成'}
+            </button>
+          ) : (
+            <Link to="/" className={styles.primaryLink}>继续竞拍</Link>
+          )}
         </div>
-      )}
-    </div>
+      </main>
+
+      {toastMessage && <div className={styles.toast} role="status">{toastMessage}</div>}
+    </section>
   );
 };
 

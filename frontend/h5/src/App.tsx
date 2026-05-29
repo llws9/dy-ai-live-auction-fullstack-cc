@@ -7,18 +7,21 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { ToastProvider, useToast } from './components/Toast'
 import { setToastFunction } from './services/api'
 import { errorMonitor } from './utils/errorMonitor'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import LoadingSpinner from './components/LoadingSpinner'
-import LiveReminderModal, { StreamInfo } from './components/LiveReminderModal'
+import MobileContainer from './components/MobileShell/MobileContainer'
+import { LegacyAuctionRedirect, LegacyResultRedirect } from './routes/legacyRedirects'
 
 // 动态导入路由组件
 const Login = lazy(() => import('./pages/Login'))
 const Home = lazy(() => import('./pages/Home'))
-const Auction = lazy(() => import('./pages/Auction'))
+const ProductDetail = lazy(() => import('./pages/ProductDetail'))
 const Result = lazy(() => import('./pages/Result'))
 const History = lazy(() => import('./pages/History'))
 const Live = lazy(() => import('./pages/Live'))
 const Follow = lazy(() => import('./pages/Follow'))
+const Profile = lazy(() => import('./pages/User/Index'))
+const Notifications = lazy(() => import('./pages/Notifications'))
 
 // 认证保护组件
 function PrivateRoute({ children }: { children: React.ReactElement }) {
@@ -59,28 +62,6 @@ function ErrorMonitorInitializer() {
 }
 
 function App() {
-  const [isReminderOpen, setIsReminderOpen] = useState(false)
-  const [activeStream, setActiveStream] = useState<StreamInfo | null>(null)
-
-  useEffect(() => {
-    // 模拟应用启动时检测是否有关注的直播间正在开播
-    const checkLiveStatus = () => {
-      // 模拟后端返回的数据
-      const mockStream: StreamInfo = {
-        id: 1,
-        name: "高奢珠宝首发专场",
-        avatarUrl: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=150",
-        statusText: "正在直播"
-      }
-      setActiveStream(mockStream)
-      setIsReminderOpen(true)
-    }
-
-    // 延迟 1.5 秒后弹出，模拟网络请求和应用初始化
-    const timer = setTimeout(checkLiveStatus, 1500)
-    return () => clearTimeout(timer)
-  }, [])
-
   return (
     <ErrorBoundary>
       <ToastProvider>
@@ -89,19 +70,32 @@ function App() {
           <ErrorMonitorInitializer />
           <GrowthBookContextProvider>
             <AuctionProvider>
-              <div className="app">
+              <MobileContainer>
                 <Suspense fallback={<LoadingSpinner />}>
                   <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/" element={<Home />} />
                     <Route path="/live" element={<Live />} />
-                    <Route path="/auction/:id" element={<Auction />} />
-                    <Route path="/result/:id" element={<Result />} />
-                    <Route path="/follow" element={
+                    <Route path="/detail" element={<ProductDetail />} />
+                    <Route path="/auction/:id" element={<LegacyAuctionRedirect />} />
+                    <Route path="/result" element={<Result />} />
+                    <Route path="/result/:id" element={<LegacyResultRedirect />} />
+                    <Route path="/profile" element={
+                      <PrivateRoute>
+                        <Profile />
+                      </PrivateRoute>
+                    } />
+                    <Route path="/notifications" element={
+                      <PrivateRoute>
+                        <Notifications />
+                      </PrivateRoute>
+                    } />
+                    <Route path="/following" element={
                       <PrivateRoute>
                         <Follow />
                       </PrivateRoute>
                     } />
+                    <Route path="/follow" element={<Navigate to="/following" replace />} />
                     <Route path="/history" element={
                       <PrivateRoute>
                         <History />
@@ -109,14 +103,7 @@ function App() {
                     } />
                   </Routes>
                 </Suspense>
-
-                {/* 全局挂载开播提醒弹窗 */}
-                <LiveReminderModal 
-                  isOpen={isReminderOpen} 
-                  onClose={() => setIsReminderOpen(false)} 
-                  stream={activeStream} 
-                />
-              </div>
+              </MobileContainer>
             </AuctionProvider>
           </GrowthBookContextProvider>
         </AuthProvider>

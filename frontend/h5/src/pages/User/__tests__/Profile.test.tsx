@@ -1,0 +1,103 @@
+import React from 'react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import Profile from '../Index';
+import { orderApi, userApi } from '../../../services/api';
+
+const mockNavigate = jest.fn();
+const mockLogout = jest.fn();
+
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => mockNavigate,
+}));
+
+jest.mock('../../../services/api', () => ({
+  userApi: {
+    getProfile: jest.fn(),
+    getBalance: jest.fn(),
+  },
+  orderApi: {
+    list: jest.fn(),
+  },
+}));
+
+jest.mock('../../../store/authContext', () => ({
+  useAuth: () => ({
+    isAuthenticated: true,
+    user: { id: 9, email: 'buyer@example.com', name: '测试用户', role: 0 },
+    token: 'token-1',
+    loading: false,
+    logout: mockLogout,
+  }),
+}));
+
+const mockedUserApi = userApi as jest.Mocked<typeof userApi>;
+const mockedOrderApi = orderApi as jest.Mocked<typeof orderApi>;
+
+describe('Profile migration', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    mockedUserApi.getProfile.mockResolvedValue({
+      id: 9,
+      name: '林见山',
+      email: 'buyer@example.com',
+      avatar: '',
+      role: 0,
+      created_at: '2026-05-01T00:00:00Z',
+    });
+    mockedUserApi.getBalance.mockResolvedValue({
+      balance: 12888,
+      frozen_amount: 600,
+      available_balance: 12288,
+    });
+    mockedOrderApi.list.mockResolvedValue([
+      {
+        id: 56,
+        auction_id: 12,
+        product_id: 34,
+        product_name: '鎏金香炉',
+        final_price: 6800,
+        status: 0,
+        created_at: '2026-05-29T12:00:00Z',
+      },
+    ]);
+  });
+
+  it('loads profile, balance and order entry from service wrappers', async () => {
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <Profile />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('林见山')).toBeInTheDocument();
+    expect(screen.getByText('¥12,888')).toBeInTheDocument();
+    expect(screen.getByText('可用 ¥12,288')).toBeInTheDocument();
+    expect(screen.getByText('鎏金香炉')).toBeInTheDocument();
+
+    expect(mockedUserApi.getProfile).toHaveBeenCalledTimes(1);
+    expect(mockedUserApi.getBalance).toHaveBeenCalledTimes(1);
+    expect(mockedOrderApi.list).toHaveBeenCalledTimes(1);
+  });
+
+  it('wires retained profile entry buttons and logout', async () => {
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <Profile />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('林见山')).toBeInTheDocument();
+
+    expect(screen.getByRole('link', { name: /我的竞拍/ })).toHaveAttribute('href', '/history');
+    expect(screen.getByRole('link', { name: /关注直播/ })).toHaveAttribute('href', '/following');
+    expect(screen.getByRole('link', { name: /消息通知/ })).toHaveAttribute('href', '/notifications');
+
+    fireEvent.click(screen.getByRole('button', { name: '退出登录' }));
+
+    await waitFor(() => expect(mockLogout).toHaveBeenCalledTimes(1));
+    expect(mockNavigate).toHaveBeenCalledWith('/login');
+  });
+});

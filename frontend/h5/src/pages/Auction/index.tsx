@@ -1,7 +1,7 @@
 // pages/Auction/index.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Loading } from '@/components/shared';
 import BidButton from '../../components/BidButton';
 import PriceDisplay from '../../components/PriceDisplay';
@@ -46,7 +46,9 @@ function getStatusText(status: number): string {
 }
 
 const AuctionPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id: pathId } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const id = pathId ?? searchParams.get('auction_id') ?? searchParams.get('id');
   const navigate = useNavigate();
   const [auction, setAuction] = useState<Auction | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,11 +57,14 @@ const AuctionPage: React.FC = () => {
   const wsRef = useRef<WebSocketService | null>(null);
 
   useEffect(() => {
-    if (id) {
-      fetchAuction();
-      fetchBidRecords();
-      connectWebSocket();
+    if (!id) {
+      setLoading(false);
+      return;
     }
+
+    fetchAuction();
+    fetchBidRecords();
+    connectWebSocket();
 
     return () => {
       if (wsRef.current) {
@@ -127,6 +132,8 @@ const AuctionPage: React.FC = () => {
   };
 
   const fetchAuction = async () => {
+    if (!id) return;
+
     try {
       const response = await fetch(`/api/v1/auctions/${id}`);
       const data = await response.json();
@@ -139,6 +146,8 @@ const AuctionPage: React.FC = () => {
   };
 
   const fetchBidRecords = async () => {
+    if (!id) return;
+
     try {
       const response = await fetch(`/api/v1/auctions/${id}/bids`);
       const data = await response.json();

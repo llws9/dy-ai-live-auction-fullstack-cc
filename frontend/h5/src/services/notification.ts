@@ -1,7 +1,7 @@
 // services/notification.ts
 // 通知服务 - 提供通知相关的API调用
 
-import { get, post } from './api';
+import { get, post, put } from './api';
 
 // 通知项接口
 export interface NotificationItem {
@@ -47,12 +47,12 @@ export const notificationApi = {
 
   // 标记单条通知已读
   markAsRead: (id: number): Promise<void> => {
-    return post<void>(`/notifications/${id}/read`);
+    return put<void>(`/notifications/${id}/read`);
   },
 
   // 标记全部已读
   markAllAsRead: (): Promise<void> => {
-    return post<void>('/notifications/read-all');
+    return put<void>('/notifications/read-all');
   },
 
   // 热拉通知 - 用户切换前台或登录时主动拉取

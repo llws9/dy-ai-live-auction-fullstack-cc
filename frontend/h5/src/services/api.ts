@@ -7,6 +7,26 @@ const API_BASE_URL = '/api/v1';
 // 请求配置
 const REQUEST_TIMEOUT = 30000; // 30秒超时
 
+function getStoredToken(): string | null {
+  return localStorage.getItem('auth_token') || localStorage.getItem('token');
+}
+
+function clearStoredAuth() {
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('auth_user');
+  localStorage.removeItem('token');
+  localStorage.removeItem('userInfo');
+}
+
+export function buildLoginRedirectPath() {
+  const currentPath = `${window.location.pathname}${window.location.search}`;
+  if (window.location.pathname === '/login') {
+    return '/login';
+  }
+
+  return `/login?redirect=${encodeURIComponent(currentPath)}`;
+}
+
 // 自定义错误类
 export class ApiError extends Error {
   status: number;
@@ -72,12 +92,10 @@ async function handleErrorResponse(response: Response): Promise<never> {
   // 特殊处理：401 未授权
   if (response.status === 401) {
     // 清除本地存储的认证信息
-    localStorage.removeItem('token');
-    localStorage.removeItem('userInfo');
+    clearStoredAuth();
 
-    // 跳转到登录页
-    const loginPath = '/login';
-    if (window.location.pathname !== loginPath) {
+    const loginPath = buildLoginRedirectPath();
+    if (window.location.pathname !== '/login') {
       window.location.href = loginPath;
     }
 
@@ -134,7 +152,7 @@ async function request<T>(
   const { showError = true, timeout = REQUEST_TIMEOUT } = config || {};
 
   // 获取 token
-  const token = localStorage.getItem('token');
+  const token = getStoredToken();
 
   const url = `${API_BASE_URL}${path}`;
 
@@ -313,6 +331,15 @@ export const auctionApi = {
 export const orderApi = {
   // 获取订单列表
   list: () => get<any>('/orders'),
+
+  // 获取用户竞拍历史
+  history: (params?: { page?: number; page_size?: number }) => {
+    const query = new URLSearchParams();
+    query.set('page', String(params?.page ?? 1));
+    query.set('page_size', String(params?.page_size ?? 20));
+
+    return get<any>(`/orders/history?${query.toString()}`);
+  },
 
   // 获取订单详情
   get: (id: number) => get<any>(`/orders/${id}`),

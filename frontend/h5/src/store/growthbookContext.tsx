@@ -1,4 +1,5 @@
 import { GrowthBook, GrowthBookProvider as GBProvider } from '@growthbook/growthbook-react';
+import axios from 'axios';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuth } from './authContext';
 
@@ -20,6 +21,24 @@ interface GrowthBookContextProviderProps {
   children: React.ReactNode;
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+
+// 上报实验曝光到后端,用于服务端 Prometheus 指标统计与离线分析。
+// 与 console 日志相比,这是 SSOT 的实验埋点出口。
+function reportExperimentViewed(experimentKey: string, variation: string) {
+  const token = localStorage.getItem('auth_token');
+  void axios
+    .post(
+      `${API_BASE_URL}/experiments/viewed`,
+      { experiment: experimentKey, variation },
+      token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+    )
+    .catch((err) => {
+      // 不阻塞前端体验,失败仅在控制台告警
+      console.warn('[experiment] viewed report failed:', err?.message || err);
+    });
+}
+
 export function GrowthBookContextProvider({ children }: GrowthBookContextProviderProps) {
   const { user } = useAuth();
   const [loaded, setLoaded] = useState(false);
@@ -30,7 +49,7 @@ export function GrowthBookContextProvider({ children }: GrowthBookContextProvide
     clientKey: import.meta.env.VITE_GROWTHBOOK_CLIENT_KEY || 'dev-client-key',
     enableDevMode: import.meta.env.DEV,
     trackingCallback: (experiment, result) => {
-      console.log(`Experiment ${experiment.key} assigned variation ${result.variationId}`);
+      reportExperimentViewed(experiment.key, String(result.variationId));
     },
   }), []);
 

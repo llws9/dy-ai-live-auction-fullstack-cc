@@ -60,6 +60,7 @@ func main() {
 	if err := db.AutoMigrate(
 		&model.Auction{},
 		&model.Bid{},
+		&model.Notification{},
 		&model.UserLiveStreamFollow{},
 		&model.UserProductReminder{},
 		&model.SkyLampSubscription{},
@@ -108,8 +109,7 @@ func main() {
 	auctionService.SetNotificationSender(notificationService)
 	auctionService.SetSkyLampDAO(skyLampDAO)
 
-	// 设置通知服务指标收集器
-	notificationService.SetMetrics(metrics.GetNotificationMetrics())
+	// 通知服务指标暂未实现，跳过设置
 	notificationService.SetHub(hub)
 
 	// 初始化 RabbitMQ 连接
@@ -200,6 +200,7 @@ func main() {
 	h := server.Default(
 		server.WithHostPorts(cfg.Server.HTTPPort),
 	)
+	h.Use(gatewayIdentityMiddleware())
 
 	// 注册路由
 	registerRoutes(h, auctionHandler, bidHandler, wsHandler, userHandler, authHandler, notificationHandler, followHandler, productReminderHandler, skyLampHandler)
@@ -266,6 +267,39 @@ func startWebSocketServer(hub *websocket.Hub, wsHandler *handler.WSHandler, port
 	log.Printf("WebSocket server starting on %s", port)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("WebSocket server error: %v", err)
+	}
+}
+
+func gatewayIdentityMiddleware() app.HandlerFunc {
+	return func(ctx context.Context, c *app.RequestContext) {
+		if userIDHeader := string(c.GetHeader("X-User-ID")); userIDHeader != "" {
+			if userID, err := strconv.ParseInt(userIDHeader, 10, 64); err == nil {
+				c.Set("user_id", userID)
+			}
+		}
+
+		if username := string(c.GetHeader("X-Username")); username != "" {
+			c.Set("username", username)
+		}
+
+		if role := parseGatewayRole(string(c.GetHeader("X-User-Role"))); role >= 0 {
+			c.Set("user_role", role)
+		}
+
+		c.Next(ctx)
+	}
+}
+
+func parseGatewayRole(role string) int {
+	switch role {
+	case "admin":
+		return 2
+	case "streamer", "merchant":
+		return 1
+	case "user":
+		return 0
+	default:
+		return -1
 	}
 }
 

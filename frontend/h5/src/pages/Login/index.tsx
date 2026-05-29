@@ -1,58 +1,65 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../store/authContext';
+import styles from './Login.module.css';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { setAuth } = useAuth();
-  const [isRegister, setIsRegister] = useState(false);
+  const redirectUrl = searchParams.get('redirect') || '/';
+
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    password: '',
-  });
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+
+  const formatPhone = (value: string) => {
+    const cleaned = value.replace(/\D/g, '').slice(0, 11);
+    if (cleaned.length <= 3) return cleaned;
+    if (cleaned.length <= 7) return `${cleaned.slice(0, 3)} ${cleaned.slice(3)}`;
+    return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 7)} ${cleaned.slice(7)}`;
+  };
+
+  const normalizePhone = (value: string) => value.replace(/\D/g, '');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) {
+      setError('请输入手机号');
+      return;
+    }
+
+    if (!password.trim()) {
+      setError('请输入密码');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     try {
-      const url = isRegister ? '/api/v1/auth/register' : '/api/v1/auth/login';
-      const body = isRegister
-        ? {
-            name: formData.name,
-            email: formData.email || undefined,
-            phone: formData.phone || undefined,
-            password: formData.password,
-          }
-        : {
-            email: formData.email,
-            phone: formData.phone,
-            password: formData.password,
-          };
-
-      const response = await fetch(url, {
+      const response = await fetch('/api/v1/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          phone: normalizedPhone,
+          password,
+        }),
       });
 
       const result = await response.json();
 
       if (response.ok && result.data) {
-        // 设置认证状态
         setAuth(result.data.token, result.data.user);
-        // 触发登录成功事件，用于通知系统热拉
         window.dispatchEvent(new CustomEvent('login-success'));
-        navigate('/');
+        navigate(redirectUrl);
       } else {
-        setError(result.message || '操作失败');
+        setError(result.message || '登录失败，请重试');
       }
     } catch (err) {
       setError('网络错误，请重试');
@@ -62,134 +69,67 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h2 style={styles.title}>{isRegister ? '用户注册' : '用户登录'}</h2>
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <button
+          type="button"
+          className={styles.backButton}
+          aria-label="返回"
+          onClick={() => navigate(-1)}
+        >
+          ‹
+        </button>
+        <div>
+          <p className={styles.eyebrow}>Luxury Auction</p>
+          <h1>登录</h1>
+        </div>
+      </header>
 
-        {error && <div style={styles.error}>{error}</div>}
+      <main className={styles.content}>
+        <section className={styles.brandCard} aria-label="奢华竞拍">
+          <div className={styles.logoMark}>LA</div>
+          <h2>奢华竞拍</h2>
+          <p>尊享品质，实时竞拍</p>
+        </section>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          {isRegister && (
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <label className={styles.field} htmlFor="login-phone">
+            <span>手机号</span>
             <input
-              type="text"
-              placeholder="用户名"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              style={styles.input}
-              required
+              id="login-phone"
+              type="tel"
+              inputMode="numeric"
+              placeholder="请输入手机号"
+              value={phone}
+              onChange={(e) => setPhone(formatPhone(e.target.value))}
+              autoComplete="tel"
+              maxLength={13}
             />
-          )}
+          </label>
 
-          <input
-            type="email"
-            placeholder="邮箱"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            style={styles.input}
-          />
+          <label className={styles.field} htmlFor="login-password">
+            <span>密码</span>
+            <input
+              id="login-password"
+              type="password"
+              placeholder="请输入密码"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+          </label>
 
-          <input
-            type="tel"
-            placeholder="手机号"
-            value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            style={styles.input}
-          />
+          {error && <div className={styles.error}>{error}</div>}
 
-          <input
-            type="password"
-            placeholder="密码"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            style={styles.input}
-            required
-          />
-
-          <button type="submit" disabled={loading} style={styles.button}>
-            {loading ? '处理中...' : (isRegister ? '注册' : '登录')}
+          <button type="submit" disabled={loading} className={styles.submitButton}>
+            {loading ? '登录中...' : '登录'}
           </button>
         </form>
 
-        <p style={styles.switchText}>
-          {isRegister ? '已有账号？' : '没有账号？'}
-          <button
-            onClick={() => setIsRegister(!isRegister)}
-            style={styles.switchButton}
-          >
-            {isRegister ? '立即登录' : '立即注册'}
-          </button>
-        </p>
-      </div>
+        <p className={styles.agreement}>登录即表示同意《用户协议》和《隐私政策》</p>
+      </main>
     </div>
   );
-};
-
-const styles: { [key: string]: React.CSSProperties } = {
-  container: {
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f5f5f5',
-    padding: '20px',
-  },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: '16px',
-    padding: '40px',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-    width: '100%',
-    maxWidth: '400px',
-  },
-  title: {
-    fontSize: '24px',
-    textAlign: 'center',
-    marginBottom: '30px',
-    color: '#333',
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-  },
-  input: {
-    padding: '14px 16px',
-    border: '1px solid #e0e0e0',
-    borderRadius: '8px',
-    fontSize: '16px',
-    outline: 'none',
-  },
-  button: {
-    padding: '14px',
-    backgroundColor: '#1890ff',
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    marginTop: '8px',
-  },
-  error: {
-    padding: '12px',
-    backgroundColor: '#fff2f0',
-    color: '#ff4d4f',
-    borderRadius: '8px',
-    marginBottom: '16px',
-    textAlign: 'center',
-  },
-  switchText: {
-    textAlign: 'center',
-    marginTop: '20px',
-    color: '#666',
-  },
-  switchButton: {
-    background: 'none',
-    border: 'none',
-    color: '#1890ff',
-    cursor: 'pointer',
-    fontSize: '14px',
-  },
 };
 
 export default LoginPage;

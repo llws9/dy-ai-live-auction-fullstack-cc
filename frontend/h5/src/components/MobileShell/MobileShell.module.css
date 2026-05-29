@@ -1,0 +1,90 @@
+.shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #121212;
+  color: #f5f0e8;
+  display: flex;
+  justify-content: center;
+  font-family: var(--font-body);
+}
+
+.viewport {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #1a1a1a;
+  overflow-x: hidden;
+}
+
+.content {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-bottom: calc(80px + var(--safe-bottom));
+}
+
+.bottomNav {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 20;
+  width: 100%;
+  max-width: 430px;
+  height: calc(64px + var(--safe-bottom));
+  padding: 8px 24px calc(8px + var(--safe-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: rgba(26, 26, 26, 0.92);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  transform: translateX(-50%);
+}
+
+.navItem {
+  min-width: 64px;
+  color: #a09888;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  line-height: 1;
+  transition: color var(--transition-fast);
+}
+
+.navItem:hover,
+.navItemActive {
+  color: #d4af37;
+}
+
+.navIcon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+@media (min-width: 431px) {
+  .shell {
+    align-items: center;
+    padding: 24px 0;
+  }
+
+  .viewport {
+    max-width: 430px;
+    min-height: min(100vh, 812px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 32px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  }
+
+  .content {
+    min-height: min(100vh, 812px);
+  }
+
+  .bottomNav {
+    position: absolute;
+    left: 0;
+    max-width: none;
+    transform: none;
+  }
+}
