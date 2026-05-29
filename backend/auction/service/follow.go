@@ -9,13 +9,23 @@ import (
 	"auction-service/model"
 )
 
+type FollowDAO interface {
+	Create(ctx context.Context, follow *model.UserLiveStreamFollow) error
+	Delete(ctx context.Context, userID, liveStreamID int64) error
+	GetByUserAndLiveStream(ctx context.Context, userID, liveStreamID int64) (*model.UserLiveStreamFollow, error)
+	GetUserFollows(ctx context.Context, userID int64, offset, limit int) ([]model.UserLiveStreamFollow, error)
+	CountUserFollows(ctx context.Context, userID int64) (int64, error)
+	UpdateNotificationEnabled(ctx context.Context, userID, liveStreamID int64, enabled bool) error
+	GetFollowStats(ctx context.Context, liveStreamID int64) (map[string]int64, error)
+}
+
 // FollowService 关注服务
 type FollowService struct {
-	followDAO *dao.UserLiveStreamFollowDAO
+	followDAO FollowDAO
 }
 
 // NewFollowService 创建关注服务
-func NewFollowService(followDAO *dao.UserLiveStreamFollowDAO) *FollowService {
+func NewFollowService(followDAO FollowDAO) *FollowService {
 	return &FollowService{
 		followDAO: followDAO,
 	}

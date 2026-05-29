@@ -82,6 +82,9 @@ func TestStatsCron_GetActiveLiveStreams(t *testing.T) {
 
 	// 添加一些测试数据到 Redis
 	redis := dao.GetRedis()
+	if redis == nil {
+		t.Skip("redis client not initialized")
+	}
 
 	// 添加正在直播的热门直播间
 	redis.SAdd(ctx, dao.HotLiveNowSet, 1, 2, 3)
@@ -121,6 +124,9 @@ func TestStatsCron_UpdateAllLiveStreamHotness(t *testing.T) {
 
 	// 添加测试数据
 	redis := dao.GetRedis()
+	if redis == nil {
+		t.Skip("redis client not initialized")
+	}
 
 	// 添加正在直播的热门直播间
 	redis.SAdd(ctx, dao.HotLiveNowSet, 9991, 9992)

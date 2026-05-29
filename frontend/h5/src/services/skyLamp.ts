@@ -1,36 +1,52 @@
-// services/skyLamp.ts
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
-// 开启天灯
-export async function activateSkyLamp(auctionId: number, token: string) {
-  const response = await fetch(`${API_BASE_URL}/api/v1/auctions/${auctionId}/sky-lamp`, {
+interface ApiResponse<T = any> {
+  code?: number;
+  message?: string;
+  data?: T;
+  [key: string]: any;
+}
+
+async function parseResponse<T>(response: Response): Promise<ApiResponse<T>> {
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.message || '请求失败');
+  }
+  return data;
+}
+
+export async function startSkyLampSubscription(auctionId: number, token: string): Promise<ApiResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/sky-lamp/subscriptions`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
     },
+    body: JSON.stringify({ auction_id: auctionId }),
   });
-  return response.json();
+
+  return parseResponse(response);
 }
 
-// 取消天灯
-export async function cancelSkyLamp(auctionId: number, token: string) {
-  const response = await fetch(`${API_BASE_URL}/api/v1/auctions/${auctionId}/sky-lamp`, {
-    method: 'DELETE',
+export async function stopSkyLampSubscription(subscriptionId: number, token: string): Promise<ApiResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/sky-lamp/subscriptions/${subscriptionId}/stop`, {
+    method: 'PUT',
     headers: {
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     },
   });
-  return response.json();
+
+  return parseResponse(response);
 }
 
-// 查询天灯状态
-export async function getSkyLampStatus(auctionId: number, token: string) {
-  const response = await fetch(`${API_BASE_URL}/api/v1/auctions/${auctionId}/sky-lamp`, {
+export async function getSkyLampSubscriptions(token: string, status?: number): Promise<ApiResponse> {
+  const query = status !== undefined ? `?status=${status}` : '';
+  const response = await fetch(`${API_BASE_URL}/api/v1/sky-lamp/subscriptions${query}`, {
+    method: 'GET',
     headers: {
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     },
   });
-  return response.json();
+
+  return parseResponse(response);
 }

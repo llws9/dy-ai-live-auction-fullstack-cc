@@ -63,9 +63,10 @@ func (s *BidService) SetSkyLampTrigger(trigger SkyLampTrigger) {
 
 // PlaceBidRequest 出价请求
 type PlaceBidRequest struct {
-	AuctionID int64
-	UserID    int64
-	Amount    float64
+	AuctionID          int64
+	UserID             int64
+	Amount             float64
+	SkipSkyLampTrigger bool // 点天灯自动跟价调用时设为true，避免递归
 }
 
 // PlaceBidResult 出价结果
@@ -206,8 +207,8 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 		}()
 	}
 
-	// 11.2 触发点天灯自动跟价
-	if s.skyLampTrigger != nil {
+	// 11.2 触发点天灯自动跟价（非点天灯自动跟价调用才触发，避免递归）
+	if s.skyLampTrigger != nil && !req.SkipSkyLampTrigger {
 		go func() {
 			// 异步触发，不阻塞主流程
 			_ = s.skyLampTrigger.TriggerAutoBid(ctx, req.AuctionID, req.Amount, rule.Increment)

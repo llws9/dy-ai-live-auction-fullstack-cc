@@ -3,6 +3,7 @@ package mq
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"time"
 )
@@ -112,7 +113,7 @@ func (p *NotificationProducer) SendAuctionStartingNotification(
 			ContentType:  "application/json",
 			Body:         body,
 			DeliveryMode: amqp.Persistent,
-			Expiration:   string(delayMs), // 消息TTL（毫秒）
+			Expiration:   fmt.Sprintf("%d", delayMs), // 消息TTL（毫秒）
 		},
 	)
 }

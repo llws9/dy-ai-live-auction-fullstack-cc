@@ -1,7 +1,8 @@
 // components/BidButton/index.tsx
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '../../store/authContext';
+import { useSkyLamp } from '../../hooks/useSkyLamp';
 
 interface BidButtonProps {
   auctionId: number;
@@ -18,26 +19,32 @@ const BidButton: React.FC<BidButtonProps> = ({
 }) => {
   const { token, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [skyLampLoading, setSkyLampLoading] = useState(false);
-  const [skyLampStatus, setSkyLampStatus] = useState<{
-    active: boolean;
-    subscription_id: number;
-    max_price_limit: number;
-    auto_bid_count: number;
-    total_bid_amount: number;
-  } | null>(null);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [customAmount, setCustomAmount] = useState<string>('');
+
+  const {
+    loading: skyLampLoading,
+    active: skyLampActive,
+    refreshStatus,
+    start: startSkyLamp,
+    stop: stopSkyLamp,
+  } = useSkyLamp(token, auctionId);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      refreshStatus();
+    }
+  }, [isAuthenticated, refreshStatus]);
 
   // 防抖处理
   const debounce = <T extends (...args: any[]) => any>(
     func: T,
     wait: number
   ): ((...args: Parameters<T>) => void) => {
-    let timeout: NodeJS.Timeout | null = null;
+    let timeout: number | null = null;
     return (...args: Parameters<T>) => {
-      if (timeout) clearTimeout(timeout);
-      timeout = setTimeout(() => func(...args), wait);
+      if (timeout) window.clearTimeout(timeout);
+      timeout = window.setTimeout(() => func(...args), wait);
     };
   };
 
@@ -79,6 +86,24 @@ const BidButton: React.FC<BidButtonProps> = ({
     }
   };
 
+  const handleStartSkyLamp = async () => {
+    try {
+      await startSkyLamp();
+      setMessage({ text: '✨ 点天灯已开启', type: 'success' });
+    } catch (error: any) {
+      setMessage({ text: error?.message || '开启点天灯失败', type: 'error' });
+    }
+  };
+
+  const handleStopSkyLamp = async () => {
+    try {
+      await stopSkyLamp();
+      setMessage({ text: '🛑 点天灯已停止', type: 'success' });
+    } catch (error: any) {
+      setMessage({ text: error?.message || '停止点天灯失败', type: 'error' });
+    }
+  };
+
   // 防抖出价函数
   const debouncedPlaceBid = useCallback(
     debounce((amount: number) => placeBid(amount), 500),
@@ -100,44 +125,8 @@ const BidButton: React.FC<BidButtonProps> = ({
     }
   };
 
-  const handleSkyLamp = async () => {
-    if (!isAuthenticated) {
-      setMessage({ text: '请先登录', type: 'error' });
-      return;
-    }
-
-    setSkyLampLoading(true);
-    setMessage(null);
-
-    try {
-      const response = await fetch(`/api/v1/auctions/${auctionId}/sky-lamp`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({}),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setMessage({ text: '🏮 点天灯成功！', type: 'success' });
-        if (result.data) {
-          setSkyLampStatus(result.data);
-        }
-      } else {
-        setMessage({ text: result.message || '点天灯失败', type: 'error' });
-      }
-    } catch (error) {
-      setMessage({ text: '网络错误，请重试', type: 'error' });
-      console.error('点天灯失败:', error);
-    } finally {
-      setSkyLampLoading(false);
-    }
-  };
-
   const minBid = currentPrice + increment;
+  const doubleBid = currentPrice + increment * 2;
 
   return (
     <div style={styles.container}>
@@ -153,33 +142,13 @@ const BidButton: React.FC<BidButtonProps> = ({
 
       {/* 快捷出价按钮 */}
       <div style={styles.quickBidSection}>
-        {/* 左列：点天灯按钮 */}
-        <button
-          onClick={handleSkyLamp}
-          disabled={skyLampLoading || skyLampStatus?.active}
-          style={{
-            ...styles.bidButton,
-            ...styles.bidButtonSkyLamp,
-            opacity: skyLampStatus?.active ? 0.6 : 1,
-          }}
-        >
-          <span style={styles.buttonIcon}>🏮</span>
-          <span style={styles.buttonText}>
-            {skyLampStatus?.active ? '天灯亮着' : '点天灯'}
-          </span>
-          <span style={styles.buttonHint}>
-            {skyLampStatus?.active ? `${skyLampStatus.auto_bid_count}次跟价` : '自动跟价'}
-          </span>
-        </button>
-
-        {/* 右列：出价按钮 */}
         <button
           onClick={() => handleBid(1)}
-          disabled={loading}
+          disabled={loading || skyLampLoading}
           style={{
             ...styles.bidButton,
             ...styles.bidButtonPrimary,
-            opacity: loading ? 0.6 : 1,
+            opacity: loading || skyLampLoading ? 0.6 : 1,
           }}
         >
           <span style={styles.buttonIcon}>💰</span>
@@ -187,6 +156,22 @@ const BidButton: React.FC<BidButtonProps> = ({
             出价 <span style={styles.buttonAmount}>¥{minBid}</span>
           </span>
           <span style={styles.buttonHint}>+{increment}元</span>
+        </button>
+
+        <button
+          onClick={() => handleBid(2)}
+          disabled={loading || skyLampLoading}
+          style={{
+            ...styles.bidButton,
+            ...styles.bidButtonHot,
+            opacity: loading || skyLampLoading ? 0.6 : 1,
+          }}
+        >
+          <span style={styles.buttonIcon}>🔥</span>
+          <span style={styles.buttonText}>
+            加倍 <span style={styles.buttonAmount}>¥{doubleBid}</span>
+          </span>
+          <span style={styles.buttonHint}>+{increment * 2}元</span>
         </button>
       </div>
 
@@ -205,14 +190,46 @@ const BidButton: React.FC<BidButtonProps> = ({
         </div>
         <button
           onClick={handleCustomBid}
-          disabled={loading}
+          disabled={loading || skyLampLoading}
           style={{
             ...styles.confirmButton,
-            opacity: loading ? 0.6 : 1,
+            opacity: loading || skyLampLoading ? 0.6 : 1,
           }}
         >
           确认出价
         </button>
+      </div>
+
+      {/* 点天灯 */}
+      <div style={styles.skyLampSection}>
+        {skyLampActive ? (
+          <button
+            onClick={handleStopSkyLamp}
+            disabled={loading || skyLampLoading}
+            style={{
+              ...styles.skyLampButton,
+              ...styles.skyLampStopButton,
+              opacity: loading || skyLampLoading ? 0.6 : 1,
+            }}
+          >
+            🛑 停止点天灯
+          </button>
+        ) : (
+          <button
+            onClick={handleStartSkyLamp}
+            disabled={loading || skyLampLoading}
+            style={{
+              ...styles.skyLampButton,
+              ...styles.skyLampStartButton,
+              opacity: loading || skyLampLoading ? 0.6 : 1,
+            }}
+          >
+            ✨ 开启点天灯
+          </button>
+        )}
+        <p style={styles.skyLampHint}>
+          {skyLampActive ? '点天灯进行中：系统将自动跟价' : '开启后将按规则自动跟价'}
+        </p>
       </div>
 
       {/* 出价提示 */}
@@ -269,10 +286,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     background: 'linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%)',
     color: 'white',
   },
-  bidButtonSkyLamp: {
-    background: 'linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%)',
-    color: 'white',
-  },
   buttonIcon: {
     fontSize: '20px',
     marginBottom: '4px',
@@ -324,6 +337,36 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '14px',
     fontWeight: 'bold',
     cursor: 'pointer',
+  },
+  skyLampSection: {
+    marginBottom: '12px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  skyLampButton: {
+    width: '100%',
+    padding: '12px 16px',
+    border: 'none',
+    borderRadius: '10px',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+  },
+  skyLampStartButton: {
+    background: 'linear-gradient(135deg, #722ed1 0%, #531dab 100%)',
+    color: '#fff',
+  },
+  skyLampStopButton: {
+    background: '#fff1f0',
+    color: '#cf1322',
+    border: '1px solid #ffa39e',
+  },
+  skyLampHint: {
+    margin: 0,
+    color: '#722ed1',
+    fontSize: '12px',
+    textAlign: 'center',
   },
   hint: {
     textAlign: 'center',

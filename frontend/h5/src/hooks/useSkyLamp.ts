@@ -1,135 +1,90 @@
-// hooks/useSkyLamp.ts
+import { useCallback, useState } from 'react';
+import {
+  getSkyLampSubscriptions,
+  startSkyLampSubscription,
+  stopSkyLampSubscription,
+} from '../services/skyLamp';
 
-import { useState, useEffect, useCallback } from 'react';
-import WebSocketService from '../services/websocket';
-import { activateSkyLamp, cancelSkyLamp, getSkyLampStatus } from '../services/skyLamp';
-
-interface SkyLampStatus {
-  active: boolean;
-  subscription_id: number;
-  max_price_limit: number;
-  auto_bid_count: number;
-  total_bid_amount: number;
-  remaining_budget: number;
+interface SkyLampSubscription {
+  id: number;
+  auction_id: number;
+  status: number;
 }
 
-interface UseSkyLampOptions {
-  auctionId: number;
-  userId: number;
-  token: string;
-  ws: WebSocketService | null;
-}
-
-export function useSkyLamp(options: UseSkyLampOptions) {
-  const { auctionId, userId, token, ws } = options;
-  const [status, setStatus] = useState<SkyLampStatus | null>(null);
+export function useSkyLamp(token: string | null, auctionId: number) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [subscriptionId, setSubscriptionId] = useState<number | null>(null);
+  const [active, setActive] = useState(false);
 
-  // 初始化时获取天灯状态
-  useEffect(() => {
-    if (auctionId && token) {
-      getSkyLampStatus(auctionId, token)
-        .then((data) => {
-          if (data.active) {
-            setStatus(data);
-          }
-        })
-        .catch((err) => {
-          console.error('Failed to get sky lamp status:', err);
-        });
-    }
-  }, [auctionId, token]);
-
-  // WebSocket消息监听
-  useEffect(() => {
-    if (!ws) return;
-
-    const handleSkyLampActivated = (data: any) => {
-      if (data.user_id === userId) {
-        setStatus({
-          active: true,
-          subscription_id: data.subscription_id,
-          max_price_limit: data.max_price_limit,
-          auto_bid_count: 0,
-          total_bid_amount: data.initial_bid_amount,
-          remaining_budget: data.max_price_limit - data.initial_bid_amount,
-        });
-      }
-    };
-
-    const handleSkyLampAutoBid = (data: any) => {
-      if (data.user_id === userId) {
-        setStatus(prev => prev ? {
-          ...prev,
-          auto_bid_count: data.auto_bid_count,
-          total_bid_amount: data.amount,
-          remaining_budget: data.remaining_budget,
-        } : null);
-      }
-    };
-
-    const handleSkyLampStopped = (data: any) => {
-      if (data.user_id === userId) {
-        setStatus(null);
-      }
-    };
-
-    ws.on('sky_lamp_activated', handleSkyLampActivated);
-    ws.on('sky_lamp_auto_bid', handleSkyLampAutoBid);
-    ws.on('sky_lamp_stopped', handleSkyLampStopped);
-
-    return () => {
-      ws.off('sky_lamp_activated', handleSkyLampActivated);
-      ws.off('sky_lamp_auto_bid', handleSkyLampAutoBid);
-      ws.off('sky_lamp_stopped', handleSkyLampStopped);
-    };
-  }, [ws, userId]);
-
-  // 开启天灯
-  const activate = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const refreshStatus = useCallback(async () => {
+    if (!token) return;
     try {
-      const result = await activateSkyLamp(auctionId, token);
-      if (result.error) {
-        setError(result.error);
-        return false;
+      const resp = await getSkyLampSubscriptions(token, 1);
+      const list = (resp.subscriptions || resp.data?.subscriptions || []) as SkyLampSubscription[];
+      const matched = list.find((x) => x.auction_id === auctionId && x.status === 1);
+      if (matched) {
+        setSubscriptionId(matched.id);
+        setActive(true);
+      } else {
+        setSubscriptionId(null);
+        setActive(false);
       }
-      return true;
-    } catch (err: any) {
-      setError(err.message || 'Failed to activate sky lamp');
-      return false;
+    } catch {
+      // ignore refresh errors
+    }
+  }, [token, auctionId]);
+
+  const start = useCallback(async () => {
+    if (!token) throw new Error('未登录');
+    setLoading(true);
+    try {
+      const resp = await startSkyLampSubscription(auctionId, token);
+      const sub = resp.subscription || resp.data?.subscription;
+      if (sub?.id) {
+        setSubscriptionId(sub.id);
+      }
+      setActive(true);
+      return resp;
     } finally {
       setLoading(false);
     }
   }, [auctionId, token]);
 
-  // 取消天灯
-  const cancel = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await cancelSkyLamp(auctionId, token);
-      if (result.error) {
-        setError(result.error);
-        return false;
+  const stop = useCallback(async () => {
+    if (!token) throw new Error('未登录');
+
+    let targetSubscriptionId = subscriptionId;
+    if (!targetSubscriptionId) {
+      const resp = await getSkyLampSubscriptions(token, 1);
+      const list = (resp.subscriptions || resp.data?.subscriptions || []) as SkyLampSubscription[];
+      const matched = list.find((x) => x.auction_id === auctionId && x.status === 1);
+      targetSubscriptionId = matched?.id ?? null;
+      if (targetSubscriptionId) {
+        setSubscriptionId(targetSubscriptionId);
       }
-      setStatus(null);
-      return true;
-    } catch (err: any) {
-      setError(err.message || 'Failed to cancel sky lamp');
-      return false;
+    }
+
+    if (!targetSubscriptionId) {
+      throw new Error('未找到可停止的天灯订阅');
+    }
+
+    setLoading(true);
+    try {
+      const resp = await stopSkyLampSubscription(targetSubscriptionId, token);
+      setActive(false);
+      setSubscriptionId(null);
+      return resp;
     } finally {
       setLoading(false);
     }
-  }, [auctionId, token]);
+  }, [token, subscriptionId, auctionId]);
 
   return {
-    status,
     loading,
-    error,
-    activate,
-    cancel,
+    active,
+    subscriptionId,
+    refreshStatus,
+    start,
+    stop,
   };
 }

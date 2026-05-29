@@ -39,6 +39,9 @@ func TestLiveStreamStatsService_SetScheduledStartTime(t *testing.T) {
 	}
 
 	service := NewLiveStreamStatsService()
+	if service.redis == nil {
+		t.Skip("redis client not initialized")
+	}
 	ctx := context.Background()
 
 	startTime := time.Now().Add(2 * time.Hour)
@@ -73,6 +76,9 @@ func TestLiveStreamStatsService_UpdateHotness(t *testing.T) {
 	}
 
 	service := NewLiveStreamStatsService()
+	if service.redis == nil {
+		t.Skip("redis client not initialized")
+	}
 	ctx := context.Background()
 
 	startTime := time.Now().Add(1 * time.Hour)
@@ -111,6 +117,9 @@ func TestLiveStreamStatsService_StartLive(t *testing.T) {
 	}
 
 	service := NewLiveStreamStatsService()
+	if service.redis == nil {
+		t.Skip("redis client not initialized")
+	}
 	ctx := context.Background()
 
 	startTime := time.Now().Add(30 * time.Minute)
@@ -145,6 +154,9 @@ func TestLiveStreamStatsService_EndLive(t *testing.T) {
 	}
 
 	service := NewLiveStreamStatsService()
+	if service.redis == nil {
+		t.Skip("redis client not initialized")
+	}
 	ctx := context.Background()
 
 	startTime := time.Now().Add(30 * time.Minute)

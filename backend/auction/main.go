@@ -93,7 +93,11 @@ func main() {
 	followService := service.NewFollowService(userLiveStreamFollowDAO)
 	productReminderService := service.NewProductReminderService(userProductReminderDAO)
 	productReminderService.SetAuctionDAO(auctionDAO)
-	skyLampService := service.NewSkyLampService(skyLampDAO, bidService)
+
+	// 初始化分布式锁服务
+	distributedLockService := service.NewDistributedLockService(dao.GetRedis())
+
+	skyLampService := service.NewSkyLampService(skyLampDAO, bidService, cfg.SkyLamp, distributedLockService)
 
 	// 设置出价服务的通知发送器和指标收集器
 	bidService.SetNotificationSender(notificationService)
@@ -104,16 +108,15 @@ func main() {
 	auctionService.SetNotificationSender(notificationService)
 	auctionService.SetSkyLampDAO(skyLampDAO)
 
-	// 设置通知服务和点天灯服务的指标收集器
+	// 设置通知服务指标收集器
 	notificationService.SetMetrics(metrics.GetNotificationMetrics())
 	notificationService.SetHub(hub)
-	skyLampService.SetMetrics(metrics.GetSkyLampMetrics())
 
 	// 初始化 RabbitMQ 连接
 	if cfg.RabbitMQ.Host != "" && cfg.RabbitMQ.User != "" {
 		rmqConfig := &mq.RabbitMQConfig{
 			Host:     cfg.RabbitMQ.Host,
-			Port:     fmt.Sprintf("%d", cfg.RabbitMQ.Port),
+			Port:     cfg.RabbitMQ.Port,
 			User:     cfg.RabbitMQ.User,
 			Password: cfg.RabbitMQ.Password,
 			VHost:    cfg.RabbitMQ.VHost,

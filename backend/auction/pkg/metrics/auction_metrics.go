@@ -307,3 +307,13 @@ func formatInt64(n int64) string {
 	}
 	return strconv.FormatInt(n, 10)
 }
+
+// InitRegistry 初始化 Prometheus Registry
+func InitRegistry() {
+	// 初始化默认 AuctionMetrics
+	Init()
+	// 初始化 SkyLampMetrics
+	InitSkyLampMetrics()
+	// 初始化 NotificationMetrics
+	InitNotificationMetrics()
+}
