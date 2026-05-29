@@ -3,12 +3,14 @@ package dao
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"gorm.io/gorm"
 
 	"auction-service/model"
 )
+
+// ErrVersionConflict 乐观锁版本冲突
+var ErrVersionConflict = errors.New("竞拍版本不匹配，可能已被其他请求更新")
 
 // AuctionDAO 竞拍数据访问层
 type AuctionDAO struct {
@@ -87,7 +89,7 @@ func (d *AuctionDAO) UpdatePrice(ctx context.Context, id int64, price float64, w
 	}
 
 	if result.RowsAffected == 0 {
-		return fmt.Errorf("竞拍版本不匹配，可能已被其他请求更新")
+		return ErrVersionConflict
 	}
 
 	return nil

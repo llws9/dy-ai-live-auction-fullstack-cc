@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"auction-service/dao"
@@ -17,12 +17,7 @@ import (
 
 // isVersionConflictError 检查是否是乐观锁版本冲突错误
 func isVersionConflictError(err error) bool {
-	if err == nil {
-		return false
-	}
-	// 检查错误消息中是否包含版本冲突标识
-	return strings.Contains(err.Error(), "版本不匹配") ||
-		strings.Contains(err.Error(), "RowsAffected")
+	return errors.Is(err, dao.ErrVersionConflict)
 }
 
 // BidService 出价服务
@@ -150,10 +145,14 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 		// 达到封顶价，需要获取分布式锁保护
 		bidLock := lock.NewAuctionBidLock(dao.GetRedis(), req.AuctionID)
 		if err := bidLock.Acquire(ctx); err != nil {
-			return &PlaceBidResult{
-				Success: false,
-				Message: "出价过于频繁，请稍后再试",
-			}, nil
+			// 区分锁占用（业务正常）和 Redis 错误（基础设施异常）
+			if errors.Is(err, lock.ErrLockNotAcquired) {
+				return &PlaceBidResult{
+					Success: false,
+					Message: "出价过于频繁，请稍后再试",
+				}, nil
+			}
+			return nil, fmt.Errorf("获取出价锁失败: %w", err)
 		}
 		defer bidLock.Release(ctx)
 
@@ -179,10 +178,14 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 	// 7. 获取分布式锁
 	bidLock := lock.NewAuctionBidLock(dao.GetRedis(), req.AuctionID)
 	if err := bidLock.Acquire(ctx); err != nil {
-		return &PlaceBidResult{
-			Success: false,
-			Message: "出价过于频繁，请稍后再试",
-		}, nil
+		// 区分锁占用（业务正常）和 Redis 错误（基础设施异常）
+		if errors.Is(err, lock.ErrLockNotAcquired) {
+			return &PlaceBidResult{
+				Success: false,
+				Message: "出价过于频繁，请稍后再试",
+			}, nil
+		}
+		return nil, fmt.Errorf("获取出价锁失败: %w", err)
 	}
 	defer bidLock.Release(ctx)
 
@@ -201,18 +204,7 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 		}, nil
 	}
 
-	// 10. 创建出价记录
-	bid := &model.Bid{
-		AuctionID: req.AuctionID,
-		UserID:    req.UserID,
-		Amount:    req.Amount,
-	}
-
-	if err := s.bidDAO.Create(ctx, bid); err != nil {
-		return nil, fmt.Errorf("创建出价记录失败: %w", err)
-	}
-
-	// 11. 更新竞拍当前价格和中标者（使用乐观锁，带重试）
+	// 10. 创建出价记录 + 更新竞拍价格（同一事务，乐观锁带重试）
 	// 保存前中标者信息，用于发送出价超越通知
 	previousWinnerID := auction.WinnerID
 	previousPrice := auction.CurrentPrice
@@ -228,37 +220,64 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 				lastErr = fmt.Errorf("重试获取竞拍失败: %w", err)
 				continue
 			}
-		}
-
-		if err := s.auctionDAO.UpdatePrice(ctx, req.AuctionID, req.Amount, req.UserID, auction.Version); err != nil {
-			lastErr = err
-			// 检查是否是版本冲突错误（可重试）
-			if isVersionConflictError(err) {
-				continue // 重试
+			// 重试时再次校验最低出价
+			minBidAmount = auction.CurrentPrice + rule.Increment
+			if req.Amount < minBidAmount {
+				return &PlaceBidResult{
+					Success: false,
+					Message: fmt.Sprintf("已被超越，当前最低出价为 %.2f 元", minBidAmount),
+				}, nil
 			}
-			// 其他错误直接返回
-			return nil, fmt.Errorf("更新竞拍价格失败: %w", err)
 		}
 
-		// 成功，清空错误并跳出循环
-		lastErr = nil
-		break
+		expectedVersion := auction.Version
+		txErr := s.auctionDAO.DB().Transaction(func(tx *gorm.DB) error {
+			// 在事务中创建出价记录
+			bid := &model.Bid{
+				AuctionID: req.AuctionID,
+				UserID:    req.UserID,
+				Amount:    req.Amount,
+			}
+			if err := s.bidDAO.WithTx(tx).Create(ctx, bid); err != nil {
+				return fmt.Errorf("创建出价记录失败: %w", err)
+			}
+
+			// 在事务中更新竞拍价格（乐观锁）
+			if err := s.auctionDAO.WithTx(tx).UpdatePrice(ctx, req.AuctionID, req.Amount, req.UserID, expectedVersion); err != nil {
+				return err
+			}
+			return nil
+		})
+
+		if txErr == nil {
+			lastErr = nil
+			break
+		}
+
+		lastErr = txErr
+		// 检查是否是版本冲突错误（可重试）
+		if isVersionConflictError(txErr) {
+			continue
+		}
+		// 其他错误直接返回
+		return nil, fmt.Errorf("出价失败: %w", txErr)
 	}
 
 	if lastErr != nil {
-		return nil, fmt.Errorf("更新竞拍价格失败（重试%d次后）: %w", maxRetries, lastErr)
+		return nil, fmt.Errorf("出价失败（重试%d次后）: %w", maxRetries, lastErr)
 	}
 
 	// 11.1 发送出价超越通知
 	if s.notificationSender != nil && previousWinnerID != nil && *previousWinnerID > 0 && *previousWinnerID != req.UserID {
 		notifyUserID := *previousWinnerID
 		go func() {
-			// 异步发送通知，不阻塞主流程
+			// 异步发送通知，不阻塞主流程；Immediately=true 确保 WebSocket 立即推送
 			_ = s.notificationSender.SendNotification(context.Background(), &model.NotificationRequest{
-				UserID:  notifyUserID,
-				Type:    model.NotificationTypeBidOutbid,
-				Title:   "出价被超越",
-				Content: fmt.Sprintf("您在竞拍中的出价 %.2f 元已被超越，当前最高价为 %.2f 元", previousPrice, req.Amount),
+				UserID:      notifyUserID,
+				Type:        model.NotificationTypeBidOutbid,
+				Title:       "出价被超越",
+				Content:     fmt.Sprintf("您在竞拍中的出价 %.2f 元已被超越，当前最高价为 %.2f 元", previousPrice, req.Amount),
+				Immediately: true,
 				Data: map[string]interface{}{
 					"auction_id": req.AuctionID,
 					"old_bid":    previousPrice,
@@ -276,50 +295,16 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 		}()
 	}
 
-	// 11.5 检查并触发延时
+	// 11.5 异步检查并触发延时
+	// 改为 goroutine 后台执行,避免在分布式锁持有期内做 DB 查询+事务,
+	// 缩短锁占用时间;事务的乐观锁/状态机保证多次触发不会重复延时。
 	if rule.TriggerDelayBefore > 0 {
-		// 重新获取竞拍信息和规则，确保数据一致性
-		auction, err = s.auctionDAO.GetByID(ctx, req.AuctionID)
-		if err == nil {
-			// 同时重新获取 rule，避免使用陈旧规则数据
-			freshRule, ruleErr := s.ruleDAO.GetByProductID(ctx, auction.ProductID)
-			if ruleErr == nil {
-				rule = freshRule
-			}
-
-			sm := NewStateMachine(auction)
-			if sm.ShouldTriggerDelay(rule.TriggerDelayBefore) && sm.CanDelay(rule.MaxDelayTime) {
-				// 计算可延时时长，确保不超过 MaxDelayTime 限制
-				remainingDelay := sm.GetRemainingDelayTime(rule.MaxDelayTime)
-				actualDelay := rule.DelayDuration
-				if actualDelay > remainingDelay {
-					actualDelay = remainingDelay
-				}
-
-				// 执行延时并更新状态（使用事务保证原子性）
-				txErr := s.auctionDAO.DB().Transaction(func(tx *gorm.DB) error {
-					txDAO := s.auctionDAO.WithTx(tx)
-					if err := txDAO.ExtendEndTime(ctx, req.AuctionID, actualDelay); err != nil {
-						return err
-					}
-					// 更新状态为延时中
-					if auction.Status == model.AuctionStatusOngoing {
-						if err := txDAO.UpdateStatus(ctx, req.AuctionID, model.AuctionStatusDelayed); err != nil {
-							return err
-						}
-					}
-					return nil
-				})
-
-				if txErr == nil {
-					fmt.Printf("Auction %d delayed by %d seconds\n", req.AuctionID, actualDelay)
-					// 记录延时触发指标（新增）
-					if s.metrics != nil {
-						s.metrics.RecordDelayTriggered(req.AuctionID)
-					}
-				}
-			}
-		}
+		auctionID := req.AuctionID
+		triggerDelayBefore := rule.TriggerDelayBefore
+		maxDelayTime := rule.MaxDelayTime
+		delayDuration := rule.DelayDuration
+		productID := auction.ProductID
+		go s.tryExtendAuction(auctionID, productID, triggerDelayBefore, maxDelayTime, delayDuration)
 	}
 
 	// 12. 获取用户排名
@@ -348,6 +333,64 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 	}, nil
 }
 
+// tryExtendAuction 后台异步检测并触发延时。
+// 设计要点:
+//   - 使用独立 context (默认 5s 超时),解耦于出价请求的生命周期;
+//   - 重新读取最新 auction/rule,避免基于陈旧数据决策;
+//   - 通过状态机 ShouldTriggerDelay/CanDelay 防止重复延时,事务保证 ExtendEndTime+UpdateStatus 原子执行。
+func (s *BidService) tryExtendAuction(auctionID, productID int64, triggerDelayBefore, maxDelayTime, delayDuration int) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	auction, err := s.auctionDAO.GetByID(ctx, auctionID)
+	if err != nil {
+		return
+	}
+
+	// 重新获取 rule,避免使用陈旧规则数据;失败则回退到调用方传入的快照参数
+	if freshRule, ruleErr := s.ruleDAO.GetByProductID(ctx, productID); ruleErr == nil {
+		triggerDelayBefore = freshRule.TriggerDelayBefore
+		maxDelayTime = freshRule.MaxDelayTime
+		delayDuration = freshRule.DelayDuration
+	}
+
+	sm := NewStateMachine(auction)
+	if !sm.ShouldTriggerDelay(triggerDelayBefore) || !sm.CanDelay(maxDelayTime) {
+		return
+	}
+
+	// 计算可延时时长,确保不超过 MaxDelayTime 限制
+	remainingDelay := sm.GetRemainingDelayTime(maxDelayTime)
+	actualDelay := delayDuration
+	if actualDelay > remainingDelay {
+		actualDelay = remainingDelay
+	}
+	if actualDelay <= 0 {
+		return
+	}
+
+	txErr := s.auctionDAO.DB().Transaction(func(tx *gorm.DB) error {
+		txDAO := s.auctionDAO.WithTx(tx)
+		if err := txDAO.ExtendEndTime(ctx, auctionID, actualDelay); err != nil {
+			return err
+		}
+		if auction.Status == model.AuctionStatusOngoing {
+			if err := txDAO.UpdateStatus(ctx, auctionID, model.AuctionStatusDelayed); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if txErr != nil {
+		return
+	}
+
+	fmt.Printf("Auction %d delayed by %d seconds\n", auctionID, actualDelay)
+	if s.metrics != nil {
+		s.metrics.RecordDelayTriggered(auctionID)
+	}
+}
+
 // handleCapPriceBid 处理封顶价出价（使用事务保证原子性）
 func (s *BidService) handleCapPriceBid(ctx context.Context, auction *model.Auction, req *PlaceBidRequest, capPrice float64) (*PlaceBidResult, error) {
 	// 使用事务确保价格更新和状态更新的原子性
@@ -355,14 +398,14 @@ func (s *BidService) handleCapPriceBid(ctx context.Context, auction *model.Aucti
 	var txErr error
 
 	txErr = s.auctionDAO.DB().Transaction(func(tx *gorm.DB) error {
-		// 创建出价记录
+		// 在事务中创建出价记录
 		bid := &model.Bid{
 			AuctionID: req.AuctionID,
 			UserID:    req.UserID,
 			Amount:    capPrice,
 		}
 
-		if err := s.bidDAO.Create(ctx, bid); err != nil {
+		if err := s.bidDAO.WithTx(tx).Create(ctx, bid); err != nil {
 			return fmt.Errorf("创建出价记录失败: %w", err)
 		}
 
@@ -439,19 +482,25 @@ func (s *BidService) broadcastRanking(ctx context.Context, auctionID int64) {
 
 	// 转换为排名项
 	rankItems := make([]websocket.RankItem, len(bids))
+
+	// 批量查询用户名，避免 N+1 查询
+	var userMap map[int64]*model.User
+	if s.userDAO != nil && len(bids) > 0 {
+		userIDs := make([]int64, 0, len(bids))
+		for _, bid := range bids {
+			userIDs = append(userIDs, bid.UserID)
+		}
+		userMap, _ = s.userDAO.GetByIDs(ctx, userIDs)
+	}
+
 	for i, bid := range bids {
 		rankItems[i] = websocket.RankItem{
 			Rank:   i + 1,
 			UserID: bid.UserID,
 			Amount: bid.Amount,
 		}
-
-		// 获取用户名
-		if s.userDAO != nil {
-			user, err := s.userDAO.GetByID(ctx, bid.UserID)
-			if err == nil {
-				rankItems[i].UserName = user.Name
-			}
+		if user, ok := userMap[bid.UserID]; ok && user != nil {
+			rankItems[i].UserName = user.Name
 		}
 	}
 

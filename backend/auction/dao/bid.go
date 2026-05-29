@@ -18,6 +18,16 @@ func NewBidDAO(db *gorm.DB) *BidDAO {
 	return &BidDAO{db: db}
 }
 
+// DB 返回底层数据库连接（用于事务）
+func (d *BidDAO) DB() *gorm.DB {
+	return d.db
+}
+
+// WithTx 使用事务创建 DAO 实例
+func (d *BidDAO) WithTx(tx *gorm.DB) *BidDAO {
+	return &BidDAO{db: tx}
+}
+
 // Create 创建出价记录
 func (d *BidDAO) Create(ctx context.Context, bid *model.Bid) error {
 	return d.db.WithContext(ctx).Create(bid).Error

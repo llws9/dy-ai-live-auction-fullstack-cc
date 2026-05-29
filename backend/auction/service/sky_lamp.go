@@ -5,9 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 	"time"
-
-	"gorm.io/gorm"
 
 	"auction-service/config"
 	"auction-service/dao"
@@ -111,45 +110,45 @@ func (s *SkyLampService) StartSubscription(ctx context.Context, userID, auctionI
 		TotalBidAmount:      0,
 	}
 
-	// 使用事务确保订阅创建和首次出价的原子性
-	txErr := s.skyLampDAO.DB().Transaction(func(tx *gorm.DB) error {
-		txDAO := s.skyLampDAO.WithTx(tx)
-
-		// 在事务中创建订阅
-		if err := txDAO.Create(ctx, subscription); err != nil {
-			return fmt.Errorf("创建订阅失败: %w", err)
+	// 拆分长事务：避免在事务中调用 PlaceBid（PlaceBid 包含独立事务、Redis 锁、WebSocket 推送）
+	// 改为补偿模式：先短事务建订阅 → 调用 PlaceBid → 失败则删除订阅、成功则更新统计
+	// Step 1: 短事务创建订阅
+	if err := s.skyLampDAO.Create(ctx, subscription); err != nil {
+		if s.metrics != nil {
+			s.metrics.RecordSubscriptionFailed(auctionID, "create_failed")
 		}
+		return nil, fmt.Errorf("创建订阅失败: %w", err)
+	}
 
-		// 立即执行首次出价
-		result, bidErr := s.bidService.PlaceBid(ctx, &PlaceBidRequest{
-			AuctionID:          auctionID,
-			UserID:             userID,
-			Amount:             initialBidAmount,
-			SkipSkyLampTrigger: true, // 避免递归触发
-		})
-		if bidErr != nil || result == nil || !result.Success {
-			// 首次出价失败，事务会自动回滚
-			if bidErr != nil {
-				return fmt.Errorf("首次出价失败: %w", bidErr)
-			}
-			return fmt.Errorf("首次出价失败: %s", result.Message)
-		}
-
-		// 更新订阅统计
-		subscription.TotalBidAmount = initialBidAmount
-		if err := txDAO.Update(ctx, subscription); err != nil {
-			return fmt.Errorf("更新订阅统计失败: %w", err)
-		}
-
-		return nil
+	// Step 2: 在事务外执行首次出价
+	result, bidErr := s.bidService.PlaceBid(ctx, &PlaceBidRequest{
+		AuctionID:          auctionID,
+		UserID:             userID,
+		Amount:             initialBidAmount,
+		SkipSkyLampTrigger: true, // 避免递归触发
 	})
+	if bidErr != nil || result == nil || !result.Success {
+		// 首次出价失败：补偿删除订阅
+		// 使用独立 context 防止主 ctx 已取消时无法清理
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		if delErr := s.skyLampDAO.Delete(cleanupCtx, subscription.ID); delErr != nil {
+			log.Printf("SkyLamp首次出价失败后删除订阅失败: id=%d, err=%v", subscription.ID, delErr)
+		}
+		cancel()
 
-	if txErr != nil {
-		// 记录订阅创建失败指标
 		if s.metrics != nil {
 			s.metrics.RecordSubscriptionFailed(auctionID, "first_bid_failed")
 		}
-		return nil, txErr
+		if bidErr != nil {
+			return nil, fmt.Errorf("首次出价失败: %w", bidErr)
+		}
+		return nil, fmt.Errorf("首次出价失败: %s", result.Message)
+	}
+
+	// Step 3: 短事务更新订阅统计（失败仅记录日志，订阅本体已可用）
+	subscription.TotalBidAmount = initialBidAmount
+	if err := s.skyLampDAO.Update(ctx, subscription); err != nil {
+		log.Printf("SkyLamp订阅统计更新失败（非致命）: id=%d, err=%v", subscription.ID, err)
 	}
 
 	// 记录订阅创建成功指标
@@ -193,23 +192,10 @@ func (s *SkyLampService) StopSubscription(ctx context.Context, userID, subscript
 }
 
 // TriggerAutoBid 触发自动跟价（被其他出价超越时调用）
+// 改进：将 per-auction 大锁拆为 per-subscription 细粒度锁，并发处理多个订阅
 func (s *SkyLampService) TriggerAutoBid(ctx context.Context, auctionID int64, currentPrice float64, increment float64) error {
 	_ = currentPrice
 	_ = increment
-
-	// 获取分布式锁，防止并发触发自动跟价
-	if s.lockSvc != nil {
-		lockKey := fmt.Sprintf("skylamp:trigger:%d", auctionID)
-		acquired, err := s.lockSvc.AcquireLock(ctx, lockKey, 10*time.Second)
-		if err != nil {
-			log.Printf("SkyLamp触发锁获取失败: auction=%d, err=%v", auctionID, err)
-		}
-		if !acquired {
-			// 其他进程正在处理，直接返回
-			return nil
-		}
-		defer s.lockSvc.ReleaseLock(ctx, lockKey)
-	}
 
 	auction, err := s.bidService.auctionDAO.GetByID(ctx, auctionID)
 	if err != nil {
@@ -232,99 +218,133 @@ func (s *SkyLampService) TriggerAutoBid(ctx context.Context, auctionID int64, cu
 		return nil
 	}
 
+	// 并发处理订阅，使用信号量限制并发数避免压垮 DB
+	// 信号量获取放到 goroutine 内，避免阻塞主 goroutine 派发循环
+	const maxConcurrency = 8
+	sem := make(chan struct{}, maxConcurrency)
+	var wg sync.WaitGroup
+
 	for i := range subscriptions {
 		sub := &subscriptions[i]
-		autoBidStartTime := time.Now()
 
-		// 使用循环外已获取的 auction，避免 N+1 查询
-		// 注意：auction 在循环开始前已获取，且分布式锁保护了并发修改
-		if !NewStateMachine(auction).CanBid() {
-			// 竞拍不可出价，继续处理下一个订阅
-			continue
-		}
+		wg.Add(1)
+		go func(sub *model.SkyLampSubscription) {
+			defer wg.Done()
 
-		if auction.WinnerID != nil && *auction.WinnerID == sub.UserID {
-			continue
-		}
-
-		if sub.CurrentAutoBidCount >= s.cfg.MaxAutoBidCount {
-			durationSeconds := time.Since(sub.CreatedAt).Seconds()
-			if err := s.skyLampDAO.UpdateStatusWithStoppedAt(ctx, sub.ID, model.SkyLampStatusStopped); err != nil {
-				log.Printf("达到最大自动跟价次数后停止订阅失败: id=%d, err=%v", sub.ID, err)
-			} else if s.metrics != nil {
-				// 记录订阅达到上限指标
-				s.metrics.RecordSubscriptionLimitReached(auctionID, sub.UserID, durationSeconds)
-			}
-			continue
-		}
-
-		if !sub.CanAutoBid(auction.CurrentPrice) {
-			// 记录订阅达到上限指标
-			durationSeconds := time.Since(sub.CreatedAt).Seconds()
-			if err := s.skyLampDAO.UpdateStatusWithStoppedAt(ctx, sub.ID, model.SkyLampStatusStopped); err != nil {
-				log.Printf("停止订阅失败: id=%d, err=%v", sub.ID, err)
-			} else if s.metrics != nil {
-				s.metrics.RecordSubscriptionLimitReached(auctionID, sub.UserID, durationSeconds)
-			}
-			continue
-		}
-
-		nextBid := sub.GetNextBidAmount(auction.CurrentPrice, rule.Increment)
-		if nextBid > sub.MaxPriceLimit {
-			nextBid = sub.MaxPriceLimit
-		}
-		if nextBid <= auction.CurrentPrice {
-			continue
-		}
-
-		result, err := s.bidService.PlaceBid(ctx, &PlaceBidRequest{
-			AuctionID:          auctionID,
-			UserID:             sub.UserID,
-			Amount:             nextBid,
-			SkipSkyLampTrigger: true,
-		})
-		if err != nil || result == nil || !result.Success {
-			// 记录自动跟价失败指标
-			if s.metrics != nil {
-				errorType := "bid_failed"
-				if err != nil {
-					errorType = "bid_error"
-				}
-				s.metrics.RecordAutoBidFailed(auctionID, sub.ID, errorType)
-			}
-
-			if err != nil {
-				log.Printf("SkyLamp自动出价失败: sub=%d, user=%d, amount=%f, err=%v", sub.ID, sub.UserID, nextBid, err)
-			}
-			continue
-		}
-
-		sub.CurrentAutoBidCount++
-		sub.TotalBidAmount += nextBid
-		if err := s.skyLampDAO.Update(ctx, sub); err != nil {
-			log.Printf("更新订阅失败: id=%d, err=%v", sub.ID, err)
-		}
-
-		// 记录自动跟价成功指标
-		if s.metrics != nil {
-			s.metrics.RecordAutoBidSuccess(auctionID, sub.UserID, sub.ID, nextBid, time.Since(autoBidStartTime))
-		}
-
-		// 使用 select 实现可取消的延迟，避免阻塞整个流程
-		if s.cfg.MinFollowInterval > 0 {
+			// 在 goroutine 内获取信号量，主 goroutine 不被阻塞
 			select {
-			case <-time.After(time.Duration(s.cfg.MinFollowInterval) * time.Millisecond):
-				// 正常延迟结束，继续处理下一个订阅
+			case sem <- struct{}{}:
+				defer func() { <-sem }()
 			case <-ctx.Done():
-				// 上下文被取消，提前退出
-				return ctx.Err()
+				return
 			}
-		}
 
-		log.Printf("SkyLamp自动出价成功: sub=%d, user=%d, amount=%f, count=%d", sub.ID, sub.UserID, nextBid, sub.CurrentAutoBidCount)
+			s.processOneSubscription(ctx, auctionID, sub, rule.Increment)
+		}(sub)
 	}
 
+	wg.Wait()
 	return nil
+}
+
+// processOneSubscription 处理单个订阅的自动跟价（带 per-subscription 锁）
+func (s *SkyLampService) processOneSubscription(ctx context.Context, auctionID int64, sub *model.SkyLampSubscription, increment float64) {
+	autoBidStartTime := time.Now()
+
+	// 细粒度锁：仅锁定当前订阅，不阻塞其他订阅处理
+	if s.lockSvc != nil {
+		lockKey := fmt.Sprintf("skylamp:sub:%d", sub.ID)
+		acquired, err := s.lockSvc.AcquireLock(ctx, lockKey, 3*time.Second)
+		if err != nil {
+			log.Printf("SkyLamp订阅锁获取失败: sub=%d, err=%v", sub.ID, err)
+			return
+		}
+		if !acquired {
+			// 其他 goroutine 正在处理同一订阅，跳过
+			return
+		}
+		defer s.lockSvc.ReleaseLock(ctx, lockKey)
+	}
+
+	// 重新拉取最新订阅与竞拍状态（避免使用陈旧数据）
+	latestSub, err := s.skyLampDAO.GetByID(ctx, sub.ID)
+	if err != nil || latestSub == nil || !latestSub.IsActive() {
+		return
+	}
+	auction, err := s.bidService.auctionDAO.GetByID(ctx, auctionID)
+	if err != nil || !NewStateMachine(auction).CanBid() {
+		return
+	}
+
+	// 自身已是最高价，无需跟价
+	if auction.WinnerID != nil && *auction.WinnerID == latestSub.UserID {
+		return
+	}
+
+	// 达到次数上限：停止订阅
+	if latestSub.CurrentAutoBidCount >= s.cfg.MaxAutoBidCount {
+		durationSeconds := time.Since(latestSub.CreatedAt).Seconds()
+		if err := s.skyLampDAO.UpdateStatusWithStoppedAt(ctx, latestSub.ID, model.SkyLampStatusStopped); err != nil {
+			log.Printf("达到最大自动跟价次数后停止订阅失败: id=%d, err=%v", latestSub.ID, err)
+		} else if s.metrics != nil {
+			s.metrics.RecordSubscriptionLimitReached(auctionID, latestSub.UserID, durationSeconds)
+		}
+		return
+	}
+
+	// 达到价格上限：停止订阅
+	if !latestSub.CanAutoBid(auction.CurrentPrice) {
+		durationSeconds := time.Since(latestSub.CreatedAt).Seconds()
+		if err := s.skyLampDAO.UpdateStatusWithStoppedAt(ctx, latestSub.ID, model.SkyLampStatusStopped); err != nil {
+			log.Printf("停止订阅失败: id=%d, err=%v", latestSub.ID, err)
+		} else if s.metrics != nil {
+			s.metrics.RecordSubscriptionLimitReached(auctionID, latestSub.UserID, durationSeconds)
+		}
+		return
+	}
+
+	// 计算下次出价金额
+	nextBid := latestSub.GetNextBidAmount(auction.CurrentPrice, increment)
+	if nextBid > latestSub.MaxPriceLimit {
+		nextBid = latestSub.MaxPriceLimit
+	}
+	if nextBid <= auction.CurrentPrice {
+		return
+	}
+
+	// 执行出价
+	result, err := s.bidService.PlaceBid(ctx, &PlaceBidRequest{
+		AuctionID:          auctionID,
+		UserID:             latestSub.UserID,
+		Amount:             nextBid,
+		SkipSkyLampTrigger: true,
+	})
+	if err != nil || result == nil || !result.Success {
+		if s.metrics != nil {
+			errorType := "bid_failed"
+			if err != nil {
+				errorType = "bid_error"
+			}
+			s.metrics.RecordAutoBidFailed(auctionID, latestSub.ID, errorType)
+		}
+		if err != nil {
+			log.Printf("SkyLamp自动出价失败: sub=%d, user=%d, amount=%f, err=%v", latestSub.ID, latestSub.UserID, nextBid, err)
+		}
+		return
+	}
+
+	// 更新订阅统计
+	latestSub.CurrentAutoBidCount++
+	latestSub.TotalBidAmount += nextBid
+	if err := s.skyLampDAO.Update(ctx, latestSub); err != nil {
+		log.Printf("更新订阅失败: id=%d, err=%v", latestSub.ID, err)
+	}
+
+	if s.metrics != nil {
+		s.metrics.RecordAutoBidSuccess(auctionID, latestSub.UserID, latestSub.ID, nextBid, time.Since(autoBidStartTime))
+	}
+
+	log.Printf("SkyLamp自动出价成功: sub=%d, user=%d, amount=%f, count=%d", latestSub.ID, latestSub.UserID, nextBid, latestSub.CurrentAutoBidCount)
 }
 
 // GetUserSubscriptions 获取用户的点天灯订阅列表

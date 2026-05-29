@@ -1,258 +1,171 @@
+// Package growthbook 是对官方 GrowthBook Go SDK 的薄封装。
+// 设计目标:
+//   - 复用官方 SDK 的 hash 分桶/规则匹配/SSE 拉取等核心能力,避免自研客户端的实现陷阱;
+//   - 在 SDK 之上叠加 Prometheus 指标 (实验分配/查看/完成);
+//   - 提供工具函数:批量评估已知 feature key、序列化为 X-Experiment-Context header 字符串。
 package growthbook
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"sync"
+	"log"
 	"time"
+
+	gb "github.com/growthbook/growthbook-golang"
 
 	"gateway-service/pkg/metrics"
 )
 
-// Client GrowthBook SDK 客户端
-type Client struct {
-	apiHost   string
-	clientKey string
-	secretKey string
-	enabled   bool
-
-	// 缓存 feature flags
-	features     map[string]*Feature
-	featuresLock sync.RWMutex
-	lastRefresh  time.Time
-
-	// HTTP client
-	httpClient *http.Client
-
-	// Prometheus metrics
-	metrics *metrics.Metrics
+// KnownFeatureKeys 网关侧会主动评估并下发到下游/前端的 feature key 列表。
+// 新增 feature 时只需在此追加,无需改动 middleware/handler。
+var KnownFeatureKeys = []string{
+	"new-auction-ui-theme",
+	"new-bidding-algorithm",
+	"bid-button-color",
+	"price-suggestion-strategy",
 }
 
-// Feature 特性开关定义
-type Feature struct {
-	Key         string
-DefaultValue interface{}
-	Rules       []FeatureRule
-}
-
-// FeatureRule 特性规则
-type FeatureRule struct {
-	Variation string
-	Value     interface{}
-	Condition *Condition
-}
-
-// Condition 条件定义
-type Condition struct {
-	Attributes map[string]interface{}
-}
-
-// Attributes 用户属性
+// Attributes 业务侧用户属性。仅承载 gateway 层关心的字段,
+// 内部通过 ToMap 转换为 GrowthBook 标准属性,避免上层依赖 SDK 类型。
 type Attributes struct {
-	ID         string
+	UserID     string
 	Role       int
 	Email      string
 	DeviceType string
-	Browser    string
-	Custom     map[string]interface{}
 }
 
-// NewClient 创建 GrowthBook 客户端
-func NewClient(apiHost, clientKey, secretKey string, enabled bool, m *metrics.Metrics) *Client {
-	return &Client{
-		apiHost:   apiHost,
-		clientKey: clientKey,
-		secretKey: secretKey,
-		enabled:   enabled,
-		features:  make(map[string]*Feature),
-		httpClient: &http.Client{
-			Timeout: 10 * time.Second,
-		},
-		metrics: m,
+// ToMap 将属性序列化为 GrowthBook SDK 所需的 map 格式。
+func (a *Attributes) ToMap() map[string]any {
+	m := map[string]any{
+		"id":   a.UserID,
+		"role": a.Role,
 	}
+	if a.Email != "" {
+		m["email"] = a.Email
+	}
+	if a.DeviceType != "" {
+		m["deviceType"] = a.DeviceType
+	}
+	return m
 }
 
-// RefreshFeatures 从 GrowthBook API 获取特性配置
-func (c *Client) RefreshFeatures(ctx context.Context) error {
-	if !c.enabled {
-		return nil
+// FeatureSnapshot 网关评估后的 feature 结果摘要。
+// 与前后端约定的 X-Experiment-Context JSON 结构保持一致。
+type FeatureSnapshot struct {
+	On        bool   `json:"on"`
+	Value     any    `json:"value,omitempty"`
+	Variation string `json:"variation,omitempty"`
+}
+
+// Client 对官方 SDK 的薄封装。
+type Client struct {
+	inner   *gb.Client
+	enabled bool
+	metrics *metrics.Metrics
+}
+
+// NewClient 创建并初始化主客户端。enabled=false 时返回 no-op 客户端。
+// 同步等待首次特性加载完成 (有 10s 超时),失败仅打日志不阻塞启动。
+func NewClient(ctx context.Context, apiHost, clientKey string, enabled bool, m *metrics.Metrics) (*Client, error) {
+	if !enabled {
+		log.Println("GrowthBook client disabled by config")
+		return &Client{enabled: false, metrics: m}, nil
 	}
 
-	url := fmt.Sprintf("%s/api/features/%s", c.apiHost, c.clientKey)
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	inner, err := gb.NewClient(
+		ctx,
+		gb.WithApiHost(apiHost),
+		gb.WithClientKey(clientKey),
+		// 5 分钟轮询拉取 feature 配置;若环境支持 SSE 可改为 WithSseDataSource()
+		gb.WithPollDataSource(5*time.Minute),
+		gb.WithExperimentCallback(func(_ context.Context, exp *gb.Experiment, res *gb.ExperimentResult, _ any) {
+			if m == nil || exp == nil || res == nil {
+				return
+			}
+			m.ExperimentAssigned.WithLabelValues(exp.Key, fmt.Sprintf("%d", res.VariationId)).Inc()
+		}),
+	)
 	if err != nil {
-		return fmt.Errorf("create request failed: %w", err)
+		return nil, fmt.Errorf("init growthbook client failed: %w", err)
 	}
 
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("fetch features failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	loadCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	if err := inner.EnsureLoaded(loadCtx); err != nil {
+		log.Printf("Warning: GrowthBook initial features load failed: %v", err)
+	} else {
+		log.Println("GrowthBook features loaded successfully")
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("read response failed: %w", err)
-	}
+	return &Client{inner: inner, enabled: true, metrics: m}, nil
+}
 
-	var result struct {
-		Features map[string]*Feature `json:"features"`
+// Close 释放后台数据源/插件,主进程退出时调用。
+func (c *Client) Close() error {
+	if c.inner != nil {
+		return c.inner.Close()
 	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return fmt.Errorf("parse response failed: %w", err)
-	}
-
-	c.featuresLock.Lock()
-	c.features = result.Features
-	c.lastRefresh = time.Now()
-	c.featuresLock.Unlock()
-
 	return nil
 }
 
-// IsOn 检查特性是否开启
-func (c *Client) IsOn(featureKey string, attrs *Attributes) bool {
-	if !c.enabled {
-		return false
-	}
-
-	result := c.EvalFeature(featureKey, attrs)
-	return result.On
+// Enabled 是否启用 (用于上游短路判断)。
+func (c *Client) Enabled() bool {
+	return c.enabled
 }
 
-// GetValue 获取特性值
-func (c *Client) GetValue(featureKey string, attrs *Attributes) interface{} {
-	if !c.enabled {
-		return nil
+// EvalFeatures 批量评估给定 keys,返回 key -> snapshot map。
+// disabled 或 attrs 为空时返回空 map (调用方需自行处理"无实验上下文"的降级)。
+func (c *Client) EvalFeatures(ctx context.Context, attrs *Attributes, keys []string) map[string]FeatureSnapshot {
+	out := make(map[string]FeatureSnapshot)
+	if !c.enabled || c.inner == nil || attrs == nil {
+		return out
 	}
 
-	result := c.EvalFeature(featureKey, attrs)
-	return result.Value
-}
-
-// EvalResult 特性评估结果
-type EvalResult struct {
-	On       bool
-	Value    interface{}
-	Variation string
-}
-
-// EvalFeature 评估特性开关
-func (c *Client) EvalFeature(featureKey string, attrs *Attributes) *EvalResult {
-	if !c.enabled {
-		return &EvalResult{On: false, Value: nil}
+	child, err := c.inner.WithAttributes(gb.Attributes(attrs.ToMap()))
+	if err != nil {
+		log.Printf("growthbook: build child client failed: %v", err)
+		return out
 	}
 
-	c.featuresLock.RLock()
-	feature, exists := c.features[featureKey]
-	c.featuresLock.RUnlock()
-
-	if !exists {
-		return &EvalResult{On: false, Value: nil}
-	}
-
-	// 评估规则
-	for _, rule := range feature.Rules {
-		if c.matchesCondition(rule.Condition, attrs) {
-			result := &EvalResult{
-				Variation: rule.Variation,
-				Value:     rule.Value,
-			}
-			result.On = c.isTruthy(result.Value)
-
-			// 记录实验分配
-			if c.metrics != nil {
-				c.metrics.ExperimentAssigned.WithLabelValues(
-					featureKey,
-					result.Variation,
-				).Inc()
-			}
-
-			return result
+	for _, key := range keys {
+		fr := child.EvalFeature(ctx, key)
+		if fr == nil {
+			continue
 		}
-	}
-
-	// 使用默认值
-	result := &EvalResult{
-		Value: feature.DefaultValue,
-	}
-	result.On = c.isTruthy(result.Value)
-	return result
-}
-
-// matchesCondition 检查条件是否匹配
-func (c *Client) matchesCondition(condition *Condition, attrs *Attributes) bool {
-	if condition == nil || condition.Attributes == nil {
-		return true // 无条件则匹配所有用户
-	}
-
-	// 简化的条件匹配逻辑
-	for key, value := range condition.Attributes {
-		switch key {
-		case "id":
-			if attrs.ID != fmt.Sprintf("%v", value) {
-				return false
-			}
-		case "role":
-			if attrs.Role != int(value.(float64)) {
-				return false
-			}
+		snap := FeatureSnapshot{On: fr.On, Value: fr.Value}
+		if fr.ExperimentResult != nil && fr.ExperimentResult.Key != "" {
+			snap.Variation = fr.ExperimentResult.Key
 		}
+		out[key] = snap
 	}
-
-	return true
+	return out
 }
 
-// isTruthy 检查值是否为真
-func (c *Client) isTruthy(value interface{}) bool {
-	switch v := value.(type) {
-	case bool:
-		return v
-	case int, int64, float64:
-		return v != 0
-	case string:
-		return v != "" && v != "false" && v != "0"
-	default:
-		return value != nil
+// SerializeFeatures 把网关评估的 feature 结果序列化为 X-Experiment-Context 头部字符串。
+// 空 map 返回空串,调用方据此决定是否设置 header。
+func SerializeFeatures(features map[string]FeatureSnapshot) string {
+	if len(features) == 0 {
+		return ""
 	}
+	b, err := json.Marshal(features)
+	if err != nil {
+		log.Printf("growthbook: serialize features failed: %v", err)
+		return ""
+	}
+	return string(b)
 }
 
-// TrackViewed 记录实验查看
+// TrackViewed 记录实验曝光。前端 trackingCallback 触发 → 后端落点。
 func (c *Client) TrackViewed(experimentKey, variation string) {
 	if c.metrics != nil {
 		c.metrics.ExperimentViewed.WithLabelValues(experimentKey, variation).Inc()
 	}
 }
 
-// TrackCompleted 记录实验完成
+// TrackCompleted 记录实验完成 (转化)。
 func (c *Client) TrackCompleted(experimentKey, variation string) {
 	if c.metrics != nil {
 		c.metrics.ExperimentCompleted.WithLabelValues(experimentKey, variation).Inc()
 	}
-}
-
-// StartRefreshLoop 启动定时刷新循环
-func (c *Client) StartRefreshLoop(ctx context.Context, interval time.Duration) {
-	go func() {
-		ticker := time.NewTicker(interval)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				if err := c.RefreshFeatures(ctx); err != nil {
-					// 静默处理错误，不影响服务运行
-				}
-			}
-		}
-	}()
 }

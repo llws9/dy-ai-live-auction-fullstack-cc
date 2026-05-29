@@ -61,14 +61,12 @@ func (s *DistributedLockService) ReleaseLock(ctx context.Context, key string) er
 }
 
 // acquireLocalLock 获取本地锁（降级方案）
+// 使用 LoadOrStore 保证 check-and-set 原子性，避免并发场景下的 TOCTOU 竞态
 func (s *DistributedLockService) acquireLocalLock(key string, ttl time.Duration) bool {
-	// 检查是否已存在
-	if _, exists := s.localLocks.Load(key); exists {
+	// LoadOrStore: 如果 key 已存在则返回已有值（loaded=true），否则存储新值（loaded=false）
+	if _, loaded := s.localLocks.LoadOrStore(key, time.Now()); loaded {
 		return false
 	}
-
-	// 存储锁
-	s.localLocks.Store(key, time.Now())
 
 	// 设置过期删除
 	go func() {

@@ -65,15 +65,6 @@ func (s *NotificationService) SetFollowDAO(followDAO *dao.UserLiveStreamFollowDA
 	s.followDAO = followDAO
 }
 
-// SetMetrics 设置指标收集器
-// 注意：当前为占位实现，通知服务的metrics功能计划在未来版本中实现。
-// 调用此方法不会产生任何效果，保留是为了接口兼容性。
-// TODO: 实现通知服务的指标收集功能（发送成功/失败计数、延迟等）
-func (s *NotificationService) SetMetrics(metrics interface{}) {
-	// NotificationService目前不需要metrics
-	// 保留此方法以备将来扩展
-}
-
 // SendNotification 发送通知
 func (s *NotificationService) SendNotification(ctx context.Context, req *model.NotificationRequest) error {
 	// 创建通知实体
@@ -122,12 +113,16 @@ func (s *NotificationService) SendBatchNotifications(ctx context.Context, reqs [
 		return fmt.Errorf("批量保存通知失败: %w", err)
 	}
 
-	// 实时推送
-	for _, notification := range notifications {
-		s.pushNotification(ctx, notification)
+	// 实时推送：仅当 Immediately=true 时推送，与单条 SendNotification 行为一致
+	pushed := 0
+	for i, notification := range notifications {
+		if reqs[i].Immediately {
+			s.pushNotification(ctx, notification)
+			pushed++
+		}
 	}
 
-	log.Printf("Batch notifications sent: count=%d", len(reqs))
+	log.Printf("Batch notifications sent: count=%d, pushed=%d", len(reqs), pushed)
 	return nil
 }
 
@@ -291,11 +286,12 @@ func (s *NotificationService) SyncUnreadNotifications(ctx context.Context, userI
 
 // HotPullNotifications - 热拉通知
 // 用户登录/切换前台时主动拉取热门直播间通知
+// 设计原则：热拉是"查询并展示"，不写 DB，避免重复通知。
 // 1. Redis获取用户关注的直播间集合 SMEMBERS user:{uid}:followed_live_streams
 // 2. ZRANGEBYSCORE live_stream:hot:start_time (now, now+1hour) 获取即将开播的热门直播间
 // 3. SMEMBERS live_stream:hot:live_now 获取正在直播的热门直播间
 // 4. 过滤：只返回用户关注的热门直播间
-// 5. 生成通知，返回结果
+// 5. 生成通知（in-memory），返回结果（不入库、不推送）
 func (s *NotificationService) HotPullNotifications(ctx context.Context, userID int64) ([]*model.Notification, error) {
 	if s.redis == nil {
 		// Redis不可用，尝试使用数据库兜底
@@ -339,10 +335,10 @@ func (s *NotificationService) HotPullNotifications(ctx context.Context, userID i
 		// 继续处理，不返回错误
 	}
 
-	// 4. 过滤：只返回用户关注的热门直播间，生成即将开播通知
+	// 4. 过滤：只返回用户关注的热门直播间，生成即将开播通知（仅 in-memory，不入库）
 	for _, liveStreamID := range startingSoon {
 		if followedSet[liveStreamID] {
-			notification := &model.Notification{
+			notifications = append(notifications, &model.Notification{
 				UserID:  userID,
 				Type:    model.NotificationTypeLiveStreamStartingSoon,
 				Title:   "即将开播",
@@ -351,18 +347,8 @@ func (s *NotificationService) HotPullNotifications(ctx context.Context, userID i
 					"live_stream_id": liveStreamID,
 					"triggered_at":   now.Format(time.RFC3339),
 				},
-			}
-
-			// 保存到数据库
-			if err := s.notificationDAO.Create(ctx, notification); err != nil {
-				log.Printf("HotPull: 保存即将开播通知失败: %v", err)
-				continue
-			}
-
-			notifications = append(notifications, notification)
-
-			// 实时推送
-			s.pushNotification(ctx, notification)
+				CreatedAt: now,
+			})
 		}
 	}
 
@@ -373,10 +359,10 @@ func (s *NotificationService) HotPullNotifications(ctx context.Context, userID i
 		// 继续处理，不返回错误
 	}
 
-	// 4. 过滤：只返回用户关注的热门直播间，生成正在直播通知
+	// 4. 过滤：只返回用户关注的热门直播间，生成正在直播通知（仅 in-memory，不入库）
 	for _, liveStreamID := range liveNow {
 		if followedSet[liveStreamID] {
-			notification := &model.Notification{
+			notifications = append(notifications, &model.Notification{
 				UserID:  userID,
 				Type:    model.NotificationTypeLiveStreamNowLive,
 				Title:   "正在直播",
@@ -385,18 +371,8 @@ func (s *NotificationService) HotPullNotifications(ctx context.Context, userID i
 					"live_stream_id": liveStreamID,
 					"triggered_at":   now.Format(time.RFC3339),
 				},
-			}
-
-			// 保存到数据库
-			if err := s.notificationDAO.Create(ctx, notification); err != nil {
-				log.Printf("HotPull: 保存正在直播通知失败: %v", err)
-				continue
-			}
-
-			notifications = append(notifications, notification)
-
-			// 实时推送
-			s.pushNotification(ctx, notification)
+				CreatedAt: now,
+			})
 		}
 	}
 
@@ -407,6 +383,7 @@ func (s *NotificationService) HotPullNotifications(ctx context.Context, userID i
 }
 
 // hotPullFromDatabase Redis失败时从数据库获取热拉通知（兜底方案）
+// 与主路径一致：仅返回 in-memory 通知，不入库、不推送
 func (s *NotificationService) hotPullFromDatabase(ctx context.Context, userID int64) ([]*model.Notification, error) {
 	log.Printf("HotPull: using database fallback for user=%d", userID)
 
@@ -436,7 +413,7 @@ func (s *NotificationService) hotPullFromDatabase(ctx context.Context, userID in
 		if err == nil {
 			for _, liveStreamID := range startingSoon {
 				if followedSet[liveStreamID] {
-					notification := &model.Notification{
+					notifications = append(notifications, &model.Notification{
 						UserID:  userID,
 						Type:    model.NotificationTypeLiveStreamStartingSoon,
 						Title:   "即将开播",
@@ -445,16 +422,8 @@ func (s *NotificationService) hotPullFromDatabase(ctx context.Context, userID in
 							"live_stream_id": liveStreamID,
 							"triggered_at":   now.Format(time.RFC3339),
 						},
-					}
-
-					// 保存到数据库
-					if err := s.notificationDAO.Create(ctx, notification); err != nil {
-						log.Printf("HotPull (DB fallback): 保存即将开播通知失败: %v", err)
-						continue
-					}
-
-					notifications = append(notifications, notification)
-					s.pushNotification(ctx, notification)
+						CreatedAt: now,
+					})
 				}
 			}
 		}
@@ -464,7 +433,7 @@ func (s *NotificationService) hotPullFromDatabase(ctx context.Context, userID in
 		if err == nil {
 			for _, liveStreamID := range liveNow {
 				if followedSet[liveStreamID] {
-					notification := &model.Notification{
+					notifications = append(notifications, &model.Notification{
 						UserID:  userID,
 						Type:    model.NotificationTypeLiveStreamNowLive,
 						Title:   "正在直播",
@@ -473,16 +442,8 @@ func (s *NotificationService) hotPullFromDatabase(ctx context.Context, userID in
 							"live_stream_id": liveStreamID,
 							"triggered_at":   now.Format(time.RFC3339),
 						},
-					}
-
-					// 保存到数据库
-					if err := s.notificationDAO.Create(ctx, notification); err != nil {
-						log.Printf("HotPull (DB fallback): 保存正在直播通知失败: %v", err)
-						continue
-					}
-
-					notifications = append(notifications, notification)
-					s.pushNotification(ctx, notification)
+						CreatedAt: now,
+					})
 				}
 			}
 		}

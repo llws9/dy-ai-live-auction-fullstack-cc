@@ -25,25 +25,20 @@ func main() {
 	m := metrics.Init("gateway")
 	log.Println("Metrics initialized for gateway service")
 
-	// 初始化 GrowthBook A/B 测试客户端
+	// 初始化 GrowthBook A/B 测试客户端 (官方 Go SDK 封装)
 	ctx := context.Background()
-	gbClient := growthbook.NewClient(
+	gbClient, err := growthbook.NewClient(
+		ctx,
 		cfg.GrowthBook.APIHost,
 		cfg.GrowthBook.ClientKey,
-		cfg.GrowthBook.SecretKey,
 		cfg.GrowthBook.Enabled,
 		m,
 	)
-
-	// 启动定时刷新特性配置（每5分钟）
-	if cfg.GrowthBook.Enabled {
-		gbClient.StartRefreshLoop(ctx, 5*time.Minute)
-		// 首次加载特性配置
-		if err := gbClient.RefreshFeatures(ctx); err != nil {
-			log.Printf("Warning: Failed to load GrowthBook features: %v", err)
-		} else {
-			log.Println("GrowthBook features loaded successfully")
-		}
+	if err != nil {
+		log.Printf("Warning: GrowthBook client init failed, A/B disabled: %v", err)
+	}
+	if gbClient != nil {
+		defer func() { _ = gbClient.Close() }()
 	}
 	log.Printf("GrowthBook client initialized (enabled: %v)", cfg.GrowthBook.Enabled)
 

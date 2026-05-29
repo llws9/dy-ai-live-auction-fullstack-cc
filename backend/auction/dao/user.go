@@ -42,6 +42,27 @@ func (d *UserDAO) GetByID(ctx context.Context, userID int64) (*model.User, error
 	return &user, nil
 }
 
+// GetByIDs 批量根据 ID 获取用户，返回 id -> user 映射
+// 仅查询 id 和 name 字段，避免无关字段开销（broadcastRanking 等场景使用）
+func (d *UserDAO) GetByIDs(ctx context.Context, userIDs []int64) (map[int64]*model.User, error) {
+	if len(userIDs) == 0 {
+		return map[int64]*model.User{}, nil
+	}
+	var users []model.User
+	err := d.db.WithContext(ctx).
+		Select("id", "name").
+		Where("id IN ?", userIDs).
+		Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[int64]*model.User, len(users))
+	for i := range users {
+		result[users[i].ID] = &users[i]
+	}
+	return result, nil
+}
+
 // Create 创建用户
 func (d *UserDAO) Create(ctx context.Context, user *model.User) error {
 	return d.db.WithContext(ctx).Create(user).Error

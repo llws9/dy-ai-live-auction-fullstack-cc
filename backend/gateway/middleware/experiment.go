@@ -2,86 +2,103 @@ package middleware
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"gateway-service/pkg/growthbook"
 )
 
-// ExperimentMiddleware 实验中间件
-// 在 JWT 认证后注入 GrowthBook 用户属性
+const (
+	ctxKeyGBAttrs        = "gb_attributes"
+	ctxKeyGBFeatures     = "gb_features"
+	ctxKeyGBFeaturesJSON = "gb_features_json"
+)
+
+// ExperimentMiddleware 在 JWT 之后运行,做两件事:
+//  1. 根据 user_id/user_role 构造 GrowthBook Attributes;
+//  2. 预先批量评估 KnownFeatureKeys 并缓存到 c.Set,
+//     避免后续 handler/proxy 重复调用 SDK,也方便代理层注入 X-Experiment-Context。
+//
+// 未登录用户使用 anonymous id,仍会进行评估 (官方 SDK 会按 anonymous 哈希分桶)。
 func ExperimentMiddleware(gbClient *growthbook.Client) app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
-		// 从 JWT 中间件获取用户信息
-		userID, exists := c.Get("user_id")
-		if !exists {
-			// 未认证用户，使用匿名属性
-			c.Set("gb_attributes", &growthbook.Attributes{
-				ID: "anonymous",
-			})
-			c.Next(ctx)
-			return
+		attrs := buildAttrs(c)
+		c.Set(ctxKeyGBAttrs, attrs)
+
+		if gbClient != nil && gbClient.Enabled() {
+			features := gbClient.EvalFeatures(ctx, attrs, growthbook.KnownFeatureKeys)
+			c.Set(ctxKeyGBFeatures, features)
+			if json := growthbook.SerializeFeatures(features); json != "" {
+				c.Set(ctxKeyGBFeaturesJSON, json)
+			}
 		}
-
-		userRole, _ := c.Get("user_role")
-
-		// 构建用户属性
-		attrs := growthbook.NewBuilder(userID.(int64), userRole.(int)).Build()
-
-		// 存储到 context
-		c.Set("gb_attributes", attrs)
 
 		c.Next(ctx)
 	}
 }
 
-// GetExperimentAttributes 从 context 获取实验属性
+func buildAttrs(c *app.RequestContext) *growthbook.Attributes {
+	if userID, exists := c.Get("user_id"); exists {
+		role, _ := c.Get("user_role")
+		return &growthbook.Attributes{
+			UserID: toIDString(userID),
+			Role:   toRoleInt(role),
+		}
+	}
+	return &growthbook.Attributes{UserID: "anonymous"}
+}
+
+// GetExperimentAttributes 从 context 读取实验属性 (handler 使用)。
 func GetExperimentAttributes(c *app.RequestContext) *growthbook.Attributes {
-	if attrs, exists := c.Get("gb_attributes"); exists {
-		return attrs.(*growthbook.Attributes)
+	if v, ok := c.Get(ctxKeyGBAttrs); ok {
+		if attrs, ok := v.(*growthbook.Attributes); ok {
+			return attrs
+		}
 	}
 	return nil
 }
 
-// RequireFeatureFlag 特性开关中间件
-// 检查用户是否在某个实验的 treatment 组
-func RequireFeatureFlag(gbClient *growthbook.Client, featureKey string) app.HandlerFunc {
-	return func(ctx context.Context, c *app.RequestContext) {
-		attrs := GetExperimentAttributes(c)
-
-		if attrs == nil {
-			c.JSON(403, map[string]interface{}{
-				"code":    403,
-				"message": "无法获取用户属性",
-			})
-			c.Abort()
-			return
+// GetExperimentFeatures 读取中间件预评估的 feature 结果。
+func GetExperimentFeatures(c *app.RequestContext) map[string]growthbook.FeatureSnapshot {
+	if v, ok := c.Get(ctxKeyGBFeatures); ok {
+		if f, ok := v.(map[string]growthbook.FeatureSnapshot); ok {
+			return f
 		}
+	}
+	return nil
+}
 
-		// 检查特性是否开启
-		if !gbClient.IsOn(featureKey, attrs) {
-			c.JSON(403, map[string]interface{}{
-				"code":    403,
-				"message": "功能未开启或您不在此功能的测试组中",
-			})
-			c.Abort()
-			return
+// GetExperimentContextHeader 读取已序列化的 X-Experiment-Context 字符串 (proxy 使用)。
+func GetExperimentContextHeader(c *app.RequestContext) string {
+	if v, ok := c.Get(ctxKeyGBFeaturesJSON); ok {
+		if s, ok := v.(string); ok {
+			return s
 		}
+	}
+	return ""
+}
 
-		c.Next(ctx)
+func toIDString(v any) string {
+	switch x := v.(type) {
+	case string:
+		return x
+	case int64:
+		return strconv.FormatInt(x, 10)
+	case int:
+		return strconv.Itoa(x)
+	default:
+		return ""
 	}
 }
 
-// FeatureValueMiddleware 特性值中间件
-// 将特性值注入到 context 中供后续 handler 使用
-func FeatureValueMiddleware(gbClient *growthbook.Client, featureKey string, contextKey string) app.HandlerFunc {
-	return func(ctx context.Context, c *app.RequestContext) {
-		attrs := GetExperimentAttributes(c)
-
-		if attrs != nil {
-			value := gbClient.GetValue(featureKey, attrs)
-			c.Set(contextKey, value)
-		}
-
-		c.Next(ctx)
+func toRoleInt(v any) int {
+	switch x := v.(type) {
+	case int:
+		return x
+	case int64:
+		return int(x)
+	default:
+		return 0
 	}
 }
