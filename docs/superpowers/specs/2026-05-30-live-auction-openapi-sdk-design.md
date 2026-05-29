@@ -62,6 +62,211 @@ Live Platform Frontend
 - 我们的 OpenAPI Gateway 是 SDK 的唯一稳定入口。
 - 当前内部 `gateway`、`auction`、`product` 服务可以继续演进，但不能成为外部契约的一部分。
 
+### 3.1 扩展模式设计
+
+扩展设计的目标不是堆叠设计模式，而是让“稳定竞拍内核”和“平台差异、横切能力、事件扩展”分离。核心竞拍规则必须直接、确定、可测试；平台差异和基础设施能力通过明确扩展点接入。
+
+推荐组合：
+
+```text
+OpenAPI Client Proxy
+  + Middleware Decorator Chain
+  + Platform Adapter Port
+  + Outbox-backed Event Mediator
+```
+
+#### 3.1.1 Proxy：SDK 统一入口
+
+Client SDK 使用代理模式隐藏远端 OpenAPI 调用细节，让接入方像调用本地方法一样使用直播竞拍能力。
+
+```text
+Platform Backend
+  -> LiveAuctionClient
+       -> AuctionAPI
+       -> BidAPI
+       -> RealtimeAPI
+       -> CallbackEventAPI
+  -> OpenAPI Gateway
+```
+
+适用场景：
+
+- 封装 HTTP 请求、响应解析、错误码映射。
+- 隐藏 OpenAPI path、签名细节、序列化格式。
+- 让不同语言 SDK 保持一致的业务方法命名。
+
+不适用场景：
+
+- 不承载竞拍业务规则。
+- 不缓存关键竞拍状态作为事实源。
+- 不替代服务端的权限校验和幂等校验。
+
+#### 3.1.2 Decorator/Middleware：横切能力扩展
+
+SDK 和服务端调用链都可以使用装饰器或中间件链处理横切能力。
+
+```text
+LiveAuctionClient
+  -> SigningMiddleware
+  -> IdempotencyMiddleware
+  -> RetryMiddleware
+  -> TimeoutMiddleware
+  -> LoggingMiddleware
+  -> MetricsMiddleware
+  -> HTTP Transport
+```
+
+适用场景：
+
+- 请求签名。
+- 超时控制。
+- 自动重试。
+- `X-Request-Id` 注入。
+- Trace、日志、指标采集。
+- 错误码标准化。
+
+不适用场景：
+
+- 不把“是否允许出价”“是否触发延时”“谁是赢家”等业务规则放入 middleware。
+- 不用 middleware 改写竞拍结果事实。
+- 不在 middleware 中产生新的业务事件。
+
+#### 3.1.3 Adapter：平台差异隔离
+
+不同直播平台的用户、直播间、商品、订单接口差异很大，应通过 Adapter 隔离，而不是污染竞拍核心。
+
+```text
+PlatformIntegrationPort
+  -> DouyinAdapter
+  -> KuaishouAdapter
+  -> TaobaoLiveAdapter
+  -> CustomPlatformAdapter
+```
+
+建议端口：
+
+```text
+UserMappingPort
+LiveStreamMappingPort
+ProductMappingPort
+OrderCallbackPort
+OrderProbePort
+NotificationPort
+```
+
+适用场景：
+
+- 外部用户 ID 与内部 `auction_user_id` 映射。
+- 外部商品 ID 与竞拍商品快照映射。
+- 平台订单回调地址、签名算法、响应格式差异。
+- 平台订单查询接口字段差异。
+
+不适用场景：
+
+- 不让平台 Adapter 直接访问竞拍数据库。
+- 不让 Adapter 决定竞拍状态机。
+- 不在 Adapter 内实现出价排序、延时竞拍、赢家判定。
+
+#### 3.1.4 Mediator/Event Dispatcher：事件编排
+
+中介模式适合做事件编排，不适合承载核心竞拍规则。竞拍域只产生领域事件，事件分发器负责通知下游扩展能力。
+
+```text
+Auction Domain
+  -> Domain Event: auction.result_confirmed
+  -> Outbox
+  -> Event Dispatcher
+       -> OrderCallbackHandler
+       -> RealtimePushHandler
+       -> AuditLogHandler
+       -> MetricsHandler
+       -> NotificationHandler
+```
+
+适用场景：
+
+- `auction.result_confirmed` 触发订单回调。
+- `bid_placed` 触发实时推送和审计日志。
+- `delay_triggered` 触发实时倒计时刷新。
+- `callback.dead_letter` 触发告警。
+
+不适用场景：
+
+- 不用一个巨大的 `PlatformMediator` 处理所有平台逻辑。
+- 不用内存事件替代可靠 Outbox。
+- 不让事件 handler 反向修改已确认的竞拍结果。
+
+#### 3.1.5 Strategy：平台级策略配置
+
+当不同平台存在策略差异时使用策略模式，而不是在主流程中写大量条件分支。
+
+建议策略：
+
+```text
+SignatureStrategy
+RetryPolicyStrategy
+OrderProbeStrategy
+CallbackTimeoutStrategy
+RateLimitStrategy
+```
+
+适用场景：
+
+- 不同平台签名算法不同。
+- 不同平台回调超时时间不同。
+- 不同平台重试节奏不同。
+- 不同平台订单查询接口稳定性不同。
+
+不适用场景：
+
+- 不用策略模式改变竞拍公平性规则。
+- 不允许平台自定义赢家判定逻辑，除非未来明确开放独立规则引擎。
+
+#### 3.1.6 设计底线
+
+必须遵守：
+
+- 核心竞拍规则不用模式堆叠，保持直接、确定、可测试。
+- 外部平台差异用 Adapter 隔离。
+- 横切能力用 Middleware/Decorator 扩展。
+- SDK 入口用 Proxy 封装 OpenAPI。
+- 回调和扩展能力用 Outbox-backed Event Dispatcher 编排。
+- 可靠事件必须先落库再投递，不能只依赖内存事件。
+
+推荐内部层次：
+
+```text
+Core Domain
+  AuctionService
+  BidService
+  RankingService
+  ResultService
+
+Extension Ports
+  OrderCallbackPort
+  OrderProbePort
+  RealtimePushPort
+  NotificationPort
+  AuditPort
+  MetricsPort
+
+Application Orchestration
+  AuctionEventDispatcher
+  CallbackDispatcher
+  ReplayScheduler
+
+Infrastructure Adapters
+  HTTPCallbackAdapter
+  PlatformOrderProbeAdapter
+  WebSocketPushAdapter
+  MetricsAdapter
+
+Client SDK
+  OpenAPIClient Proxy
+  Middleware Decorator Chain
+  Typed API Modules
+```
+
 ## 4. OpenAPI 能力分组
 
 ### 4.1 Platform API
