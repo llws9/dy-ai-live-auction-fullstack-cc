@@ -1,5 +1,5 @@
 import React from 'react';
-import { useExperimentVariant } from './useFeature';
+import { useExperimentVariant, useFeatureIsOnByKey, useFeatureValueByKey } from '@/shared/growthbook/useFeature';
 
 interface ExperimentLayerProps {
   parentKey: string;

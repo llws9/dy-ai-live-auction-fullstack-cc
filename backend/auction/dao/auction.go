@@ -3,6 +3,7 @@ package dao
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"gorm.io/gorm"
 
@@ -60,15 +61,26 @@ func (d *AuctionDAO) UpdateStatus(ctx context.Context, id int64, status model.Au
 		Update("status", status).Error
 }
 
-// UpdatePrice 更新当前价格和中标者
-func (d *AuctionDAO) UpdatePrice(ctx context.Context, id int64, price float64, winnerID int64) error {
-	return d.db.WithContext(ctx).
+// UpdatePrice 更新当前价格和中标者（使用乐观锁）
+func (d *AuctionDAO) UpdatePrice(ctx context.Context, id int64, price float64, winnerID int64, expectedVersion int) error {
+	result := d.db.WithContext(ctx).
 		Model(&model.Auction{}).
-		Where("id = ?", id).
+		Where("id = ? AND version = ?", id, expectedVersion).
 		Updates(map[string]interface{}{
 			"current_price": price,
 			"winner_id":     winnerID,
-		}).Error
+			"version":       gorm.Expr("version + 1"),
+		})
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("竞拍版本不匹配，可能已被其他请求更新")
+	}
+
+	return nil
 }
 
 // ExtendEndTime 延长结束时间

@@ -7,8 +7,9 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { ToastProvider, useToast } from './components/Toast'
 import { setToastFunction } from './services/api'
 import { errorMonitor } from './utils/errorMonitor'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import LoadingSpinner from './components/LoadingSpinner'
+import LiveReminderModal, { StreamInfo } from './components/LiveReminderModal'
 
 // 动态导入路由组件
 const Login = lazy(() => import('./pages/Login'))
@@ -58,6 +59,28 @@ function ErrorMonitorInitializer() {
 }
 
 function App() {
+  const [isReminderOpen, setIsReminderOpen] = useState(false)
+  const [activeStream, setActiveStream] = useState<StreamInfo | null>(null)
+
+  useEffect(() => {
+    // 模拟应用启动时检测是否有关注的直播间正在开播
+    const checkLiveStatus = () => {
+      // 模拟后端返回的数据
+      const mockStream: StreamInfo = {
+        id: 1,
+        name: "高奢珠宝首发专场",
+        avatarUrl: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=150",
+        statusText: "正在直播"
+      }
+      setActiveStream(mockStream)
+      setIsReminderOpen(true)
+    }
+
+    // 延迟 1.5 秒后弹出，模拟网络请求和应用初始化
+    const timer = setTimeout(checkLiveStatus, 1500)
+    return () => clearTimeout(timer)
+  }, [])
+
   return (
     <ErrorBoundary>
       <ToastProvider>
@@ -86,6 +109,13 @@ function App() {
                     } />
                   </Routes>
                 </Suspense>
+
+                {/* 全局挂载开播提醒弹窗 */}
+                <LiveReminderModal 
+                  isOpen={isReminderOpen} 
+                  onClose={() => setIsReminderOpen(false)} 
+                  stream={activeStream} 
+                />
               </div>
             </AuctionProvider>
           </GrowthBookContextProvider>

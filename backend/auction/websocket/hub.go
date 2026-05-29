@@ -185,10 +185,10 @@ func (h *Hub) LeaveUserRoom(userID int64, client *Client) {
 
 // BroadcastToUserRoom - 向用户房间广播消息
 func (h *Hub) BroadcastToUserRoom(userID int64, message *Message) {
-	h.userRoomsMu.RLock()
-	clients := h.UserRooms[userID]
-	h.userRoomsMu.RUnlock()
+	h.userRoomsMu.Lock()
+	defer h.userRoomsMu.Unlock()
 
+	clients := h.UserRooms[userID]
 	if clients == nil {
 		return
 	}

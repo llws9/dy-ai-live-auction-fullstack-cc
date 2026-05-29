@@ -85,13 +85,8 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 	// 记录并发出价计数（新增）
 	if s.metrics != nil {
 		s.metrics.IncConcurrentBids()
+		defer s.metrics.DecConcurrentBids() // 确保函数结束时总是递减
 	}
-	var concurrentDecreased bool
-	defer func() {
-		if !concurrentDecreased && s.metrics != nil {
-			s.metrics.DecConcurrentBids()
-		}
-	}()
 
 	// 1. 校验用户是否存在（逻辑外键校验）
 	if s.userDAO != nil {
@@ -139,7 +134,17 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 
 	// 6. 检查封顶价
 	if rule.CapPrice != nil && *rule.CapPrice > 0 && req.Amount >= *rule.CapPrice {
-		// 达到封顶价，直接成交
+		// 达到封顶价，需要获取分布式锁保护
+		bidLock := lock.NewAuctionBidLock(dao.GetRedis(), req.AuctionID)
+		if err := bidLock.Acquire(ctx); err != nil {
+			return &PlaceBidResult{
+				Success: false,
+				Message: "出价过于频繁，请稍后再试",
+			}, nil
+		}
+		defer bidLock.Release(ctx)
+
+		// 直接成交
 		return s.handleCapPriceBid(ctx, auction, req, *rule.CapPrice)
 	}
 
@@ -179,12 +184,12 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 		return nil, fmt.Errorf("创建出价记录失败: %w", err)
 	}
 
-	// 11. 更新竞拍当前价格和中标者
+	// 11. 更新竞拍当前价格和中标者（使用乐观锁）
 	// 保存前中标者信息，用于发送出价超越通知
 	previousWinnerID := auction.WinnerID
 	previousPrice := auction.CurrentPrice
 
-	if err := s.auctionDAO.UpdatePrice(ctx, req.AuctionID, req.Amount, req.UserID); err != nil {
+	if err := s.auctionDAO.UpdatePrice(ctx, req.AuctionID, req.Amount, req.UserID, auction.Version); err != nil {
 		return nil, fmt.Errorf("更新竞拍价格失败: %w", err)
 	}
 
@@ -193,7 +198,7 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 		notifyUserID := *previousWinnerID
 		go func() {
 			// 异步发送通知，不阻塞主流程
-			_ = s.notificationSender.SendNotification(ctx, &model.NotificationRequest{
+			_ = s.notificationSender.SendNotification(context.Background(), &model.NotificationRequest{
 				UserID:  notifyUserID,
 				Type:    model.NotificationTypeBidOutbid,
 				Title:   "出价被超越",
@@ -211,7 +216,7 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 	if s.skyLampTrigger != nil && !req.SkipSkyLampTrigger {
 		go func() {
 			// 异步触发，不阻塞主流程
-			_ = s.skyLampTrigger.TriggerAutoBid(ctx, req.AuctionID, req.Amount, rule.Increment)
+			_ = s.skyLampTrigger.TriggerAutoBid(context.Background(), req.AuctionID, req.Amount, rule.Increment)
 		}()
 	}
 
@@ -261,7 +266,6 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 		s.metrics.RecordBid(req.AuctionID, req.Amount, true)
 		s.metrics.RecordBidUser(req.AuctionID)
 	}
-	concurrentDecreased = true // 标记已处理
 
 	return &PlaceBidResult{
 		Success:      true,
@@ -285,8 +289,8 @@ func (s *BidService) handleCapPriceBid(ctx context.Context, auction *model.Aucti
 		return nil, fmt.Errorf("创建出价记录失败: %w", err)
 	}
 
-	// 更新竞拍价格和状态
-	if err := s.auctionDAO.UpdatePrice(ctx, req.AuctionID, capPrice, req.UserID); err != nil {
+	// 更新竞拍价格和状态（使用乐观锁）
+	if err := s.auctionDAO.UpdatePrice(ctx, req.AuctionID, capPrice, req.UserID, auction.Version); err != nil {
 		return nil, fmt.Errorf("更新竞拍价格失败: %w", err)
 	}
 

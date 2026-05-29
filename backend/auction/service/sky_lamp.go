@@ -232,7 +232,8 @@ func (s *SkyLampService) TriggerAutoBid(ctx context.Context, auctionID int64, cu
 		return nil
 	}
 
-	for _, sub := range subscriptions {
+	for i := range subscriptions {
+		sub := &subscriptions[i]
 		autoBidStartTime := time.Now()
 
 		auction, err = s.bidService.auctionDAO.GetByID(ctx, auctionID)
@@ -246,7 +247,8 @@ func (s *SkyLampService) TriggerAutoBid(ctx context.Context, auctionID int64, cu
 			continue
 		}
 		if !NewStateMachine(auction).CanBid() {
-			return nil
+			// 竞拍不可出价，继续处理下一个订阅
+			continue
 		}
 
 		if auction.WinnerID != nil && *auction.WinnerID == sub.UserID {
@@ -307,7 +309,7 @@ func (s *SkyLampService) TriggerAutoBid(ctx context.Context, auctionID int64, cu
 
 		sub.CurrentAutoBidCount++
 		sub.TotalBidAmount += nextBid
-		if err := s.skyLampDAO.Update(ctx, &sub); err != nil {
+		if err := s.skyLampDAO.Update(ctx, sub); err != nil {
 			log.Printf("更新订阅失败: id=%d, err=%v", sub.ID, err)
 		}
 
