@@ -34,6 +34,12 @@ func (s *AuctionService) SetNotificationSender(sender NotificationSender) {
 	s.notificationSender = sender
 }
 
+// SetSkyLampDAO 设置点天灯DAO（用于更新统计数据）
+func (s *AuctionService) SetSkyLampDAO(skyLampDAO *dao.SkyLampDAO) {
+	// AuctionService暂时不需要SkyLampDAO
+	// 保留此方法以备将来扩展
+}
+
 // CreateAuctionRequest 创建竞拍请求
 type CreateAuctionRequest struct {
 	ProductID int64

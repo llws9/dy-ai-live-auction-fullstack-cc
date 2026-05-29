@@ -44,6 +44,7 @@ type NotificationService struct {
 	notificationDAO *dao.NotificationDAO
 	hub             *websocket.Hub
 	redis           *redis.Client
+	followDAO       *dao.UserLiveStreamFollowDAO
 }
 
 // NewNotificationService 创建通知服务
@@ -57,6 +58,17 @@ func NewNotificationService(notificationDAO *dao.NotificationDAO, redis *redis.C
 // SetHub 设置WebSocket Hub
 func (s *NotificationService) SetHub(hub *websocket.Hub) {
 	s.hub = hub
+}
+
+// SetFollowDAO 设置关注DAO（用于热拉Redis失败时DB兜底）
+func (s *NotificationService) SetFollowDAO(followDAO *dao.UserLiveStreamFollowDAO) {
+	s.followDAO = followDAO
+}
+
+// SetMetrics 设置指标收集器（占位方法，通知服务暂不需要metrics）
+func (s *NotificationService) SetMetrics(metrics interface{}) {
+	// NotificationService目前不需要metrics
+	// 保留此方法以备将来扩展
 }
 
 // SendNotification 发送通知
