@@ -97,7 +97,9 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	v1.GET("/orders/:id", productProxy.Forward)
 	v1.POST("/orders/:id/pay", productProxy.Forward)
 	v1.PUT("/orders/:id/ship", productProxy.Forward)          // T007: 订单发货
-	v1.GET("/orders/history", productProxy.Forward)           // T008: 用户订单历史
+	// T008: 用户订单历史 — JWT 化（spec C / F-C3, M1 P0 安全修复）
+	// 仅认证用户可读；下游通过 X-User-ID header 透传识别本人，禁止接受 query user_id。
+	authGroup.GET("/orders/history", productProxy.Forward)
 
 	// ========== 直播间路由 ==========
 	authGroup.GET("/admin/live-streams", middleware.RequireAdmin(), productProxy.Forward) // T009: 管理端直播间列表

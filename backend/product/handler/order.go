@@ -216,15 +216,26 @@ func (h *OrderHandler) Update(ctx context.Context, c *app.RequestContext) {
 	c.JSON(200, order)
 }
 
-// GetUserHistory 获取用户历史记录
+// GetUserHistory 获取当前登录用户的订单历史。
+//
+// 安全契约（spec C / F-C3, M1 P0）：
+//   - 用户身份只来自 Gateway 透传的 X-User-ID header，不接受 query/body user_id；
+//     这样调用方无法通过篡改请求参数读取他人订单。
+//   - 缺失 X-User-ID（即未经 Gateway JWT 中间件）时返回 401。
 func (h *OrderHandler) GetUserHistory(ctx context.Context, c *app.RequestContext) {
-	// 从JWT中获取用户ID（简化实现）
-	userIDStr := c.Query("user_id")
+	userIDStr := string(c.GetHeader("X-User-ID"))
+	if userIDStr == "" {
+		c.JSON(401, map[string]interface{}{
+			"code":    401,
+			"message": "未认证",
+		})
+		return
+	}
 	userID, err := strconv.ParseInt(userIDStr, 10, 64)
-	if err != nil {
-		c.JSON(400, map[string]interface{}{
-			"code":    400,
-			"message": "无效的用户ID",
+	if err != nil || userID <= 0 {
+		c.JSON(401, map[string]interface{}{
+			"code":    401,
+			"message": "无效的用户身份",
 		})
 		return
 	}
@@ -242,9 +253,9 @@ func (h *OrderHandler) GetUserHistory(ctx context.Context, c *app.RequestContext
 	}
 
 	c.JSON(200, map[string]interface{}{
-		"items": items,
-		"total": total,
-		"page":  page,
+		"items":     items,
+		"total":     total,
+		"page":      page,
 		"page_size": pageSize,
 	})
 }
