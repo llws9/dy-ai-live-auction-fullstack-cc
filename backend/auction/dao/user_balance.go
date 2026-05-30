@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 
 	"auction-service/model"
@@ -24,16 +25,16 @@ func NewUserBalanceDAO(db *gorm.DB) *UserBalanceDAO {
 //   - 命中：返回字段 + hit=true
 //   - 未命中：返回 hit=false（不返回 ErrRecordNotFound，避免 handler 把"无记录"误判为故障）
 //   - DB 故障：返回 err
-func (d *UserBalanceDAO) GetByUserID(ctx context.Context, userID int64) (available, frozen float64, currency string, hit bool, err error) {
+func (d *UserBalanceDAO) GetByUserID(ctx context.Context, userID int64) (available, frozen decimal.Decimal, currency string, hit bool, err error) {
 	var b model.UserBalance
 	err = d.db.WithContext(ctx).
 		Where("user_id = ?", userID).
 		First(&b).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return 0, 0, "", false, nil
+			return decimal.Zero, decimal.Zero, "", false, nil
 		}
-		return 0, 0, "", false, err
+		return decimal.Zero, decimal.Zero, "", false, err
 	}
 	return b.AvailableAmount, b.FrozenAmount, b.Currency, true, nil
 }

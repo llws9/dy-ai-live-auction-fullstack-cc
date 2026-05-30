@@ -189,20 +189,7 @@ const HomePage: React.FC = () => {
       const response = await auctionApi.list(params);
       const rawAuctions = extractList(response);
 
-      // 后端已内嵌 product 摘要（spec C §5.2），无 product 时再 fallback 单独查
-      const products = await Promise.all(
-        rawAuctions.map(async (auction) => {
-          if (auction.product || !auction.product_id) return undefined;
-          try {
-            return await productApi.get(auction.product_id);
-          } catch (error) {
-            console.warn('获取商品详情失败:', auction.product_id, error);
-            return undefined;
-          }
-        })
-      );
-
-      setAuctions(rawAuctions.map((auction, index) => normalizeAuction(auction, products[index])));
+      setAuctions(rawAuctions.map((auction) => normalizeAuction(auction)));
     } catch (error) {
       console.error('获取竞拍列表失败:', error);
       setAuctions([]);

@@ -116,7 +116,7 @@ func (f *UserStatsFetcher) fetchOrderHistory(ctx context.Context, userID int64) 
 			Total int64                    `json:"total"`
 		} `json:"data"`
 	}
-	if err := json.Unmarshal(body, &flat); err == nil && (flat.Items != nil || flat.Total > 0) {
+	if err := json.Unmarshal(body, &flat); err == nil && flat.Items != nil {
 		return flat.Total, countWinners(flat.Items), true
 	}
 	if err := json.Unmarshal(body, &wrapped); err == nil {

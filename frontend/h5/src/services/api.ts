@@ -350,7 +350,13 @@ export const auctionApi = {
 // 订单 API
 export const orderApi = {
   // 获取订单列表
-  list: () => get<any>('/orders'),
+  list: (params?: { page?: number; page_size?: number }) => {
+    const query = new URLSearchParams();
+    query.set('page', String(params?.page ?? 1));
+    query.set('page_size', String(params?.page_size ?? 20));
+
+    return get<any>(`/orders?${query.toString()}`);
+  },
 
   // 获取用户竞拍历史
   history: (params?: { page?: number; page_size?: number }) => {

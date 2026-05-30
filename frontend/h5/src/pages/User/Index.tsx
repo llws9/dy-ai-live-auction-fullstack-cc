@@ -116,7 +116,7 @@ const UserCenter: React.FC = () => {
         userApi.getProfile(),
         userApi.getBalance(),
         userApi.getStats(),
-        orderApi.list(),
+        orderApi.list({ page: 1, page_size: 2 }),
       ]);
 
       if (!alive) return;

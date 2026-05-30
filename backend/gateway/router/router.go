@@ -88,9 +88,11 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	// ========== 直播间关注路由 ==========
 	authGroup.POST("/live-streams/:id/follow", auctionProxy.Forward)
 	authGroup.DELETE("/live-streams/:id/follow", auctionProxy.Forward)
-	authGroup.GET("/live-streams/:id/follow-status", auctionProxy.Forward) // T2.6 (F-B2)
+	authGroup.GET("/live-streams/:id/follow-status", auctionProxy.Forward)
 	authGroup.GET("/user/followed-live-streams", auctionProxy.Forward)
 	authGroup.PUT("/live-streams/:id/notification", auctionProxy.Forward)
+	v1.GET("/live-streams/:id/followers/stats", auctionProxy.Forward)
+	v1.GET("/live-streams/:id/followers/count", auctionProxy.Forward)
 
 	// ========== 用户余额（T3.1 F-A2 只读） ==========
 	authGroup.GET("/user/balance", auctionProxy.Forward)
@@ -109,12 +111,11 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	})
 
 	// ========== 订单服务路由 ==========
-	v1.GET("/orders", productProxy.Forward)
 	v1.GET("/orders/:id", productProxy.Forward)
 	v1.POST("/orders/:id/pay", productProxy.Forward)
 	v1.PUT("/orders/:id/ship", productProxy.Forward)          // T007: 订单发货
-	// T008: 用户订单历史 — JWT 化（spec C / F-C3, M1 P0 安全修复）
-	// 仅认证用户可读；下游通过 X-User-ID header 透传识别本人，禁止接受 query user_id。
+	// 订单列表 & 历史均需 JWT 认证；下游通过 X-User-ID header 识别本人，禁止接受 query user_id。
+	authGroup.GET("/orders", productProxy.Forward)
 	authGroup.GET("/orders/history", productProxy.Forward)
 
 	// ========== 直播间路由 ==========

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -125,9 +126,9 @@ func (h *FollowHandler) GetUserFollowsHandler(ctx context.Context, c *app.Reques
 		userID, page, pageSize)
 	if err != nil {
 		if err.Error() == "invalid user_id" {
-			c.JSON(400, map[string]interface{}{
-				"code":    400,
-				"message": err.Error(),
+			c.JSON(401, map[string]interface{}{
+				"code":    401,
+				"message": "未登录或无效用户",
 			})
 			return
 		}
@@ -165,7 +166,7 @@ func (h *FollowHandler) GetFollowStatusHandler(ctx context.Context, c *app.Reque
 
 	resp, err := BuildFollowStatusResponse(ctx, h.followService, userID, liveStreamID)
 	if err != nil {
-		if err.Error() == "invalid user_id" || err.Error() == "invalid live_stream_id" {
+		if errors.Is(err, ErrInvalidUserID) || errors.Is(err, ErrInvalidLiveStream) {
 			c.JSON(400, map[string]interface{}{"code": 400, "message": err.Error()})
 			return
 		}
@@ -184,7 +185,6 @@ func (h *FollowHandler) GetFollowStatusHandler(ctx context.Context, c *app.Reque
 
 // ToggleNotificationHandler 切换通知状态
 func (h *FollowHandler) ToggleNotificationHandler(ctx context.Context, c *app.RequestContext) {
-	// 解析路径参数
 	liveStreamIDStr := c.Param("id")
 	liveStreamID, err := strconv.ParseInt(liveStreamIDStr, 10, 64)
 	if err != nil {
@@ -195,10 +195,8 @@ func (h *FollowHandler) ToggleNotificationHandler(ctx context.Context, c *app.Re
 		return
 	}
 
-	// 获取用户ID
 	userID := c.GetInt64("user_id")
 
-	// 解析请求体
 	var req struct {
 		Enabled bool `json:"enabled"`
 	}
@@ -210,7 +208,6 @@ func (h *FollowHandler) ToggleNotificationHandler(ctx context.Context, c *app.Re
 		return
 	}
 
-	// 切换通知状态
 	if err := h.followService.ToggleNotification(ctx, userID, liveStreamID, req.Enabled); err != nil {
 		c.JSON(500, map[string]interface{}{
 			"code":    500,
@@ -219,9 +216,69 @@ func (h *FollowHandler) ToggleNotificationHandler(ctx context.Context, c *app.Re
 		return
 	}
 
-	// 返回成功响应
 	c.JSON(200, map[string]interface{}{
 		"code":    200,
 		"message": "通知状态更新成功",
+	})
+}
+
+// GetFollowersStatsHandler 获取直播间关注统计（公开接口）
+func (h *FollowHandler) GetFollowersStatsHandler(ctx context.Context, c *app.RequestContext) {
+	liveStreamIDStr := c.Param("id")
+	liveStreamID, err := strconv.ParseInt(liveStreamIDStr, 10, 64)
+	if err != nil {
+		c.JSON(400, map[string]interface{}{
+			"code":    400,
+			"message": "无效的直播间ID",
+		})
+		return
+	}
+
+	stats, err := h.followService.GetFollowStats(ctx, liveStreamID)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{
+			"code":    500,
+			"message": "获取关注统计失败",
+		})
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{
+		"code": 200,
+		"data": stats,
+	})
+}
+
+// GetFollowersCountHandler 获取直播间关注人数（内部接口，供 product-service 调用）
+func (h *FollowHandler) GetFollowersCountHandler(ctx context.Context, c *app.RequestContext) {
+	liveStreamIDStr := c.Param("id")
+	liveStreamID, err := strconv.ParseInt(liveStreamIDStr, 10, 64)
+	if err != nil {
+		c.JSON(400, map[string]interface{}{
+			"code":    400,
+			"message": "无效的直播间ID",
+		})
+		return
+	}
+
+	stats, err := h.followService.GetFollowStats(ctx, liveStreamID)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{
+			"code":    500,
+			"message": "获取关注人数失败",
+		})
+		return
+	}
+
+	count := int64(0)
+	if v, ok := stats["followers_count"]; ok {
+		count = v
+	}
+
+	c.JSON(200, map[string]interface{}{
+		"code": 200,
+		"data": map[string]interface{}{
+			"count": count,
+		},
 	})
 }
