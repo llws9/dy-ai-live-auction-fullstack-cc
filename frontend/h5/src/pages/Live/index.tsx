@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '@/services/api';
 import WebSocketService from '@/services/websocket';
 import { useAuth } from '@/store/authContext';
+import { useToast } from '../../components/Toast';
 import styles from './Live.module.css';
 
 interface Auction {
@@ -112,6 +113,7 @@ const LiveRoomPage: React.FC = () => {
   const [connected, setConnected] = useState(false);
   const [toast, setToast] = useState('');
   const [now, setNow] = useState(() => Date.now());
+  const { showToast: showGlobalToast } = useToast();
 
   const currentPrice = auction?.current_price ?? 0;
   const increment = product?.rules?.increment ?? 100;
@@ -505,6 +507,54 @@ const LiveRoomPage: React.FC = () => {
           <p>聊天协议尚未开放，当前仅保留直播间互动入口。</p>
         </section>
       </div>
+
+      {import.meta.env.DEV && (
+        <div className={styles.toastDemoPanel} aria-label="触达 Toast 测试">
+          <button
+            type="button"
+            onClick={() =>
+              showGlobalToast({
+                type: 'warning',
+                title: '截拍预警',
+                message: '当前拍品即将截拍，请及时确认出价',
+                duration: 3000,
+              })
+            }
+          >
+            截拍预警
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              showGlobalToast({
+                type: 'danger',
+                title: '您已被超价',
+                message: '当前最高价已更新，可立即重新出价',
+                actionText: '重新出价',
+                onAction: () => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }),
+                duration: 3000,
+              })
+            }
+          >
+            被超价
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              showGlobalToast({
+                type: 'success',
+                title: '恭喜中标',
+                message: '您已成功拍下当前拍品，请尽快支付',
+                actionText: '去支付',
+                onAction: () => window.location.assign('/result'),
+                duration: 3000,
+              })
+            }
+          >
+            中标结果
+          </button>
+        </div>
+      )}
 
       {toast && <div className={styles.toast} role="status">{toast}</div>}
     </section>
