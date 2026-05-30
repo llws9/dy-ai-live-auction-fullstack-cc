@@ -1,7 +1,7 @@
 import { GrowthBook, GrowthBookProvider as GBProvider } from '@growthbook/growthbook-react';
-import axios from 'axios';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuth } from './authContext';
+import { post } from '../services/api';
 
 interface GrowthBookContextValue {
   growthbook: GrowthBook;
@@ -21,40 +21,41 @@ interface GrowthBookContextProviderProps {
   children: React.ReactNode;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
-
 // 上报实验曝光到后端,用于服务端 Prometheus 指标统计与离线分析。
 // 与 console 日志相比,这是 SSOT 的实验埋点出口。
 function reportExperimentViewed(experimentKey: string, variation: string) {
-  const token = localStorage.getItem('auth_token');
-  void axios
-    .post(
-      `${API_BASE_URL}/experiments/viewed`,
-      { experiment: experimentKey, variation },
-      token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
-    )
-    .catch((err) => {
+  void post('/experiments/viewed', { experiment: experimentKey, variation }, { showError: false }).catch(
+    (err) => {
       // 不阻塞前端体验,失败仅在控制台告警
       console.warn('[experiment] viewed report failed:', err?.message || err);
-    });
+    },
+  );
 }
 
 export function GrowthBookContextProvider({ children }: GrowthBookContextProviderProps) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [loaded, setLoaded] = useState(false);
 
   // 使用 useMemo 进行懒初始化，符合 React Hooks 规则
-  const gb = useMemo(() => new GrowthBook({
-    apiHost: import.meta.env.VITE_GROWTHBOOK_API_HOST || 'http://localhost:3200',
-    clientKey: import.meta.env.VITE_GROWTHBOOK_CLIENT_KEY || 'dev-client-key',
-    enableDevMode: import.meta.env.DEV,
-    trackingCallback: (experiment, result) => {
-      reportExperimentViewed(experiment.key, String(result.variationId));
-    },
-  }), []);
+  const gb = useMemo(
+    () =>
+      new GrowthBook({
+        apiHost: import.meta.env.VITE_GROWTHBOOK_API_HOST || 'http://localhost:3200',
+        clientKey: import.meta.env.VITE_GROWTHBOOK_CLIENT_KEY || 'dev-client-key',
+        enableDevMode: import.meta.env.DEV,
+        trackingCallback: (experiment, result) => {
+          reportExperimentViewed(experiment.key, String(result.variationId));
+        },
+      }),
+    [],
+  );
 
-  // 更新用户属性
+  // 初始加载特性配置（必须在 attributes 就绪后才发起，避免首次分桶用空属性）
   useEffect(() => {
+    // 等待 auth 初始化完成（避免 token 已存在但 user 尚未注水时就分桶）
+    if (authLoading) return;
+
+    // 先注入 attributes，再加载/刷新特性
     if (user) {
       gb.setAttributes({
         id: user.id.toString(),
@@ -68,18 +69,25 @@ export function GrowthBookContextProvider({ children }: GrowthBookContextProvide
         deviceType: 'mobile',
       });
     }
-  }, [user, gb]);
 
-  // 初始加载特性配置并清理setInterval
+    if (!loaded) {
+      gb.loadFeatures()
+        .catch((err) => {
+          console.warn('Failed to load GrowthBook features:', err);
+        })
+        .finally(() => {
+          setLoaded(true);
+        });
+    } else {
+      // 已加载过：用户态变化时只刷新一次特性
+      gb.refreshFeatures().catch(() => {
+        // 静默失败：旧 features 仍可用
+      });
+    }
+  }, [authLoading, user, gb, loaded]);
+
+  // 自动刷新特性配置，组件卸载时清理
   useEffect(() => {
-    gb.loadFeatures().then(() => {
-      setLoaded(true);
-    }).catch((err) => {
-      console.warn('Failed to load GrowthBook features:', err);
-      setLoaded(true); // 即使失败也继续
-    });
-
-    // 自动刷新特性配置，组件卸载时清理
     const intervalId = setInterval(() => {
       gb.refreshFeatures();
     }, 60000);
@@ -95,9 +103,7 @@ export function GrowthBookContextProvider({ children }: GrowthBookContextProvide
 
   return (
     <GrowthBookContext.Provider value={{ growthbook: gb }}>
-      <GBProvider growthbook={gb}>
-        {children}
-      </GBProvider>
+      <GBProvider growthbook={gb}>{children}</GBProvider>
     </GrowthBookContext.Provider>
   );
 }

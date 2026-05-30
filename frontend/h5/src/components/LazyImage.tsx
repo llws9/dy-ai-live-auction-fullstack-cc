@@ -26,14 +26,15 @@ const LazyImage: React.FC<LazyImageProps> = ({
 
   useEffect(() => {
     // 创建 Intersection Observer
+    const currentImg = imgRef.current;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             setIsInView(true);
             // 一旦进入视口，停止观察
-            if (imgRef.current) {
-              observer.unobserve(imgRef.current);
+            if (currentImg) {
+              observer.unobserve(currentImg);
             }
           }
         });
@@ -45,14 +46,14 @@ const LazyImage: React.FC<LazyImageProps> = ({
     );
 
     // 开始观察
-    if (imgRef.current) {
-      observer.observe(imgRef.current);
+    if (currentImg) {
+      observer.observe(currentImg);
     }
 
     // 清理
     return () => {
-      if (imgRef.current) {
-        observer.unobserve(imgRef.current);
+      if (currentImg) {
+        observer.unobserve(currentImg);
       }
     };
   }, []);

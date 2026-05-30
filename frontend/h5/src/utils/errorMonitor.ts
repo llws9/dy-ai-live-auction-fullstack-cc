@@ -216,12 +216,18 @@ class ErrorMonitor {
    */
   private async sendToServer(errors: ErrorReport[]) {
     try {
+      // token 为空时不附 Authorization 头，避免发送 "Bearer null" 触发 401
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(this.reportEndpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-        },
+        headers,
         body: JSON.stringify({ errors }),
       });
 

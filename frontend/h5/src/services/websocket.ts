@@ -1,6 +1,10 @@
 // services/websocket.ts
 
 import { MessageTypeThrottlers } from '../utils/throttle';
+import { buildLoginRedirectPath } from './api';
+
+// 服务端鉴权失败的 WebSocket 关闭码（与后端约定）
+const WS_AUTH_FAILED_CLOSE_CODE = 4401;
 
 type MessageHandler = (data: any) => void;
 
@@ -30,6 +34,7 @@ class WebSocketService {
   private reconnectTimer: NodeJS.Timeout | null = null;
   private pingInterval: NodeJS.Timeout | null = null;
   private isConnecting = false;
+  private connectingPromise: Promise<void> | null = null;
   private isManualClose = false;
   private lastMessage: Message | null = null;
   private notificationCallbacks: Set<(notification: NotificationMessage) => void> = new Set();
@@ -67,21 +72,22 @@ class WebSocketService {
   }
 
   connect(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        resolve();
-        return;
-      }
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      return Promise.resolve();
+    }
 
-      if (this.isConnecting) {
-        return;
-      }
+    // 复用进行中的连接 Promise，避免调用方挂起
+    if (this.isConnecting && this.connectingPromise) {
+      return this.connectingPromise;
+    }
 
-      this.isConnecting = true;
-      this.isManualClose = false;
+    this.isConnecting = true;
+    this.isManualClose = false;
 
-      // 构建WebSocket URL，添加token参数
-      let wsUrl = `ws://${window.location.host}/api/v1/ws?auction_id=${this.auctionId}`;
+    this.connectingPromise = new Promise<void>((resolve, reject) => {
+      // 根据当前页面协议自动选择 ws / wss，避免 HTTPS 站点 mixed-content 拦截
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      let wsUrl = `${proto}//${window.location.host}/api/v1/ws?auction_id=${this.auctionId}`;
       if (this.token) {
         wsUrl += `&token=${encodeURIComponent(this.token)}`;
       }
@@ -91,6 +97,7 @@ class WebSocketService {
       this.ws.onopen = () => {
         console.log('WebSocket connected');
         this.isConnecting = false;
+        this.connectingPromise = null;
         this.reconnectAttempts = 0;
         this.startPing();
         resolve();
@@ -108,18 +115,39 @@ class WebSocketService {
       this.ws.onerror = (error) => {
         console.error('WebSocket error:', error);
         this.isConnecting = false;
+        this.connectingPromise = null;
         reject(error);
       };
 
-      this.ws.onclose = () => {
-        console.log('WebSocket closed');
+      this.ws.onclose = (event) => {
+        console.log('WebSocket closed', event.code);
         this.isConnecting = false;
+        this.connectingPromise = null;
         this.stopPing();
+
+        // 鉴权失败：清理本地凭据并重定向登录页，停止重连
+        if (event.code === WS_AUTH_FAILED_CLOSE_CODE) {
+          this.isManualClose = true;
+          try {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_user');
+            localStorage.removeItem('token');
+          } catch {
+            // ignore storage errors
+          }
+          if (window.location.pathname !== '/login') {
+            window.location.href = buildLoginRedirectPath();
+          }
+          return;
+        }
+
         if (!this.isManualClose) {
           this.scheduleReconnect();
         }
       };
     });
+
+    return this.connectingPromise;
   }
 
   disconnect(): void {

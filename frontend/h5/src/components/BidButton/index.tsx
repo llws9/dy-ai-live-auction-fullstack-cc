@@ -1,8 +1,9 @@
 // components/BidButton/index.tsx
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../../store/authContext';
 import { useSkyLamp } from '../../hooks/useSkyLamp';
+import { bidApi } from '../../services/api';
 
 interface BidButtonProps {
   auctionId: number;
@@ -36,19 +37,10 @@ const BidButton: React.FC<BidButtonProps> = ({
     }
   }, [isAuthenticated, refreshStatus]);
 
-  // 防抖处理
-  const debounce = <T extends (...args: any[]) => any>(
-    func: T,
-    wait: number
-  ): ((...args: Parameters<T>) => void) => {
-    let timeout: number | null = null;
-    return (...args: Parameters<T>) => {
-      if (timeout) window.clearTimeout(timeout);
-      timeout = window.setTimeout(() => func(...args), wait);
-    };
-  };
+  // placeBid 通过 ref 暴露最新引用，使 debounce 实例可保持稳定
+  const placeBidRef = useRef<(amount: number) => Promise<void>>(async () => {});
 
-  const placeBid = async (amount: number) => {
+  placeBidRef.current = async (amount: number) => {
     if (!isAuthenticated) {
       setMessage({ text: '请先登录', type: 'error' });
       return;
@@ -58,57 +50,48 @@ const BidButton: React.FC<BidButtonProps> = ({
     setMessage(null);
 
     try {
-      const response = await fetch(`/api/v1/auctions/${auctionId}/bids`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ amount }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setMessage({ text: '🎉 出价成功！', type: 'success' });
-        setCustomAmount('');
-        if (onBidSuccess) {
-          onBidSuccess(amount);
-        }
-      } else {
-        setMessage({ text: result.message || '出价失败', type: 'error' });
-      }
-    } catch (error) {
-      setMessage({ text: '网络错误，请重试', type: 'error' });
-      console.error('出价失败:', error);
+      // 使用统一的 bidApi（已封装鉴权 / 业务码 / 错误提示）
+      await bidApi.placeBid(auctionId, amount);
+      setMessage({ text: '🎉 出价成功！', type: 'success' });
+      setCustomAmount('');
+      onBidSuccess?.(amount);
+    } catch (error: any) {
+      // api.ts 已经统一弹出 toast，这里只做 UI 文案
+      setMessage({ text: error?.message || '出价失败', type: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStartSkyLamp = async () => {
+  // 防抖出价：实例只创建一次，依赖通过 ref 始终读取最新 props
+  const debouncedPlaceBid = useMemo(() => {
+    let timer: number | null = null;
+    return (amount: number) => {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        timer = null;
+        void placeBidRef.current(amount);
+      }, 500);
+    };
+  }, []);
+
+  const handleStartSkyLamp = useCallback(async () => {
     try {
       await startSkyLamp();
       setMessage({ text: '✨ 点天灯已开启', type: 'success' });
     } catch (error: any) {
       setMessage({ text: error?.message || '开启点天灯失败', type: 'error' });
     }
-  };
+  }, [startSkyLamp]);
 
-  const handleStopSkyLamp = async () => {
+  const handleStopSkyLamp = useCallback(async () => {
     try {
       await stopSkyLamp();
       setMessage({ text: '🛑 点天灯已停止', type: 'success' });
     } catch (error: any) {
       setMessage({ text: error?.message || '停止点天灯失败', type: 'error' });
     }
-  };
-
-  // 防抖出价函数
-  const debouncedPlaceBid = useCallback(
-    debounce((amount: number) => placeBid(amount), 500),
-    [auctionId, currentPrice, increment]
-  );
+  }, [stopSkyLamp]);
 
   const handleBid = (multiplier: number = 1) => {
     const bidAmount = currentPrice + increment * multiplier;

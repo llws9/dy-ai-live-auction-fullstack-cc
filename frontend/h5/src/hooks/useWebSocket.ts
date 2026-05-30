@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import WebSocketService from '../services/websocket';
+import { useAuth } from '../store/authContext';
 
 interface UseWebSocketOptions {
   auctionId: number;
@@ -24,19 +25,15 @@ export interface NotificationData {
 }
 
 export function useWebSocket(options: UseWebSocketOptions) {
-  const {
-    auctionId,
-    onBidPlaced,
-    onRankUpdate,
-    onDelayTriggered,
-    onAuctionEnded,
-    onTimeSync,
-    onError,
-    onNotification,
-  } = options;
+  const { auctionId } = options;
+  const { token } = useAuth();
 
   const wsRef = useRef<WebSocketService | null>(null);
   const [connected, setConnected] = useState(false);
+
+  // 使用 ref 持有最新回调，避免父组件重渲染（未 memoize 回调）导致断连重连
+  const handlersRef = useRef(options);
+  handlersRef.current = options;
 
   // 显示浏览器通知
   const showBrowserNotification = useCallback((notification: NotificationData) => {
@@ -63,54 +60,42 @@ export function useWebSocket(options: UseWebSocketOptions) {
   }, []);
 
   useEffect(() => {
-    wsRef.current = new WebSocketService(auctionId);
+    const ws = new WebSocketService(auctionId, token || undefined);
+    wsRef.current = ws;
 
-    // 注册事件处理器
-    if (onBidPlaced) {
-      wsRef.current.on('bid_placed', onBidPlaced);
-    }
-    if (onRankUpdate) {
-      wsRef.current.on('rank_update', onRankUpdate);
-    }
-    if (onDelayTriggered) {
-      wsRef.current.on('delay_triggered', onDelayTriggered);
-    }
-    if (onAuctionEnded) {
-      wsRef.current.on('auction_ended', onAuctionEnded);
-    }
-    if (onTimeSync) {
-      wsRef.current.on('time_sync', onTimeSync);
-    }
-    if (onError) {
-      wsRef.current.on('error', onError);
-    }
+    // 注册事件处理器：通过 handlersRef 间接调用，回调更新无需重连
+    ws.on('bid_placed', (data) => handlersRef.current.onBidPlaced?.(data));
+    ws.on('rank_update', (data) => handlersRef.current.onRankUpdate?.(data));
+    ws.on('delay_triggered', (data) => handlersRef.current.onDelayTriggered?.(data));
+    ws.on('auction_ended', (data) => handlersRef.current.onAuctionEnded?.(data));
+    ws.on('time_sync', (data) => handlersRef.current.onTimeSync?.(data));
+    ws.on('error', (data) => handlersRef.current.onError?.(data));
 
     // 注册通知处理器
-    if (onNotification) {
-      wsRef.current.onNotification((notification) => {
-        onNotification(notification);
-        showBrowserNotification(notification);
-      });
-    }
-
-    // 连接状态处理
-    wsRef.current.on('pong', () => setConnected(true));
-    wsRef.current.on('time_sync', () => setConnected(true));
-
-    // 建立连接
-    wsRef.current.connect().then(() => {
-      setConnected(true);
-    }).catch((error) => {
-      console.error('WebSocket connection failed:', error);
-      setConnected(false);
+    ws.onNotification((notification) => {
+      handlersRef.current.onNotification?.(notification);
+      showBrowserNotification(notification);
     });
 
+    // 连接状态处理
+    ws.on('pong', () => setConnected(true));
+    ws.on('time_sync', () => setConnected(true));
+
+    // 建立连接
+    ws.connect()
+      .then(() => setConnected(true))
+      .catch((error) => {
+        console.error('WebSocket connection failed:', error);
+        setConnected(false);
+      });
+
     return () => {
-      if (wsRef.current) {
-        wsRef.current.disconnect();
+      ws.disconnect();
+      if (wsRef.current === ws) {
+        wsRef.current = null;
       }
     };
-  }, [auctionId, onBidPlaced, onRankUpdate, onDelayTriggered, onAuctionEnded, onTimeSync, onError, onNotification, showBrowserNotification]);
+  }, [auctionId, token, showBrowserNotification]);
 
   return {
     connected,

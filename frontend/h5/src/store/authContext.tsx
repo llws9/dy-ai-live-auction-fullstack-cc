@@ -1,12 +1,12 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authService, User } from '../services/auth';
+import { authService, User, LoginRequest } from '../services/auth';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (req: LoginRequest) => Promise<void>;
   setAuth: (token: string, user: User) => void;
   logout: () => void;
   isAdmin: () => boolean;
@@ -39,9 +39,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(false);
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (req: LoginRequest) => {
     try {
-      const result = await authService.login(email, password);
+      const result = await authService.login(req);
       setToken(result.token);
       setUser(result.user);
       setIsAuthenticated(true);

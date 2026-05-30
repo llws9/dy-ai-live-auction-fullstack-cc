@@ -109,7 +109,7 @@ const UserCenter: React.FC = () => {
     return () => {
       alive = false;
     };
-  }, [authUser?.id]);
+  }, [authUser]);
 
   const userInfo = useMemo<ProfileUser>(() => {
     return {

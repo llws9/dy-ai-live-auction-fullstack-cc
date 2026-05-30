@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../store/authContext';
+import { authService } from '../../services/auth';
 import styles from './Login.module.css';
 
 const LoginPage: React.FC = () => {
@@ -41,28 +42,13 @@ const LoginPage: React.FC = () => {
     setError('');
 
     try {
-      const response = await fetch('/api/v1/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phone: normalizedPhone,
-          password,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok && result.data) {
-        setAuth(result.data.token, result.data.user);
-        window.dispatchEvent(new CustomEvent('login-success'));
-        navigate(redirectUrl);
-      } else {
-        setError(result.message || '登录失败，请重试');
-      }
-    } catch (err) {
-      setError('网络错误，请重试');
+      // 通过 authService 走统一 api.ts，token 与 user 由其内部持久化
+      const data = await authService.login({ phone: normalizedPhone, password });
+      setAuth(data.token, data.user);
+      window.dispatchEvent(new CustomEvent('login-success'));
+      navigate(redirectUrl);
+    } catch (err: any) {
+      setError(err?.message || '登录失败，请重试');
     } finally {
       setLoading(false);
     }

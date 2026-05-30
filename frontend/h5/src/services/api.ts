@@ -7,7 +7,11 @@ const API_BASE_URL = '/api/v1';
 // 请求配置
 const REQUEST_TIMEOUT = 30000; // 30秒超时
 
-function getStoredToken(): string | null {
+// 业务成功码 SSOT：与后端 handler 中 c.JSON(200, {"code": 200, ...}) 对齐；
+// 历史代码也使用 0 表示成功，过渡期同时兼容。
+export const SUCCESS_CODES: ReadonlySet<number> = new Set([0, 200]);
+
+export function getStoredToken(): string | null {
   return localStorage.getItem('auth_token') || localStorage.getItem('token');
 }
 
@@ -180,7 +184,7 @@ async function request<T>(
       const data = await response.json();
 
       // 检查业务错误码
-      if (data.code && data.code !== 0 && data.code !== 200) {
+      if (data.code !== undefined && !SUCCESS_CODES.has(data.code)) {
         const error = new ApiError(
           data.message || data.msg || '操作失败',
           response.status,

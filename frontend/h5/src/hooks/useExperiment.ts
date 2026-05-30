@@ -25,10 +25,10 @@ export function useExperimentLayer(
   childKey?: string
 ): { parentVariant: string | null; childVariant: string | null } {
   const parentValue = useFeatureValue(parentKey, null);
-  const childValue = childKey ? useFeatureValue(childKey, null) : null;
+  const childValue = useFeatureValue(childKey || '__disabled_child_experiment__', null);
 
   return {
     parentVariant: parentValue as string | null,
-    childVariant: childValue as string | null,
+    childVariant: childKey ? (childValue as string | null) : null,
   };
 }

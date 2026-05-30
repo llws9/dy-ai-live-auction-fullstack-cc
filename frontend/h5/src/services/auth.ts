@@ -1,26 +1,23 @@
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+import { post, ApiError } from './api';
 
 export interface User {
   id: number;
-  email: string;
+  email?: string;
+  phone?: string;
   name: string;
   role: number; // 0=用户, 1=商家, 2=管理员
 }
 
+// 后端登录契约支持 email / phone 任一
 export interface LoginRequest {
-  email: string;
+  email?: string;
+  phone?: string;
   password: string;
 }
 
-export interface LoginResponse {
-  code: number;
-  message: string;
-  data: {
-    user: User;
-    token: string;
-  };
+export interface LoginResponseData {
+  user: User;
+  token: string;
 }
 
 class AuthService {
@@ -28,43 +25,36 @@ class AuthService {
   private USER_KEY = 'auth_user';
 
   /**
-   * 用户登录
+   * 用户登录：通过统一 api.ts 的 post()，自动处理业务码/超时/错误提示。
    */
-  async login(email: string, password: string): Promise<{ user: User; token: string }> {
-    try {
-      const response = await axios.post<LoginResponse>(`${API_BASE_URL}/auth/login`, {
-        email,
-        password,
-      });
-
-      if (response.data.code === 200 && response.data.data) {
-        const { user, token } = response.data.data;
-
-        // 存储到localStorage
-        this.setToken(token);
-        this.setUser(user);
-
-        return { user, token };
-      } else {
-        throw new Error(response.data.message || '登录失败');
-      }
-    } catch (error: any) {
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      }
-      throw new Error('登录失败，请检查网络连接');
+  async login(req: LoginRequest): Promise<LoginResponseData> {
+    if (!req.email && !req.phone) {
+      throw new ApiError('请输入邮箱或手机号', 400, 'INVALID_PARAMS');
     }
+    if (!req.password) {
+      throw new ApiError('请输入密码', 400, 'INVALID_PARAMS');
+    }
+
+    const data = await post<LoginResponseData>('/auth/login', req, { showError: false });
+
+    if (!data?.token || !data?.user) {
+      throw new ApiError('登录响应缺少 token / user', 500, 'INVALID_RESPONSE');
+    }
+
+    this.setToken(data.token);
+    this.setUser(data.user);
+
+    return data;
   }
 
   /**
-   * 用户登出
+   * 用户登出：仅清理本地凭据，由调用方负责导航（避免硬刷新丢失 SPA 状态）。
    */
   logout(): void {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
-
-    // 跳转到登录页
-    window.location.href = '/login';
+    localStorage.removeItem('token');
+    localStorage.removeItem('userInfo');
   }
 
   /**

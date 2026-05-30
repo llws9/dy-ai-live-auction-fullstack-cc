@@ -216,8 +216,8 @@ export const useNotification = () => {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        // 检查用户是否已登录
-        const token = localStorage.getItem('token');
+        // 检查用户是否已登录（与 services/api.ts 的存储 key 保持一致）
+        const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
         if (token) {
           console.log('[HotPull] Triggered by visibility change');
           hotPullNotifications();

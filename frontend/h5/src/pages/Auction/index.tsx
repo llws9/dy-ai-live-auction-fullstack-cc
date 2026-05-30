@@ -1,6 +1,6 @@
 // pages/Auction/index.tsx
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Loading } from '@/components/shared';
 import BidButton from '../../components/BidButton';
@@ -56,24 +56,7 @@ const AuctionPage: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const wsRef = useRef<WebSocketService | null>(null);
 
-  useEffect(() => {
-    if (!id) {
-      setLoading(false);
-      return;
-    }
-
-    fetchAuction();
-    fetchBidRecords();
-    connectWebSocket();
-
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.disconnect();
-      }
-    };
-  }, [id]);
-
-  const connectWebSocket = () => {
+  const connectWebSocket = useCallback(() => {
     if (!id) return;
 
     const auctionId = parseInt(id, 10);
@@ -93,22 +76,24 @@ const AuctionPage: React.FC = () => {
     });
 
     ws.on('bid_placed', (data: any) => {
-      if (auction && data.current_price) {
-        setAuction({ ...auction, current_price: data.current_price });
+      if (data.current_price) {
+        setAuction((prev) => (prev ? { ...prev, current_price: data.current_price } : prev));
       }
     });
 
     ws.on('sync_response', (data: any) => {
       if (data) {
-        if (auction) {
-          setAuction({
-            ...auction,
+        setAuction((prev) => (
+          prev
+            ? {
+              ...prev,
             current_price: data.current_price,
             winner_id: data.winner_id,
             end_time: new Date(data.end_time).toISOString(),
             status: data.status,
-          });
-        }
+            }
+            : prev
+        ));
 
         if (data.ranking) {
           const records: BidRecord[] = data.ranking.map((item: RankItem, index: number) => ({
@@ -129,9 +114,9 @@ const AuctionPage: React.FC = () => {
     }).catch((error) => {
       console.error('WebSocket connection failed:', error);
     });
-  };
+  }, [id]);
 
-  const fetchAuction = async () => {
+  const fetchAuction = useCallback(async () => {
     if (!id) return;
 
     try {
@@ -143,9 +128,9 @@ const AuctionPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  const fetchBidRecords = async () => {
+  const fetchBidRecords = useCallback(async () => {
     if (!id) return;
 
     try {
@@ -160,7 +145,24 @@ const AuctionPage: React.FC = () => {
         { id: 3, user_id: 4, user_name: '用户C', amount: 130, created_at: new Date().toISOString() },
       ]);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+
+    fetchAuction();
+    fetchBidRecords();
+    connectWebSocket();
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.disconnect();
+      }
+    };
+  }, [id, fetchAuction, fetchBidRecords, connectWebSocket]);
 
   const handleBidSuccess = (newPrice: number) => {
     if (auction) {
