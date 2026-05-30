@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { auctionApi, productApi } from '@/services/api';
+import PageHeader from '@/components/shared/PageHeader';
 import styles from './Home.module.css';
 
 type HomeTab = '全部' | '收藏' | '珠宝腕表' | '艺术品' | '奢侈品' | '收藏品';
@@ -147,20 +148,23 @@ const HomePage: React.FC = () => {
 
   return (
     <section className={styles.page}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>奢华竞拍</h1>
-        <div className={styles.headerActions}>
-          <span className={styles.iconButton} aria-label="搜索暂未开放" title="搜索暂未开放">
-            搜
-          </span>
-          <Link className={styles.iconButton} to="/following" aria-label="我的关注">
-            关
-          </Link>
-          <Link className={styles.iconButton} to="/notifications" aria-label="消息通知">
-            铃
-          </Link>
-        </div>
-      </header>
+      <PageHeader
+        classes={{ header: styles.header, title: styles.title }}
+        title="奢华竞拍"
+        actions={
+          <>
+            <span className={styles.iconButton} aria-label="搜索暂未开放" title="搜索暂未开放">
+              搜
+            </span>
+            <Link className={styles.iconButton} to="/following" aria-label="我的关注">
+              关
+            </Link>
+            <Link className={styles.iconButton} to="/notifications" aria-label="消息通知">
+              铃
+            </Link>
+          </>
+        }
+      />
 
       <nav className={styles.tabs} aria-label="首页分类">
         {tabs.map((tab) => (

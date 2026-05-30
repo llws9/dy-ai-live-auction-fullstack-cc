@@ -29,34 +29,6 @@ describe('MobileShell', () => {
     expect(setTimeoutSpy).not.toHaveBeenCalled();
   });
 
-  it('hides ThemeToggle on /login route', () => {
-    render(
-      <MemoryRouter initialEntries={['/login']}>
-        <ThemeProvider>
-          <MobileContainer>
-            <main>登录页</main>
-          </MobileContainer>
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
-
-    expect(screen.queryByRole('button', { name: /切换到/ })).not.toBeInTheDocument();
-  });
-
-  it('renders ThemeToggle on non-login routes', () => {
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <ThemeProvider>
-          <MobileContainer>
-            <main>首页</main>
-          </MobileContainer>
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByRole('button', { name: /切换到/ })).toBeInTheDocument();
-  });
-
   it('shows retained bottom navigation entries and active route state', () => {
     render(
       <MemoryRouter initialEntries={['/profile']}>

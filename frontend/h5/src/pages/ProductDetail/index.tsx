@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { auctionApi, bidApi, productApi } from '@/services/api';
 import { useAuth } from '@/store/authContext';
+import PageHeader from '@/components/shared/PageHeader';
 import styles from './ProductDetail.module.css';
 
 interface AuctionDetail {
@@ -211,11 +212,18 @@ const ProductDetail: React.FC = () => {
 
   return (
     <section className={styles.page}>
-      <header className={styles.header}>
-        <Link to="/" className={styles.backButton} aria-label="返回首页">‹</Link>
-        <h1 className={styles.headerTitle}>商品详情</h1>
-        <span className={styles.sharePlaceholder} aria-label="分享暂未开放" title="分享暂未开放">享</span>
-      </header>
+      <PageHeader
+        classes={{
+          header: styles.header,
+          backButton: styles.backButton,
+          title: styles.headerTitle,
+        }}
+        back={{ to: '/' }}
+        title="商品详情"
+        actions={
+          <span className={styles.sharePlaceholder} aria-label="分享暂未开放" title="分享暂未开放">享</span>
+        }
+      />
 
       <main className={styles.content}>
         <div className={styles.hero}>

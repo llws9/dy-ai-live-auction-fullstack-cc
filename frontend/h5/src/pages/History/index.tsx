@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { orderApi } from '../../services/api';
+import PageHeader from '@/components/shared/PageHeader';
 import styles from './AuctionHistory.module.css';
 
 interface HistoryRecord {
@@ -138,16 +139,17 @@ const AuctionHistoryPage: React.FC = () => {
 
   return (
     <section className={styles.page}>
-      <header className={styles.header}>
-        <button className={styles.backButton} type="button" onClick={() => navigate(-1)} aria-label="返回">
-          <span aria-hidden="true">‹</span>
-        </button>
-        <div>
-          <p className={styles.eyebrow}>Auction Ledger</p>
-          <h1>我的竞拍记录</h1>
-        </div>
-        <Link className={styles.homeLink} to="/">首页</Link>
-      </header>
+      <PageHeader
+        classes={{
+          header: styles.header,
+          backButton: styles.backButton,
+          eyebrow: styles.eyebrow,
+        }}
+        back={{ onClick: () => navigate(-1) }}
+        eyebrow="Auction Ledger"
+        title="我的竞拍记录"
+        actions={<Link className={styles.homeLink} to="/">首页</Link>}
+      />
 
       <div className={styles.summaryGrid}>
         <div className={styles.summaryCard}>
