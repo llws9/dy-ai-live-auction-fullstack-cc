@@ -93,6 +93,24 @@ func (h *OrderHandler) Get(ctx context.Context, c *app.RequestContext) {
 	c.JSON(200, order)
 }
 
+// Summary 获取当前登录用户订单触点汇总。
+func (h *OrderHandler) Summary(ctx context.Context, c *app.RequestContext) {
+	userIDStr := string(c.Request.Header.Peek("X-User-ID"))
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil || userID <= 0 {
+		c.JSON(401, map[string]interface{}{"code": 401, "message": "未认证，请先登录"})
+		return
+	}
+
+	summary, err := h.orderService.GetSummary(ctx, userID)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "获取订单汇总失败: " + err.Error()})
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{"code": 0, "message": "success", "data": summary})
+}
+
 // Pay 支付订单
 // @Summary 支付订单
 // @Description 支付指定订单（Mock实现）

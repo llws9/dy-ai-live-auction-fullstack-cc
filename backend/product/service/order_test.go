@@ -299,6 +299,26 @@ func (suite *OrderTestSuite) TestGetUserHistory() {
 	suite.Equal(int64(0), total)
 }
 
+func (suite *OrderTestSuite) TestGetSummary() {
+	ctx := context.Background()
+	userID := int64(100)
+
+	_, err := suite.service.CreateOrder(ctx, 101, 1, userID, 500.0)
+	suite.NoError(err)
+	paid, err := suite.service.CreateOrder(ctx, 102, 1, userID, 600.0)
+	suite.NoError(err)
+	_, err = suite.service.PayOrder(ctx, paid.ID)
+	suite.NoError(err)
+	_, err = suite.service.CreateOrder(ctx, 103, 1, 200, 700.0)
+	suite.NoError(err)
+
+	summary, err := suite.service.GetSummary(ctx, userID)
+
+	suite.NoError(err)
+	suite.Equal(int64(1), summary.PendingPayment)
+	suite.Equal(int64(1), summary.WonNotPaid)
+}
+
 // TestRunSuite 运行测试套件
 func TestRunOrderSuite(t *testing.T) {
 	suite.Run(t, new(OrderTestSuite))

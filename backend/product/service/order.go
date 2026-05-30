@@ -70,6 +70,18 @@ func (s *OrderService) ListOrders(ctx context.Context, userID *int64, page, page
 	return s.orderDAO.List(ctx, userID, page, pageSize)
 }
 
+// GetSummary 获取用户订单触点汇总
+func (s *OrderService) GetSummary(ctx context.Context, userID int64) (*model.OrderSummaryResponse, error) {
+	pending, err := s.orderDAO.CountByWinnerAndStatus(ctx, userID, model.OrderStatusPending)
+	if err != nil {
+		return nil, err
+	}
+	return &model.OrderSummaryResponse{
+		PendingPayment: pending,
+		WonNotPaid:     pending,
+	}, nil
+}
+
 // PayOrder 支付订单（模拟）
 func (s *OrderService) PayOrder(ctx context.Context, id int64) (*model.Order, error) {
 	start := time.Now()
@@ -103,12 +115,12 @@ func (s *OrderService) PayOrder(ctx context.Context, id int64) (*model.Order, er
 
 	s.logger.LogOperationWithData(ctx, logger.OperationPay, logger.ObjectOrder, fmt.Sprintf("%d", id),
 		true, nil, map[string]interface{}{
-			"order_id":     id,
-			"auction_id":   order.AuctionID,
-			"product_id":   order.ProductID,
-			"winner_id":    order.WinnerID,
-			"final_price":  order.FinalPrice,
-			"duration_ms":  time.Since(start).Milliseconds(),
+			"order_id":    id,
+			"auction_id":  order.AuctionID,
+			"product_id":  order.ProductID,
+			"winner_id":   order.WinnerID,
+			"final_price": order.FinalPrice,
+			"duration_ms": time.Since(start).Milliseconds(),
 		}, nil)
 
 	return s.orderDAO.GetByID(ctx, id)
@@ -147,11 +159,11 @@ func (s *OrderService) ShipOrder(ctx context.Context, id int64) (*model.Order, e
 
 	s.logger.LogOperationWithData(ctx, logger.OperationShip, logger.ObjectOrder, fmt.Sprintf("%d", id),
 		true, nil, map[string]interface{}{
-			"order_id":     id,
-			"auction_id":   order.AuctionID,
-			"product_id":   order.ProductID,
-			"winner_id":    order.WinnerID,
-			"duration_ms":  time.Since(start).Milliseconds(),
+			"order_id":    id,
+			"auction_id":  order.AuctionID,
+			"product_id":  order.ProductID,
+			"winner_id":   order.WinnerID,
+			"duration_ms": time.Since(start).Milliseconds(),
 		}, nil)
 
 	return s.orderDAO.GetByID(ctx, id)
@@ -190,12 +202,12 @@ func (s *OrderService) CompleteOrder(ctx context.Context, id int64) (*model.Orde
 
 	s.logger.LogOperationWithData(ctx, logger.OperationComplete, logger.ObjectOrder, fmt.Sprintf("%d", id),
 		true, nil, map[string]interface{}{
-			"order_id":     id,
-			"auction_id":   order.AuctionID,
-			"product_id":   order.ProductID,
-			"winner_id":    order.WinnerID,
-			"final_price":  order.FinalPrice,
-			"duration_ms":  time.Since(start).Milliseconds(),
+			"order_id":    id,
+			"auction_id":  order.AuctionID,
+			"product_id":  order.ProductID,
+			"winner_id":   order.WinnerID,
+			"final_price": order.FinalPrice,
+			"duration_ms": time.Since(start).Milliseconds(),
 		}, nil)
 
 	return s.orderDAO.GetByID(ctx, id)
