@@ -139,7 +139,7 @@ func (h *AuctionHandler) GetResult(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	auction, err := h.auctionService.GetAuction(ctx, id)
+	resp, err := BuildAuctionResultResponse(ctx, h.productClient, h.auctionService.GetAuction, id)
 	if err != nil {
 		c.JSON(404, map[string]interface{}{
 			"code":    404,
@@ -148,19 +148,11 @@ func (h *AuctionHandler) GetResult(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// 构建结果响应
-	result := map[string]interface{}{
-		"auction_id":    auction.ID,
-		"product_id":    auction.ProductID,
-		"status":        auction.Status,
-		"final_price":   auction.CurrentPrice,
-		"winner_id":     auction.WinnerID,
-		"started_at":    auction.StartTime,
-		"ended_at":      auction.EndTime,
-		"delay_used":    auction.DelayUsed,
-	}
-
-	c.JSON(200, result)
+	c.JSON(200, map[string]interface{}{
+		"code":    200,
+		"message": "success",
+		"data":    resp,
+	})
 }
 
 // Get 获取竞拍详情

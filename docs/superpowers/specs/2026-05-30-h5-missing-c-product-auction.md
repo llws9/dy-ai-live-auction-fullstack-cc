@@ -442,3 +442,20 @@ authGroup.GET("/orders/history", productProxy.Forward)  // ✅
 
 - list 场景已用 batch 接口避免 N+1。
 - product 摘要在 product-service 加
+
+### 9.2 product-service 故障降级（已决策 · 2026-05-30）
+
+两个接口分别采用不同降级策略，原因：失败语义、阻塞代价不同。
+
+| 接口 | 失败时行为 | 决策依据 |
+|---|---|---|
+| F-C1 `/auctions` (list) | **整个接口 5xx**，无静默降级 | 列表是探索/筛选场景，product 摘要承载首图与名称，半数缺失会让用户体验严重劣化；分页查询整体失败更符合直觉，便于客户端做 skeleton/重试。 |
+| F-C2 `/auctions/:id/result` (result) | **`product=null` 软降级**，核心字段照常 200 返回 | result 是用户查看中标结果的核心页；`winner_id`、`final_price`、`won_bid` 不依赖 product-service。即使 product-service 抖动，让用户看到中标价值远高于 5xx 阻塞。 |
+
+**实现位置**：
+- list：[handler/auction_list.go](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/auction/handler/auction_list.go) `BuildAuctionListResponse` — 任一 client 调用 err 直接 bubble，handler 转 500。
+- result：[handler/auction_result.go](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/auction/handler/auction_result.go) `BuildAuctionResultResponse` — `pc.BatchGetSummaries` 错误时吞掉错误，返回 `product=nil`。
+
+**前端契约**：
+- list：客户端可信 `items[].product` 必非空。
+- result：客户端必须做 `product == null` 兜底（不展示画廊或显示占位文案）。
