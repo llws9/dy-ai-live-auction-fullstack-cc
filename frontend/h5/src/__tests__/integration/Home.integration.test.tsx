@@ -153,7 +153,7 @@ describe('Home Page Integration', () => {
     });
 
     expect(screen.getByText('直播间')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /关注/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /收藏/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /历史/ })).toBeInTheDocument();
   });
 });

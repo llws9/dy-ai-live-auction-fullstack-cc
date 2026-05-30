@@ -65,7 +65,7 @@ const LiveReminderModal: React.FC<LiveReminderModalProps> = ({ isOpen, onClose, 
         
         <div className={styles.content}>
           <p className={styles.message}>
-            您关注的直播间已经开始啦，快来参与竞拍吧！
+            您收藏的直播间已经开始啦，快来参与竞拍吧！
           </p>
           
           <div className={styles.streamInfo}>

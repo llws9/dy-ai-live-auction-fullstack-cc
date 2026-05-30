@@ -4,6 +4,7 @@ import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '@/serv
 import WebSocketService from '@/services/websocket';
 import { useAuth } from '@/store/authContext';
 import { useToast } from '../../components/Toast';
+import { IS_DEV } from '@/utils/env';
 import styles from './Live.module.css';
 
 interface Auction {
@@ -188,16 +189,24 @@ const LiveRoomPage: React.FC = () => {
         const resolvedProductId = auctionData.product_id ?? auctionData.product?.id;
         const resolvedLiveStreamId = queryLiveStreamId || auctionData.live_stream_id;
 
-        const [productData, liveStreamData, followersStats] = await Promise.all([
+        const [productData, liveStreamData, followersStats, followStatus] = await Promise.all([
           resolvedProductId ? productApi.get(resolvedProductId).catch(() => auctionData.product ?? null) : Promise.resolve(auctionData.product ?? null),
           resolvedLiveStreamId ? liveStreamApi.get(resolvedLiveStreamId).catch(() => null) : Promise.resolve(null),
           resolvedLiveStreamId ? followApi.getFollowersStats(resolvedLiveStreamId).catch(() => null) : Promise.resolve(null),
+          resolvedLiveStreamId && isAuthenticated
+            ? followApi.getFollowStatus(resolvedLiveStreamId).catch(() => null)
+            : Promise.resolve(null),
         ]);
 
         if (cancelled) return;
         setProduct(productData);
         setLiveStream(liveStreamData);
-        setFollowing(Boolean(liveStreamData?.is_following));
+        // 登录态优先使用 follow-status 接口的权威值，未登录或失败时回退到详情接口字段
+        const authoritativeFollowing =
+          followStatus && typeof followStatus.is_following === 'boolean'
+            ? followStatus.is_following
+            : Boolean(liveStreamData?.is_following);
+        setFollowing(authoritativeFollowing);
         setFollowersCount(Number(followersStats?.count ?? followersStats?.followers_count ?? liveStreamData?.followers_count ?? 0));
         await loadRanking();
       } catch (error) {
@@ -217,7 +226,7 @@ const LiveRoomPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [auctionId, loadRanking, queryLiveStreamId]);
+  }, [auctionId, loadRanking, queryLiveStreamId, isAuthenticated]);
 
   useEffect(() => {
     setBidAmount(String(minBid));
@@ -310,11 +319,11 @@ const LiveRoomPage: React.FC = () => {
 
   const handleFollow = async () => {
     if (!effectiveLiveStreamId) {
-      showToast('直播间信息缺失，暂不能关注');
+      showToast('直播间信息缺失，暂不能收藏');
       return;
     }
     if (!isAuthenticated) {
-      showToast('请先登录后关注');
+      showToast('请先登录后收藏');
       return;
     }
 
@@ -329,11 +338,11 @@ const LiveRoomPage: React.FC = () => {
       } else {
         await followApi.followLiveStream(effectiveLiveStreamId);
       }
-      showToast(previousFollowing ? '已取消关注' : '已关注直播间');
+      showToast(previousFollowing ? '已取消收藏' : '已收藏直播间');
     } catch (error: any) {
       setFollowing(previousFollowing);
       setFollowersCount((count) => Math.max(0, count + (previousFollowing ? 1 : -1)));
-      showToast(error?.message || '关注操作失败');
+      showToast(error?.message || '收藏操作失败');
     } finally {
       setFollowingPending(false);
     }
@@ -445,9 +454,9 @@ const LiveRoomPage: React.FC = () => {
             <p>{roomName}</p>
             <div className={styles.followRow}>
               <button className={styles.followButton} disabled={followingPending} onClick={handleFollow} type="button">
-                {followingPending ? '处理中...' : following ? '已关注' : '关注'}
+                {followingPending ? '处理中...' : following ? '已收藏' : '收藏'}
               </button>
-              <span>{followersCount.toLocaleString()} 人关注</span>
+              <span>{followersCount.toLocaleString()} 人收藏</span>
             </div>
           </div>
         </article>
@@ -508,7 +517,7 @@ const LiveRoomPage: React.FC = () => {
         </section>
       </div>
 
-      {import.meta.env.DEV && (
+      {IS_DEV && (
         <div className={styles.toastDemoPanel} aria-label="触达 Toast 测试">
           <button
             type="button"

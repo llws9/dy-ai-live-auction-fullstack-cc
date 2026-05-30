@@ -79,9 +79,9 @@ const FollowPage: React.FC = () => {
         setLiveStreams(extractList<LiveStream>(response));
       } catch (err) {
         if (!alive) return;
-        console.error('加载关注列表失败:', err);
+        console.error('加载收藏列表失败:', err);
         setLiveStreams([]);
-        setError('关注列表暂时无法加载');
+        setError('收藏列表暂时无法加载');
       } finally {
         if (alive) setLoading(false);
       }
@@ -106,8 +106,8 @@ const FollowPage: React.FC = () => {
       setLiveStreams((streams) => streams.filter((stream) => stream.id !== liveStreamId));
       if (expandedId === liveStreamId) setExpandedId(null);
     } catch (error) {
-      console.error('取消关注失败:', error);
-      setError('取消关注失败，请稍后重试');
+      console.error('取消收藏失败:', error);
+      setError('取消收藏失败，请稍后重试');
     } finally {
       setPendingUnfollowIds((ids) => ids.filter((id) => id !== liveStreamId));
     }
@@ -126,15 +126,15 @@ const FollowPage: React.FC = () => {
           eyebrow: styles.eyebrow,
         }}
         back={{ onClick: () => navigate(-1) }}
-        eyebrow="FOLLOWING"
-        title="关注的直播间"
-        actions={<span className={styles.countBadge}>{liveStreams.length} 个关注</span>}
+        eyebrow="FAVORITES"
+        title="我的收藏"
+        actions={<span className={styles.countBadge}>{liveStreams.length} 个收藏</span>}
       />
 
-      <section className={styles.summaryGrid} aria-label="关注概览">
+      <section className={styles.summaryGrid} aria-label="收藏概览">
         <div className={styles.summaryCard}>
           <strong>{liveStreams.length}</strong>
-          <span>已关注</span>
+          <span>已收藏</span>
         </div>
         <div className={styles.summaryCard}>
           <strong>{liveCount}</strong>
@@ -150,12 +150,12 @@ const FollowPage: React.FC = () => {
 
       <main className={styles.content}>
         {loading ? (
-          <div className={styles.loading}>加载关注列表...</div>
+          <div className={styles.loading}>加载收藏列表...</div>
         ) : liveStreams.length === 0 ? (
           <div className={styles.emptyState}>
             <div className={styles.emptyMark}>♡</div>
-            <p>暂无关注的直播间</p>
-            <span>浏览直播时点击关注按钮即可添加</span>
+            <p>暂无收藏的直播间</p>
+            <span>浏览直播时点击收藏按钮即可添加</span>
           </div>
         ) : (
           <div className={styles.streamList}>
@@ -192,7 +192,7 @@ const FollowPage: React.FC = () => {
                         <p>{title}</p>
                         <div className={styles.metrics}>
                           <span>{toNumber(stream.viewer_count)} 观看</span>
-                          <span>{toNumber(stream.followers_count)} 人关注</span>
+                          <span>{toNumber(stream.followers_count)} 人收藏</span>
                         </div>
                       </div>
                       <span className={expanded ? styles.chevronOpen : styles.chevron}>⌄</span>
@@ -217,7 +217,7 @@ const FollowPage: React.FC = () => {
                         disabled={pending}
                         onClick={() => handleUnfollow(stream.id)}
                       >
-                        {pending ? '取消中...' : `取消关注 ${title}`}
+                        {pending ? '取消中...' : `取消收藏 ${title}`}
                       </button>
                     </div>
                   </div>
