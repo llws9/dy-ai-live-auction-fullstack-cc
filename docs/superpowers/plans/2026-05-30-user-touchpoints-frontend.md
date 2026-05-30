@@ -4,7 +4,7 @@
 
 **Goal:** 在 `frontend/h5` 落地一期用户触达闭环：红点徽标、顶部 Toast、重新登录后一次性开播弹窗。
 
-**Architecture:** 采用“先 UI 设计、再业务接入”的两段式方案：先完成红点与顶部 Toast 的 theme-ready 静态 UI，再接入 Mock 数据、全局 Toast 行为和登录后弹窗触发。触达数据、Toast 展示入口、登录弹窗标记各自保持单一事实源，避免新增并行 Toast 体系；日间/夜间一键切换本期不实现开关，但所有新增触达 UI 必须通过 CSS 变量具备主题适配能力。
+**Architecture:** 采用“先 UI 设计、再业务接入”的两段式最小改动方案：先完成红点与顶部 Toast 的 theme-ready 静态 UI，再接入 Mock 数据、全局 Toast 行为和登录后弹窗触发；实现上新增纯展示 `BadgeDot` 和 Mock hook，复用并升级现有 `components/Toast`，在 `MobileContainer` 挂载 `LiveReminderModal`。重新登录弹窗只在 `useAuth` 完成加载且用户已认证后消费 pending 标记，触达数据、Toast 展示入口、登录弹窗标记各自保持单一事实源，避免新增并行 Toast 体系；日间/夜间一键切换本期不实现开关，但所有新增触达 UI 必须通过 CSS 变量具备主题适配能力。
 
 **Tech Stack:** React 18、TypeScript、CSS Modules、React Router、Jest、Testing Library、Vite。
 
@@ -929,8 +929,9 @@ git commit -m "feat(h5): support rich top toast"
 
 **Boundary:**
 - 复用现有 `frontend/h5/src/components/LiveReminderModal/` 前端界面，不重做弹窗 DOM 结构和视觉样式。
-- 本任务只负责三件事：登录成功写入触发标记、`MobileContainer` 读取标记并挂载现有弹窗、给现有弹窗补轻量无障碍属性和移除外链兜底图。
+- 本任务只负责三件事：登录成功写入触发标记、`MobileContainer` 在认证完成且已登录后读取标记并挂载现有弹窗、给现有弹窗补轻量无障碍属性和移除外链兜底图。
 - 不新增新的弹窗组件，不迁移样式，不改「稍后再看 / 立即前往」交互语义。
+- 不在 `loading === true` 或 `isAuthenticated === false` 时消费 `pending_live_reminder`，否则会在 AuthProvider 初始化期间误弹或误清除标记。
 
 **Files:**
 - Modify: `frontend/h5/src/store/authContext.tsx`
@@ -940,7 +941,44 @@ git commit -m "feat(h5): support rich top toast"
 
 - [ ] **Step 1: 写 MobileContainer 弹窗失败用例**
 
-Modify `frontend/h5/src/__tests__/components/MobileShell.test.tsx`，追加：
+Modify `frontend/h5/src/__tests__/components/MobileShell.test.tsx`，在 imports 后添加 `useAuth` mock：
+
+```tsx
+import { useAuth } from '../../store/authContext';
+
+jest.mock('../../store/authContext', () => ({
+  useAuth: jest.fn(),
+}));
+
+const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
+const authState = {
+  isAuthenticated: true,
+  user: null,
+  token: 'test-token',
+  loading: false,
+  login: jest.fn(),
+  setAuth: jest.fn(),
+  logout: jest.fn(),
+  isAdmin: jest.fn(() => false),
+  isMerchant: jest.fn(() => false),
+};
+```
+
+Add default auth state before each test:
+
+```tsx
+  beforeEach(() => {
+    mockUseAuth.mockReturnValue(authState);
+  });
+```
+
+Add cleanup to `afterEach`:
+
+```tsx
+    localStorage.clear();
+```
+
+追加弹窗触发与认证门禁用例：
 
 ```tsx
   it('opens live reminder once when pending login marker exists', () => {
@@ -972,12 +1010,38 @@ Modify `frontend/h5/src/__tests__/components/MobileShell.test.tsx`，追加：
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
-```
 
-Add cleanup to `afterEach`:
+  it('does not consume pending live reminder while auth is loading', () => {
+    mockUseAuth.mockReturnValue({ ...authState, loading: true, isAuthenticated: false });
+    localStorage.setItem('pending_live_reminder', '1');
 
-```tsx
-    localStorage.clear();
+    render(
+      <MemoryRouter>
+        <MobileContainer>
+          <main>页面内容</main>
+        </MobileContainer>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(localStorage.getItem('pending_live_reminder')).toBe('1');
+  });
+
+  it('does not consume pending live reminder when unauthenticated', () => {
+    mockUseAuth.mockReturnValue({ ...authState, isAuthenticated: false, loading: false });
+    localStorage.setItem('pending_live_reminder', '1');
+
+    render(
+      <MemoryRouter>
+        <MobileContainer>
+          <main>页面内容</main>
+        </MobileContainer>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(localStorage.getItem('pending_live_reminder')).toBe('1');
+  });
 ```
 
 - [ ] **Step 2: 运行失败测试**
@@ -1054,6 +1118,7 @@ Replace `frontend/h5/src/components/MobileShell/MobileContainer.tsx`:
 
 ```tsx
 import { ReactNode, useEffect, useState } from 'react';
+import { useAuth } from '../../store/authContext';
 import LiveReminderModal, { StreamInfo } from '../LiveReminderModal';
 import BottomNav from './BottomNav';
 import styles from './MobileShell.module.css';
@@ -1070,16 +1135,21 @@ const mockLiveReminderStream: StreamInfo = {
 };
 
 function MobileContainer({ children }: MobileContainerProps) {
+  const { isAuthenticated, loading } = useAuth();
   const [isReminderOpen, setIsReminderOpen] = useState(false);
 
   useEffect(() => {
+    if (loading || !isAuthenticated) {
+      return;
+    }
+
     if (localStorage.getItem('pending_live_reminder') !== '1') {
       return;
     }
 
     localStorage.removeItem('pending_live_reminder');
     setIsReminderOpen(true);
-  }, []);
+  }, [isAuthenticated, loading]);
 
   return (
     <div className={styles.shell} data-testid="mobile-shell">

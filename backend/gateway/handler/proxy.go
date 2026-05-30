@@ -181,6 +181,22 @@ func HandleWebSocket(ctx context.Context, c *app.RequestContext, auctionServiceU
 	})
 }
 
+// HandleTestWebSocket 处理测试平台 WS endpoint discovery
+// 与 HandleWebSocket 同样模式：返回真实 WS 直连地址，由前端建连。
+func HandleTestWebSocket(ctx context.Context, c *app.RequestContext, testWSBase string) {
+	testID := c.Query("test_id")
+	wsURL := strings.TrimRight(testWSBase, "/") + "/ws/test/progress?test_id=" + testID
+	c.JSON(200, map[string]interface{}{
+		"code":    200,
+		"message": "Test WebSocket 端点",
+		"data": map[string]interface{}{
+			"ws_url":      wsURL,
+			"test_id":     testID,
+			"instruction": "请直接连接 test-service 的 WebSocket 端点",
+		},
+	})
+}
+
 // ProxyWebSocket WebSocket 代理
 func ProxyWebSocket(targetURL string) app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {

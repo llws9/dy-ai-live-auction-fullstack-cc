@@ -1,0 +1,10 @@
+# test-dashboard 本地镜像：复用宿主机构建的 dist 和静态 Go 服务器，不依赖 Docker Hub。
+# 构建前先运行：npm run build && GOOS=linux GOARCH=$(go env GOARCH) CGO_ENABLED=0 go build -o dashboard-server-linux ./docker-server
+
+FROM scratch
+WORKDIR /app
+COPY dashboard-server-linux /app/dashboard-server
+COPY dist /app/dist
+
+EXPOSE 80
+ENTRYPOINT ["/app/dashboard-server"]

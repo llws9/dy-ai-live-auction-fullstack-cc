@@ -1,0 +1,9 @@
+# gateway-service 本地镜像：复用宿主机预构建二进制，不依赖 Docker Hub。
+# 构建前先运行：GOOS=linux GOARCH=$(go env GOARCH) CGO_ENABLED=0 go build -o gateway-service-linux .
+
+FROM scratch
+WORKDIR /app
+COPY gateway-service-linux /app/gateway-service
+
+EXPOSE 8080
+ENTRYPOINT ["/app/gateway-service"]

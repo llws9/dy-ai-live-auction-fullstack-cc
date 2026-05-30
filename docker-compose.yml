@@ -1,10 +1,9 @@
-version: '3.8'
-
 services:
   # ==================== 应用服务 ====================
 
   # API Gateway
   gateway:
+    image: dy-ai-live-auction-gateway:local
     build:
       context: ./backend/gateway
       dockerfile: Dockerfile
@@ -15,11 +14,13 @@ services:
       - NACOS_NAMESPACE=auction-dev
       - NACOS_GROUP=gateway
       - NACOS_DATA_ID=gateway-config.yaml
+      - TEST_SERVICE_URL=http://test-service:18090
+      # Browser connects directly to host-exposed WS port after gateway endpoint discovery.
+      - TEST_SERVICE_WS_URL=ws://localhost:18092
     depends_on:
       - nacos
-      - product
-      - auction
       - redis
+      - test-service
     networks:
       - auction-network
     labels:
@@ -122,6 +123,7 @@ services:
   # Nacos - 配置中心
   nacos:
     image: nacos/nacos-server:v2.2.3
+    platform: linux/amd64
     container_name: nacos
     ports:
       - "8848:8848"  # HTTP API
@@ -187,6 +189,54 @@ services:
       - "3001:80"
     networks:
       - auction-network
+
+  # Test Service - 测试平台后端（HTTP + Mock Partner + WS）
+  test-service:
+    image: dy-ai-live-auction-test-service:local
+    build:
+      context: ./backend/test
+      dockerfile: Dockerfile
+    ports:
+      - "18090:18090" # HTTP API
+      - "18091:18091" # Mock Partner Server
+      - "18092:18092" # WebSocket
+    environment:
+      - TEST_HTTP_PORT=:18090
+      - TEST_WS_PORT=:18092
+      - TEST_MOCK_PARTNER_PORT=:18091
+      - TEST_GATEWAY_URL=http://gateway:8080
+      - TEST_AUCTION_URL=http://auction:8082
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_NAME=auction
+      - TEST_RETENTION_DAYS=7
+      - LOG_LEVEL=info
+    depends_on:
+      - mysql
+    networks:
+      - auction-network
+    restart: unless-stopped
+    labels:
+      - "service_name=test-service"
+
+  # Test Dashboard - 测试平台前端控制台
+  test-dashboard:
+    image: dy-ai-live-auction-test-dashboard:local
+    build:
+      context: ./frontend/test-dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "3003:80"
+    depends_on:
+      - gateway
+      - test-service
+    networks:
+      - auction-network
+    restart: unless-stopped
+    labels:
+      - "service_name=test-dashboard"
 
   # ==================== 日志平台 (Observability) ====================
 

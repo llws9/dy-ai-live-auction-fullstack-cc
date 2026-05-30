@@ -1,0 +1,9 @@
+# test-service 本地镜像：复用宿主机预构建二进制，不依赖 Docker Hub 拉取 builder/runtime。
+# 构建前先运行：GOOS=linux GOARCH=$(go env GOARCH) CGO_ENABLED=0 go build -o test-service-linux .
+
+FROM scratch
+WORKDIR /app
+COPY test-service-linux /app/test-service
+
+EXPOSE 18090 18091 18092
+ENTRYPOINT ["/app/test-service"]

@@ -1,0 +1,5 @@
+.git
+coverage.out
+gateway-service
+*.test
+.DS_Store

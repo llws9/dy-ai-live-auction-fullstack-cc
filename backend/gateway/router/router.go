@@ -23,6 +23,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	// 创建代理处理器
 	productProxy := handler.NewProxyHandler(cfg.Services.ProductURL)
 	auctionProxy := handler.NewProxyHandler(cfg.Services.AuctionURL)
+	testProxy := handler.NewProxyHandler(cfg.Services.TestURL)
 
 	// 创建实验处理器
 	experimentHandler := handler.NewExperimentHandler(gbClient)
@@ -131,6 +132,15 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.GET("/experiments/features", experimentHandler.GetFeatures)       // 获取用户特性开关
 	authGroup.POST("/experiments/viewed", experimentHandler.TrackViewed)        // 记录实验查看
 	authGroup.POST("/experiments/completed", experimentHandler.TrackCompleted)  // 记录实验完成
+
+	// ========== 测试平台路由（test-service） ==========
+	// HTTP 透传 /api/test/* → test-service:18090
+	testHTTP := h.Group("/api/test")
+	testHTTP.Any("/*path", testProxy.Forward)
+	// WS endpoint discovery：/ws/test/progress 返回真实 WS URL
+	h.GET("/ws/test/progress", func(ctx context.Context, c *app.RequestContext) {
+		handler.HandleTestWebSocket(ctx, c, cfg.Services.TestWSURL)
+	})
 }
 
 // checkService 检查服务是否可用
