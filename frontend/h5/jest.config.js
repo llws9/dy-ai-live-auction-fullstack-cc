@@ -13,6 +13,8 @@ module.exports = {
   ],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
+    '^@/utils/env$': '<rootDir>/__mocks__/envMock.js',
+    '^.+/utils/env$': '<rootDir>/__mocks__/envMock.js',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^.+\\.module\\.(css|sass|scss)$': 'identity-obj-proxy',
     '^.+\\.(css|sass|scss)$': '<rootDir>/__mocks__/styleMock.js',

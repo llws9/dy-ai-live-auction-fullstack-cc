@@ -17,6 +17,7 @@ jest.mock('../../../services/api', () => ({
     followLiveStream: jest.fn(),
     unfollowLiveStream: jest.fn(),
     getFollowersStats: jest.fn(),
+    getFollowStatus: jest.fn(),
   },
   liveStreamApi: {
     get: jest.fn(),
@@ -43,6 +44,15 @@ jest.mock('../../../store/authContext', () => ({
     token: 'token-1',
     loading: false,
   }),
+}));
+
+jest.mock('../../../components/Toast', () => ({
+  __esModule: true,
+  useToast: () => ({
+    showToast: jest.fn(),
+    hideToast: jest.fn(),
+  }),
+  showGlobalToast: jest.fn(),
 }));
 
 const mockedAuctionApi = auctionApi as jest.Mocked<typeof auctionApi>;
@@ -90,6 +100,7 @@ describe('LiveRoom migration', () => {
     mockedFollowApi.followLiveStream.mockResolvedValue({});
     mockedFollowApi.unfollowLiveStream.mockResolvedValue({});
     mockedFollowApi.getFollowersStats.mockResolvedValue({ count: 12 });
+    mockedFollowApi.getFollowStatus.mockResolvedValue({ is_following: false });
   });
 
   it('loads live auction data and wires bid/follow actions', async () => {
@@ -117,5 +128,35 @@ describe('LiveRoom migration', () => {
     fireEvent.click(screen.getByRole('button', { name: /立即出价/ }));
     await waitFor(() => expect(mockedBidApi.placeBid).toHaveBeenCalledWith(5, 1300));
     expect(await screen.findByText('测试用户')).toBeInTheDocument();
+  });
+
+  it('uses follow-status endpoint as the authoritative is_following source when logged in', async () => {
+    // 详情接口占位返回 false（后端 T2.4 当前固定 false）
+    mockedLiveStreamApi.get.mockResolvedValue({
+      id: 3,
+      name: '瓷器珍藏夜场',
+      host_name: '拍卖师王老师',
+      viewer_count: 128,
+      is_following: false,
+      followers_count: 12,
+    });
+    // 权威接口返回 true，应覆盖详情占位
+    mockedFollowApi.getFollowStatus.mockResolvedValue({ is_following: true });
+
+    render(
+      <MemoryRouter
+        initialEntries={['/live?id=3&auction_id=5']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <LiveRoom />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(mockedFollowApi.getFollowStatus).toHaveBeenCalledWith(3));
+
+    // 按钮文案应为「已关注」，点击触发取消关注
+    const followBtn = await screen.findByRole('button', { name: /已关注/ });
+    fireEvent.click(followBtn);
+    await waitFor(() => expect(mockedFollowApi.unfollowLiveStream).toHaveBeenCalledWith(3));
   });
 });

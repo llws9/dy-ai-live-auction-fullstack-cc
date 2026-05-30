@@ -392,6 +392,11 @@ export const followApi = {
   getFollowersStats: (liveStreamId: number) => {
     return get<any>(`/live-streams/${liveStreamId}/followers/stats`);
   },
+
+  // 获取当前登录用户对指定直播间的关注状态（后端权威）
+  getFollowStatus: (liveStreamId: number) => {
+    return get<{ is_following: boolean }>(`/live-streams/${liveStreamId}/follow-status`);
+  },
 };
 
 // 直播间 API
