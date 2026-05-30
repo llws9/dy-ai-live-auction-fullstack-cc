@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { auctionApi, productApi } from '@/services/api';
+import { notificationApi } from '@/services/notification';
+import { useAuth } from '@/store/authContext';
 import PageHeader from '@/components/shared/PageHeader';
+import BadgeDot from '@/components/BadgeDot';
 import styles from './Home.module.css';
 
 // 固定 tab：「全部」「收藏」无需 category_id；动态 tab 来自 GET /categories
@@ -112,6 +115,39 @@ const HomePage: React.FC = () => {
   const [categories, setCategories] = useState<CategoryTab[]>([]);
   const [auctions, setAuctions] = useState<HomeAuction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const { isAuthenticated } = useAuth();
+
+  // F-D2：登录后拉取未读消息数（mount + 回到前台），失败时降级为 0
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setUnreadCount(0);
+      return;
+    }
+    let cancelled = false;
+    const refresh = () => {
+      notificationApi
+        .getUnreadCount()
+        .then((res) => {
+          if (cancelled) return;
+          setUnreadCount(res?.count ?? 0);
+        })
+        .catch((error) => {
+          console.warn('获取未读消息数失败:', error);
+        });
+    };
+    refresh();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        refresh();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [isAuthenticated]);
 
   // 启动时拉取分类 tabs（失败不阻塞首屏）
   useEffect(() => {
@@ -202,6 +238,9 @@ const HomePage: React.FC = () => {
             </Link>
             <Link className={styles.iconButton} to="/notifications" aria-label="消息通知">
               铃
+              {unreadCount > 0 && (
+                <BadgeDot count={unreadCount} className={styles.notificationBadge} />
+              )}
             </Link>
           </>
         }
