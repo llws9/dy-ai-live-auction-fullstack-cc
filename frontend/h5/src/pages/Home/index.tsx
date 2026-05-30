@@ -197,8 +197,8 @@ const HomePage: React.FC = () => {
             <span className={styles.iconButton} aria-label="搜索暂未开放" title="搜索暂未开放">
               搜
             </span>
-            <Link className={styles.iconButton} to="/following" aria-label="我的关注">
-              关
+            <Link className={styles.iconButton} to="/following" aria-label="我的收藏">
+              收
             </Link>
             <Link className={styles.iconButton} to="/notifications" aria-label="消息通知">
               铃

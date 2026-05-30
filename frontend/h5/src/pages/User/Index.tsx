@@ -175,7 +175,7 @@ const UserCenter: React.FC = () => {
       <div className={styles.statsGrid} aria-label="个人统计入口">
         <Link to="/following" className={styles.statCard}>
           <strong>---</strong>
-          <span>关注</span>
+          <span>收藏</span>
         </Link>
         <div className={styles.statCard}>
           <strong>---</strong>
@@ -240,7 +240,7 @@ const UserCenter: React.FC = () => {
         </Link>
         <Link to="/following" className={styles.menuItem}>
           <span className={styles.menuIcon}>F</span>
-          <span>关注直播</span>
+          <span>我的收藏</span>
           <b>›</b>
         </Link>
         <Link to="/notifications" className={styles.menuItem}>

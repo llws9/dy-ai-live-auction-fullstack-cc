@@ -94,7 +94,7 @@ describe('Profile migration', () => {
 
     expect(screen.getByLabelText('1 条待处理提醒')).toHaveTextContent('1');
     expect(screen.getByRole('link', { name: /我的竞拍/ })).toHaveAttribute('href', '/history');
-    expect(screen.getByRole('link', { name: /关注直播/ })).toHaveAttribute('href', '/following');
+    expect(screen.getByRole('link', { name: /我的收藏/ })).toHaveAttribute('href', '/following');
     expect(screen.getByRole('link', { name: /消息通知/ })).toHaveAttribute('href', '/notifications');
 
     fireEvent.click(screen.getByRole('button', { name: '退出登录' }));

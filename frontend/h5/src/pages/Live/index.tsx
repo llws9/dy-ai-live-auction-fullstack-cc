@@ -319,11 +319,11 @@ const LiveRoomPage: React.FC = () => {
 
   const handleFollow = async () => {
     if (!effectiveLiveStreamId) {
-      showToast('直播间信息缺失，暂不能关注');
+      showToast('直播间信息缺失，暂不能收藏');
       return;
     }
     if (!isAuthenticated) {
-      showToast('请先登录后关注');
+      showToast('请先登录后收藏');
       return;
     }
 
@@ -338,11 +338,11 @@ const LiveRoomPage: React.FC = () => {
       } else {
         await followApi.followLiveStream(effectiveLiveStreamId);
       }
-      showToast(previousFollowing ? '已取消关注' : '已关注直播间');
+      showToast(previousFollowing ? '已取消收藏' : '已收藏直播间');
     } catch (error: any) {
       setFollowing(previousFollowing);
       setFollowersCount((count) => Math.max(0, count + (previousFollowing ? 1 : -1)));
-      showToast(error?.message || '关注操作失败');
+      showToast(error?.message || '收藏操作失败');
     } finally {
       setFollowingPending(false);
     }
@@ -454,9 +454,9 @@ const LiveRoomPage: React.FC = () => {
             <p>{roomName}</p>
             <div className={styles.followRow}>
               <button className={styles.followButton} disabled={followingPending} onClick={handleFollow} type="button">
-                {followingPending ? '处理中...' : following ? '已关注' : '关注'}
+                {followingPending ? '处理中...' : following ? '已收藏' : '收藏'}
               </button>
-              <span>{followersCount.toLocaleString()} 人关注</span>
+              <span>{followersCount.toLocaleString()} 人收藏</span>
             </div>
           </div>
         </article>

@@ -27,6 +27,11 @@ jest.mock('../../../store/authContext', () => ({
   }),
 }));
 
+jest.mock('../../../components/ThemeToggle', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 const mockedFollowApi = followApi as jest.Mocked<typeof followApi>;
 
 describe('Following migration', () => {
@@ -69,11 +74,11 @@ describe('Following migration', () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByText('关注的直播间')).toBeInTheDocument();
+    expect(await screen.findByText('我的收藏')).toBeInTheDocument();
     expect(screen.getByText('苏州玉器专场')).toBeInTheDocument();
     expect(screen.getByText('林掌柜')).toBeInTheDocument();
     expect(screen.getByText('456 观看')).toBeInTheDocument();
-    expect(screen.getByText('2 个关注')).toBeInTheDocument();
+    expect(screen.getByText('2 个收藏')).toBeInTheDocument();
 
     await waitFor(() => expect(mockedFollowApi.getFollowedLiveStreams).toHaveBeenCalledWith(1, 20));
   });
@@ -87,11 +92,11 @@ describe('Following migration', () => {
 
     expect(await screen.findByText('苏州玉器专场')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '取消关注 苏州玉器专场' }));
+    fireEvent.click(screen.getByRole('button', { name: '取消收藏 苏州玉器专场' }));
 
     await waitFor(() => expect(mockedFollowApi.unfollowLiveStream).toHaveBeenCalledWith(31));
     expect(screen.queryByText('苏州玉器专场')).not.toBeInTheDocument();
-    expect(screen.getByText('1 个关注')).toBeInTheDocument();
+    expect(screen.getByText('1 个收藏')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '进入直播间 海派古董夜拍' }));
 

@@ -122,7 +122,7 @@ describe('LiveRoom migration', () => {
     expect(mockedProductApi.get).toHaveBeenCalledWith(7);
     expect(mockedBidApi.getRanking).toHaveBeenCalledWith(5, 10);
 
-    fireEvent.click(screen.getByRole('button', { name: /关注/ }));
+    fireEvent.click(screen.getByRole('button', { name: /收藏/ }));
     await waitFor(() => expect(mockedFollowApi.followLiveStream).toHaveBeenCalledWith(3));
 
     fireEvent.click(screen.getByRole('button', { name: /立即出价/ }));
@@ -154,8 +154,8 @@ describe('LiveRoom migration', () => {
 
     await waitFor(() => expect(mockedFollowApi.getFollowStatus).toHaveBeenCalledWith(3));
 
-    // 按钮文案应为「已关注」，点击触发取消关注
-    const followBtn = await screen.findByRole('button', { name: /已关注/ });
+    // 按钮文案应为「已收藏」，点击触发取消收藏
+    const followBtn = await screen.findByRole('button', { name: /已收藏/ });
     fireEvent.click(followBtn);
     await waitFor(() => expect(mockedFollowApi.unfollowLiveStream).toHaveBeenCalledWith(3));
   });
