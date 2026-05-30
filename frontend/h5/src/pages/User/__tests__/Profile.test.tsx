@@ -17,6 +17,7 @@ jest.mock('../../../services/api', () => ({
   userApi: {
     getProfile: jest.fn(),
     getBalance: jest.fn(),
+    getStats: jest.fn(),
   },
   orderApi: {
     list: jest.fn(),
@@ -49,9 +50,14 @@ describe('Profile migration', () => {
       created_at: '2026-05-01T00:00:00Z',
     });
     mockedUserApi.getBalance.mockResolvedValue({
-      balance: 12888,
+      available_amount: 12288,
       frozen_amount: 600,
-      available_balance: 12288,
+      currency: 'CNY',
+    });
+    mockedUserApi.getStats.mockResolvedValue({
+      following_count: 8,
+      auction_history_count: 3,
+      won_count: 1,
     });
     mockedOrderApi.list.mockResolvedValue([
       {
@@ -74,12 +80,13 @@ describe('Profile migration', () => {
     );
 
     expect(await screen.findByText('林见山')).toBeInTheDocument();
-    expect(screen.getByText('¥12,888')).toBeInTheDocument();
-    expect(screen.getByText('可用 ¥12,288')).toBeInTheDocument();
+    expect(screen.getByText('¥12,288')).toBeInTheDocument();
+    expect(screen.getByText('冻结 ¥600')).toBeInTheDocument();
     expect(screen.getByText('鎏金香炉')).toBeInTheDocument();
 
     expect(mockedUserApi.getProfile).toHaveBeenCalledTimes(1);
     expect(mockedUserApi.getBalance).toHaveBeenCalledTimes(1);
+    expect(mockedUserApi.getStats).toHaveBeenCalledTimes(1);
     expect(mockedOrderApi.list).toHaveBeenCalledTimes(1);
   });
 
@@ -96,6 +103,9 @@ describe('Profile migration', () => {
     expect(screen.getByRole('link', { name: /我的竞拍/ })).toHaveAttribute('href', '/history');
     expect(screen.getByRole('link', { name: /我的收藏/ })).toHaveAttribute('href', '/following');
     expect(screen.getByRole('link', { name: /消息通知/ })).toHaveAttribute('href', '/notifications');
+    const addressLinks = screen.getAllByRole('link').filter((el) => el.getAttribute('href') === '/addresses');
+    expect(addressLinks.length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole('link', { name: '管理收货地址' })).toHaveAttribute('href', '/addresses');
 
     fireEvent.click(screen.getByRole('button', { name: '退出登录' }));
 

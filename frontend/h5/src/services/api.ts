@@ -286,8 +286,20 @@ export const userApi = {
   // 更新用户信息
   updateProfile: (data: any) => put<any>('/user/profile', data),
 
-  // 获取余额
+  // 获取余额（T3.1 F-A2，返回 { available_amount, frozen_amount, currency }）
   getBalance: () => get<any>('/user/balance'),
+
+  // 获取个人统计（T2.7 F-A1，返回 { following_count, auction_history_count, won_count }）
+  getStats: () => get<any>('/users/me/stats'),
+};
+
+// 收货地址 API（T3.2 F-A3）
+export const addressApi = {
+  list: () => get<any>('/users/me/addresses'),
+  create: (data: any) => post<any>('/users/me/addresses', data),
+  update: (id: number, data: any) => put<any>(`/users/me/addresses/${id}`, data),
+  remove: (id: number) => del<any>(`/users/me/addresses/${id}`),
+  setDefault: (id: number) => post<any>(`/users/me/addresses/${id}/default`),
 };
 
 // 商品 API

@@ -14,10 +14,21 @@ interface ProfileUser {
   role?: number;
 }
 
+// 后端 T3.1 返回 { available_amount, frozen_amount, currency }；
+// 兼容旧字段（balance/available_balance）以避免历史 mock 测试跑红。
 interface BalanceData {
+  available_amount?: number | string;
+  frozen_amount?: number | string;
+  currency?: string;
+  // 旧字段（已废弃，保留兼容）
   balance?: number | string;
   available_balance?: number | string;
-  frozen_amount?: number | string;
+}
+
+interface UserStats {
+  following_count?: number | null;
+  auction_history_count?: number | null;
+  won_count?: number | null;
 }
 
 interface OrderSummary {
@@ -50,6 +61,24 @@ function formatCurrency(value: number | string | undefined) {
   return `¥${toNumber(value).toLocaleString('zh-CN', { maximumFractionDigits: 0 })}`;
 }
 
+function statValue(value?: number | null) {
+  if (value === undefined || value === null) return '-';
+  return String(value);
+}
+
+// 钱包余额：优先取 T3.1 新字段 available_amount，回退旧字段
+function pickAvailable(b: BalanceData | null) {
+  if (!b) return undefined;
+  if (b.available_amount !== undefined) return b.available_amount;
+  if (b.available_balance !== undefined) return b.available_balance;
+  return b.balance;
+}
+
+function pickFrozen(b: BalanceData | null) {
+  if (!b) return undefined;
+  return b.frozen_amount;
+}
+
 function roleLabel(role?: number) {
   if (role === 2) return '管理员';
   if (role === 1) return '商家/主播';
@@ -70,6 +99,7 @@ const UserCenter: React.FC = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileUser | null>(authUser);
   const [balance, setBalance] = useState<BalanceData | null>(null);
+  const [stats, setStats] = useState<UserStats | null>(null);
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,9 +112,10 @@ const UserCenter: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const [profileResult, balanceResult, ordersResult] = await Promise.allSettled([
+      const [profileResult, balanceResult, statsResult, ordersResult] = await Promise.allSettled([
         userApi.getProfile(),
         userApi.getBalance(),
+        userApi.getStats(),
         orderApi.list(),
       ]);
 
@@ -98,6 +129,11 @@ const UserCenter: React.FC = () => {
 
       if (balanceResult.status === 'fulfilled') {
         setBalance(balanceResult.value);
+      }
+
+      // stats 失败时降级为 null（UI 显示 "-"），不阻塞页面
+      if (statsResult.status === 'fulfilled') {
+        setStats(statsResult.value);
       }
 
       if (ordersResult.status === 'fulfilled') {
@@ -174,30 +210,30 @@ const UserCenter: React.FC = () => {
 
       <div className={styles.statsGrid} aria-label="个人统计入口">
         <Link to="/following" className={styles.statCard}>
-          <strong>---</strong>
+          <strong>{statValue(stats?.following_count)}</strong>
           <span>收藏</span>
         </Link>
-        <div className={styles.statCard}>
-          <strong>---</strong>
-          <span>粉丝</span>
-        </div>
         <Link to="/history" className={styles.statCard}>
-          <strong>{orders.length || '---'}</strong>
+          <strong>{statValue(stats?.auction_history_count)}</strong>
           <span>竞拍记录</span>
         </Link>
+        <div className={styles.statCard}>
+          <strong>{statValue(stats?.won_count)}</strong>
+          <span>中标</span>
+        </div>
       </div>
 
       <section className={styles.walletCard} aria-label="钱包余额">
         <div>
           <p className={styles.cardLabel}>钱包余额</p>
-          <strong>{balance ? formatCurrency(balance.balance) : '暂不可用'}</strong>
-          {balance?.available_balance !== undefined && (
-            <span>可用 {formatCurrency(balance.available_balance)}</span>
+          <strong>{balance ? formatCurrency(pickAvailable(balance)) : '¥0'}</strong>
+          {pickFrozen(balance) !== undefined && (
+            <span>冻结 {formatCurrency(pickFrozen(balance))}</span>
           )}
         </div>
-        <button className={styles.disabledAction} type="button" disabled>
-          充值待开放
-        </button>
+        <Link to="/addresses" className={styles.disabledAction} aria-label="管理收货地址">
+          收货地址
+        </Link>
       </section>
 
       <section className={styles.orderCard}>
@@ -246,6 +282,11 @@ const UserCenter: React.FC = () => {
         <Link to="/notifications" className={styles.menuItem}>
           <span className={styles.menuIcon}>N</span>
           <span>消息通知</span>
+          <b>›</b>
+        </Link>
+        <Link to="/addresses" className={styles.menuItem}>
+          <span className={styles.menuIcon}>D</span>
+          <span>收货地址</span>
           <b>›</b>
         </Link>
         <Link to="/" className={`${styles.menuItem} ${styles.mutedItem}`}>
