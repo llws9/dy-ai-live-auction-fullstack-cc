@@ -1,15 +1,15 @@
 .container {
-  /* Theme-ready variables with dark mode default fallbacks */
-  --touchpoint-surface: var(--color-surface-elevated, rgba(28, 28, 30, 0.96));
-  --touchpoint-text: var(--color-text-primary, #ffffff);
-  --touchpoint-text-muted: var(--color-text-secondary, rgba(255, 255, 255, 0.78));
+  /* Theme-ready variables mapped to global semantic tokens */
+  --touchpoint-surface: var(--bg-elevated);
+  --touchpoint-text: var(--text-primary);
+  --touchpoint-text-muted: var(--text-secondary);
   --touchpoint-accent: var(--color-accent, #d4af37);
   --touchpoint-warning: var(--color-warning, #f5c542);
   --touchpoint-danger: var(--color-danger, #ff3b30);
   --touchpoint-success: var(--color-success, #34c759);
   --touchpoint-info: var(--color-info, #64d2ff);
-  --touchpoint-shadow: var(--shadow-floating, 0 16px 40px rgba(0, 0, 0, 0.32));
-  --touchpoint-divider: var(--color-border, rgba(255, 255, 255, 0.15));
+  --touchpoint-shadow: var(--shadow-key);
+  --touchpoint-divider: var(--border-subtle);
 
   position: fixed;
   top: calc(16px + env(safe-area-inset-top, 0px));
