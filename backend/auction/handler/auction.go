@@ -7,6 +7,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 
+	"auction-service/client"
 	"auction-service/dao"
 	"auction-service/model"
 	"auction-service/service"
@@ -15,6 +16,9 @@ import (
 // AuctionHandler 竞拍 Handler
 type AuctionHandler struct {
 	auctionService *service.AuctionService
+	// productClient 用于在 List 中按 category_id 过滤、批量回填商品摘要。
+	// 可为 nil（向后兼容），但若客户端传 category_id 会得到 503。
+	productClient client.ProductClient
 }
 
 // NewAuctionHandler 创建竞拍 Handler
@@ -22,6 +26,11 @@ func NewAuctionHandler(auctionService *service.AuctionService) *AuctionHandler {
 	return &AuctionHandler{
 		auctionService: auctionService,
 	}
+}
+
+// SetProductClient 注入 product-service 内部接口客户端。
+func (h *AuctionHandler) SetProductClient(pc client.ProductClient) {
+	h.productClient = pc
 }
 
 // CreateAuctionRequest 创建竞拍请求
@@ -204,59 +213,77 @@ func (h *AuctionHandler) List(ctx context.Context, c *app.RequestContext) {
 	liveStreamIDStr := c.Query("live_stream_id")
 	liveStreamName := c.Query("live_stream_name")
 	search := c.Query("search")
+	categoryIDStr := c.Query("category_id")
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 
-	// 构建筛选条件
+	// 归一化为 ListParams
+	params := ListParams{
+		LiveStreamName: liveStreamName,
+		Search:         search,
+		Page:           page,
+		PageSize:       pageSize,
+	}
+	if statusStr != "" {
+		if s, err := strconv.Atoi(statusStr); err == nil {
+			st := model.AuctionStatus(s)
+			params.Status = &st
+		}
+	}
+	if liveStreamIDStr != "" {
+		if id, err := strconv.ParseInt(liveStreamIDStr, 10, 64); err == nil {
+			params.LiveStreamID = &id
+		}
+	}
+	if categoryIDStr != "" {
+		if cid, err := strconv.ParseInt(categoryIDStr, 10, 64); err == nil && cid > 0 {
+			params.CategoryID = &cid
+		}
+	}
+
+	// 走带 product 摘要回填的编排路径（spec C §5.2）。
+	if h.productClient != nil {
+		items, total, err := BuildAuctionListResponse(ctx, h.productClient, h.auctionService.ListAuctionsWithFilters, params)
+		if err != nil {
+			c.JSON(500, map[string]interface{}{
+				"code":    500,
+				"message": "获取竞拍列表失败: " + err.Error(),
+			})
+			return
+		}
+		c.JSON(200, map[string]interface{}{
+			"code":    200,
+			"message": "success",
+			"data": map[string]interface{}{
+				"items":     items,
+				"total":     total,
+				"page":      page,
+				"page_size": pageSize,
+			},
+		})
+		return
+	}
+
+	// 旧路径：未注入 productClient 时走原有逻辑（保持向后兼容，单元测试用）
 	var filters *dao.AuctionFilters
 	if statusStr != "" || liveStreamIDStr != "" || liveStreamName != "" || search != "" {
-		filters = &dao.AuctionFilters{}
-
-		// 状态筛选
-		if statusStr != "" {
-			s, err := strconv.Atoi(statusStr)
-			if err == nil {
-				st := model.AuctionStatus(s)
-				filters.Status = &st
-			}
+		filters = &dao.AuctionFilters{
+			Status:         params.Status,
+			LiveStreamID:   params.LiveStreamID,
+			LiveStreamName: liveStreamName,
+			Search:         search,
 		}
-
-		// 直播间ID筛选
-		if liveStreamIDStr != "" {
-			liveStreamID, err := strconv.ParseInt(liveStreamIDStr, 10, 64)
-			if err == nil {
-				filters.LiveStreamID = &liveStreamID
-			}
-		}
-
-		// 直播间名称搜索
-		filters.LiveStreamName = liveStreamName
-
-		// 关键词搜索
-		filters.Search = search
 	}
 
 	var auctions []model.Auction
 	var total int64
 	var err error
-
-	// 获取竞拍列表
 	if filters != nil {
 		auctions, total, err = h.auctionService.ListAuctionsWithFilters(ctx, filters, page, pageSize)
 	} else {
-		// 兼容旧API：只按状态筛选
-		var status *model.AuctionStatus
-		if statusStr != "" {
-			s, err := strconv.Atoi(statusStr)
-			if err == nil {
-				st := model.AuctionStatus(s)
-				status = &st
-			}
-		}
-		auctions, total, err = h.auctionService.ListAuctions(ctx, status, page, pageSize)
+		auctions, total, err = h.auctionService.ListAuctions(ctx, params.Status, page, pageSize)
 	}
-
 	if err != nil {
 		c.JSON(500, map[string]interface{}{
 			"code":    500,
@@ -264,9 +291,7 @@ func (h *AuctionHandler) List(ctx context.Context, c *app.RequestContext) {
 		})
 		return
 	}
-
-	// 构建响应
-	response := map[string]interface{}{
+	c.JSON(200, map[string]interface{}{
 		"code":    200,
 		"message": "success",
 		"data": map[string]interface{}{
@@ -275,9 +300,7 @@ func (h *AuctionHandler) List(ctx context.Context, c *app.RequestContext) {
 			"page":      page,
 			"page_size": pageSize,
 		},
-	}
-
-	c.JSON(200, response)
+	})
 }
 
 // GetBids 获取竞拍出价记录

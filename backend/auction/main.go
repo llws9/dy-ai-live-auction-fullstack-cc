@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/prometheus/client_golang/prometheus"
 
+	"auction-service/client"
 	"auction-service/config"
 	"auction-service/dao"
 	"auction-service/handler"
@@ -145,6 +147,12 @@ func main() {
 
 	// 初始化 Handler 层
 	auctionHandler := handler.NewAuctionHandler(auctionService)
+	// 注入 product-service 内部接口客户端，启用 list 接口的 category 过滤与商品摘要回填（spec C §5.2）。
+	productSvcURL := os.Getenv("PRODUCT_SERVICE_URL")
+	if productSvcURL == "" {
+		productSvcURL = "http://localhost:8081"
+	}
+	auctionHandler.SetProductClient(client.NewHTTPProductClient(productSvcURL, 2*time.Second))
 	bidHandler := handler.NewBidHandler(bidService)
 	wsHandler := handler.NewWSHandler()
 	userHandler := handler.NewUserHandler(userDAO)
