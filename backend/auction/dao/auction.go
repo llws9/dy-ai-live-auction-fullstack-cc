@@ -220,12 +220,43 @@ func (d *AuctionDAO) ListWithFilters(ctx context.Context, filters *AuctionFilter
 
 	// 分页查询
 	offset := (page - 1) * pageSize
-	err := query.Order("auctions.id DESC").
+	err := query.Order("id DESC").
 		Offset(offset).
 		Limit(pageSize).
 		Find(&auctions).Error
 
 	return auctions, total, err
+}
+
+// CountActiveByLiveStreamIDs 按 live_stream_id 批量统计 "进行中" 竞拍数量
+// （T3.3 / spec B §2.3：F-B3 列表项 auction_count 字段）。
+//
+// "进行中" 定义：status IN (Ongoing=1, Delayed=2)。
+// 返回 map[live_stream_id]count；无记录的 id 不会出现在 map 中（调用方按 0 处理）。
+func (d *AuctionDAO) CountActiveByLiveStreamIDs(ctx context.Context, liveStreamIDs []int64) (map[int64]int64, error) {
+	if len(liveStreamIDs) == 0 {
+		return map[int64]int64{}, nil
+	}
+	type row struct {
+		LiveStreamID int64
+		Cnt          int64
+	}
+	var rows []row
+	err := d.db.WithContext(ctx).
+		Model(&model.Auction{}).
+		Select("live_stream_id, COUNT(*) AS cnt").
+		Where("live_stream_id IN ?", liveStreamIDs).
+		Where("status IN ?", []model.AuctionStatus{model.AuctionStatusOngoing, model.AuctionStatusDelayed}).
+		Group("live_stream_id").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[int64]int64, len(rows))
+	for _, r := range rows {
+		result[r.LiveStreamID] = r.Cnt
+	}
+	return result, nil
 }
 
 // AuctionFilters 竞拍筛选条件

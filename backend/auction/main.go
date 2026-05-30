@@ -17,6 +17,7 @@ import (
 	"auction-service/config"
 	"auction-service/dao"
 	"auction-service/handler"
+	"auction-service/middleware"
 	"auction-service/model"
 	"auction-service/mq"
 	"auction-service/pkg/metrics"
@@ -156,16 +157,24 @@ func main() {
 	if productSvcURL == "" {
 		productSvcURL = "http://localhost:8081"
 	}
-	auctionHandler.SetProductClient(client.NewHTTPProductClient(productSvcURL, 2*time.Second))
+	internalAPIToken := os.Getenv("INTERNAL_API_TOKEN")
+	productClient := client.NewHTTPProductClient(productSvcURL, 2*time.Second)
+	productClient.SetInternalToken(internalAPIToken)
+	auctionHandler.SetProductClient(productClient)
+	// 直播间客户端（T3.3 / spec B §4.1：调 product /internal/live-streams/batch）。
+	liveStreamClient := client.NewHTTPLiveStreamClient(productSvcURL, 2*time.Second)
+	liveStreamClient.SetInternalToken(internalAPIToken)
 	bidHandler := handler.NewBidHandler(bidService)
 	wsHandler := handler.NewWSHandler()
 	userHandler := handler.NewUserHandler(userDAO)
 	notificationHandler := handler.NewNotificationHandler(notificationService)
 	followHandler := handler.NewFollowHandler(followService)
+	followHandler.SetFollowedListFetchers(liveStreamClient, userDAO, auctionDAO)
 	productReminderHandler := handler.NewProductReminderHandler(productReminderService)
 	skyLampHandler := handler.NewSkyLampHandler(skyLampService)
 	userBalanceHandler := handler.NewUserBalanceHandler(userBalanceDAO)
 	userAddressHandler := handler.NewUserAddressHandler(userAddressDAO)
+	internalUserHandler := handler.NewInternalUserHandler(userDAO)
 
 	// 初始化认证 Handler
 	jwtExpire := 24 // 24小时
@@ -218,6 +227,14 @@ func main() {
 
 	// 注册路由
 	registerRoutes(h, auctionHandler, bidHandler, wsHandler, userHandler, authHandler, notificationHandler, followHandler, productReminderHandler, skyLampHandler, userBalanceHandler, userAddressHandler)
+
+	// ========== 内部接口（仅服务间调用，不经过 Gateway） ==========
+	// spec: docs/superpowers/specs/2026-05-30-h5-missing-b-livestream.md §4.1
+	if internalAPIToken == "" {
+		log.Println("Warning: INTERNAL_API_TOKEN not set; /internal/* endpoints will reject all calls")
+	}
+	internal := h.Group("/internal", middleware.InternalAuthMiddleware(internalAPIToken))
+	internal.POST("/users/batch", internalUserHandler.BatchByIDs)
 
 	// 注册 Prometheus metrics 端点
 	h.GET("/metrics", func(ctx context.Context, c *app.RequestContext) {

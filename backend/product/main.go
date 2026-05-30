@@ -3,12 +3,14 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 
 	"product-service/config"
 	"product-service/dao"
 	"product-service/handler"
+	"product-service/middleware"
 	"product-service/model"
 	"product-service/service"
 )
@@ -73,6 +75,7 @@ func main() {
 	liveStreamHandler := handler.NewLiveStreamHandler(liveStreamService)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 	internalHandler := handler.NewInternalHandler(productService)
+	internalHandler.SetLiveStreamDAO(liveStreamDAO)
 
 	// 监听配置变更（如果 Nacos 可用）
 	if nacosLoader != nil {
@@ -141,7 +144,13 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 
 	// 内部接口（仅服务间调用，不经过 Gateway）
 	// spec: docs/superpowers/specs/2026-05-30-h5-missing-c-product-auction.md §5
-	internal := h.Group("/internal")
+	// spec: docs/superpowers/specs/2026-05-30-h5-missing-b-livestream.md §4.1
+	internalToken := os.Getenv("INTERNAL_API_TOKEN")
+	if internalToken == "" {
+		log.Println("Warning: INTERNAL_API_TOKEN not set; /internal/* endpoints will reject all calls")
+	}
+	internal := h.Group("/internal", middleware.InternalAuthMiddleware(internalToken))
 	internal.GET("/products", internalHandler.ListByCategory)
 	internal.POST("/products/batch", internalHandler.BatchByIDs)
+	internal.POST("/live-streams/batch", internalHandler.BatchLiveStreams)
 }
