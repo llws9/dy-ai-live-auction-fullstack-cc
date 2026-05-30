@@ -92,6 +92,9 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.GET("/user/followed-live-streams", auctionProxy.Forward)
 	authGroup.PUT("/live-streams/:id/notification", auctionProxy.Forward)
 
+	// ========== 用户余额（T3.1 F-A2 只读） ==========
+	authGroup.GET("/user/balance", auctionProxy.Forward)
+
 	// ========== WebSocket 路由 ==========
 	v1.GET("/ws", func(ctx context.Context, c *app.RequestContext) {
 		// WebSocket 连接处理
