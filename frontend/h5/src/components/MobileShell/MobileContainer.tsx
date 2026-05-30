@@ -1,5 +1,7 @@
 import { ReactNode, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import LiveReminderModal, { StreamInfo } from '../LiveReminderModal';
+import ThemeToggle from '../ThemeToggle';
 import BottomNav from './BottomNav';
 import styles from './MobileShell.module.css';
 
@@ -16,6 +18,7 @@ const mockLiveReminderStream: StreamInfo = {
 
 function MobileContainer({ children }: MobileContainerProps) {
   const [isReminderOpen, setIsReminderOpen] = useState(false);
+  const { pathname } = useLocation();
 
   useEffect(() => {
     if (localStorage.getItem('pending_live_reminder') !== '1') {
@@ -29,6 +32,11 @@ function MobileContainer({ children }: MobileContainerProps) {
   return (
     <div className={styles.shell} data-testid="mobile-shell">
       <div className={styles.viewport}>
+        {pathname !== '/login' && (
+          <div className={styles.themeToggleSlot}>
+            <ThemeToggle />
+          </div>
+        )}
         <div className={styles.content}>{children}</div>
         <BottomNav />
         <LiveReminderModal

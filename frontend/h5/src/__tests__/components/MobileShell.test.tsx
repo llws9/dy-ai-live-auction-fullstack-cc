@@ -2,11 +2,13 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import MobileContainer from '../../components/MobileShell/MobileContainer';
 import BottomNav from '../../components/MobileShell/BottomNav';
+import { ThemeProvider } from '../../store/themeContext';
 
 describe('MobileShell', () => {
   afterEach(() => {
     jest.restoreAllMocks();
     localStorage.clear();
+    document.documentElement.removeAttribute('data-theme');
   });
 
   it('renders children inside the mobile container without startup demo timers', () => {
@@ -14,9 +16,11 @@ describe('MobileShell', () => {
 
     render(
       <MemoryRouter>
-        <MobileContainer>
-          <main>页面内容</main>
-        </MobileContainer>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>页面内容</main>
+          </MobileContainer>
+        </ThemeProvider>
       </MemoryRouter>,
     );
 
@@ -66,9 +70,11 @@ describe('MobileShell', () => {
 
     render(
       <MemoryRouter>
-        <MobileContainer>
-          <main>页面内容</main>
-        </MobileContainer>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>页面内容</main>
+          </MobileContainer>
+        </ThemeProvider>
       </MemoryRouter>,
     );
 
@@ -82,9 +88,11 @@ describe('MobileShell', () => {
 
     render(
       <MemoryRouter>
-        <MobileContainer>
-          <main>页面内容</main>
-        </MobileContainer>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>页面内容</main>
+          </MobileContainer>
+        </ThemeProvider>
       </MemoryRouter>,
     );
 
