@@ -81,7 +81,7 @@ func main() {
 	}
 	liveStreamHandler.SetAuctionClient(client.NewAuctionClient(auctionSvcURL, 2*time.Second))
 	categoryHandler := handler.NewCategoryHandler(categoryService)
-	internalHandler := handler.NewInternalHandler(productService, liveStreamDAO, liveStreamDAO, liveStreamDAO)
+	internalHandler := handler.NewInternalHandler(productService, liveStreamDAO)
 
 	// 监听配置变更（如果 Nacos 可用）
 	if nacosLoader != nil {

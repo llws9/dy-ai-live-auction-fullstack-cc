@@ -11,8 +11,10 @@ import (
 
 // FollowHandler 关注处理器
 type FollowHandler struct {
-	followService *service.FollowService
-	lsFetcher     LiveStreamBatchFetcher
+	followService  *service.FollowService
+	lsFetcher      LiveStreamBatchFetcher
+	userFetcher    UserAvatarFetcher
+	auctionFetcher AuctionCountFetcher
 }
 
 // NewFollowHandler 创建关注处理器
@@ -25,8 +27,12 @@ func NewFollowHandler(followService *service.FollowService) *FollowHandler {
 // SetFollowedListFetchers 注入 GetUserFollowsHandler 编排所需的批量取数依赖（T3.3 / spec B §2.3）。
 func (h *FollowHandler) SetFollowedListFetchers(
 	ls LiveStreamBatchFetcher,
+	user UserAvatarFetcher,
+	auction AuctionCountFetcher,
 ) {
 	h.lsFetcher = ls
+	h.userFetcher = user
+	h.auctionFetcher = auction
 }
 
 // FollowHandler 关注直播间
@@ -107,7 +113,7 @@ func (h *FollowHandler) GetUserFollowsHandler(ctx context.Context, c *app.Reques
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 
-	if h.lsFetcher == nil {
+	if h.lsFetcher == nil || h.userFetcher == nil || h.auctionFetcher == nil {
 		c.JSON(500, map[string]interface{}{
 			"code":    500,
 			"message": "服务未就绪",
@@ -116,7 +122,7 @@ func (h *FollowHandler) GetUserFollowsHandler(ctx context.Context, c *app.Reques
 	}
 
 	resp, err := BuildFollowedLiveStreams(ctx, h.followService,
-		h.lsFetcher,
+		h.lsFetcher, h.userFetcher, h.auctionFetcher,
 		userID, page, pageSize)
 	if err != nil {
 		if err.Error() == "invalid user_id" {

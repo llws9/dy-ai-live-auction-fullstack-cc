@@ -133,68 +133,21 @@ func (d *LiveStreamDAO) ListAdmin(ctx context.Context, offset, limit int, status
 
 	query := d.db.WithContext(ctx).Model(&model.LiveStream{})
 
+	// 状态筛选
 	if statusFilter != nil {
 		query = query.Where("status = ?", *statusFilter)
 	}
 
+	// 获取总数
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
+	// 获取列表
 	err := query.Offset(offset).Limit(limit).Order("created_at DESC").Find(&liveStreams).Error
 	if err != nil {
 		return nil, 0, err
 	}
 
 	return liveStreams, total, nil
-}
-
-func (d *LiveStreamDAO) GetAvatarsByIDs(ctx context.Context, ids []int64) (map[int64]string, error) {
-	if len(ids) == 0 {
-		return map[int64]string{}, nil
-	}
-	type row struct {
-		ID     int64
-		Avatar string
-	}
-	var rows []row
-	err := d.db.WithContext(ctx).
-		Table("users").
-		Select("id, avatar").
-		Where("id IN ?", ids).
-		Scan(&rows).Error
-	if err != nil {
-		return nil, err
-	}
-	result := make(map[int64]string, len(rows))
-	for _, r := range rows {
-		result[r.ID] = r.Avatar
-	}
-	return result, nil
-}
-
-func (d *LiveStreamDAO) CountActiveByLiveStreamIDs(ctx context.Context, liveStreamIDs []int64) (map[int64]int, error) {
-	if len(liveStreamIDs) == 0 {
-		return map[int64]int{}, nil
-	}
-	type row struct {
-		LiveStreamID int64
-		Cnt          int
-	}
-	var rows []row
-	err := d.db.WithContext(ctx).
-		Table("auctions").
-		Select("live_stream_id, COUNT(*) AS cnt").
-		Where("live_stream_id IN ?", liveStreamIDs).
-		Where("status IN ?", []int{1, 2}).
-		Group("live_stream_id").
-		Scan(&rows).Error
-	if err != nil {
-		return nil, err
-	}
-	result := make(map[int64]int, len(rows))
-	for _, r := range rows {
-		result[r.LiveStreamID] = r.Cnt
-	}
-	return result, nil
 }

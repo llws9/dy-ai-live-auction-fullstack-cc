@@ -10,34 +10,27 @@ import (
 	"product-service/service"
 )
 
+// InternalHandler 暴露 /internal/* 内部接口，仅供同 VPC 的其它服务调用，
+// 禁止注册到 Gateway（spec C §5.3 / §6.3）。
 type InternalHandler struct {
-	productService  *service.ProductService
-	liveStreamDAO   liveStreamBatchProvider
-	userAvatarDAO   userAvatarProvider
-	auctionCountDAO auctionCountProvider
+	productService *service.ProductService
+	liveStreamDAO  liveStreamBatchProvider
 }
 
+// liveStreamBatchProvider 抽象 LiveStreamDAO.GetByIDs，便于 handler 单测注入 fake。
 type liveStreamBatchProvider interface {
 	GetByIDs(ctx context.Context, ids []int64) (map[int64]*model.LiveStream, error)
 }
 
-type userAvatarProvider interface {
-	GetAvatarsByIDs(ctx context.Context, ids []int64) (map[int64]string, error)
-}
-
-type auctionCountProvider interface {
-	CountActiveByLiveStreamIDs(ctx context.Context, ids []int64) (map[int64]int, error)
-}
-
-func NewInternalHandler(productService *service.ProductService, liveStreamDAO liveStreamBatchProvider, userAvatarDAO userAvatarProvider, auctionCountDAO auctionCountProvider) *InternalHandler {
+// NewInternalHandler 创建内部接口 Handler。
+func NewInternalHandler(productService *service.ProductService, liveStreamDAO liveStreamBatchProvider) *InternalHandler {
 	return &InternalHandler{
-		productService:  productService,
-		liveStreamDAO:   liveStreamDAO,
-		userAvatarDAO:   userAvatarDAO,
-		auctionCountDAO: auctionCountDAO,
+		productService: productService,
+		liveStreamDAO:  liveStreamDAO,
 	}
 }
 
+// productSummary 是 list 场景下回给调用方的精简摘要。
 type productSummary struct {
 	ID         int64    `json:"id"`
 	Name       string   `json:"name"`
@@ -58,6 +51,7 @@ func toSummary(p model.Product) productSummary {
 	}
 }
 
+// ListByCategory 处理 GET /internal/products?category_id=&page=&page_size=
 func (h *InternalHandler) ListByCategory(ctx context.Context, c *app.RequestContext) {
 	categoryIDStr := string(c.Query("category_id"))
 	if categoryIDStr == "" {
@@ -96,10 +90,12 @@ func (h *InternalHandler) ListByCategory(ctx context.Context, c *app.RequestCont
 	})
 }
 
+// BatchByIDsRequest 是 POST /internal/products/batch 的请求体。
 type BatchByIDsRequest struct {
 	IDs []int64 `json:"ids"`
 }
 
+// BatchByIDs 处理 POST /internal/products/batch，按 id 列表批量取摘要。
 func (h *InternalHandler) BatchByIDs(ctx context.Context, c *app.RequestContext) {
 	var req BatchByIDsRequest
 	if err := c.BindJSON(&req); err != nil {
@@ -113,6 +109,7 @@ func (h *InternalHandler) BatchByIDs(ctx context.Context, c *app.RequestContext)
 
 	items, err := h.productService.GetProductsByIDs(ctx, req.IDs)
 	if err != nil {
+		// service 仅在超长时返回错误（见 spec §5.1.1），按 400 回。
 		c.JSON(400, map[string]interface{}{"code": 400, "message": err.Error()})
 		return
 	}
@@ -131,18 +128,19 @@ func (h *InternalHandler) BatchByIDs(ctx context.Context, c *app.RequestContext)
 	})
 }
 
+// liveStreamSummary 是 /internal/live-streams/batch 的返回单元（spec B §4.1 契约）。
 type liveStreamSummary struct {
-	ID           int64   `json:"id"`
-	Name         string  `json:"name"`
-	CoverImage   string  `json:"cover_image"`
-	Status       int     `json:"status"`
-	CreatorID    int64   `json:"creator_id"`
-	HostAvatar   *string `json:"host_avatar"`
-	AuctionCount *int    `json:"auction_count"`
+	ID         int64  `json:"id"`
+	Name       string `json:"name"`
+	CoverImage string `json:"cover_image"`
+	Status     int    `json:"status"`
+	CreatorID  int64  `json:"creator_id"`
 }
 
 const internalLiveStreamBatchMaxIDs = 200
 
+// BatchLiveStreams 处理 POST /internal/live-streams/batch（T3.3 / spec B §4.1）。
+// 入参 ids（非空、长度 ≤ 200），返回按 id 命中的直播间摘要列表，缺失 id 跳过。
 func (h *InternalHandler) BatchLiveStreams(ctx context.Context, c *app.RequestContext) {
 	var req BatchByIDsRequest
 	if err := c.BindJSON(&req); err != nil {
@@ -164,29 +162,6 @@ func (h *InternalHandler) BatchLiveStreams(ctx context.Context, c *app.RequestCo
 		return
 	}
 
-	creatorIDs := make([]int64, 0, len(items))
-	seenCreator := make(map[int64]struct{}, len(items))
-	for _, ls := range items {
-		if ls.CreatorID == 0 {
-			continue
-		}
-		if _, ok := seenCreator[ls.CreatorID]; ok {
-			continue
-		}
-		seenCreator[ls.CreatorID] = struct{}{}
-		creatorIDs = append(creatorIDs, ls.CreatorID)
-	}
-
-	avatars := map[int64]string{}
-	if h.userAvatarDAO != nil && len(creatorIDs) > 0 {
-		avatars, _ = h.userAvatarDAO.GetAvatarsByIDs(ctx, creatorIDs)
-	}
-
-	counts := map[int64]int{}
-	if h.auctionCountDAO != nil {
-		counts, _ = h.auctionCountDAO.CountActiveByLiveStreamIDs(ctx, req.IDs)
-	}
-
 	summaries := make([]liveStreamSummary, 0, len(items))
 	seen := make(map[int64]struct{}, len(req.IDs))
 	for _, id := range req.IDs {
@@ -198,20 +173,13 @@ func (h *InternalHandler) BatchLiveStreams(ctx context.Context, c *app.RequestCo
 		if !ok {
 			continue
 		}
-		s := liveStreamSummary{
+		summaries = append(summaries, liveStreamSummary{
 			ID:         ls.ID,
 			Name:       ls.Name,
 			CoverImage: ls.CoverImage,
 			Status:     int(ls.Status),
 			CreatorID:  ls.CreatorID,
-		}
-		if avatar, hit := avatars[ls.CreatorID]; hit && avatar != "" {
-			s.HostAvatar = &avatar
-		}
-		if cnt, hit := counts[ls.ID]; hit {
-			s.AuctionCount = &cnt
-		}
-		summaries = append(summaries, s)
+		})
 	}
 
 	c.JSON(200, map[string]interface{}{
