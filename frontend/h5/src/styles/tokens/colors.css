@@ -98,3 +98,41 @@
   --gradient-secondary: linear-gradient(135deg, var(--color-secondary-400) 0%, var(--color-primary-500) 100%);
   --gradient-accent: linear-gradient(135deg, var(--color-accent-500) 0%, var(--color-primary-500) 100%);
 }
+
+/* ===== 主题语义 tokens（日/夜） ===== */
+/* 切换由 <html data-theme="dark" | "light"> 控制 */
+
+:root[data-theme="dark"] {
+  --bg-page: #1a1a1a;
+  --bg-surface: #262626;
+  --bg-elevated: rgba(44, 44, 44, 0.78);
+  --text-primary: #f5f0e8;
+  --text-secondary: #a09888;
+  --text-brand: #c9a96e;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --shadow-key: 0 8px 24px rgba(0, 0, 0, 0.40);
+}
+
+:root[data-theme="light"] {
+  --bg-page: #faf7f2;
+  --bg-surface: #ffffff;
+  --bg-elevated: rgba(255, 255, 255, 0.92);
+  --text-primary: #2a2520;
+  --text-secondary: #6b6358;
+  --text-brand: #8a6a2a;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --shadow-key: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* 兜底：未设置 data-theme 时按 dark 渲染 */
+:root:not([data-theme]) {
+  --bg-page: #1a1a1a;
+  --bg-surface: #262626;
+  --bg-elevated: rgba(44, 44, 44, 0.78);
+  --text-primary: #f5f0e8;
+  --text-secondary: #a09888;
+  --text-brand: #c9a96e;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --shadow-key: 0 8px 24px rgba(0, 0, 0, 0.40);
+}
+
