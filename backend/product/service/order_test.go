@@ -29,7 +29,7 @@ func (suite *OrderTestSuite) SetupSuite() {
 	assert.NoError(suite.T(), err)
 
 	// 自动迁移
-	err = db.AutoMigrate(&model.Order{}, &model.Auction{}, &model.Product{}, &model.Bid{})
+	err = db.AutoMigrate(&model.Order{}, &model.Product{})
 	assert.NoError(suite.T(), err)
 
 	suite.db = db
@@ -286,21 +286,17 @@ func (suite *OrderTestSuite) TestNotificationCallback() {
 	suite.Equal(model.OrderStatusPaid, order.Status)
 }
 
-// TestGetUserHistory 测试获取用户历史
+// TestGetUserHistory 测试获取用户历史（降级路径：historyDAO=nil）
 func (suite *OrderTestSuite) TestGetUserHistory() {
 	ctx := context.Background()
 
-	// 创建订单
-	_, err := suite.service.CreateOrder(ctx, 1, 1, 100, 500.0)
-	suite.NoError(err)
+	// 使用 nil historyDAO 构造的 service，走降级返回空列表
+	svc := NewOrderService(suite.orderDAO, nil)
+	items, total, err := svc.GetUserHistory(ctx, 100, 1, 10)
 
-	// 获取用户历史
-	items, total, err := suite.service.GetUserHistory(ctx, 100, 1, 10)
-
-	// 由于没有真实的拍卖数据，可能返回空
 	suite.NoError(err)
 	suite.NotNil(items)
-	_ = total
+	suite.Equal(int64(0), total)
 }
 
 // TestRunSuite 运行测试套件
