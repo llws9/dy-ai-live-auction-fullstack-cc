@@ -2,6 +2,7 @@ package router
 
 import (
 	"context"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
@@ -52,6 +53,10 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 
 	// 用户信息
 	authGroup.GET("/users/me", auctionProxy.Forward)
+
+	// 用户聚合统计 (T2.7 / spec A F-A1) —— Gateway BFF 并行调下游聚合
+	userStatsHandler := handler.NewUserStatsHandler(cfg.Services.AuctionURL, cfg.Services.ProductURL, 2*time.Second)
+	authGroup.GET("/users/me/stats", userStatsHandler.Handle)
 
 	// ========== 商品服务路由 ==========
 	v1.GET("/products", productProxy.Forward)
