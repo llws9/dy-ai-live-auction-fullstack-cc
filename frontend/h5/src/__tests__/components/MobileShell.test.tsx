@@ -6,6 +6,7 @@ import BottomNav from '../../components/MobileShell/BottomNav';
 describe('MobileShell', () => {
   afterEach(() => {
     jest.restoreAllMocks();
+    localStorage.clear();
   });
 
   it('renders children inside the mobile container without startup demo timers', () => {
@@ -59,4 +60,34 @@ describe('MobileShell', () => {
       expect(screen.queryByRole('navigation', { name: '底部导航' })).not.toBeInTheDocument();
     },
   );
+
+  it('opens live reminder once when pending login marker exists', () => {
+    localStorage.setItem('pending_live_reminder', '1');
+
+    render(
+      <MemoryRouter>
+        <MobileContainer>
+          <main>页面内容</main>
+        </MobileContainer>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('直播开播提醒')).toBeInTheDocument();
+    expect(localStorage.getItem('pending_live_reminder')).toBeNull();
+  });
+
+  it('does not open live reminder without pending login marker', () => {
+    localStorage.removeItem('pending_live_reminder');
+
+    render(
+      <MemoryRouter>
+        <MobileContainer>
+          <main>页面内容</main>
+        </MobileContainer>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });

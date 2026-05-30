@@ -23,13 +23,18 @@ const LiveReminderModal: React.FC<LiveReminderModalProps> = ({ isOpen, onClose, 
   useEffect(() => {
     if (isOpen) {
       setShouldRender(true);
-    } else {
-      const timer = setTimeout(() => {
-        setShouldRender(false);
-      }, 200); // 对应动画的时间
-      return () => clearTimeout(timer);
+      return;
     }
-  }, [isOpen]);
+
+    if (!shouldRender) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setShouldRender(false);
+    }, 200); // 对应动画的时间
+    return () => clearTimeout(timer);
+  }, [isOpen, shouldRender]);
 
   if (!shouldRender || !stream) return null;
 
@@ -46,13 +51,16 @@ const LiveReminderModal: React.FC<LiveReminderModalProps> = ({ isOpen, onClose, 
     >
       <div 
         className={`${styles.modal} ${!isOpen ? styles.slideDown : ''}`} 
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="live-reminder-title"
         onClick={e => e.stopPropagation()}
       >
         <div className={styles.header}>
           <div className={styles.iconWrapper}>
             🎥
           </div>
-          <h3 className={styles.title}>直播开播提醒</h3>
+          <h3 id="live-reminder-title" className={styles.title}>直播开播提醒</h3>
         </div>
         
         <div className={styles.content}>
@@ -62,7 +70,7 @@ const LiveReminderModal: React.FC<LiveReminderModalProps> = ({ isOpen, onClose, 
           
           <div className={styles.streamInfo}>
             <img 
-              src={stream.avatarUrl || 'https://via.placeholder.com/150'} 
+              src={stream.avatarUrl} 
               alt={stream.name} 
               className={styles.streamAvatar} 
             />

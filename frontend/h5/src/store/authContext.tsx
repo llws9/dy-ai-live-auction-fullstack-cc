@@ -42,6 +42,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = async (req: LoginRequest) => {
     try {
       const result = await authService.login(req);
+      localStorage.setItem('pending_live_reminder', '1');
       setToken(result.token);
       setUser(result.user);
       setIsAuthenticated(true);
