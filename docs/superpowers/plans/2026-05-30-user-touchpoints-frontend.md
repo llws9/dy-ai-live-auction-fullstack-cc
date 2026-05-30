@@ -4,7 +4,7 @@
 
 **Goal:** 在 `frontend/h5` 落地一期用户触达闭环：红点徽标、顶部 Toast、重新登录后一次性开播弹窗。
 
-**Architecture:** 采用适配当前仓库的最小改动方案：新增纯展示 `BadgeDot` 和 Mock hook，复用并升级现有 `components/Toast`，在 `MobileContainer` 挂载 `LiveReminderModal`。触达数据、Toast 展示入口、登录弹窗标记各自保持单一事实源，避免新增并行 Toast 体系。
+**Architecture:** 采用“先 UI 设计、再业务接入”的两段式方案：先完成红点与顶部 Toast 的 theme-ready 静态 UI，再接入 Mock 数据、全局 Toast 行为和登录后弹窗触发。触达数据、Toast 展示入口、登录弹窗标记各自保持单一事实源，避免新增并行 Toast 体系；日间/夜间一键切换本期不实现开关，但所有新增触达 UI 必须通过 CSS 变量具备主题适配能力。
 
 **Tech Stack:** React 18、TypeScript、CSS Modules、React Router、Jest、Testing Library、Vite。
 
@@ -12,11 +12,11 @@
 
 ## File Structure
 
-- Create: `frontend/h5/src/components/BadgeDot/index.tsx`
-- Create: `frontend/h5/src/components/BadgeDot/BadgeDot.module.css`
+- Create/Modify: `frontend/h5/src/components/BadgeDot/index.tsx`
+- Create/Modify: `frontend/h5/src/components/BadgeDot/BadgeDot.module.css`
 - Create: `frontend/h5/src/components/BadgeDot/__tests__/BadgeDot.test.tsx`
 - Create: `frontend/h5/src/hooks/useTouchpointNotifications.ts`
-- Create: `frontend/h5/src/components/Toast/Toast.module.css`
+- Create/Modify: `frontend/h5/src/components/Toast/Toast.module.css`
 - Create: `frontend/h5/src/components/Toast/__tests__/ToastProvider.test.tsx`
 - Modify: `frontend/h5/src/components/Toast/index.tsx`
 - Modify: `frontend/h5/src/components/MobileShell/BottomNav.tsx`
@@ -38,11 +38,136 @@
 
 ---
 
-### Task 1: BadgeDot 与 Mock 数据源
+## Theme-Ready UI Contract
+
+新增红点和 Toast UI 必须满足：
+- 不实现主题切换按钮，不修改全局主题系统；只预留日间/夜间主题变量。
+- CSS 不硬编码核心语义颜色，必须优先使用局部 CSS variables，并提供 fallback。
+- 组件根节点或容器要能跟随未来 `[data-theme='light']` / `[data-theme='dark']` 或上层全局 CSS variables 自动切换。
+- 触控目标不低于 44px；Toast action/close 按钮需要可点击、可聚焦。
+- 暗色默认值适配当前 H5；浅色变量必须保证文字对比度和红点/Toast 类型色可辨识。
+
+Recommended local variables:
+
+```css
+--touchpoint-surface;
+--touchpoint-surface-strong;
+--touchpoint-text;
+--touchpoint-text-muted;
+--touchpoint-accent;
+--touchpoint-warning;
+--touchpoint-danger;
+--touchpoint-success;
+--touchpoint-info;
+--touchpoint-shadow;
+--touchpoint-border;
+```
+
+---
+
+### Task 0: 红点与 Toast 静态 UI 设计
 
 **Files:**
-- Create: `frontend/h5/src/components/BadgeDot/index.tsx`
-- Create: `frontend/h5/src/components/BadgeDot/BadgeDot.module.css`
+- Create/Modify: `frontend/h5/src/components/BadgeDot/index.tsx`
+- Create/Modify: `frontend/h5/src/components/BadgeDot/BadgeDot.module.css`
+- Modify: `frontend/h5/src/components/Toast/index.tsx`
+- Create/Modify: `frontend/h5/src/components/Toast/Toast.module.css`
+
+**Boundary:**
+- 本任务只做 UI 与组件接口，不接 Mock 数据、不改 `BottomNav`、不改 `Profile`、不改 `Live`、不改登录逻辑。
+- `ToastProvider` 可以保留现有行为，也可以先用静态演示结构，但必须保持后续 Task 3 能接入 `showToast` 行为。
+- 必须支持未来日间/夜间一键切换：用 CSS variables 做 theme-ready，不在本期实现切换按钮。
+
+- [ ] **Step 1: 交付 UI 设计提示词给外部模型**
+
+Use this exact prompt:
+
+```text
+请先只做移动端 H5 用户触达 UI 设计与静态组件实现，不接业务逻辑。
+
+目标文件：
+1. frontend/h5/src/components/BadgeDot/index.tsx
+2. frontend/h5/src/components/BadgeDot/BadgeDot.module.css
+3. frontend/h5/src/components/Toast/index.tsx
+4. frontend/h5/src/components/Toast/Toast.module.css
+
+要求：
+1. 不修改登录、路由、MobileContainer、Profile、BottomNav、Live 页面业务逻辑。
+2. 不引入新依赖。
+3. 使用 React 18 + TypeScript + CSS Modules。
+4. 保持移动端 H5/iOS-like 触控体验，按钮高度至少 44px。
+5. 视觉风格贴合直播竞拍产品：高级、低打扰、清晰可读。
+6. 必须支持未来日间/夜间一键切换：不要实现切换按钮，但 CSS 必须使用 theme-ready variables，并为暗色/浅色提供可覆盖变量。
+7. BadgeDot 支持 count、max、dot、ariaLabel、className。
+8. BadgeDot 支持 4 种状态：纯红点、数字、99+、0 不展示。
+9. Toast 支持 success/warning/danger/error/info/loading 样式。
+10. Toast UI 支持 title、message、actionText、关闭按钮、最多 3 条堆叠。
+11. 保留旧 showToast(message, type, duration) 调用兼容性；对象签名 showToast({ type, title, message, duration, actionText, onAction }) 后续会接入。
+12. 输出完整代码，不要改其他文件。
+```
+
+- [ ] **Step 2: 核对 UI 文件边界**
+
+Run:
+
+```bash
+cd /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc
+git diff --name-only
+```
+
+Expected: 只出现以下 4 个 UI 文件，或其中一部分：
+
+```text
+frontend/h5/src/components/BadgeDot/index.tsx
+frontend/h5/src/components/BadgeDot/BadgeDot.module.css
+frontend/h5/src/components/Toast/index.tsx
+frontend/h5/src/components/Toast/Toast.module.css
+```
+
+- [ ] **Step 3: 核对 theme-ready 变量**
+
+Run:
+
+```bash
+cd /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc
+python3 - <<'PY'
+from pathlib import Path
+for root in [Path("frontend/h5/src/components/BadgeDot"), Path("frontend/h5/src/components/Toast")]:
+    for path in root.rglob("*"):
+        if path.is_file() and path.suffix in {".css", ".tsx"}:
+            for line in path.read_text().splitlines():
+                if "touchpoint-" in line:
+                    print(f"{path}: {line.strip()}")
+PY
+```
+
+Expected: 输出包含 `--touchpoint-surface`、`--touchpoint-text`、`--touchpoint-danger`、`--touchpoint-success`、`--touchpoint-warning`。
+
+- [ ] **Step 4: 运行 TypeScript 构建**
+
+Run:
+
+```bash
+cd /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5
+npm run build
+```
+
+Expected: PASS。若失败，只修复 UI 组件类型错误，不接业务逻辑。
+
+- [ ] **Step 5: 提交**
+
+```bash
+git add frontend/h5/src/components/BadgeDot frontend/h5/src/components/Toast
+git commit -m "feat(h5): design touchpoint UI components"
+```
+
+---
+
+### Task 1: BadgeDot UI 验证与 Mock 数据源
+
+**Files:**
+- Create/Modify: `frontend/h5/src/components/BadgeDot/index.tsx`
+- Create/Modify: `frontend/h5/src/components/BadgeDot/BadgeDot.module.css`
 - Create: `frontend/h5/src/components/BadgeDot/__tests__/BadgeDot.test.tsx`
 - Create: `frontend/h5/src/hooks/useTouchpointNotifications.ts`
 
@@ -89,9 +214,11 @@ npm test -- --runInBand src/components/BadgeDot/__tests__/BadgeDot.test.tsx
 
 Expected: FAIL，报错包含 `Cannot find module '../index'`。
 
-- [ ] **Step 3: 实现 BadgeDot**
+- [ ] **Step 3: 核对或补齐 BadgeDot 接口与 Mock hook**
 
-Create `frontend/h5/src/components/BadgeDot/index.tsx`:
+If Task 0 already delivered `BadgeDot`, keep its visual DOM and CSS class names where possible, but ensure this public interface and behavior exist:
+
+`frontend/h5/src/components/BadgeDot/index.tsx`:
 
 ```tsx
 import styles from './BadgeDot.module.css';
@@ -128,18 +255,24 @@ function BadgeDot({
 export default BadgeDot;
 ```
 
-Create `frontend/h5/src/components/BadgeDot/BadgeDot.module.css`:
+If Task 0 did not deliver CSS, use this theme-ready fallback. If Task 0 already delivered a stronger visual design, only verify it keeps the same class names or compatible exported behavior.
+
+`frontend/h5/src/components/BadgeDot/BadgeDot.module.css`:
 
 ```css
 .badge {
+  --touchpoint-danger: var(--color-danger, #ff3b30);
+  --touchpoint-border: var(--color-surface, #1a1a1a);
+  --touchpoint-badge-text: var(--color-on-danger, #fff);
+
   position: absolute;
   top: -4px;
   right: -8px;
   min-width: 8px;
   height: 8px;
-  border: 1px solid #1a1a1a;
+  border: 1px solid var(--touchpoint-border);
   border-radius: 999px;
-  background: #ff3b30;
+  background: var(--touchpoint-danger);
   box-shadow: 0 2px 8px rgba(255, 59, 48, 0.35);
 }
 
@@ -147,7 +280,7 @@ Create `frontend/h5/src/components/BadgeDot/BadgeDot.module.css`:
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  color: #fff;
+  color: var(--touchpoint-badge-text);
   font-size: 10px;
   font-weight: 700;
   line-height: 16px;
@@ -380,11 +513,11 @@ git commit -m "feat(h5): show touchpoint badges"
 
 ---
 
-### Task 3: 升级全局 Toast Provider
+### Task 3: 接入全局 Toast Provider 行为
 
 **Files:**
 - Modify: `frontend/h5/src/components/Toast/index.tsx`
-- Create: `frontend/h5/src/components/Toast/Toast.module.css`
+- Create/Modify: `frontend/h5/src/components/Toast/Toast.module.css`
 - Create: `frontend/h5/src/components/Toast/__tests__/ToastProvider.test.tsx`
 
 - [ ] **Step 1: 写 ToastProvider 失败用例**
@@ -493,7 +626,9 @@ npm test -- --runInBand src/components/Toast/__tests__/ToastProvider.test.tsx
 
 Expected: FAIL，现有 `showToast` 不支持对象签名与 action。
 
-- [ ] **Step 3: 改造 ToastProvider**
+- [ ] **Step 3: 接入 ToastProvider 行为并保留 UI 设计**
+
+Keep Task 0 visual decisions and theme-ready variables. Replace or merge only the React behavior needed for legacy signature, rich config signature, action close, and max 3 visible items.
 
 Replace `frontend/h5/src/components/Toast/index.tsx` with:
 
@@ -631,10 +766,22 @@ function getIcon(type: ToastType): string {
 export default ToastProvider;
 ```
 
-Create `frontend/h5/src/components/Toast/Toast.module.css`:
+If Task 0 did not deliver CSS, use this theme-ready fallback. If Task 0 delivered CSS, keep its visual design and only ensure these class names exist: `container`、`toast`、`success`、`warning`、`danger`、`error`、`info`、`loading`、`icon`、`body`、`title`、`message`、`action`、`close`.
+
+`frontend/h5/src/components/Toast/Toast.module.css`:
 
 ```css
 .container {
+  --touchpoint-surface: var(--color-surface-elevated, rgba(28, 28, 30, 0.96));
+  --touchpoint-text: var(--color-text-primary, #fff);
+  --touchpoint-text-muted: var(--color-text-secondary, rgba(255, 255, 255, 0.78));
+  --touchpoint-accent: var(--color-accent, #d4af37);
+  --touchpoint-warning: var(--color-warning, #f5c542);
+  --touchpoint-danger: var(--color-danger, #ff3b30);
+  --touchpoint-success: var(--color-success, #d4af37);
+  --touchpoint-info: var(--color-info, #64d2ff);
+  --touchpoint-shadow: var(--shadow-floating, 0 16px 40px rgba(0, 0, 0, 0.32));
+
   position: fixed;
   top: calc(16px + env(safe-area-inset-top, 0px));
   left: 50%;
@@ -654,29 +801,29 @@ Create `frontend/h5/src/components/Toast/Toast.module.css`:
   padding: 12px 12px 12px 14px;
   border-left: 4px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
-  background: rgba(28, 28, 30, 0.96);
-  color: #fff;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.32);
+  background: var(--touchpoint-surface);
+  color: var(--touchpoint-text);
+  box-shadow: var(--touchpoint-shadow);
   animation: slideDown 180ms ease-out;
   pointer-events: auto;
 }
 
 .success {
-  border-left-color: #d4af37;
+  border-left-color: var(--touchpoint-success);
 }
 
 .warning {
-  border-left-color: #f5c542;
+  border-left-color: var(--touchpoint-warning);
 }
 
 .danger,
 .error {
-  border-left-color: #ff3b30;
+  border-left-color: var(--touchpoint-danger);
 }
 
 .info,
 .loading {
-  border-left-color: #64d2ff;
+  border-left-color: var(--touchpoint-info);
 }
 
 .icon {
@@ -705,7 +852,7 @@ Create `frontend/h5/src/components/Toast/Toast.module.css`:
 }
 
 .message {
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--touchpoint-text-muted);
   font-size: 12px;
   line-height: 1.4;
 }
@@ -713,7 +860,7 @@ Create `frontend/h5/src/components/Toast/Toast.module.css`:
 .action,
 .close {
   border: 0;
-  color: #d4af37;
+  color: var(--touchpoint-accent);
   background: transparent;
   font: inherit;
   cursor: pointer;
@@ -1124,16 +1271,27 @@ Run:
 cd /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5
 npm test -- --runInBand src/components/BadgeDot/__tests__/BadgeDot.test.tsx src/__tests__/components/MobileShell.test.tsx src/pages/User/__tests__/Profile.test.tsx src/components/Toast/__tests__/ToastProvider.test.tsx
 npm run build
+cd /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc
+python3 - <<'PY'
+from pathlib import Path
+for root in [Path("frontend/h5/src/components/BadgeDot"), Path("frontend/h5/src/components/Toast")]:
+    for path in root.rglob("*"):
+        if path.is_file() and path.suffix in {".css", ".tsx"}:
+            for line in path.read_text().splitlines():
+                if "touchpoint-" in line:
+                    print(f"{path}: {line.strip()}")
+PY
 ```
 
 Expected:
 - Jest: all listed suites PASS。
 - Build: `tsc && vite build` exits with code 0。
+- Theme readiness: grep output contains local `touchpoint-` CSS variables for BadgeDot and Toast。
 
 ---
 
 ## Self-Review
 
-- Spec coverage: 红点、Mock 数据、顶部 Toast、旧签名兼容、新对象签名、重新登录弹窗、开发环境 Demo、自动化测试与人工验收均有对应任务。
+- Spec coverage: 先 UI 设计、日间/夜间 theme-ready、红点、Mock 数据、顶部 Toast、旧签名兼容、新对象签名、重新登录弹窗、开发环境 Demo、自动化测试与人工验收均有对应任务。
 - Placeholder scan: 本计划不包含未决占位、未定义接口或延后实现项。
-- Type consistency: `showToast` 旧签名和对象签名在 Task 3 定义，Task 5 只使用对象签名；`BadgeDot` 的 `count/max/dot/className` 在 Task 1 定义，Task 2 复用同一接口。
+- Type consistency: `showToast` 旧签名和对象签名在 Task 3 定义，Task 5 只使用对象签名；`BadgeDot` 的 `count/max/dot/className` 在 Task 0/1 定义，Task 2 复用同一接口。
