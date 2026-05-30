@@ -5,6 +5,8 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
+      // anti-FOUC: 在 React hydration 前同步写入 data-theme，避免首屏闪烁。
+      // NOTE: 'h5.theme' / 合法值 / 默认 'dark' 必须与 src/store/themeContext.tsx 保持一致。
       (function () {
         try {
           var stored = localStorage.getItem('h5.theme');

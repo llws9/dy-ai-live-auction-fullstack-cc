@@ -17,6 +17,9 @@ interface ThemeContextValue {
   setTheme: (t: Theme) => void;
 }
 
+// NOTE: 修改下列常量时必须同步更新 frontend/h5/index.html 中的 anti-FOUC inline script，
+// 否则会出现首屏闪烁或主题不一致。inline script 必须在 React 加载前同步执行，
+// 无法 import 本模块的常量。
 const STORAGE_KEY = 'h5.theme';
 const DEFAULT_THEME: Theme = 'dark';
 
