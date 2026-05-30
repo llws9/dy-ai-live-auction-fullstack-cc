@@ -89,6 +89,7 @@ function getTarget(notification: NotificationRecord) {
   const type = notification.type;
   const liveStreamId = readField(notification, 'live_stream_id');
   const auctionId = readField(notification, 'auction_id');
+  const orderId = readField(notification, 'order_id');
 
   if (['live_start', 'live_stream_starting_soon', 'live_stream_now_live'].includes(type) && liveStreamId) {
     return `/live?id=${liveStreamId}`;
@@ -100,6 +101,11 @@ function getTarget(notification: NotificationRecord) {
 
   if (['auction_start', 'auction_starting', 'bid_outbid'].includes(type) && auctionId) {
     return `/detail?id=${auctionId}`;
+  }
+
+  // T3.6 / F-D2 §6：订单类通知携带 order_id 时跳转订单详情页
+  if ((type === 'order' || type.startsWith('order_')) && orderId) {
+    return `/order/${orderId}`;
   }
 
   return null;

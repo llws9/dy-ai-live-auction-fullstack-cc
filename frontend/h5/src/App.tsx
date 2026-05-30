@@ -24,6 +24,7 @@ const Follow = lazy(() => import('./pages/Follow'))
 const Profile = lazy(() => import('./pages/User/Index'))
 const Notifications = lazy(() => import('./pages/Notifications'))
 const Addresses = lazy(() => import('./pages/Addresses'))
+const OrderDetail = lazy(() => import('./pages/Order/Detail'))
 
 // 认证保护组件
 function PrivateRoute({ children }: { children: React.ReactElement }) {
@@ -107,6 +108,11 @@ function App() {
                       <Route path="/addresses" element={
                         <PrivateRoute>
                           <Addresses />
+                        </PrivateRoute>
+                      } />
+                      <Route path="/order/:id" element={
+                        <PrivateRoute>
+                          <OrderDetail />
                         </PrivateRoute>
                       } />
                     </Routes>

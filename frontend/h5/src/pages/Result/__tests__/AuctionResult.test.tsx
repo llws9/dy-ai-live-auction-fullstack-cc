@@ -4,6 +4,13 @@ import { MemoryRouter } from 'react-router-dom';
 import ResultPage from '../index';
 import { auctionApi, orderApi, productApi } from '../../../services/api';
 
+const mockNavigate = jest.fn();
+
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => mockNavigate,
+}));
+
 jest.mock('../../../services/api', () => ({
   auctionApi: {
     getResult: jest.fn(),
@@ -25,6 +32,11 @@ jest.mock('../../../store/authContext', () => ({
     token: 'token-1',
     loading: false,
   }),
+}));
+
+jest.mock('../../../components/ThemeToggle', () => ({
+  __esModule: true,
+  default: () => null,
 }));
 
 const mockedAuctionApi = auctionApi as jest.Mocked<typeof auctionApi>;
@@ -86,5 +98,45 @@ describe('AuctionResult migration', () => {
 
     await waitFor(() => expect(mockedOrderApi.pay).toHaveBeenCalledWith(56));
     expect(await screen.findByText('支付成功，订单已更新')).toBeInTheDocument();
+  });
+
+  it('shows 查看订单 button that navigates to /order/:id when order_id exists (T3.6)', async () => {
+    render(
+      <MemoryRouter
+        initialEntries={['/result?id=12']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <ResultPage />
+      </MemoryRouter>
+    );
+
+    const viewOrderBtn = await screen.findByRole('button', { name: '查看订单' });
+    expect(viewOrderBtn).not.toBeDisabled();
+    fireEvent.click(viewOrderBtn);
+    expect(mockNavigate).toHaveBeenCalledWith('/order/56');
+  });
+
+  it('disables 查看订单 with 订单生成中 fallback when order_id is missing (T3.6)', async () => {
+    mockedAuctionApi.getResult.mockResolvedValueOnce({
+      auction_id: 12,
+      id: 12,
+      product_id: 34,
+      status: 3,
+      final_price: 6800,
+      winner_id: 9,
+      ended_at: new Date().toISOString(),
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={['/result?id=12']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <ResultPage />
+      </MemoryRouter>
+    );
+
+    const fallbackBtn = await screen.findByRole('button', { name: '订单生成中' });
+    expect(fallbackBtn).toBeDisabled();
   });
 });

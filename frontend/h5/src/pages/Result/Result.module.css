@@ -280,6 +280,27 @@
   color: var(--text-brand);
 }
 
+.secondaryButton {
+  display: inline-flex;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(201, 169, 110, 0.56);
+  border-radius: var(--radius-xl);
+  background: transparent;
+  color: var(--text-brand);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.secondaryButton:disabled {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border-color: rgba(201, 169, 110, 0.24);
+  cursor: not-allowed;
+}
+
 .loading,
 .empty {
   display: flex;

@@ -46,6 +46,12 @@
   text-decoration: none;
 }
 
+.notificationBadge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+}
+
 .tabs {
   overflow-x: auto;
   padding: var(--spacing-3) var(--spacing-4) var(--spacing-2);

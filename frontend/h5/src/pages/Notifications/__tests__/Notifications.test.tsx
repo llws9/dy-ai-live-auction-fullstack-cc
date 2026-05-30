@@ -20,6 +20,11 @@ jest.mock('../../../services/notification', () => ({
   },
 }));
 
+jest.mock('../../../components/ThemeToggle', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 const mockedNotificationApi = notificationApi as jest.Mocked<typeof notificationApi>;
 
 describe('Notifications migration', () => {
@@ -83,5 +88,35 @@ describe('Notifications migration', () => {
 
     await waitFor(() => expect(mockedNotificationApi.markAsRead).toHaveBeenCalledWith(1));
     expect(mockNavigate).toHaveBeenCalledWith('/live?id=88');
+  });
+
+  it('navigates order notifications to /order/:id when data.order_id is present (T3.6)', async () => {
+    mockedNotificationApi.list.mockResolvedValue({
+      items: [
+        {
+          id: 9,
+          type: 'order_paid',
+          title: '订单已支付',
+          content: '你的订单 #1234 已成功支付',
+          data: { order_id: 1234 },
+          created_at: '2026-05-30T09:00:00Z',
+        },
+      ],
+      total: 1,
+      page: 1,
+      page_size: 20,
+    });
+
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <NotificationsPage />
+      </MemoryRouter>
+    );
+
+    const orderNotice = await screen.findByRole('button', { name: /订单 #1234 已成功支付/ });
+    fireEvent.click(orderNotice);
+
+    await waitFor(() => expect(mockedNotificationApi.markAsRead).toHaveBeenCalledWith(9));
+    expect(mockNavigate).toHaveBeenCalledWith('/order/1234');
   });
 });

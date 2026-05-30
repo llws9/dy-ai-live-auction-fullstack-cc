@@ -1,0 +1,224 @@
+.page {
+  min-height: 100%;
+  background: var(--bg-page);
+  color: var(--text-primary);
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(var(--spacing-5) + env(safe-area-inset-top, 0px)) var(--spacing-5) var(--spacing-3);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  backdrop-filter: blur(16px);
+}
+
+.backButton {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(201, 169, 110, 0.28);
+  border-radius: var(--radius-full);
+  background: var(--bg-elevated);
+  color: var(--text-brand);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.headerTitle {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.12em;
+}
+
+.content {
+  padding: var(--spacing-6) var(--spacing-5) calc(var(--spacing-8) + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-5);
+}
+
+.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-4);
+  padding: var(--spacing-8) var(--spacing-5);
+  color: var(--text-secondary);
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--border-subtle);
+  border-top-color: var(--text-brand);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.emptyText {
+  font-size: var(--font-size-md);
+  color: var(--text-secondary);
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 6px var(--spacing-4);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  background: rgba(201, 169, 110, 0.12);
+  color: var(--text-brand);
+}
+
+.statusBadge[data-tone='warning'] {
+  background: rgba(255, 178, 56, 0.16);
+  color: #b78211;
+}
+.statusBadge[data-tone='info'] {
+  background: rgba(56, 132, 255, 0.16);
+  color: #1c5fd8;
+}
+.statusBadge[data-tone='success'] {
+  background: rgba(33, 174, 116, 0.16);
+  color: #1a8e5e;
+}
+.statusBadge[data-tone='neutral'] {
+  background: rgba(120, 120, 128, 0.16);
+  color: var(--text-secondary);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  padding: var(--spacing-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-secondary);
+  letter-spacing: 0.1em;
+}
+
+.kv {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  margin: 0;
+}
+
+.kv > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.kv dt {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.kv dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.priceText {
+  color: var(--text-brand);
+}
+
+.amount {
+  font-size: 28px;
+  color: var(--text-brand);
+}
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.timeline li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-left: var(--spacing-4);
+  border-left: 2px solid rgba(201, 169, 110, 0.28);
+}
+
+.timelineLabel {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.timeline time {
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-2);
+}
+
+.secondaryButton,
+.primaryButton {
+  flex: 1;
+  min-height: 44px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.secondaryButton {
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.primaryButton {
+  border: none;
+  background: var(--text-brand);
+  color: #fff;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--spacing-8) + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  padding: var(--spacing-3) var(--spacing-5);
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  z-index: 50;
+}

@@ -243,14 +243,24 @@ const ResultPage: React.FC = () => {
         <div className={styles.actions}>
           <Link to="/" className={styles.secondaryLink}>返回首页</Link>
           {isWinner ? (
-            <button
-              className={styles.primaryButton}
-              type="button"
-              onClick={handlePay}
-              disabled={!orderId || paying || order?.status === 1}
-            >
-              {order?.status === 1 ? '已支付' : paying ? '支付中...' : orderId ? '立即支付' : '订单待生成'}
-            </button>
+            <>
+              <button
+                className={styles.primaryButton}
+                type="button"
+                onClick={handlePay}
+                disabled={!orderId || paying || order?.status === 1}
+              >
+                {order?.status === 1 ? '已支付' : paying ? '支付中...' : orderId ? '立即支付' : '订单待生成'}
+              </button>
+              <button
+                className={styles.secondaryButton}
+                type="button"
+                onClick={() => orderId && navigate(`/order/${orderId}`)}
+                disabled={!orderId}
+              >
+                {orderId ? '查看订单' : '订单生成中'}
+              </button>
+            </>
           ) : (
             <Link to="/" className={styles.primaryLink}>继续竞拍</Link>
           )}
