@@ -58,6 +58,13 @@
   color: #d4af37;
 }
 
+.navIconWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .navIcon {
   font-size: 22px;
   line-height: 1;

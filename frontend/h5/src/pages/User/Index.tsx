@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { orderApi, userApi } from '../../services/api';
 import { useAuth } from '../../store/authContext';
+import BadgeDot from '../../components/BadgeDot';
+import { useTouchpointNotifications } from '../../hooks/useTouchpointNotifications';
 import styles from './Profile.module.css';
 
 interface ProfileUser {
@@ -64,6 +66,7 @@ function orderStatusLabel(status?: number | string) {
 
 const UserCenter: React.FC = () => {
   const { user: authUser, logout } = useAuth();
+  const { pendingPayment } = useTouchpointNotifications();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileUser | null>(authUser);
   const [balance, setBalance] = useState<BalanceData | null>(null);
@@ -229,7 +232,10 @@ const UserCenter: React.FC = () => {
       <nav className={styles.menu} aria-label="个人中心功能">
         <Link to="/history" className={styles.menuItem}>
           <span className={styles.menuIcon}>A</span>
-          <span>我的竞拍</span>
+          <span className={styles.menuLabel}>
+            我的竞拍
+            <BadgeDot count={pendingPayment} className={styles.menuBadge} />
+          </span>
           <b>›</b>
         </Link>
         <Link to="/following" className={styles.menuItem}>

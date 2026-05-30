@@ -6,6 +6,7 @@ import { orderApi, userApi } from '../../../services/api';
 
 const mockNavigate = jest.fn();
 const mockLogout = jest.fn();
+const mockAuthUser = { id: 9, email: 'buyer@example.com', name: '测试用户', role: 0 };
 
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
@@ -25,7 +26,7 @@ jest.mock('../../../services/api', () => ({
 jest.mock('../../../store/authContext', () => ({
   useAuth: () => ({
     isAuthenticated: true,
-    user: { id: 9, email: 'buyer@example.com', name: '测试用户', role: 0 },
+    user: mockAuthUser,
     token: 'token-1',
     loading: false,
     logout: mockLogout,
@@ -91,6 +92,7 @@ describe('Profile migration', () => {
 
     expect(await screen.findByText('林见山')).toBeInTheDocument();
 
+    expect(screen.getByLabelText('1 条待处理提醒')).toHaveTextContent('1');
     expect(screen.getByRole('link', { name: /我的竞拍/ })).toHaveAttribute('href', '/history');
     expect(screen.getByRole('link', { name: /关注直播/ })).toHaveAttribute('href', '/following');
     expect(screen.getByRole('link', { name: /消息通知/ })).toHaveAttribute('href', '/notifications');

@@ -37,6 +37,16 @@ describe('MobileShell', () => {
     expect(screen.getByRole('link', { name: /我的/ })).toHaveAttribute('aria-current', 'page');
   });
 
+  it('shows unread total badge on profile nav item', () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <BottomNav />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByLabelText('3 条待处理提醒')).toHaveTextContent('3');
+  });
+
   it.each(['/detail', '/result', '/notifications', '/following', '/history', '/login'])(
     'hides bottom navigation on %s',
     (path) => {

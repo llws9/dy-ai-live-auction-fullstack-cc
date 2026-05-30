@@ -249,6 +249,17 @@
   line-height: 1;
 }
 
+.menuLabel {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.menuBadge {
+  top: -10px;
+  right: -22px;
+}
+
 .menuIcon {
   display: inline-flex;
   width: 36px;

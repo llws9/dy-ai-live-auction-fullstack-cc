@@ -1,4 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
+import BadgeDot from '../BadgeDot';
+import { useTouchpointNotifications } from '../../hooks/useTouchpointNotifications';
 import styles from './MobileShell.module.css';
 
 const hiddenNavPaths = new Set([
@@ -13,7 +15,7 @@ const hiddenNavPaths = new Set([
 const navItems = [
   { path: '/', label: '首页', icon: '⌂' },
   { path: '/live', label: '直播间', icon: '▶' },
-  { path: '/profile', label: '我的', icon: '○' },
+  { path: '/profile', label: '我的', icon: '○', badge: true },
 ];
 
 function isHiddenPath(pathname: string) {
@@ -26,6 +28,7 @@ function isActivePath(pathname: string, itemPath: string) {
 
 function BottomNav() {
   const { pathname } = useLocation();
+  const { unreadTotal } = useTouchpointNotifications();
 
   if (isHiddenPath(pathname)) {
     return null;
@@ -43,8 +46,11 @@ function BottomNav() {
             className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
             aria-current={isActive ? 'page' : undefined}
           >
-            <span className={styles.navIcon} aria-hidden="true">
-              {item.icon}
+            <span className={styles.navIconWrap}>
+              <span className={styles.navIcon} aria-hidden="true">
+                {item.icon}
+              </span>
+              {item.badge && <BadgeDot count={unreadTotal} />}
             </span>
             <span>{item.label}</span>
           </Link>
