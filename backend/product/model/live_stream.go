@@ -17,6 +17,7 @@ type LiveStream struct {
 	Name        string           `json:"name" gorm:"type:varchar(128);not null"`          // 直播间名称
 	Description string           `json:"description" gorm:"type:text"`                    // 直播间描述
 	CoverImage  string           `json:"cover_image" gorm:"type:varchar(256)"`            // 封面图URL
+	VideoURL    string           `json:"video_url" gorm:"type:varchar(512)"`              // 直播流URL（HLS/FLV，本期由后台手动配置）
 	Status      LiveStreamStatus `json:"status" gorm:"type:tinyint;default:1"`            // 状态：0=禁用，1=正常
 	CreatedAt   time.Time        `json:"created_at" gorm:"autoCreateTime"`                // 创建时间
 	UpdatedAt   time.Time        `json:"updated_at" gorm:"autoUpdateTime"`                // 更新时间

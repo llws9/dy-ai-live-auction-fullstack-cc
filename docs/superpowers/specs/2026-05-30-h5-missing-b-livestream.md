@@ -238,6 +238,23 @@ authGroup.GET("/live-streams/:id/follow-status", auctionProxy.Forward)
 - product-service `GetDetail` 检测到 `X-User-Id` 不为空时调用一次，否则跳过。
 - 缓存：`follow:{user_id}:{live_stream_id}` TTL `60s`，关注/取消关注操作触发主动 `DEL`。
 
+### 4.4 T2.4 实施决策（2026-05-30 实施落档）
+
+实施 T2.4 时为控制 M2 范围，对 §4.1（host）/§4.3（is_following 真实查询）做**进一步分阶段降级**：
+
+| 字段 | spec 设计 | T2.4 实际实现 | 推迟到 |
+|---|---|---|---|
+| `host_name` | 内部 HTTP `GET /internal/users/:id` + Redis 缓存 | **占位 `""`** | M3 host 内部接口落地 |
+| `host_avatar` | 同上 | **占位 `""`**，前端兜底默认头像 | M3 |
+| `viewer_count` | 固定 `0` | `0` ✅ 与 spec 一致 | — |
+| `video_url` | `live_streams.video_url` 列读出 | ✅ 已落库列 + 读出，空时返回 `null` | — |
+| `is_following` | OptionalJWTAuth + follow service 查询 | **固定 `false`**；T2.5 已挂载 OptionalJWTAuth 中间件，但 product-service 暂不消费 `X-User-ID` | T2.6 单独接口 `/live-streams/:id/follow-status` 上线后由前端二次拉取合并 |
+
+**理由（第一性原理）**：
+- **避免引入跨服务调用**会同时拉入 client 抽象 + 缓存 + 错误处理（≈ T2.2 量级），M2 当前优先 T2.6/T2.7 的端到端贯通。
+- 字段稳定存在是契约的**最低保证**；调用方代码无需感知"占位 vs 真值"差异，下期直接替换实现即可，不会引发前端崩溃。
+- T2.5 已完成 gateway 透传 `X-User-ID`；product-service 接入时只需读 header 不改路由，**改造点已收敛在单文件**。
+
 ---
 
 ## 5. UI 重命名清单（F-B4）
