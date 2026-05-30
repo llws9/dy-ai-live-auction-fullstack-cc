@@ -304,16 +304,20 @@ export const productApi = {
 
   // 获取商品详情
   get: (id: number) => get<any>(`/products/${id}`),
+
+  // 获取分类列表（公开接口，T2.10 Home tabs 数据源）
+  listCategories: () => get<any>(`/categories`),
 };
 
 // 竞拍 API
 export const auctionApi = {
   // 获取竞拍列表
-  list: (params?: { status?: string; page?: number; page_size?: number }) => {
+  list: (params?: { status?: string; page?: number; page_size?: number; category_id?: number }) => {
     const query = new URLSearchParams();
     if (params?.status) query.set('status', params.status);
     if (params?.page) query.set('page', String(params.page));
     if (params?.page_size) query.set('page_size', String(params.page_size));
+    if (params?.category_id) query.set('category_id', String(params.category_id));
 
     return get<any>(`/auctions?${query.toString()}`);
   },

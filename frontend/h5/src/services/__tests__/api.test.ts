@@ -3,7 +3,7 @@ jest.mock('../../utils/errorMessages', () => ({
   logError: jest.fn(),
 }));
 
-import { buildLoginRedirectPath, orderApi, userApi } from '../api';
+import { auctionApi, buildLoginRedirectPath, orderApi, userApi } from '../api';
 
 describe('api service auth header', () => {
   beforeEach(() => {
@@ -71,5 +71,34 @@ describe('api service auth header', () => {
     window.history.pushState({}, '', '/profile?from=history');
 
     expect(buildLoginRedirectPath()).toBe('/login?redirect=%2Fprofile%3Ffrom%3Dhistory');
+  });
+
+  it('passes category_id to /auctions list query when provided (T2.10)', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({ code: 200, data: { list: [], total: 0 } }),
+    } as Response);
+    global.fetch = fetchMock;
+
+    await auctionApi.list({ page: 1, page_size: 20, category_id: 12 });
+
+    const calledUrl = fetchMock.mock.calls[0][0] as string;
+    expect(calledUrl).toContain('/api/v1/auctions');
+    expect(calledUrl).toContain('category_id=12');
+  });
+
+  it('omits category_id from /auctions query when not provided (T2.10)', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({ code: 200, data: { list: [], total: 0 } }),
+    } as Response);
+    global.fetch = fetchMock;
+
+    await auctionApi.list({ page: 1, page_size: 20 });
+
+    const calledUrl = fetchMock.mock.calls[0][0] as string;
+    expect(calledUrl).not.toContain('category_id');
   });
 });

@@ -4,7 +4,13 @@ import { auctionApi, productApi } from '@/services/api';
 import PageHeader from '@/components/shared/PageHeader';
 import styles from './Home.module.css';
 
-type HomeTab = '全部' | '收藏' | '珠宝腕表' | '艺术品' | '奢侈品' | '收藏品';
+// 固定 tab：「全部」「收藏」无需 category_id；动态 tab 来自 GET /categories
+type SpecialTab = '全部' | '收藏';
+
+interface CategoryTab {
+  id: number;
+  name: string;
+}
 
 interface ProductSummary {
   id?: number;
@@ -35,7 +41,7 @@ interface HomeAuction {
   product?: ProductSummary;
 }
 
-const tabs: HomeTab[] = ['全部', '收藏', '珠宝腕表', '艺术品', '奢侈品', '收藏品'];
+const SPECIAL_TABS: SpecialTab[] = ['全部', '收藏'];
 
 const extractList = (response: any): RawAuction[] => {
   if (Array.isArray(response)) return response;
@@ -45,6 +51,25 @@ const extractList = (response: any): RawAuction[] => {
   if (Array.isArray(response?.data?.list)) return response.data.list;
   if (Array.isArray(response?.data?.items)) return response.data.items;
   if (Array.isArray(response?.data?.auctions)) return response.data.auctions;
+  return [];
+};
+
+const extractCategories = (response: any): CategoryTab[] => {
+  const candidates = [
+    response,
+    response?.list,
+    response?.items,
+    response?.data,
+    response?.data?.list,
+    response?.data?.items,
+  ];
+  for (const c of candidates) {
+    if (Array.isArray(c)) {
+      return c
+        .filter((item: any) => item && typeof item.id === 'number' && typeof item.name === 'string')
+        .map((item: any) => ({ id: item.id, name: item.name }));
+    }
+  }
   return [];
 };
 
@@ -81,19 +106,29 @@ const normalizeAuction = (auction: RawAuction, product?: ProductSummary): HomeAu
   product: auction.product ?? product,
 });
 
-const matchesTab = (auction: HomeAuction, activeTab: HomeTab) => {
-  if (activeTab === '全部') return true;
-  if (activeTab === '收藏') return false;
-
-  const category = auction.product?.category_name || auction.product?.category;
-  if (!category) return true;
-  return category === activeTab;
-};
-
 const HomePage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<HomeTab>('全部');
+  // activeTab 用 string 既能存「全部」/「收藏」也能存动态分类 name
+  const [activeTab, setActiveTab] = useState<string>('全部');
+  const [categories, setCategories] = useState<CategoryTab[]>([]);
   const [auctions, setAuctions] = useState<HomeAuction[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 启动时拉取分类 tabs（失败不阻塞首屏）
+  useEffect(() => {
+    let cancelled = false;
+    productApi
+      .listCategories()
+      .then((response) => {
+        if (cancelled) return;
+        setCategories(extractCategories(response));
+      })
+      .catch((error) => {
+        console.warn('获取分类列表失败:', error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const fetchAuctions = useCallback(async () => {
     if (activeTab === '收藏') {
@@ -104,13 +139,24 @@ const HomePage: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await auctionApi.list({ page: 1, page_size: 20 });
+      const params: { page: number; page_size: number; category_id?: number } = {
+        page: 1,
+        page_size: 20,
+      };
+      if (activeTab !== '全部') {
+        const matched = categories.find((c) => c.name === activeTab);
+        if (matched) {
+          params.category_id = matched.id;
+        }
+      }
+
+      const response = await auctionApi.list(params);
       const rawAuctions = extractList(response);
 
+      // 后端已内嵌 product 摘要（spec C §5.2），无 product 时再 fallback 单独查
       const products = await Promise.all(
         rawAuctions.map(async (auction) => {
           if (auction.product || !auction.product_id) return undefined;
-
           try {
             return await productApi.get(auction.product_id);
           } catch (error) {
@@ -127,24 +173,19 @@ const HomePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeTab]);
+  }, [activeTab, categories]);
 
   useEffect(() => {
     let cancelled = false;
-
     const load = async () => {
       await fetchAuctions();
       if (cancelled) return;
     };
-
     load();
-
     return () => {
       cancelled = true;
     };
   }, [fetchAuctions]);
-
-  const visibleAuctions = auctions.filter((auction) => matchesTab(auction, activeTab));
 
   return (
     <section className={styles.page}>
@@ -167,7 +208,7 @@ const HomePage: React.FC = () => {
       />
 
       <nav className={styles.tabs} aria-label="首页分类">
-        {tabs.map((tab) => (
+        {SPECIAL_TABS.map((tab) => (
           <button
             key={tab}
             type="button"
@@ -175,6 +216,16 @@ const HomePage: React.FC = () => {
             onClick={() => setActiveTab(tab)}
           >
             {tab}
+          </button>
+        ))}
+        {categories.map((cat) => (
+          <button
+            key={cat.id}
+            type="button"
+            className={`${styles.tab} ${activeTab === cat.name ? styles.tabActive : ''}`}
+            onClick={() => setActiveTab(cat.name)}
+          >
+            {cat.name}
           </button>
         ))}
       </nav>
@@ -185,7 +236,7 @@ const HomePage: React.FC = () => {
             <span className={styles.loadingSpinner} />
             <span className={styles.loadingText}>加载竞拍中...</span>
           </div>
-        ) : visibleAuctions.length === 0 ? (
+        ) : auctions.length === 0 ? (
           <div className={styles.empty}>
             <span className={styles.emptyIcon}>◇</span>
             <p className={styles.emptyText}>{activeTab === '收藏' ? '暂无收藏竞拍' : '暂无竞拍数据'}</p>
@@ -193,7 +244,7 @@ const HomePage: React.FC = () => {
           </div>
         ) : (
           <div className={styles.grid}>
-            {visibleAuctions.map((auction) => {
+            {auctions.map((auction) => {
               const statusInfo = getStatusInfo(auction.status);
               const productImage = getFirstImage(auction.product);
               const productName = auction.product?.name || `竞拍场次 #${auction.id}`;
