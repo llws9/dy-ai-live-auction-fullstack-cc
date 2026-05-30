@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { auctionApi, orderApi, productApi } from '@/services/api';
 import { useAuth } from '@/store/authContext';
+import PageHeader from '@/components/shared/PageHeader';
 import styles from './Result.module.css';
 
 interface BidRecord {
@@ -168,11 +169,18 @@ const ResultPage: React.FC = () => {
 
   return (
     <section className={styles.page}>
-      <header className={styles.header}>
-        <button className={styles.backButton} onClick={() => navigate(-1)} aria-label="返回上一页">‹</button>
-        <h1 className={styles.headerTitle}>竞拍结果</h1>
-        <span className={styles.sharePlaceholder} aria-label="分享暂未开放" title="分享暂未开放">享</span>
-      </header>
+      <PageHeader
+        classes={{
+          header: styles.header,
+          backButton: styles.backButton,
+          title: styles.headerTitle,
+        }}
+        back={{ onClick: () => navigate(-1) }}
+        title="竞拍结果"
+        actions={
+          <span className={styles.sharePlaceholder} aria-label="分享暂未开放" title="分享暂未开放">享</span>
+        }
+      />
 
       <main className={styles.content}>
         <section className={styles.hero}>

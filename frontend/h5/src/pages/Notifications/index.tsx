@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { notificationApi, NotificationItem } from '../../services/notification';
+import PageHeader from '@/components/shared/PageHeader';
 import styles from './Notifications.module.css';
 
 type NotificationType =
@@ -199,16 +200,17 @@ const NotificationsPage: React.FC = () => {
 
   return (
     <section className={styles.page}>
-      <header className={styles.header}>
-        <button className={styles.backButton} type="button" onClick={() => navigate(-1)} aria-label="返回">
-          <span aria-hidden="true">‹</span>
-        </button>
-        <div>
-          <p className={styles.eyebrow}>Notification Center</p>
-          <h1>消息通知</h1>
-        </div>
-        <Link className={styles.homeLink} to="/">首页</Link>
-      </header>
+      <PageHeader
+        classes={{
+          header: styles.header,
+          backButton: styles.backButton,
+          eyebrow: styles.eyebrow,
+        }}
+        back={{ onClick: () => navigate(-1) }}
+        eyebrow="Notification Center"
+        title="消息通知"
+        actions={<Link className={styles.homeLink} to="/">首页</Link>}
+      />
 
       <section className={styles.summaryGrid} aria-label="通知概览">
         <div className={styles.summaryCard}>

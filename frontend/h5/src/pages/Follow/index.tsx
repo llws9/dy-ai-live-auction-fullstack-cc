@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { followApi } from '../../services/api';
+import PageHeader from '@/components/shared/PageHeader';
 import styles from './Following.module.css';
 
 interface LiveStream {
@@ -118,16 +119,17 @@ const FollowPage: React.FC = () => {
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <button className={styles.backButton} type="button" onClick={() => navigate(-1)} aria-label="返回">
-          ‹
-        </button>
-        <div>
-          <p className={styles.eyebrow}>FOLLOWING</p>
-          <h1>关注的直播间</h1>
-        </div>
-        <span className={styles.countBadge}>{liveStreams.length} 个关注</span>
-      </header>
+      <PageHeader
+        classes={{
+          header: styles.header,
+          backButton: styles.backButton,
+          eyebrow: styles.eyebrow,
+        }}
+        back={{ onClick: () => navigate(-1) }}
+        eyebrow="FOLLOWING"
+        title="关注的直播间"
+        actions={<span className={styles.countBadge}>{liveStreams.length} 个关注</span>}
+      />
 
       <section className={styles.summaryGrid} aria-label="关注概览">
         <div className={styles.summaryCard}>

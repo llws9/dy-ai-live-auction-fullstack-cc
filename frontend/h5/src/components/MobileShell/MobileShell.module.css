@@ -95,10 +95,3 @@
     transform: none;
   }
 }
-
-.themeToggleSlot {
-  position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 12px);
-  right: 12px;
-  z-index: 100;
-}
