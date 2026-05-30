@@ -103,7 +103,10 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 
 	// ========== 直播间路由 ==========
 	authGroup.GET("/admin/live-streams", middleware.RequireAdmin(), productProxy.Forward) // T009: 管理端直播间列表
-	v1.GET("/live-streams/:id", productProxy.Forward)                                       // T010: 直播间详情
+	// T010: 直播间详情。公开访问，但若客户端带合法 Bearer token，
+	// OptionalJWTAuth 会注入 user_id，proxy.Forward 据此把 X-User-ID 透传给 product-service，
+	// 用于查询 is_following 等登录态字段（spec B / F-B1, T2.5）。
+	v1.GET("/live-streams/:id", middleware.OptionalJWTAuth(cfg.JWT.Secret), productProxy.Forward)
 
 	// ========== 通知服务路由 ==========
 	authGroup.GET("/notifications", auctionProxy.Forward)

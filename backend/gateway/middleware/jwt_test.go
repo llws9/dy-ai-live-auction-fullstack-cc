@@ -1,9 +1,11 @@
 package middleware
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 )
@@ -243,27 +245,91 @@ func TestGenerateToken(t *testing.T) {
 	})
 }
 
-func TestOptionalJWTAuth(t *testing.T) {
+// TestOptionalJWTAuth_Behavior 直接驱动 OptionalJWTAuth 中间件，覆盖三分支：
+//   - 无 Authorization header → 放行，不注入 user_id；
+//   - 带合法 Bearer token → 放行 + 注入 user_id/username/user_role；
+//   - 带非法 token / 错误前缀 → 放行（不返回 401），不注入。
+//
+// 对应 spec：docs/superpowers/specs/2026-05-30-h5-missing-b-livestream.md §5.3
+func TestOptionalJWTAuth_Behavior(t *testing.T) {
 	secret := "test-secret-key"
+	mw := OptionalJWTAuth(secret)
 
-	t.Run("should allow request without token", func(t *testing.T) {
-		// OptionalJWTAuth should continue even without token
-		assert.True(t, true) // Middleware should call c.Next(ctx)
+	t.Run("no token → pass through, no user_id", func(t *testing.T) {
+		ctx := context.Background()
+		c := app.NewContext(0)
+		c.Request.SetMethod("GET")
+		c.Request.SetRequestURI("/api/v1/live-streams/1")
+		// 注册一个空的下游 handler 让 c.Next 推进 index。
+		c.SetHandlers([]app.HandlerFunc{
+			mw,
+			func(ctx context.Context, c *app.RequestContext) {},
+		})
+		c.Next(ctx)
+
+		_, exists := c.Get("user_id")
+		assert.False(t, exists, "user_id 不应被注入")
+		assert.False(t, c.IsAborted(), "无 token 不应中断请求")
 	})
 
-	t.Run("should set user context if valid token provided", func(t *testing.T) {
-		token, err := GenerateToken(secret, 123, "testuser", 0, 24)
+	t.Run("valid token → injects user_id/username/user_role", func(t *testing.T) {
+		token, err := GenerateToken(secret, 123, "alice", 1, 24)
 		assert.NoError(t, err)
 
-		// Token would be parsed and user info set in context
-		assert.NotEmpty(t, token)
+		ctx := context.Background()
+		c := app.NewContext(0)
+		c.Request.SetMethod("GET")
+		c.Request.SetRequestURI("/api/v1/live-streams/1")
+		c.Request.Header.Set("Authorization", "Bearer "+token)
+		c.SetHandlers([]app.HandlerFunc{
+			mw,
+			func(ctx context.Context, c *app.RequestContext) {},
+		})
+		c.Next(ctx)
+
+		uid, exists := c.Get("user_id")
+		assert.True(t, exists, "合法 token 必须注入 user_id")
+		assert.Equal(t, int64(123), uid)
+		assert.Equal(t, "alice", c.GetString("username"))
+		assert.Equal(t, 1, c.GetInt("user_role"))
+		assert.False(t, c.IsAborted())
 	})
 
-	t.Run("should continue if invalid token provided", func(t *testing.T) {
-		// OptionalJWTAuth should continue even with invalid token
-		invalidToken := "invalid-token"
-		assert.NotEmpty(t, invalidToken)
-		// Middleware should call c.Next(ctx) regardless
+	t.Run("malformed header → pass through, no user_id", func(t *testing.T) {
+		ctx := context.Background()
+		c := app.NewContext(0)
+		c.Request.SetMethod("GET")
+		c.Request.SetRequestURI("/api/v1/live-streams/1")
+		c.Request.Header.Set("Authorization", "NotBearer xxx")
+		c.SetHandlers([]app.HandlerFunc{
+			mw,
+			func(ctx context.Context, c *app.RequestContext) {},
+		})
+		c.Next(ctx)
+
+		_, exists := c.Get("user_id")
+		assert.False(t, exists)
+		assert.False(t, c.IsAborted(), "非法格式不应触发 401，须放行交由下游决定")
+	})
+
+	t.Run("invalid signature → pass through, no user_id", func(t *testing.T) {
+		token, err := GenerateToken(secret, 123, "alice", 0, 24)
+		assert.NoError(t, err)
+
+		ctx := context.Background()
+		c := app.NewContext(0)
+		c.Request.SetMethod("GET")
+		c.Request.SetRequestURI("/api/v1/live-streams/1")
+		c.Request.Header.Set("Authorization", "Bearer "+token+"tampered")
+		c.SetHandlers([]app.HandlerFunc{
+			mw,
+			func(ctx context.Context, c *app.RequestContext) {},
+		})
+		c.Next(ctx)
+
+		_, exists := c.Get("user_id")
+		assert.False(t, exists)
+		assert.False(t, c.IsAborted(), "签名错误不应触发 401")
 	})
 }
 
