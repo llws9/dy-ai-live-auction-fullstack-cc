@@ -67,6 +67,7 @@ func main() {
 		&model.UserProductReminder{},
 		&model.SkyLampSubscription{},
 		&model.UserBalance{},
+		&model.UserAddress{},
 	); err != nil {
 		log.Printf("Warning: AutoMigrate failed (tables may already exist): %v", err)
 	}
@@ -81,6 +82,7 @@ func main() {
 	userProductReminderDAO := dao.NewUserProductReminderDAO(db)
 	skyLampDAO := dao.NewSkyLampDAO(db)
 	userBalanceDAO := dao.NewUserBalanceDAO(db)
+	userAddressDAO := dao.NewUserAddressDAO(db)
 
 	// 初始化 WebSocket Hub
 	hub := websocket.NewHub()
@@ -163,6 +165,7 @@ func main() {
 	productReminderHandler := handler.NewProductReminderHandler(productReminderService)
 	skyLampHandler := handler.NewSkyLampHandler(skyLampService)
 	userBalanceHandler := handler.NewUserBalanceHandler(userBalanceDAO)
+	userAddressHandler := handler.NewUserAddressHandler(userAddressDAO)
 
 	// 初始化认证 Handler
 	jwtExpire := 24 // 24小时
@@ -214,7 +217,7 @@ func main() {
 	h.Use(gatewayIdentityMiddleware())
 
 	// 注册路由
-	registerRoutes(h, auctionHandler, bidHandler, wsHandler, userHandler, authHandler, notificationHandler, followHandler, productReminderHandler, skyLampHandler, userBalanceHandler)
+	registerRoutes(h, auctionHandler, bidHandler, wsHandler, userHandler, authHandler, notificationHandler, followHandler, productReminderHandler, skyLampHandler, userBalanceHandler, userAddressHandler)
 
 	// 注册 Prometheus metrics 端点
 	h.GET("/metrics", func(ctx context.Context, c *app.RequestContext) {
@@ -315,7 +318,7 @@ func parseGatewayRole(role string) int {
 }
 
 // registerRoutes 注册路由
-func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bidHandler *handler.BidHandler, wsHandler *handler.WSHandler, userHandler *handler.UserHandler, authHandler *handler.AuthHandler, notificationHandler *handler.NotificationHandler, followHandler *handler.FollowHandler, productReminderHandler *handler.ProductReminderHandler, skyLampHandler *handler.SkyLampHandler, userBalanceHandler *handler.UserBalanceHandler) {
+func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bidHandler *handler.BidHandler, wsHandler *handler.WSHandler, userHandler *handler.UserHandler, authHandler *handler.AuthHandler, notificationHandler *handler.NotificationHandler, followHandler *handler.FollowHandler, productReminderHandler *handler.ProductReminderHandler, skyLampHandler *handler.SkyLampHandler, userBalanceHandler *handler.UserBalanceHandler, userAddressHandler *handler.UserAddressHandler) {
 	v1 := h.Group("/api/v1")
 
 	// ========== 认证相关路由 ==========
@@ -366,4 +369,11 @@ func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bid
 
 	// ========== 用户余额（T3.1 F-A2 只读） ==========
 	v1.GET("/user/balance", userBalanceHandler.GetUserBalanceHandler)
+
+	// ========== 收货地址 CRUD（T3.2 F-A3） ==========
+	v1.GET("/users/me/addresses", userAddressHandler.List)
+	v1.POST("/users/me/addresses", userAddressHandler.Create)
+	v1.PUT("/users/me/addresses/:id", userAddressHandler.Update)
+	v1.DELETE("/users/me/addresses/:id", userAddressHandler.Delete)
+	v1.POST("/users/me/addresses/:id/default", userAddressHandler.SetDefault)
 }

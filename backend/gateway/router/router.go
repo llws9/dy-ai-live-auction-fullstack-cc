@@ -95,6 +95,13 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	// ========== 用户余额（T3.1 F-A2 只读） ==========
 	authGroup.GET("/user/balance", auctionProxy.Forward)
 
+	// ========== 收货地址 CRUD（T3.2 F-A3） ==========
+	authGroup.GET("/users/me/addresses", auctionProxy.Forward)
+	authGroup.POST("/users/me/addresses", auctionProxy.Forward)
+	authGroup.PUT("/users/me/addresses/:id", auctionProxy.Forward)
+	authGroup.DELETE("/users/me/addresses/:id", auctionProxy.Forward)
+	authGroup.POST("/users/me/addresses/:id/default", auctionProxy.Forward)
+
 	// ========== WebSocket 路由 ==========
 	v1.GET("/ws", func(ctx context.Context, c *app.RequestContext) {
 		// WebSocket 连接处理
