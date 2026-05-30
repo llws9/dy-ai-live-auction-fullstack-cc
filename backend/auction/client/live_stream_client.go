@@ -14,11 +14,13 @@ import (
 // LiveStreamSummary 是 product-service 内部接口返回的直播间摘要。
 // 字段与 spec B §4.1 内部接口契约一致。
 type LiveStreamSummary struct {
-	ID         int64  `json:"id"`
-	Name       string `json:"name"`
-	CoverImage string `json:"cover_image"`
-	Status     int    `json:"status"`
-	CreatorID  int64  `json:"creator_id"`
+	ID           int64   `json:"id"`
+	Name         string  `json:"name"`
+	CoverImage   string  `json:"cover_image"`
+	Status       int     `json:"status"`
+	CreatorID    int64   `json:"creator_id"`
+	HostAvatar   *string `json:"host_avatar"`
+	AuctionCount *int    `json:"auction_count"`
 }
 
 // LiveStreamClient 抽象 auction-service 对 product-service 直播间内部接口的依赖。

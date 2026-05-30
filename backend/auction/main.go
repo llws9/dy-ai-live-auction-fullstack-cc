@@ -169,7 +169,7 @@ func main() {
 	userHandler := handler.NewUserHandler(userDAO)
 	notificationHandler := handler.NewNotificationHandler(notificationService)
 	followHandler := handler.NewFollowHandler(followService)
-	followHandler.SetFollowedListFetchers(liveStreamClient, userDAO, auctionDAO)
+	followHandler.SetFollowedListFetchers(liveStreamClient)
 	productReminderHandler := handler.NewProductReminderHandler(productReminderService)
 	skyLampHandler := handler.NewSkyLampHandler(skyLampService)
 	userBalanceHandler := handler.NewUserBalanceHandler(userBalanceDAO)

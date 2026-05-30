@@ -32,7 +32,7 @@ func newInternalHandlerWithSeed(t *testing.T, seed func(db *gorm.DB)) *InternalH
 		seed(db)
 	}
 	svc := service.NewProductService(dao.NewProductDAO(db), dao.NewAuctionRuleDAO(db), dao.NewLiveStreamDAO(db))
-	return NewInternalHandler(svc, nil)
+	return NewInternalHandler(svc, nil, nil, nil)
 }
 
 func ptr64(v int64) *int64 { return &v }
