@@ -2,7 +2,7 @@
 
 .container {
   min-height: 100vh;
-  background: var(--bg-secondary);
+  background: var(--bg-page);
   padding-bottom: calc(var(--spacing-5) + env(safe-area-inset-bottom, 0px));
 }
 
@@ -14,7 +14,7 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: var(--bg-secondary);
+  background: var(--bg-page);
   padding: var(--spacing-5);
 }
 

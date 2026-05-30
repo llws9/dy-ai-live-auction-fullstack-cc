@@ -1,7 +1,7 @@
 .page {
   min-height: 100%;
-  background: #1a1a1a;
-  color: #f5f0e8;
+  background: var(--bg-page);
+  color: var(--text-primary);
 }
 
 .header {
@@ -12,13 +12,13 @@
   align-items: center;
   justify-content: space-between;
   padding: calc(var(--spacing-5) + env(safe-area-inset-top, 0px)) var(--spacing-6) var(--spacing-4);
-  background: rgba(26, 26, 26, 0.96);
+  background: var(--bg-elevated);
   backdrop-filter: blur(16px);
 }
 
 .title {
   margin: 0;
-  color: #c9a96e;
+  color: var(--text-brand);
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.08em;
@@ -39,8 +39,8 @@
   justify-content: center;
   border: 1px solid rgba(201, 169, 110, 0.28);
   border-radius: var(--radius-full);
-  background: rgba(44, 44, 44, 0.78);
-  color: #c9a96e;
+  background: var(--bg-elevated);
+  color: var(--text-brand);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   text-decoration: none;
@@ -63,14 +63,14 @@
   padding: 0 0 var(--spacing-2);
   border: none;
   background: transparent;
-  color: #a09888;
+  color: var(--text-secondary);
   cursor: pointer;
   font-size: var(--font-size-sm);
   transition: color var(--transition-fast);
 }
 
 .tabActive {
-  color: #d4af37;
+  color: var(--text-brand);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -96,7 +96,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #a09888;
+  color: var(--text-secondary);
   text-align: center;
 }
 
@@ -115,14 +115,14 @@
 }
 
 .emptyIcon {
-  color: #c9a96e;
+  color: var(--text-brand);
   font-size: 42px;
   line-height: 1;
 }
 
 .emptyText {
   margin: var(--spacing-3) 0 0;
-  color: #a09888;
+  color: var(--text-secondary);
 }
 
 .emptyHint {
@@ -145,7 +145,7 @@
   overflow: hidden;
   border: 1px solid rgba(201, 169, 110, 0.08);
   border-radius: 18px;
-  background: #2c2c2c;
+  background: var(--bg-surface);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(201, 169, 110, 0.06);
 }
 
@@ -185,13 +185,13 @@
   padding: 3px var(--spacing-2);
   border-radius: var(--radius-full);
   background: rgba(0, 0, 0, 0.62);
-  color: #a09888;
+  color: var(--text-secondary);
   font-size: 10px;
   backdrop-filter: blur(12px);
 }
 
 .statusLive {
-  color: #d4af37;
+  color: var(--text-brand);
 }
 
 .liveDot {
@@ -212,7 +212,7 @@
 .productName {
   overflow: hidden;
   margin: 0;
-  color: #f5f0e8;
+  color: var(--text-primary);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
   text-overflow: ellipsis;
@@ -224,7 +224,7 @@
   align-items: center;
   justify-content: space-between;
   margin-top: var(--spacing-1);
-  color: #a09888;
+  color: var(--text-secondary);
   font-size: 10px;
 }
 
@@ -234,7 +234,7 @@
 
 .price {
   margin-top: var(--spacing-2);
-  color: #d4af37;
+  color: var(--text-brand);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
 }
@@ -259,13 +259,13 @@
 }
 
 .outlineButton {
-  border: 1px solid #c9a96e;
-  color: #c9a96e;
+  border: 1px solid var(--text-brand);
+  color: var(--text-brand);
 }
 
 .secondaryButton {
-  background: #3a3a3a;
-  color: #f5f0e8;
+  background: var(--bg-surface);
+  color: var(--text-primary);
 }
 
 .primaryButton {

@@ -2,8 +2,8 @@
   position: relative;
   width: 100%;
   min-height: 100vh;
-  background: #000;
-  color: #f5f0e8;
+  background: var(--bg-page);
+  color: var(--text-primary);
   overflow: hidden;
 }
 
@@ -93,8 +93,8 @@
   overflow: hidden;
   border: 1px solid rgba(201, 169, 110, 0.8);
   border-radius: var(--radius-full);
-  background: #2c2c2c;
-  color: #c9a96e;
+  background: var(--bg-surface);
+  color: var(--text-brand);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
 }
@@ -223,7 +223,7 @@
   display: block;
   max-width: 140px;
   margin-top: 3px;
-  color: #a09888;
+  color: var(--text-secondary);
   font-size: 10px;
 }
 
@@ -234,7 +234,7 @@
 
 .previewPrice strong {
   display: block;
-  color: #d4af37;
+  color: var(--text-brand);
   font-size: var(--font-size-lg);
 }
 
@@ -248,7 +248,7 @@
   padding: var(--spacing-3) var(--spacing-5) calc(92px + env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   border-radius: 28px 28px 0 0;
-  background: #1a1a1a;
+  background: var(--bg-page);
   transform: translateY(calc(100% - 64px));
   transition: transform 0.45s ease;
 }
@@ -274,7 +274,7 @@
 
 .priceLabel {
   display: block;
-  color: #a09888;
+  color: var(--text-secondary);
   font-size: 10px;
   letter-spacing: 0.12em;
 }
@@ -282,7 +282,7 @@
 .priceBlock strong {
   display: block;
   margin-top: var(--spacing-1);
-  color: #d4af37;
+  color: var(--text-brand);
   font-size: 38px;
   font-weight: var(--font-weight-bold);
   line-height: 1;
@@ -293,7 +293,7 @@
   justify-content: center;
   gap: var(--spacing-4);
   margin-top: var(--spacing-2);
-  color: #a09888;
+  color: var(--text-secondary);
   font-size: 10px;
 }
 
@@ -306,19 +306,19 @@
   padding: 6px var(--spacing-3);
   border: 1px solid rgba(212, 175, 55, 0.18);
   border-radius: var(--radius-full);
-  background: #2c2c2c;
-  color: #a09888;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
   font-size: 10px;
 }
 
 .countdown strong {
-  color: #f5f0e8;
+  color: var(--text-primary);
   font-family: monospace;
   font-size: var(--font-size-lg);
 }
 
 .countdown em {
-  color: #c9a96e;
+  color: var(--text-brand);
   font-style: normal;
 }
 
@@ -333,7 +333,7 @@
   padding: var(--spacing-4);
   border: 1px solid rgba(201, 169, 110, 0.08);
   border-radius: 20px;
-  background: #2c2c2c;
+  background: var(--bg-surface);
 }
 
 .productCard img,
@@ -352,20 +352,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #3a3a3a;
-  color: #a09888;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
   font-size: var(--font-size-xs);
 }
 
 .productCard h1 {
   margin: 0;
-  color: #fff;
+  color: var(--text-primary);
   font-size: var(--font-size-base);
 }
 
 .productCard p {
   margin: var(--spacing-1) 0 0;
-  color: #a09888;
+  color: var(--text-secondary);
   font-size: var(--font-size-xs);
 }
 
@@ -393,7 +393,7 @@
 }
 
 .followRow span {
-  color: #a09888;
+  color: var(--text-secondary);
   font-size: 10px;
 }
 
@@ -402,15 +402,15 @@
 .chatBlock {
   margin-top: var(--spacing-4);
   padding: var(--spacing-4);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
   border-radius: 20px;
-  background: #222;
+  background: var(--bg-surface);
 }
 
 .rankingBlock h2,
 .chatBlock h2 {
   margin: 0 0 var(--spacing-3);
-  color: #f5f0e8;
+  color: var(--text-primary);
   font-size: var(--font-size-sm);
 }
 
@@ -425,7 +425,7 @@
   gap: var(--spacing-3);
   padding: var(--spacing-2) var(--spacing-3);
   border-radius: var(--radius-lg);
-  background: #2c2c2c;
+  background: var(--bg-surface);
 }
 
 .rank {
@@ -443,12 +443,12 @@
 
 .rankingName {
   flex: 1;
-  color: #f5f0e8;
+  color: var(--text-primary);
   font-size: var(--font-size-sm);
 }
 
 .rankingItem strong {
-  color: #d4af37;
+  color: var(--text-brand);
   font-size: var(--font-size-sm);
 }
 
@@ -456,14 +456,14 @@
 .authHint,
 .chatBlock p {
   margin: 0;
-  color: #a09888;
+  color: var(--text-secondary);
   font-size: var(--font-size-xs);
 }
 
 .bidBox label {
   display: block;
   margin-bottom: var(--spacing-2);
-  color: #a09888;
+  color: var(--text-secondary);
   font-size: var(--font-size-xs);
 }
 
@@ -475,11 +475,11 @@
   padding: 0 var(--spacing-4);
   border: 1px solid rgba(201, 169, 110, 0.25);
   border-radius: var(--radius-lg);
-  background: #2c2c2c;
+  background: var(--bg-surface);
 }
 
 .bidInputRow span {
-  color: #c9a96e;
+  color: var(--text-brand);
   font-weight: var(--font-weight-bold);
 }
 
@@ -487,7 +487,7 @@
   width: 100%;
   border: none;
   background: transparent;
-  color: #fff;
+  color: var(--text-primary);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
   outline: none;
@@ -502,10 +502,10 @@
 
 .quickBids button {
   padding: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  background: #3a3a3a;
-  color: #a09888;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
   cursor: pointer;
   font-size: var(--font-size-sm);
 }
@@ -580,20 +580,20 @@
   align-items: center;
   justify-content: center;
   padding: var(--spacing-6);
-  background: #1a1a1a;
-  color: #f5f0e8;
+  background: var(--bg-page);
+  color: var(--text-primary);
   text-align: center;
 }
 
 .statePage h1 {
   margin: 0;
-  color: #d4af37;
+  color: var(--text-brand);
   font-size: var(--font-size-xl);
 }
 
 .statePage p {
   margin: var(--spacing-3) 0 0;
-  color: #a09888;
+  color: var(--text-secondary);
 }
 
 .stateButton {

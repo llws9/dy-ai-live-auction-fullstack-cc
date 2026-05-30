@@ -1,7 +1,7 @@
 .page {
   min-height: 100%;
-  background: radial-gradient(circle at 50% 0, rgba(201, 169, 110, 0.16), transparent 34%), #1a1a1a;
-  color: #f5f0e8;
+  background: radial-gradient(circle at 50% 0, rgba(201, 169, 110, 0.16), transparent 34%), var(--bg-page);
+  color: var(--text-primary);
 }
 
 .header {
@@ -12,8 +12,8 @@
   align-items: center;
   justify-content: space-between;
   padding: calc(var(--spacing-5) + env(safe-area-inset-top, 0px)) var(--spacing-5) var(--spacing-3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(26, 26, 26, 0.88);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
   backdrop-filter: blur(16px);
 }
 
@@ -26,8 +26,8 @@
   justify-content: center;
   border: 1px solid rgba(201, 169, 110, 0.28);
   border-radius: var(--radius-full);
-  background: rgba(44, 44, 44, 0.78);
-  color: #c9a96e;
+  background: var(--bg-elevated);
+  color: var(--text-brand);
   font-weight: var(--font-weight-bold);
 }
 
@@ -44,7 +44,7 @@
 
 .headerTitle {
   margin: 0;
-  color: #f5f0e8;
+  color: var(--text-primary);
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.12em;
@@ -64,10 +64,10 @@
   justify-content: center;
   margin-bottom: var(--spacing-5);
   padding: 7px var(--spacing-4);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
-  background: rgba(58, 58, 58, 0.62);
-  color: #a09888;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
 }
@@ -75,7 +75,7 @@
 .resultBadgeWinner {
   border-color: rgba(212, 175, 55, 0.34);
   background: rgba(212, 175, 55, 0.12);
-  color: #d4af37;
+  color: var(--text-brand);
 }
 
 .productFrame {
@@ -127,7 +127,7 @@
 
 .lotNo,
 .label {
-  color: #a09888;
+  color: var(--text-secondary);
   font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -139,7 +139,7 @@
 
 .productName {
   margin: 0;
-  color: #fff;
+  color: var(--text-primary);
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
   line-height: 1.35;
@@ -150,7 +150,7 @@
   margin-top: var(--spacing-5);
   border: 1px solid rgba(201, 169, 110, 0.08);
   border-radius: 22px;
-  background: rgba(44, 44, 44, 0.74);
+  background: var(--bg-surface);
 }
 
 .priceCard {
@@ -164,7 +164,7 @@
 
 .finalPrice {
   display: block;
-  color: #d4af37;
+  color: var(--text-brand);
   font-size: 38px;
   font-weight: 900;
   line-height: 1;
@@ -189,8 +189,8 @@
   justify-content: center;
   border: 2px solid rgba(212, 175, 55, 0.82);
   border-radius: var(--radius-full);
-  background: #3a3a3a;
-  color: #d4af37;
+  background: var(--bg-surface);
+  color: var(--text-brand);
   font-weight: var(--font-weight-bold);
 }
 
@@ -205,7 +205,7 @@
 .winnerInfo strong,
 .bidTime strong,
 .metaCard strong {
-  color: #f5f0e8;
+  color: var(--text-primary);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
 }
@@ -213,7 +213,7 @@
 .winnerInfo span,
 .bidTime span,
 .metaCard span {
-  color: #a09888;
+  color: var(--text-secondary);
   font-size: 10px;
 }
 
@@ -270,14 +270,14 @@
 }
 
 .primaryButton:disabled {
-  background: #3a3a3a;
-  color: #a09888;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
   cursor: not-allowed;
 }
 
 .secondaryLink {
   border: 1px solid rgba(201, 169, 110, 0.56);
-  color: #c9a96e;
+  color: var(--text-brand);
 }
 
 .loading,
@@ -302,18 +302,18 @@
 
 .loadingText,
 .empty p {
-  color: #a09888;
+  color: var(--text-secondary);
   font-size: var(--font-size-sm);
 }
 
 .emptyIcon {
-  color: #c9a96e;
+  color: var(--text-brand);
   font-size: 42px;
 }
 
 .empty h1 {
   margin: var(--spacing-3) 0 var(--spacing-2);
-  color: #f5f0e8;
+  color: var(--text-primary);
   font-size: var(--font-size-xl);
 }
 
@@ -328,8 +328,8 @@
   padding: var(--spacing-3) var(--spacing-4);
   border: 1px solid rgba(212, 175, 55, 0.24);
   border-radius: var(--radius-lg);
-  background: rgba(26, 26, 26, 0.94);
-  color: #f5f0e8;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
   font-size: var(--font-size-sm);
   text-align: center;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.32);
