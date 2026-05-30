@@ -778,7 +778,12 @@ git commit -m "feat(h5): support rich top toast"
 
 ---
 
-### Task 4: 重新登录后一次性弹窗
+### Task 4: 复用现有开播弹窗并实现重新登录后一次性触发
+
+**Boundary:**
+- 复用现有 `frontend/h5/src/components/LiveReminderModal/` 前端界面，不重做弹窗 DOM 结构和视觉样式。
+- 本任务只负责三件事：登录成功写入触发标记、`MobileContainer` 读取标记并挂载现有弹窗、给现有弹窗补轻量无障碍属性和移除外链兜底图。
+- 不新增新的弹窗组件，不迁移样式，不改「稍后再看 / 立即前往」交互语义。
 
 **Files:**
 - Modify: `frontend/h5/src/store/authContext.tsx`
@@ -866,7 +871,9 @@ Modify `frontend/h5/src/store/authContext.tsx`，在 `login` 成功分支中 `se
   };
 ```
 
-- [ ] **Step 4: 给弹窗补 role 与去外链占位图**
+- [ ] **Step 4: 在现有弹窗上做轻量增强**
+
+保留 `frontend/h5/src/components/LiveReminderModal/index.tsx` 的现有 UI、按钮和动画，只做以下最小修改：
 
 Modify `frontend/h5/src/components/LiveReminderModal/index.tsx`：
 
@@ -892,7 +899,9 @@ Modify image src:
               src={stream.avatarUrl}
 ```
 
-- [ ] **Step 5: MobileContainer 挂载弹窗**
+Do not modify `frontend/h5/src/components/LiveReminderModal/LiveReminderModal.module.css` in this task.
+
+- [ ] **Step 5: MobileContainer 挂载现有弹窗**
 
 Replace `frontend/h5/src/components/MobileShell/MobileContainer.tsx`:
 
