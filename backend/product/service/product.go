@@ -210,3 +210,36 @@ func (s *ProductService) CreateAuctionRule(ctx context.Context, req *CreateAucti
 func (s *ProductService) GetAuctionRule(ctx context.Context, productID int64) (*model.AuctionRule, error) {
 	return s.ruleDAO.GetByProductID(ctx, productID)
 }
+
+// MaxBatchProductIDs 是 GetProductsByIDs 单次允许的最大 id 数。
+// 与 spec C §5.1.1 对齐：批量接口单次不超过 200 个。
+const MaxBatchProductIDs = 200
+
+// ListProductsByCategory 按 category_id 过滤商品（内部接口用）。
+// page<=0 默认 1；pageSize<=0 默认 500；上限 1000，与 spec §5.1.2 对齐。
+func (s *ProductService) ListProductsByCategory(ctx context.Context, categoryID int64, page, pageSize int) ([]model.Product, int64, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 500
+	}
+	if pageSize > 1000 {
+		pageSize = 1000
+	}
+	return s.productDAO.ListByCategoryID(ctx, categoryID, page, pageSize)
+}
+
+// GetProductsByIDs 按 id 列表批量获取商品（内部接口用）。
+// - ids 为空/nil 直接返回空切片，不查 DB；
+// - 超过 MaxBatchProductIDs 返回错误（spec C §5.1.1）；
+// - 已删除/不存在的 id 不出现在结果中，由调用方按 id 自行 map。
+func (s *ProductService) GetProductsByIDs(ctx context.Context, ids []int64) ([]model.Product, error) {
+	if len(ids) == 0 {
+		return []model.Product{}, nil
+	}
+	if len(ids) > MaxBatchProductIDs {
+		return nil, errors.New("ids 数量超过上限")
+	}
+	return s.productDAO.GetByIDs(ctx, ids)
+}
