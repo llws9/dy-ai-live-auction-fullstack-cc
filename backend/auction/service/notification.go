@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -41,11 +42,25 @@ type EventHandler func(ctx context.Context, event interface{}) error
 
 // NotificationService 通知服务
 type NotificationService struct {
-	notificationDAO *dao.NotificationDAO
+	notificationDAO notificationStore
 	hub             *websocket.Hub
 	redis           *redis.Client
 	followDAO       *dao.UserLiveStreamFollowDAO
 }
+
+type notificationStore interface {
+	Create(ctx context.Context, notification *model.Notification) error
+	CreateBatch(ctx context.Context, notifications []*model.Notification) error
+	GetByUserID(ctx context.Context, userID int64, page, pageSize int, unreadOnly bool) (*model.NotificationListResponse, error)
+	GetUnreadCount(ctx context.Context, userID int64) (int64, error)
+	CountUnreadByTypes(ctx context.Context, userID int64, types []model.NotificationType) (int64, error)
+	MarkUnreadByTypesAsRead(ctx context.Context, userID int64, types []model.NotificationType) error
+	MarkAsRead(ctx context.Context, id int64, userID int64) error
+	MarkAllAsRead(ctx context.Context, userID int64) error
+	GetUnreadByUserID(ctx context.Context, userID int64, limit int) ([]model.Notification, error)
+}
+
+var errNotificationSummaryUnavailable = errors.New("notification summary unavailable")
 
 // NewNotificationService 创建通知服务
 func NewNotificationService(notificationDAO *dao.NotificationDAO, redis *redis.Client) *NotificationService {
@@ -274,11 +289,11 @@ func notificationTypesForCategory(category string) ([]model.NotificationType, er
 func (s *NotificationService) GetSummary(ctx context.Context, userID int64) (*model.NotificationSummaryResponse, error) {
 	unreadTotal, err := s.notificationDAO.CountUnreadByTypes(ctx, userID, nil)
 	if err != nil {
-		return nil, err
+		return nil, errNotificationSummaryUnavailable
 	}
 	outbid, err := s.notificationDAO.CountUnreadByTypes(ctx, userID, []model.NotificationType{model.NotificationTypeBidOutbid})
 	if err != nil {
-		return nil, err
+		return nil, errNotificationSummaryUnavailable
 	}
 	return &model.NotificationSummaryResponse{
 		UnreadTotal: unreadTotal,
