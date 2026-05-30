@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/prometheus/client_golang/prometheus"
 
+	"auction-service/client"
 	"auction-service/config"
 	"auction-service/dao"
 	"auction-service/handler"
@@ -145,6 +147,12 @@ func main() {
 
 	// 初始化 Handler 层
 	auctionHandler := handler.NewAuctionHandler(auctionService)
+	// 注入 product-service 内部接口客户端，启用 list 接口的 category 过滤与商品摘要回填（spec C §5.2）。
+	productSvcURL := os.Getenv("PRODUCT_SERVICE_URL")
+	if productSvcURL == "" {
+		productSvcURL = "http://localhost:8081"
+	}
+	auctionHandler.SetProductClient(client.NewHTTPProductClient(productSvcURL, 2*time.Second))
 	bidHandler := handler.NewBidHandler(bidService)
 	wsHandler := handler.NewWSHandler()
 	userHandler := handler.NewUserHandler(userDAO)
@@ -338,6 +346,7 @@ func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bid
 	// ========== 直播间关注相关路由 ==========
 	v1.POST("/live-streams/:id/follow", followHandler.FollowHandler)
 	v1.DELETE("/live-streams/:id/follow", followHandler.UnfollowHandler)
+	v1.GET("/live-streams/:id/follow-status", followHandler.GetFollowStatusHandler) // T2.6 (F-B2)
 	v1.GET("/user/followed-live-streams", followHandler.GetUserFollowsHandler)
 	v1.PUT("/live-streams/:id/notification", followHandler.ToggleNotificationHandler)
 

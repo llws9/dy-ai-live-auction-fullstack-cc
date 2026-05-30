@@ -119,6 +119,44 @@ func (h *FollowHandler) GetUserFollowsHandler(ctx context.Context, c *app.Reques
 	})
 }
 
+// GetFollowStatusHandler 查询当前用户对指定直播间的关注状态（F-B2）
+//
+// 路径：GET /api/v1/live-streams/:id/follow-status（authGroup）
+// 响应：{ "code":200, "data":{ "is_following": bool } }
+//
+// user_id 来源同 POST/DELETE follow：由 gateway JWTAuth 注入到 c.Set("user_id", ...)。
+func (h *FollowHandler) GetFollowStatusHandler(ctx context.Context, c *app.RequestContext) {
+	liveStreamIDStr := c.Param("id")
+	liveStreamID, err := strconv.ParseInt(liveStreamIDStr, 10, 64)
+	if err != nil {
+		c.JSON(400, map[string]interface{}{
+			"code":    400,
+			"message": "无效的直播间ID",
+		})
+		return
+	}
+
+	userID := c.GetInt64("user_id")
+
+	resp, err := BuildFollowStatusResponse(ctx, h.followService, userID, liveStreamID)
+	if err != nil {
+		if err.Error() == "invalid user_id" || err.Error() == "invalid live_stream_id" {
+			c.JSON(400, map[string]interface{}{"code": 400, "message": err.Error()})
+			return
+		}
+		c.JSON(500, map[string]interface{}{
+			"code":    500,
+			"message": "查询关注状态失败",
+		})
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{
+		"code": 200,
+		"data": resp,
+	})
+}
+
 // ToggleNotificationHandler 切换通知状态
 func (h *FollowHandler) ToggleNotificationHandler(ctx context.Context, c *app.RequestContext) {
 	// 解析路径参数

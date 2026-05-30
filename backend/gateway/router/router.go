@@ -2,6 +2,7 @@ package router
 
 import (
 	"context"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
@@ -53,6 +54,10 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	// 用户信息
 	authGroup.GET("/users/me", auctionProxy.Forward)
 
+	// 用户聚合统计 (T2.7 / spec A F-A1) —— Gateway BFF 并行调下游聚合
+	userStatsHandler := handler.NewUserStatsHandler(cfg.Services.AuctionURL, cfg.Services.ProductURL, 2*time.Second)
+	authGroup.GET("/users/me/stats", userStatsHandler.Handle)
+
 	// ========== 商品服务路由 ==========
 	v1.GET("/products", productProxy.Forward)
 	v1.GET("/products/:id", productProxy.Forward)
@@ -83,6 +88,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	// ========== 直播间关注路由 ==========
 	authGroup.POST("/live-streams/:id/follow", auctionProxy.Forward)
 	authGroup.DELETE("/live-streams/:id/follow", auctionProxy.Forward)
+	authGroup.GET("/live-streams/:id/follow-status", auctionProxy.Forward) // T2.6 (F-B2)
 	authGroup.GET("/user/followed-live-streams", auctionProxy.Forward)
 	authGroup.PUT("/live-streams/:id/notification", auctionProxy.Forward)
 
@@ -97,11 +103,16 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	v1.GET("/orders/:id", productProxy.Forward)
 	v1.POST("/orders/:id/pay", productProxy.Forward)
 	v1.PUT("/orders/:id/ship", productProxy.Forward)          // T007: 订单发货
-	v1.GET("/orders/history", productProxy.Forward)           // T008: 用户订单历史
+	// T008: 用户订单历史 — JWT 化（spec C / F-C3, M1 P0 安全修复）
+	// 仅认证用户可读；下游通过 X-User-ID header 透传识别本人，禁止接受 query user_id。
+	authGroup.GET("/orders/history", productProxy.Forward)
 
 	// ========== 直播间路由 ==========
 	authGroup.GET("/admin/live-streams", middleware.RequireAdmin(), productProxy.Forward) // T009: 管理端直播间列表
-	v1.GET("/live-streams/:id", productProxy.Forward)                                       // T010: 直播间详情
+	// T010: 直播间详情。公开访问，但若客户端带合法 Bearer token，
+	// OptionalJWTAuth 会注入 user_id，proxy.Forward 据此把 X-User-ID 透传给 product-service，
+	// 用于查询 is_following 等登录态字段（spec B / F-B1, T2.5）。
+	v1.GET("/live-streams/:id", middleware.OptionalJWTAuth(cfg.JWT.Secret), productProxy.Forward)
 
 	// ========== 通知服务路由 ==========
 	authGroup.GET("/notifications", auctionProxy.Forward)

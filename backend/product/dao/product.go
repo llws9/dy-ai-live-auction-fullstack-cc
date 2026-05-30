@@ -72,3 +72,31 @@ func (d *ProductDAO) UpdateStatus(ctx context.Context, id int64, status model.Pr
 		Where("id = ?", id).
 		Update("status", status).Error
 }
+
+// ListByCategoryID 按 category_id 过滤商品列表（内部接口用）。
+func (d *ProductDAO) ListByCategoryID(ctx context.Context, categoryID int64, page, pageSize int) ([]model.Product, int64, error) {
+	var products []model.Product
+	var total int64
+
+	query := d.db.WithContext(ctx).Model(&model.Product{}).Where("category_id = ?", categoryID)
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order("id ASC").Find(&products).Error; err != nil {
+		return nil, 0, err
+	}
+	return products, total, nil
+}
+
+// GetByIDs 按 id 列表批量获取商品（内部接口用，缺失 id 不出现在结果中）。
+func (d *ProductDAO) GetByIDs(ctx context.Context, ids []int64) ([]model.Product, error) {
+	if len(ids) == 0 {
+		return []model.Product{}, nil
+	}
+	var products []model.Product
+	if err := d.db.WithContext(ctx).Where("id IN ?", ids).Find(&products).Error; err != nil {
+		return nil, err
+	}
+	return products, nil
+}

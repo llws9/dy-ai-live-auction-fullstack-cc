@@ -186,6 +186,15 @@ func (d *AuctionDAO) ListWithFilters(ctx context.Context, filters *AuctionFilter
 		query = query.Where("status = ?", *filters.Status)
 	}
 
+	// product_id IN (...) 过滤（来自分类筛选编排，见 AuctionFilters.ProductIDs 注释）
+	if filters.ProductIDs != nil {
+		if len(filters.ProductIDs) == 0 {
+			// 显式空切片视为"无命中"，直接返回空结果，避免空 IN 触发不可预期 SQL。
+			return []model.Auction{}, 0, nil
+		}
+		query = query.Where("auctions.product_id IN ?", filters.ProductIDs)
+	}
+
 	// 直播间ID筛选
 	if filters.LiveStreamID != nil {
 		query = query.Where("live_stream_id = ?", *filters.LiveStreamID)
@@ -225,6 +234,10 @@ type AuctionFilters struct {
 	LiveStreamID   *int64
 	LiveStreamName string
 	Search         string
+	// ProductIDs 仅在 category_id 过滤时由 handler 层装填，
+	// 来自 product-service /internal/products?category_id= 的 id 列表（spec C §5.2）。
+	// 为空切片表示无命中（应由调用方提前短路），nil 表示未过滤。
+	ProductIDs []int64
 }
 
 // GetByLiveStreamID 根据直播间ID获取竞拍列表

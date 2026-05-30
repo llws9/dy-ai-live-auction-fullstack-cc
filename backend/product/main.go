@@ -72,6 +72,7 @@ func main() {
 	productPublishHandler := handler.NewProductHandler(productService)
 	liveStreamHandler := handler.NewLiveStreamHandler(liveStreamService)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
+	internalHandler := handler.NewInternalHandler(productService)
 
 	// 监听配置变更（如果 Nacos 可用）
 	if nacosLoader != nil {
@@ -88,7 +89,7 @@ func main() {
 	)
 
 	// 注册路由
-	registerRoutes(h, productHandler, ruleHandler, orderHandler, statisticsHandler, productPublishHandler, liveStreamHandler, categoryHandler)
+	registerRoutes(h, productHandler, ruleHandler, orderHandler, statisticsHandler, productPublishHandler, liveStreamHandler, categoryHandler, internalHandler)
 
 	// 启动服务
 	log.Printf("Product service starting on %s", cfg.Server.Port)
@@ -96,7 +97,7 @@ func main() {
 }
 
 // registerRoutes 注册路由
-func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, ruleHandler *handler.RuleHandler, orderHandler *handler.OrderHandler, statisticsHandler *handler.StatisticsHandler, productPublishHandler *handler.ProductHandler, liveStreamHandler *handler.LiveStreamHandler, categoryHandler *handler.CategoryHandler) {
+func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, ruleHandler *handler.RuleHandler, orderHandler *handler.OrderHandler, statisticsHandler *handler.StatisticsHandler, productPublishHandler *handler.ProductHandler, liveStreamHandler *handler.LiveStreamHandler, categoryHandler *handler.CategoryHandler, internalHandler *handler.InternalHandler) {
 	v1 := h.Group("/api/v1")
 
 	// 商品相关路由
@@ -137,4 +138,10 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	v1.POST("/categories", categoryHandler.Create)
 	v1.PUT("/categories/:id", categoryHandler.Update)
 	v1.DELETE("/categories/:id", categoryHandler.Delete)
+
+	// 内部接口（仅服务间调用，不经过 Gateway）
+	// spec: docs/superpowers/specs/2026-05-30-h5-missing-c-product-auction.md §5
+	internal := h.Group("/internal")
+	internal.GET("/products", internalHandler.ListByCategory)
+	internal.POST("/products/batch", internalHandler.BatchByIDs)
 }
