@@ -913,7 +913,7 @@ type StreamInfo struct {
 }
 ```
 
-- [ ] **Step 3: Preserve live session start time**
+- [ ] **Step 3: Preserve live session start time and production transition entrypoint**
 
 Modify `backend/auction/service/live_stream_stats.go`:
 
@@ -943,6 +943,16 @@ In `EndLive`, clear the session marker before saving or deleting stats:
 stats.Status = "ended"
 stats.StartedAt = nil
 ```
+
+Add a production path that calls the same `StartLive` method instead of relying on tests only. The minimum acceptable implementation is a protected auction endpoint that validates the current user can operate the live stream, then calls `liveStreamStatsService.StartLive(ctx, liveStreamID)`. Do not create a second in-memory session source. The same `liveStreamStatsService` instance must feed both the transition endpoint and `LiveStatsSessionResolver`.
+
+Add a service/handler test before implementation that covers:
+
+```text
+follow user -> call production start-live transition -> first pending-reminder returns the stream with real StartedAt -> second pending-reminder returns empty
+```
+
+If ownership validation cannot be implemented in this task, gate the transition endpoint behind existing admin/merchant auth middleware and document it as an internal operator endpoint. The task is not complete if `StartedAt` is only written by unit tests.
 
 - [ ] **Step 4: Add receipt DAO**
 
@@ -1236,11 +1246,10 @@ func (h *LiveReminderHandler) GetPendingReminder(ctx context.Context, c *app.Req
 
 - [ ] **Step 8: Wire main and route**
 
-Modify `backend/auction/main.go`:
+Modify `backend/auction/main.go`. Reuse the existing `liveStreamStatsService := service.NewLiveStreamStatsService()` that is already created for `statsCron`; do not redeclare or instantiate a second stats service. Wire the reminder resolver after that existing declaration:
 
 ```go
 liveStreamReminderReceiptDAO := dao.NewLiveStreamReminderReceiptDAO(db)
-liveStreamStatsService := service.NewLiveStreamStatsService()
 liveSessionResolver := service.NewLiveStatsSessionResolver(liveStreamStatsService)
 liveReminderService := service.NewLiveReminderService(userLiveStreamFollowDAO, liveSessionResolver, liveStreamReminderReceiptDAO)
 liveReminderHandler := handler.NewLiveReminderHandler(liveReminderService)
@@ -1256,6 +1265,8 @@ Extend `registerRoutes` signature with `liveReminderHandler *handler.LiveReminde
 
 ```go
 v1.GET("/live/pending-reminder", liveReminderHandler.GetPendingReminder)
+// Protected operator/admin route that writes the real StartedAt source used by pending-reminder.
+v1.POST("/live-streams/:id/start", liveStreamStatsHandler.StartLive)
 ```
 
 - [ ] **Step 9: Verify auction service**
@@ -1264,7 +1275,7 @@ Run:
 
 ```bash
 cd /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/auction
-gofmt -w model/live_stream_reminder_receipt.go dao/live_stream_reminder_receipt.go service/live_reminder.go service/live_reminder_test.go service/live_stream_stats.go handler/live_reminder.go main.go
+gofmt -w model/live_stream_reminder_receipt.go dao/live_stream_reminder_receipt.go service/live_reminder.go service/live_reminder_test.go service/live_stream_stats.go handler/live_reminder.go handler/live_stream_stats.go main.go
 go test ./dao ./service ./handler
 ```
 
@@ -1275,7 +1286,7 @@ Expected: PASS.
 Run:
 
 ```bash
-git add backend/auction/migration/002_create_live_stream_reminder_receipts.sql backend/auction/model/live_stream_reminder_receipt.go backend/auction/dao/live_stream_reminder_receipt.go backend/auction/service/live_reminder.go backend/auction/service/live_reminder_test.go backend/auction/service/live_stream_stats.go backend/auction/handler/live_reminder.go backend/auction/main.go
+git add backend/auction/migration/002_create_live_stream_reminder_receipts.sql backend/auction/model/live_stream_reminder_receipt.go backend/auction/dao/live_stream_reminder_receipt.go backend/auction/service/live_reminder.go backend/auction/service/live_reminder_test.go backend/auction/service/live_stream_stats.go backend/auction/handler/live_reminder.go backend/auction/handler/live_stream_stats.go backend/auction/main.go
 git commit -m "feat(auction): add pending live reminder endpoint"
 ```
 
