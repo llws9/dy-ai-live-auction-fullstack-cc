@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react'
 import { AuthProvider, useAuth } from './store/authContext'
 import { AuctionProvider } from './store/auctionContext'
 import { GrowthBookContextProvider } from './store/growthbookContext'
+import { ThemeProvider } from './store/themeContext'
 import ErrorBoundary from './components/ErrorBoundary'
 import { ToastProvider, useToast } from './components/Toast'
 import { setToastFunction } from './services/api'
@@ -64,50 +65,52 @@ function ErrorMonitorInitializer() {
 function App() {
   return (
     <ErrorBoundary>
-      <ToastProvider>
-        <ToastInitializer />
-        <AuthProvider>
-          <ErrorMonitorInitializer />
-          <GrowthBookContextProvider>
-            <AuctionProvider>
-              <MobileContainer>
-                <Suspense fallback={<LoadingSpinner />}>
-                  <Routes>
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/" element={<Home />} />
-                    <Route path="/live" element={<Live />} />
-                    <Route path="/detail" element={<ProductDetail />} />
-                    <Route path="/auction/:id" element={<LegacyAuctionRedirect />} />
-                    <Route path="/result" element={<Result />} />
-                    <Route path="/result/:id" element={<LegacyResultRedirect />} />
-                    <Route path="/profile" element={
-                      <PrivateRoute>
-                        <Profile />
-                      </PrivateRoute>
-                    } />
-                    <Route path="/notifications" element={
-                      <PrivateRoute>
-                        <Notifications />
-                      </PrivateRoute>
-                    } />
-                    <Route path="/following" element={
-                      <PrivateRoute>
-                        <Follow />
-                      </PrivateRoute>
-                    } />
-                    <Route path="/follow" element={<Navigate to="/following" replace />} />
-                    <Route path="/history" element={
-                      <PrivateRoute>
-                        <History />
-                      </PrivateRoute>
-                    } />
-                  </Routes>
-                </Suspense>
-              </MobileContainer>
-            </AuctionProvider>
-          </GrowthBookContextProvider>
-        </AuthProvider>
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <ToastInitializer />
+          <AuthProvider>
+            <ErrorMonitorInitializer />
+            <GrowthBookContextProvider>
+              <AuctionProvider>
+                <MobileContainer>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Routes>
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/" element={<Home />} />
+                      <Route path="/live" element={<Live />} />
+                      <Route path="/detail" element={<ProductDetail />} />
+                      <Route path="/auction/:id" element={<LegacyAuctionRedirect />} />
+                      <Route path="/result" element={<Result />} />
+                      <Route path="/result/:id" element={<LegacyResultRedirect />} />
+                      <Route path="/profile" element={
+                        <PrivateRoute>
+                          <Profile />
+                        </PrivateRoute>
+                      } />
+                      <Route path="/notifications" element={
+                        <PrivateRoute>
+                          <Notifications />
+                        </PrivateRoute>
+                      } />
+                      <Route path="/following" element={
+                        <PrivateRoute>
+                          <Follow />
+                        </PrivateRoute>
+                      } />
+                      <Route path="/follow" element={<Navigate to="/following" replace />} />
+                      <Route path="/history" element={
+                        <PrivateRoute>
+                          <History />
+                        </PrivateRoute>
+                      } />
+                    </Routes>
+                  </Suspense>
+                </MobileContainer>
+              </AuctionProvider>
+            </GrowthBookContextProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   )
 }
