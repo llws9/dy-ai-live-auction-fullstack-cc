@@ -346,6 +346,7 @@ func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bid
 	// ========== 直播间关注相关路由 ==========
 	v1.POST("/live-streams/:id/follow", followHandler.FollowHandler)
 	v1.DELETE("/live-streams/:id/follow", followHandler.UnfollowHandler)
+	v1.GET("/live-streams/:id/follow-status", followHandler.GetFollowStatusHandler) // T2.6 (F-B2)
 	v1.GET("/user/followed-live-streams", followHandler.GetUserFollowsHandler)
 	v1.PUT("/live-streams/:id/notification", followHandler.ToggleNotificationHandler)
 

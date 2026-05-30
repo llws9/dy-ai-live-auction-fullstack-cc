@@ -83,6 +83,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	// ========== 直播间关注路由 ==========
 	authGroup.POST("/live-streams/:id/follow", auctionProxy.Forward)
 	authGroup.DELETE("/live-streams/:id/follow", auctionProxy.Forward)
+	authGroup.GET("/live-streams/:id/follow-status", auctionProxy.Forward) // T2.6 (F-B2)
 	authGroup.GET("/user/followed-live-streams", auctionProxy.Forward)
 	authGroup.PUT("/live-streams/:id/notification", auctionProxy.Forward)
 
