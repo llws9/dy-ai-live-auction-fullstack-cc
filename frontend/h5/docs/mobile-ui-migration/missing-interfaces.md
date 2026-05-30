@@ -1,38 +1,99 @@
-# H5 新移动端迁移缺失接口盘点
+# H5 新移动端迁移后端接口缺口核对
 
 ## 判定原则
 
-新移动端 UI 需要展示或触发、但旧 H5 service wrapper、现有页面调用或后端契约无法明确支撑的能力，记录为缺失接口或契约缺口。前端迁移阶段只能使用明确安全的降级，不用 mock 数据掩盖领域数据缺失。
+新移动端 UI 需要展示或触发、但旧 H5 service wrapper、现有页面调用或后端契约无法明确支撑的能力，记录为缺口。缺口不等同于“完全没有后端代码”，需要按真实状态拆分：
 
-## 初始缺口
+| 分类 | 判定标准 | 处理原则 |
+| --- | --- | --- |
+| 真缺后端能力 | 未发现数据库表、model、DAO、handler、路由或 WS 协议 | 后端补接口/模型；前端只展示空态或禁用按钮 |
+| 已有但契约不足 | 后端有接口或数据结构，但字段、过滤参数、鉴权语义、Gateway 暴露不满足 UI | 明确扩展契约；前端 adapter 只兼容真实字段 |
+| 前端未接入/页面缺失 | 后端能力已存在，但 H5 页面或 service 未接入 | 前端补接入或新增页面，不把它记录为后端缺失 |
 
-| 页面 | 新 UI 需求 | 当前可用能力 | 缺口 | 建议接口/契约 | 前端临时策略 |
+前端迁移阶段只能使用明确安全的降级，不用 mock 数据掩盖领域数据缺失。
+
+## 核对结论总览
+
+| 状态 | 能力 | 结论 |
+| --- | --- | --- |
+| 真缺后端能力 | 收藏列表、收藏筛选 | 未发现通用收藏表、model、DAO、handler 或路由；直播间关注不能等价为商品/竞拍收藏。 |
+| 真缺后端能力 | 直播聊天消息列表/发送 | 未发现 `chat_message`、`send_chat` WS 协议，也未发现 `GET/POST /live-streams/:id/messages`。 |
+| 真缺后端能力 | 用户统计 | 未发现 `GET /api/v1/users/me/stats`；现有统计多为直播间/管理统计，不是 Profile 所需字段。 |
+| 真缺后端能力 | 钱包余额、充值、保证金 | 未发现用户余额、钱包、保证金表或后端路由。 |
+| 真缺后端能力 | 收货地址、用户设置 | 未发现地址、收货人或用户设置相关 model、表或路由。 |
+| 已有但契约不足 | 分类 Tab | 后端已有 `categories` 表、`products.category_id` 和 Product Service `/categories`；但 Gateway 未暴露 `/categories`，`GET /auctions` 不支持 `category/category_id` 过滤。 |
+| 已有但契约不足 | 直播间详情 | `GET /api/v1/live-streams/:id` 已存在，但字段缺 `host_name/host_avatar/viewer_count/video_url/is_following`。 |
+| 已有但契约不足 | 关注状态 | 已有 follow/unfollow/followed-list，但无单直播间 `follow-status`，详情也不返回 `is_following`。 |
+| 已有但契约不足 | 商品规则 | 已有 `GET /api/v1/products/:id/rules`，但 `GET /products/:id` 不内嵌 `rules`；规则 handler 仍有 product_id/auction_id 临时映射风险。 |
+| 已有但契约不足 | 竞拍结果 | `GET /api/v1/auctions/:id/result` 已存在，但缺 `order_id/product/won_bid`。 |
+| 已有但契约不足 | 竞拍历史 | `GET /api/v1/orders/history` 已存在，但仍用 `user_id` query，且缺商品图片、`my_highest_bid`、`ended_at`、`product`。 |
+| 已有但契约不足 | 订单支付 | Gateway 注册 `POST /orders/:id/pay`，Product Service 实际注册 `PUT /orders/:id/pay`，方法不一致。 |
+| 前端未接入/页面缺失 | Home 通知未读数 | 后端 `GET /api/v1/notifications/unread-count` 已存在；Home 未接入真实未读数。 |
+| 前端未接入/页面缺失 | 订单详情页 | 后端 `GET /api/v1/orders/:id` 已存在；H5 缺 `/order` 页面或订单通知承接页。 |
+| 已确认可用 | Following 列表/取消关注 | 后端已有 `GET /api/v1/user/followed-live-streams` 和 `DELETE /api/v1/live-streams/:id/follow`。 |
+| 已确认可用 | Notifications 列表/已读 | 后端已有通知列表、未读数、单条已读、全部已读；跳转 ID 属于 `data` 字段生产契约。 |
+| 已确认可用 | Login 手机号登录 | 后端 `POST /api/v1/auth/login` 支持 `phone/password`，返回 `data.token` 和 `data.user`。 |
+
+## 真缺后端能力
+
+| 页面 | 新 UI 需求 | 当前核对结果 | 缺口 | 建议接口/契约 | 前端临时策略 |
 | --- | --- | --- | --- | --- | --- |
-| `Home` | 分类 Tab：`全部`、`收藏`、`珠宝腕表`、`艺术品`、`奢侈品`、`收藏品` | `auctionApi.list` 支持 `status/page/page_size`，新源代码注释说明后端暂不支持分类筛选 | 缺分类筛选与收藏列表 | `GET /api/v1/auctions?category=&favorite_only=` 或独立收藏列表接口 | 非收藏 Tab 暂显示全部；收藏 Tab 显示空态并标注待开放。 |
-| `Home` | 通知红点/未读状态 | `notificationApi.getUnreadCount` 在旧通知 service 中存在 | H5 页面未接入通知未读数 | 复用 `GET /api/v1/notifications/unread-count`，统一响应 `{ count }` | 首轮可静态红点或接入 hook，不能写死有未读。 |
-| `LiveRoom` | 直播间详情包含主播、头像、在线人数、封面/视频源 | `liveStreamApi.get` 可获取直播间详情，但字段是否包含 `host_avatar/host_name/viewer_count/video_url` 未确认 | 直播详情字段契约不明确 | `GET /api/v1/live-streams/:id` 返回 `host_name`、`host_avatar`、`viewer_count`、`cover_image`、`video_url`、`status` | 缺字段时显示安全空态或商品图，不使用外部占位图。 |
-| `LiveRoom` | 聊天消息列表和发送聊天 | 旧 `WebSocketService` 支持通用消息、通知、排行、出价同步 | 没有明确聊天消息协议和发送接口 | WebSocket 增加 `chat_message`、`send_chat` 协议，或 `GET/POST /live-streams/:id/messages` | 聊天输入先禁用或仅保留 UI，不发送假消息。 |
-| `LiveRoom` | 分享、更多菜单、关注按钮 | 旧 `followApi` 支持关注直播间，但新 `LiveRoom` 当前心形按钮无逻辑 | 分享/更多无接口；关注状态和切换契约需确认 | `GET /live-streams/:id/follow-status` 或详情返回 `is_following`；分享使用 Web Share API 可无后端 | 分享/更多先无操作或隐藏；关注需对接后再启用。 |
-| `ProductDetail` | 商品详情中展示 `product.rules` | 旧 `productApi.get` 与新源 `productApi.getRules` 能力不一致 | `productApi.get` 是否内嵌 `rules` 不明确 | `GET /api/v1/products/:id` 返回 `rules`，或迁移时补 `productApi.getRules(productId)` | 优先补前端 adapter；缺规则时以服务端兜底规则展示并记录。 |
-| `AuctionResult` | 判断当前用户是否中标 | 新源代码从 `getBids` 推断最高价；旧 `getResult` 返回 `winner_id` | 结果页权威中标判定接口未统一 | 优先 `GET /api/v1/auctions/:id/result` 返回 `winner_id`、`final_price`、`order_id`、`product`、`won_bid` | 不使用 `wonBid.user_id === user.id` 作为长期方案；首轮可前端临时适配。 |
-| `AuctionResult` | 查看订单入口 `/order?id=` | 旧 H5 无订单详情页路由，service 有 `orderApi.get/pay` | 用户端订单详情页缺失 | 新增 `OrderDetail` 页面或调整结果页直接承接支付/订单状态 | 若无订单页，按钮禁用或跳回历史页并记录。 |
-| `Profile` | 关注数、粉丝数、竞拍记录数 | 旧 `User/Index` 有 `/api/v1/users/me/stats` | 新 UI 所需统计字段与旧 stats 字段不一致 | `GET /api/v1/users/me/stats` 返回 `following_count`、`followers_count`、`auction_history_count` | 先显示 `---`，不伪造统计。 |
-| `Profile` | 钱包余额、充值 | 旧 service 有 `userApi.getBalance`，但后端可用性未确认 | 余额和充值能力未确认 | `GET /api/v1/user/balance`；充值需支付/钱包接口 | 显示“暂不可用”，充值按钮禁用或提示待开放。 |
-| `Profile` | 我的收藏、保证金、收货地址、设置 | 现有 H5 未发现对应用户端 service | 缺完整用户资产/地址/设置接口 | 收藏：`GET /api/v1/users/me/favorites`；保证金：`GET /api/v1/users/me/deposits`；地址：`/addresses`；设置：待定义 | 入口标记暂未开放，不接入假数据。 |
-| `AuctionHistory` | 用户参与的竞拍历史，区分成功/失败和我的出价 | 历史接口文档已提供 `GET /api/v1/orders/history?page=&page_size=`，后端返回 `auction_id`、`product_name`、`final_price`、`is_winner`、`bid_count`、`created_at` | 缺商品图片、`my_highest_bid`、`ended_at` 等新 UI 完整字段；后端实现的 `user_id` 查询参数与文档 JWT 语义需统一 | 建议扩展 `/api/v1/orders/history` 返回 `product`、`my_highest_bid`、`ended_at`，并以 JWT 用户身份为准 | 迁移时已移除 `Math.random()` 类展示，页面只展示真实可得字段。 |
-| `Following` | 用户关注直播间列表 | 旧 `followApi.getFollowedLiveStreams` 存在；新源临时用 `liveStreamApi.list` | 新旧 wrapper 命名与响应字段不统一 | 统一到 `GET /api/v1/user/followed-live-streams?page=&page_size=` 返回 `list/items` 之一并建 adapter | 使用旧 `followApi`，不要用全量直播列表冒充关注。 |
-| `Following` | 取消关注 | 旧 `followApi.unfollowLiveStream` 存在 | 新 UI 当前没有取消关注按钮 | 非接口缺失，是 UI 行为缺口 | 迁移时按新 UI 增加明确按钮，或记录产品确认。 |
-| `Notifications` | 通知列表跳转需要 `live_stream_id`、`auction_id`、`order_id` | 旧 `notificationApi.list` 存在 | 通知 data 字段与新页面直接字段不统一 | 统一通知响应字段，或 adapter 从 `notification.data` 映射实体 ID | 无 ID 时通知不可跳转，只展示内容。 |
-| `Login` | 手机号/密码登录和 redirect 回跳 | 旧 `authService` 偏 email；旧页面表单同时传 email/phone | 手机号登录是否为主契约需确认 | `POST /api/v1/auth/login` 支持 `{ phone, password }` 并返回 `{ token, user }` | 若后端只支持 email，需要产品确认是否改 UI 或增加账号字段。 |
+| `Home` | 收藏 Tab 展示用户收藏竞拍 | 未发现通用收藏表、model、DAO、handler 或路由 | 缺收藏业务能力；直播间关注不是商品/竞拍收藏 | `GET /api/v1/users/me/favorites?page=&page_size=` 或 `GET /api/v1/auctions?favorite_only=true`；需定义收藏对象是 `product`、`auction` 还是 `live_stream` | 收藏 Tab 显示空态和“待开放”，不能用全量列表冒充收藏。 |
+| `LiveRoom` | 聊天消息列表和发送聊天 | 当前 WS 消息类型只有 `ping/sync/bid/rank/notification/sky_lamp` 等，未发现聊天协议 | 缺聊天消息协议、持久化和发送接口 | WS 增加 `chat_message`、`send_chat`，或 HTTP 增加 `GET/POST /api/v1/live-streams/:id/messages` | 聊天输入禁用或提示“聊天协议尚未开放”，不展示静态假聊天。 |
+| `Profile` | 关注数、粉丝数、竞拍记录数 | 未发现用户维度 stats 接口；现有 stats 主要是直播间热度或管理统计 | 缺统一用户统计接口 | `GET /api/v1/users/me/stats` 返回 `following_count`、`followers_count`、`auction_history_count` | 显示 `---` 或仅展示真实可得订单条数，不拼凑统计。 |
+| `Profile` | 钱包余额、可用余额、充值、保证金 | 未发现钱包、余额、保证金表或路由 | 缺资产账户能力和充值/保证金接口 | `GET /api/v1/user/balance`；充值、保证金需单独定义资金流和支付契约 | 显示“暂不可用”，充值/保证金入口禁用。 |
+| `Profile` | 收货地址、设置 | 未发现地址、收货人、用户设置相关模型或路由 | 缺用户地址和设置能力 | 地址：`/api/v1/users/me/addresses`；设置接口按产品项定义 | 入口隐藏或标记待开放，不写假地址。 |
+
+## 已有但契约不足
+
+| 页面 | 新 UI 需求 | 当前核对结果 | 契约缺口 | 建议接口/契约 | 前端临时策略 |
+| --- | --- | --- | --- | --- | --- |
+| `Home` | 分类 Tab：`珠宝腕表/艺术品/奢侈品/收藏品` | 后端已有 `categories` 表、`products.category_id` 和 Product Service `/api/v1/categories`；Gateway 未暴露 `/categories`；`GET /api/v1/auctions` 只支持 `status/live_stream_id/live_stream_name/search/page/page_size` | 不是缺分类表，而是缺 Gateway 分类路由和竞拍列表按商品分类过滤 | Gateway 增加 `GET /api/v1/categories`；`GET /api/v1/auctions?category_id=` 通过 `auctions.product_id -> products.category_id` 过滤，或返回内嵌 `product.category_id/category` 供前端安全筛选 | 非收藏 Tab 可展示全部或仅按已补齐的商品分类字段前端筛选；不能声称后端已支持分类筛选。 |
+| `Home` | 首页卡片直接展示商品名称和首图 | `auctionApi.list` 返回竞拍字段；`Product` 有 `images/category_id`；页面可按 `product_id` 补 `productApi.get` | 列表接口未稳定内嵌 `product`，导致 N+1 请求或卡片字段不完整 | `GET /api/v1/auctions` 返回必要商品摘要：`product: { id, name, images, category_id }` | 页面优先读 `auction.product`，缺失时按 `product_id` 补详情；失败显示竞拍空态，不写 mock 图。 |
+| `LiveRoom` | 直播间详情展示主播、头像、在线人数、封面/视频源、关注状态 | `GET /api/v1/live-streams/:id` 已存在，但当前只返回 `id/name/description/cover_image/status/creator_id/created_at` | 缺 `host_name`、`host_avatar`、`viewer_count`、`video_url`、`is_following` | 详情返回 `host_name`、`host_avatar`、`viewer_count`、`cover_image`、`video_url`、`status`、`is_following` | adapter 兼容已有字段；缺视频和封面时显示“暂无直播画面”，不使用外部占位图。 |
+| `LiveRoom` | 关注按钮状态和切换 | 已有 `POST/DELETE /api/v1/live-streams/:id/follow` 和关注列表；没有单直播间状态查询 | 缺 `is_following` 查询契约 | `GET /api/v1/live-streams/:id/follow-status`，或直播详情在认证态下返回 `is_following` | 没有状态前不默认点亮关注；切换失败回滚 UI。 |
+| `LiveRoom` | 出价排行实时同步 | `bidApi.getRanking`、`auctionApi.getBids`、WS 出价/排行消息存在 | WS `rank_update`、`bid_placed`、`sync_response` 字段结构需要固定前端类型 | WS 固定推送 `{ ranking, current_price, status, end_time }`；HTTP 排行固定 `items/list` 之一 | 页面 adapter 兼容 `ranking/bids/list/items`，不制造排行。 |
+| `LiveRoom` | 单直播间多商品竞拍浮层 | 首页入口是单个 `auction_id`；竞拍列表支持 `live_stream_id` 过滤 | 不算完全缺失，但缺明确直播间聚合接口和 UI 契约 | 明确使用 `GET /api/v1/auctions?live_stream_id=`，或新增 `GET /api/v1/live-streams/:id/auctions` 返回直播间竞拍商品摘要 | 当前页面按单 `auction_id` 展示；多商品浮层等契约明确后再恢复。 |
+| `ProductDetail` | 商品规则 | 已有 `GET /api/v1/products/:id/rules`；`GET /products/:id` 不返回 `rules`；规则 handler 注释显示临时使用 `product_id` 作为 `auction_id` | 不是缺接口，而是规则归属和详情内嵌契约不清 | 明确规则属于 `product` 还是 `auction`；如果 UI 需要商品详情一次返回，则 `GET /products/:id` 内嵌 `rules` | 优先调用 `productApi.getRules(productId)`；缺规则时只使用安全默认加价幅度，不伪造业务规则。 |
+| `ProductDetail` | 分享按钮 | 无分享目标、埋点、口令或后端分享记录契约；浏览器 Web Share API 可选 | 分享业务动作未定义 | 如需后端记录，定义 `POST /api/v1/share-events`；否则明确纯前端 Web Share | 展示“分享暂未开放”或只启用浏览器原生分享，不假装已分享成功。 |
+| `AuctionResult` | 权威展示中标者、成交价、商品和订单 | `GET /api/v1/auctions/:id/result` 已存在，返回 `auction_id/product_id/status/final_price/winner_id/started_at/ended_at/delay_used` | 缺 `order_id`、`product`、`won_bid`；页面仍需补商品详情，无法直接支付订单 | 结果接口返回 `winner_id`、`final_price`、`order_id`、`product`、`won_bid`；或提供按 `auction_id` 查订单能力 | 页面优先使用 result 权威字段；只用 `productApi.get` 补展示，不长期从最高出价推断中标。 |
+| `AuctionResult` | 中标后支付订单 | 后端有 `orders` 表、`GET /orders/:id`、支付 service；但 Gateway 是 `POST /orders/:id/pay`，Product Service 是 `PUT /orders/:id/pay` | 支付方法不一致；`POST /orders` 创建路由未注册；result 不返回 `order_id` | 统一支付方法，建议 Gateway 和 Product 都支持同一方法；竞拍结束后订单创建链路需明确，result 返回 `order_id` | 无 `order_id` 时按钮显示“订单待生成”并禁用，不伪造订单。 |
+| `AuctionHistory` | 用户竞拍历史 | `GET /api/v1/orders/history` 已存在，返回 `auction_id/product_name/final_price/is_winner/bid_count/created_at` | 仍要求 `user_id` query，不符合 JWT 用户语义；缺商品图片、`my_highest_bid`、`ended_at`、`product` | 从 JWT/Gateway 身份获取用户；扩展返回 `product`、`my_highest_bid`、`ended_at` | 页面只展示真实可得字段；缺图片用本地空态，不随机金额。 |
+| `Following` | 关注直播间列表展示主播、观看人数、竞拍数 | `GET /api/v1/user/followed-live-streams` 已存在，返回 `data.items` | 基础接口存在，但直播字段如 `host_avatar/viewer_count/title/auction_count` 可能不完整 | 关注列表项统一返回直播间卡片摘要字段 | adapter 兼容多响应形态；缺封面/头像时显示本地空态。 |
+| `Notifications` | 通知跳转到直播、竞拍结果、详情、订单 | 通知模型有 `data JSON`；通知列表/已读接口存在 | 直接字段和 `data` 字段未统一；订单详情页缺失时不能跳死链 | 统一 `data.live_stream_id`、`data.auction_id`、`data.order_id`；或拉平成直接字段 | 有 ID 才跳转；缺 ID 只展示内容；订单通知提示订单详情页待开放。 |
+
+## 前端未接入或页面缺失
+
+| 页面 | 新 UI 需求 | 后端核对结果 | 前端缺口 | 建议处理 | 临时策略 |
+| --- | --- | --- | --- | --- | --- |
+| `Home` | 通知入口展示真实未读红点 | 后端已有 `GET /api/v1/notifications/unread-count`，Gateway 已暴露 | Home 未接入真实未读数 | 在 Home 接入 `notificationApi.getUnreadCount()`，仅 `count > 0` 显示红点 | 不写死静态红点。 |
+| `AuctionResult` / `Notifications` / `Profile` | 查看订单详情 | 后端已有 `GET /api/v1/orders/:id`；H5 service 有 `orderApi.get` | 缺用户端 `/order` 页面或通知订单承接页 | 新增 `OrderDetail` 页面，或结果页直接承接支付/订单状态 | 没有页面前按钮禁用或跳 `/history`，不生成死链。 |
+| `Following` | 取消关注按钮 | 后端已有 `DELETE /api/v1/live-streams/:id/follow` | 新 UI 原始设计没有取消关注按钮，属于 UI 行为缺口 | 在卡片操作区保留明确“取消关注”按钮，成功后从列表移除 | 失败保留原列表并提示错误。 |
+| `Login` | 手机号/密码登录和 redirect 回跳 | 后端 `POST /api/v1/auth/login` 支持 email 或 phone，并返回 `{ code, message, data: { token, user } }` | 后端不缺；前端需保持 token key 和 401 redirect 一致 | 页面发送归一化手机号和密码；401 使用 `redirect` 回跳 | 登录失败展示服务端 `message` 或安全错误文案。 |
+
+## 已确认后端可用能力
+
+| 能力 | 后端现状 | 注意事项 |
+| --- | --- | --- |
+| 通知列表/未读/单条已读/全部已读 | Gateway 已暴露 `GET /notifications`、`GET /notifications/unread-count`、`PUT /notifications/:id/read`、`PUT /notifications/read-all` | 需要统一分页响应和通知 `data` 字段。 |
+| 关注/取消关注/关注列表 | Gateway 已暴露 `POST /live-streams/:id/follow`、`DELETE /live-streams/:id/follow`、`GET /user/followed-live-streams` | 缺单个直播间关注状态查询。 |
+| 商品详情 | Product Service 和 Gateway 已暴露 `GET /products/:id` | 详情不内嵌规则；规则需单独查。 |
+| 商品规则 | Product Service 和 Gateway 已暴露 `GET /products/:id/rules` | product_id/auction_id 语义需修正。 |
+| 竞拍详情/出价/排行/结果 | Auction Service 和 Gateway 已暴露相关接口 | result 字段不满足支付和商品展示闭环。 |
+| 订单列表/详情 | Product Service 和 Gateway 已暴露 `GET /orders`、`GET /orders/:id` | H5 订单详情页缺失。 |
+| 手机号登录 | Auth handler 支持 `phone/password` | 认证 token key 需统一为 `auth_token/auth_user`。 |
 
 ## 响应契约待统一
 
 | 能力 | 现状 | 风险 | 建议 |
 | --- | --- | --- | --- |
-| 分页字段 | 新源代码多用 `response.list`，旧 `notification.ts` 用 `items`，旧 `Follow` 用 `response.data.items` | 页面迁移时容易空列表 | 建立 H5 adapter，统一读 `list ?? items ?? data.items`。 |
+| 分页字段 | 页面和接口混用 `list/items/data.list/data.items` | 页面迁移时容易空列表 | 建立 H5 adapter，统一读 `list ?? items ?? data.list ?? data.items`。 |
+| Gateway 暴露 | Product Service 有 `/categories`，Gateway 未注册；所有 H5 HTTP 应走 Gateway | 前端不能安全直连下游服务 | Gateway 补齐 H5 需要的只读路由，避免绕过统一鉴权、实验上下文和错误处理。 |
+| 订单支付方法 | Gateway 使用 `POST /orders/:id/pay`，Product Service 使用 `PUT /orders/:id/pay` | 支付请求经 Gateway 可能 404/405 | 统一为一个方法，并同步前端 wrapper、Swagger 和测试。 |
+| 用户身份语义 | `orders/history` 仍读取 `user_id` query | 用户可越权查询其他用户历史 | 改为从 JWT/Gateway 注入身份读取用户 ID。 |
 | 出价接口命名 | 新源使用 `auctionApi.placeBid`，旧 H5 service 同时有 `auctionApi.bid` 和 `bidApi.placeBid` | 重复 wrapper 容易接错路径 | 统一保留一个页面级调用入口。 |
-| 登录 token key | 旧 `api.ts` 使用 `token/userInfo`，旧 `auth.ts` 使用 `auth_token/auth_user` | 认证态不一致导致 401 或页面误判未登录 | 迁移时只保留 `store/authContext` 的约定，并让 request 读取同一 token key。 |
-| 直播间列表参数 | 新源 `liveStreamApi.list({ page, page_size })`，旧 H5 `liveStreamApi.list(page, pageSize)` | 直接迁移会类型/运行时不兼容 | 迁移前统一 service 签名或做兼容重载。 |
+| 登录 token key | 旧 `api.ts` 使用 `token/userInfo`，旧 `auth.ts` 使用 `auth_token/auth_user` | 认证态不一致导致 401 或页面误判未登录 | 只保留 `store/authContext` 约定，并让 request 读取同一 token key。 |
+| 直播间列表参数 | 新源 `liveStreamApi.list({ page, page_size })`，旧 H5 `liveStreamApi.list(page, pageSize)` | 直接迁移会类型/运行时不兼容 | 统一 service 签名或做兼容重载。 |
 
 ## 安全降级规则
 
@@ -40,78 +101,17 @@
 | --- | --- | --- |
 | 接口缺失 | 展示空态、禁用按钮、写入本文档 | 写硬编码 mock 数据冒充真实业务数据。 |
 | 字段缺失 | adapter 映射已有字段，并记录契约差异 | 用随机数或固定文案制造用户资产/竞拍结果。 |
-| 页面缺失 | 新增可达路由并保留旧源码 | 直接删除旧页面或后端接口。 |
+| 页面缺失 | 新增可达路由并保留旧源码 | 生成死链或直接删除仍被引用的旧页面。 |
+| Gateway 未暴露 | 记录为契约缺口并等待 Gateway 补路由 | 前端绕过 Gateway 直连下游服务。 |
 
+## 后续优先级
 
-## Task 3 Home 迁移确认
-
-| 页面 | 新 UI 需求 | 当前可用能力 | 缺口 | 前端临时策略 | 处理位置 |
-| --- | --- | --- | --- | --- | --- |
-| `Home` | 首页卡片直接展示商品名称和首图 | `auctionApi.list` 返回竞拍字段；`productApi.get(product_id)` 可补商品详情 | 列表接口未稳定内嵌 `product`，需要额外并发请求商品详情 | 页面级 adapter 优先使用 `auction.product`，缺失时按 `product_id` 调 `productApi.get`；商品获取失败只展示竞拍场次空态，不写 mock 图片 | `frontend/h5/src/pages/Home/index.tsx` |
-| `Home` | 分类 Tab 按 `珠宝腕表/艺术品/奢侈品/收藏品` 筛选 | 当前后端竞拍列表未确认支持 `category` 参数 | 分类筛选契约缺失 | 若商品返回 `category/category_name` 则前端可筛选；缺分类字段时非收藏 Tab 暂显示全部，保留既有缺口记录 | `frontend/h5/src/pages/Home/index.tsx` |
-| `Home` | 收藏 Tab 展示用户收藏竞拍 | 当前 H5 无收藏竞拍列表接口 | 收藏列表接口缺失 | 收藏 Tab 显示空态和“待开放”说明，不用全量列表冒充收藏 | `frontend/h5/src/pages/Home/index.tsx` |
-| `Home` | 通知入口展示真实未读红点 | 后续 `Notifications` 任务会统一通知接口 | Home 阶段未接入未读数 | 移除新源静态红点，只保留 `/notifications` 入口，避免伪造未读状态 | `frontend/h5/src/pages/Home/index.tsx` |
-
-## Task 4 LiveRoom 迁移确认
-
-| 页面 | 新 UI 需求 | 当前可用能力 | 缺口 | 前端临时策略 | 处理位置 |
-| --- | --- | --- | --- | --- | --- |
-| `LiveRoom` | 直播间详情展示主播、头像、在线人数、封面/视频源、关注状态 | `liveStreamApi.get` 可获取直播间详情，`followApi.getFollowersStats` 可获取关注统计 | `GET /api/v1/live-streams/:id` 字段是否稳定包含 `host_name`、`host_avatar`、`viewer_count`、`cover_image`、`video_url`、`is_following` 未确认 | 通过 adapter 兼容 `host_name/creator_name`、`host_avatar/avatar`；缺视频和封面时显示“暂无直播画面”，不使用外部占位图 | `frontend/h5/src/pages/Live/index.tsx` |
-| `LiveRoom` | 出价排行实时同步 | `bidApi.getRanking`、`auctionApi.getBids`、`WebSocketService` 可用 | WebSocket `rank_update`、`bid_placed`、`sync_response` 的字段结构未形成统一前端类型 | 页面使用 `extractList` 兼容 `ranking/bids/list/items`；长期建议后端固定推送 `{ ranking, current_price, status, end_time }` | `frontend/h5/src/pages/Live/index.tsx` |
-| `LiveRoom` | 直播聊天消息列表和发送聊天 | 当前 `WebSocketService` 仅明确支持通用消息、通知、排行、出价同步 | 缺少 `chat_message`、`send_chat` 协议或 HTTP 聊天接口 | 保留“直播互动”入口并提示聊天协议尚未开放，不展示静态假聊天消息，不发送聊天 | `frontend/h5/src/pages/Live/index.tsx` |
-| `LiveRoom` | 分享和更多菜单 | 当前无明确后端接口；浏览器可选 Web Share API 未做产品确认 | 分享目标、埋点、更多菜单动作缺失 | Task 4 不保留无动作按钮，避免用户可点但无结果 | `frontend/h5/src/pages/Live/index.tsx` |
-| `LiveRoom` | 单直播间多商品竞拍浮层 | 当前首页入口传单个 `auction_id`；可用接口是单竞拍详情 | 缺直播间内竞拍商品聚合接口 | 当前页面按新源和入口语义迁移单 `auction_id`；如要恢复多商品浮层，建议新增 `GET /api/v1/live-streams/:id/auctions` | `frontend/h5/src/pages/Live/index.tsx` |
-
-## Task 5 ProductDetail 迁移确认
-
-| 页面 | 新 UI 需求 | 当前可用能力 | 缺口 | 前端临时策略 | 处理位置 |
-| --- | --- | --- | --- | --- | --- |
-| `ProductDetail` | 商品详情页展示商品图文、竞拍状态、当前价、起拍价、出价记录和竞拍规则 | `auctionApi.get`、`auctionApi.getBids`、`productApi.get`、`bidApi.placeBid` 可支撑核心链路 | `product.rules` 是否稳定由 `GET /api/v1/products/:id` 返回仍未确认 | 页面 adapter 从 `product.rules`、`product.start_price/increment/cap_price`、`auction.start_price/increment/cap_price` 依次读取；缺失时只使用明确安全默认加价幅度 `100`，不伪造业务结果 | `frontend/h5/src/pages/ProductDetail/index.tsx` |
-| `ProductDetail` | 分享按钮 | 当前无分享目标、埋点和后端接口契约 | 分享动作缺失 | 仅展示“分享暂未开放”占位，不触发假分享 | `frontend/h5/src/pages/ProductDetail/index.tsx` |
-
-## Task 6 AuctionResult 迁移确认
-
-| 页面 | 新 UI 需求 | 当前可用能力 | 缺口 | 前端临时策略 | 处理位置 |
-| --- | --- | --- | --- | --- | --- |
-| `AuctionResult` | 权威展示竞拍结果、中标者、成交价和商品信息 | `auctionApi.getResult` 可读取 `/api/v1/auctions/:id/result`，`productApi.get` 可按 `product_id` 补商品详情 | `getResult` 响应字段需稳定包含 `winner_id`、`final_price`、`order_id`、`won_bid`；若缺少 `product` 仍需额外请求商品 | 页面优先使用 `getResult`，仅用 `productApi.get` 补商品展示；不再从前端最高出价长期推断中标结果 | `frontend/h5/src/pages/Result/index.tsx` |
-| `AuctionResult` | 中标后支付订单 | `orderApi.pay(order_id)` 可触发模拟支付，前端已在有 `order_id` 时接入 | 当前没有用户端订单详情页；`orderApi.create` wrapper 存在但 Gateway/Product Service 未注册 `POST /orders` 创建路由 | 不伪造订单；无 `order_id` 时按钮显示“订单待生成”并禁用，订单详情页留给后续 `OrderDetail` 或历史页任务确认 | `frontend/h5/src/pages/Result/index.tsx` |
-
-## Task 7 Profile 迁移确认
-
-| 页面 | 新 UI 需求 | 当前可用能力 | 缺口 | 前端临时策略 | 处理位置 |
-| --- | --- | --- | --- | --- | --- |
-| `Profile` | 展示用户资料、角色和 ID | `userApi.getProfile` 可读取 `/api/v1/user/profile`；`AuthContext` 可提供登录态用户兜底 | 用户头像、角色字段是否稳定返回仍需后端契约确认 | 优先展示接口用户资料；缺头像时用姓名首字兜底，不使用外部占位图 | `frontend/h5/src/pages/User/Index.tsx` |
-| `Profile` | 钱包余额、可用余额、充值入口 | `userApi.getBalance` 可读取 `/api/v1/user/balance` | 充值/钱包流水接口缺失；余额字段 `balance/available_balance/frozen_amount` 需稳定 | 有余额则展示真实余额；充值按钮禁用并标注待开放，不伪造资产数据 | `frontend/h5/src/pages/User/Index.tsx` |
-| `Profile` | 最近订单和“我的竞拍/订单”入口 | `orderApi.list` 可读取 `/api/v1/orders`；历史页 `/history` 已存在 | 用户端订单详情页仍缺失，订单列表响应字段可能是 `list/items/orders/data.items` 多形态 | 页面 adapter 兼容常见列表字段，最近订单点击跳 `/history`，不新增未确认订单详情路由 | `frontend/h5/src/pages/User/Index.tsx` |
-| `Profile` | 关注数、粉丝数、竞拍记录数 | 当前仅有 `followApi.getFollowedLiveStreams` 和 `orderApi.list` | 缺统一用户统计接口：`following_count`、`followers_count`、`auction_history_count` | 统计数字继续显示 `---` 或订单条数，不用旧 `/users/me/stats` 字段冒充新 UI 统计 | `frontend/h5/src/pages/User/Index.tsx` |
-| `Profile` | 收藏、保证金、地址、设置 | H5 现有 service 未提供完整用户资产/地址/设置能力 | 后端接口和产品交互未定义 | 仅保留设置待开放入口；收藏、保证金、地址不作为 Task 7 可用入口暴露 | `frontend/h5/src/pages/User/Index.tsx` |
-
-## Task 8 AuctionHistory 迁移确认
-
-| 页面 | 新 UI 需求 | 当前可用能力 | 缺口 | 前端临时策略 | 处理位置 |
-| --- | --- | --- | --- | --- | --- |
-| `AuctionHistory` | 展示用户参与竞拍记录、成功/失败状态、最终成交价和参与信息 | 历史接口文档提供 `GET /api/v1/orders/history?page=&page_size=`；后端当前返回 `auction_id`、`product_name`、`final_price`、`is_winner`、`bid_count`、`created_at` 等字段 | 仍缺商品图片、`my_highest_bid`、`ended_at`、`product` 嵌套信息；后端实现当前还存在 `user_id` 查询参数与接口文档 JWT 语义不一致的风险 | 页面只展示真实可得字段：商品名、成功/未中标、出价次数、最终成交价；缺图片时显示本地空态，不使用随机金额或外部占位图 | `frontend/h5/src/pages/History/index.tsx`、`frontend/h5/src/services/api.ts` |
-| `AuctionHistory` | 结果/详情入口 | 现有 `/result?id=` 和 `/detail?id=` 已可达 | 缺用户端订单详情页，不适合在历史页承接支付 | 成功记录跳结果页，未中标记录跳详情页；不新增订单详情路由，不恢复历史页支付弹窗 | `frontend/h5/src/pages/History/index.tsx` |
-
-## Task 9 Following 迁移确认
-
-| 页面 | 新 UI 需求 | 当前可用能力 | 缺口 | 前端临时策略 | 处理位置 |
-| --- | --- | --- | --- | --- | --- |
-| `Following` | 展示当前用户关注的直播间列表、直播状态、主播、观看人数和竞拍数 | `followApi.getFollowedLiveStreams(page, pageSize)` 可读取 `GET /api/v1/user/followed-live-streams?page=&page_size=` | 后端分页响应字段仍可能返回 `list/items/data.list/data.items` 多形态；部分直播字段如 `host_avatar/viewer_count/title` 可能缺失 | 页面 adapter 兼容多响应形态；缺封面/头像时显示本地空态，不使用全量直播列表或 mock 数据冒充关注 | `frontend/h5/src/pages/Follow/index.tsx` |
-| `Following` | 取消关注后列表原地更新 | `followApi.unfollowLiveStream(liveStreamId)` 可调用 `DELETE /api/v1/live-streams/:id/follow` | 新源 UI 没有取消关注按钮，属于行为缺口而非后端接口缺口 | 迁移时在卡片操作区增加明确“取消关注”按钮，成功后从列表移除；失败保留原列表并提示错误 | `frontend/h5/src/pages/Follow/index.tsx` |
-| `Following` | 进入直播间 | 迁移后的 `LiveRoom` 目标路由是 `/live?id=` | 旧 Follow 页面跳 `/live/:id`，与新移动端路由不一致 | 进入直播间统一跳 `/live?id=${liveStreamId}`，保留 App 中旧 `/follow` 到 `/following` 兼容跳转 | `frontend/h5/src/pages/Follow/index.tsx`、`frontend/h5/src/App.tsx` |
-
-## Task 10 Notifications 迁移确认
-
-| 页面 | 新 UI 需求 | 当前可用能力 | 缺口 | 前端临时策略 | 处理位置 |
-| --- | --- | --- | --- | --- | --- |
-| `Notifications` | 通知中心列表、未读数、单条已读、全部已读 | `notificationApi.list`、`getUnreadCount`、`markAsRead`、`markAllAsRead` 已存在 | 后端分页响应字段可能是 `items/list/data.items/data.list` 多形态 | 页面 adapter 兼容多响应形态，失败展示错误态，不写 mock 通知 | `frontend/h5/src/pages/Notifications/index.tsx` |
-| `Notifications` | 开播、竞拍结果、竞拍提醒跳转到业务页面 | 通知 `data` 可携带 `live_stream_id`、`auction_id`；新 H5 已有 `/live?id=`、`/result?id=`、`/detail?id=` | 直接字段和 `data` 字段未统一，且缺字段时无法安全跳转 | 优先读取直接字段，其次读取 `notification.data`；缺 ID 时只展示内容，不生成空 ID 路由 | `frontend/h5/src/pages/Notifications/index.tsx` |
-| `Notifications` | 订单通知跳转订单详情 | `notificationApi.list` 可返回订单类通知；`orderApi.get/pay` wrapper 存在 | 用户端没有 `/order` 或订单详情页路由，不能从通知中心跳死链 | 订单通知只展示内容并提示“订单详情页尚未开放”，长期建议新增 `OrderDetail` 页面或定义订单通知承接页 | `frontend/h5/src/pages/Notifications/index.tsx` |
-
-## Task 11 Login 迁移确认
-
-| 页面 | 新 UI 需求 | 当前可用能力 | 缺口 | 前端临时策略 | 处理位置 |
-| --- | --- | --- | --- | --- | --- |
-| `Login` | 手机号/密码登录 | 旧页面已直接请求 `/api/v1/auth/login` 并可同时发送 `email/phone/password`；`AuthContext.setAuth` 负责写入 `auth_token/auth_user` | 后端需稳定支持 `{ phone, password }` 登录契约，并返回 `{ data: { token, user } }` | 页面只发送归一化手机号和密码；失败展示服务端 `message` 或安全错误文案，不降级到邮箱 UI | `frontend/h5/src/pages/Login/index.tsx` |
-| `Login` | 登录后回到触发登录前页面 | 登录页可读取 `redirect` 参数；`api.ts` 可统一处理 401 | 401 跳转如不带当前路径会丢失用户上下文 | 新增 `buildLoginRedirectPath()` 构造 `/login?redirect=` 当前路径；登录成功后 `navigate(redirectUrl)` 回跳 | `frontend/h5/src/pages/Login/index.tsx`、`frontend/h5/src/services/api.ts` |
+| 优先级 | 事项 | 原因 |
+| --- | --- | --- |
+| P0 | 统一 `orders/:id/pay` 的 Gateway/Product 方法 | 当前支付链路可能不可用。 |
+| P0 | `orders/history` 改为 JWT 用户语义 | 防止越权查询历史记录。 |
+| P1 | Gateway 暴露 `/api/v1/categories`，并为 `GET /auctions` 增加分类过滤或商品摘要 | 首页分类 Tab 的真实数据来源。 |
+| P1 | 扩展 `GET /live-streams/:id` 和 `GET /auctions/:id/result` 字段 | LiveRoom 和 Result 页面核心展示闭环。 |
+| P1 | 补用户 stats、钱包/保证金、收藏、地址接口 | Profile 资产和用户中心能力。 |
+| P2 | 定义直播聊天协议和分享契约 | 互动能力，不应使用假消息或无动作按钮。 |
+| P2 | 新增 H5 `OrderDetail` 页面 | 后端订单详情已具备，缺用户端承接页。 |
