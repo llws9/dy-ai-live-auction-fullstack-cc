@@ -245,7 +245,8 @@ func (d *NotificationDAO) CountUnreadByTypes(ctx context.Context, userID int64, 
 	if len(types) > 0 {
 		query = query.Where("type IN ?", types)
 	}
-	return count, query.Count(&count).Error
+	err := query.Count(&count).Error
+	return count, err
 }
 
 func (d *NotificationDAO) MarkUnreadByTypesAsRead(ctx context.Context, userID int64, types []model.NotificationType) error {
@@ -982,7 +983,121 @@ func (d *LiveStreamReminderReceiptDAO) Claim(ctx context.Context, userID, liveSt
 }
 ```
 
-- [ ] **Step 5: Add live reminder service**
+- [ ] **Step 5: Add live reminder service tests first**
+
+Create `backend/auction/service/live_reminder_test.go` with multi-candidate coverage:
+
+```go
+package service
+
+import (
+	"context"
+	"testing"
+
+	"auction-service/model"
+	"github.com/stretchr/testify/assert"
+)
+
+type fakeLiveSessionResolver struct {
+	sessions map[int64]*model.StreamInfo
+}
+
+func (r *fakeLiveSessionResolver) GetActiveSession(ctx context.Context, liveStreamID int64) (*model.StreamInfo, error) {
+	return r.sessions[liveStreamID], nil
+}
+
+type fakeReminderClaimer struct {
+	claimableByStream map[int64]bool
+}
+
+func (c *fakeReminderClaimer) Claim(ctx context.Context, userID, liveStreamID, startedAt int64) (bool, error) {
+	return c.claimableByStream[liveStreamID], nil
+}
+
+func TestLiveReminderServiceReturnsFirstClaimableLiveCandidate(t *testing.T) {
+	ctx := context.Background()
+	followDAO := new(MockUserLiveStreamFollowDAO)
+	followDAO.On("GetUserFollows", ctx, int64(100), 0, 50).Return([]model.UserLiveStreamFollow{
+		{UserID: 100, LiveStreamID: 1, NotificationEnabled: false},
+		{UserID: 100, LiveStreamID: 2, NotificationEnabled: true},
+		{UserID: 100, LiveStreamID: 3, NotificationEnabled: true},
+	}, nil)
+
+	service := NewLiveReminderService(
+		followDAO,
+		&fakeLiveSessionResolver{sessions: map[int64]*model.StreamInfo{
+			3: {ID: 3, LiveRoomID: 3, Name: "直播间 3", StatusText: "正在直播", StartedAt: 1717000000000},
+		}},
+		&fakeReminderClaimer{claimableByStream: map[int64]bool{3: true}},
+	)
+
+	result, err := service.GetPendingReminder(ctx, 100)
+
+	assert.NoError(t, err)
+	assert.True(t, result.HasReminder)
+	assert.Equal(t, int64(3), result.Stream.ID)
+	followDAO.AssertExpectations(t)
+}
+
+func TestLiveReminderServiceContinuesAfterClaimConflict(t *testing.T) {
+	ctx := context.Background()
+	followDAO := new(MockUserLiveStreamFollowDAO)
+	followDAO.On("GetUserFollows", ctx, int64(100), 0, 50).Return([]model.UserLiveStreamFollow{
+		{UserID: 100, LiveStreamID: 2, NotificationEnabled: true},
+		{UserID: 100, LiveStreamID: 3, NotificationEnabled: true},
+	}, nil)
+
+	service := NewLiveReminderService(
+		followDAO,
+		&fakeLiveSessionResolver{sessions: map[int64]*model.StreamInfo{
+			2: {ID: 2, LiveRoomID: 2, Name: "直播间 2", StatusText: "正在直播", StartedAt: 1717000000000},
+			3: {ID: 3, LiveRoomID: 3, Name: "直播间 3", StatusText: "正在直播", StartedAt: 1717000010000},
+		}},
+		&fakeReminderClaimer{claimableByStream: map[int64]bool{2: false, 3: true}},
+	)
+
+	result, err := service.GetPendingReminder(ctx, 100)
+
+	assert.NoError(t, err)
+	assert.True(t, result.HasReminder)
+	assert.Equal(t, int64(3), result.Stream.ID)
+	followDAO.AssertExpectations(t)
+}
+
+func TestLiveReminderServiceReturnsEmptyWhenNoCandidateCanBeClaimed(t *testing.T) {
+	ctx := context.Background()
+	followDAO := new(MockUserLiveStreamFollowDAO)
+	followDAO.On("GetUserFollows", ctx, int64(100), 0, 50).Return([]model.UserLiveStreamFollow{
+		{UserID: 100, LiveStreamID: 2, NotificationEnabled: true},
+	}, nil)
+
+	service := NewLiveReminderService(
+		followDAO,
+		&fakeLiveSessionResolver{sessions: map[int64]*model.StreamInfo{
+			2: {ID: 2, LiveRoomID: 2, Name: "直播间 2", StatusText: "正在直播", StartedAt: 1717000000000},
+		}},
+		&fakeReminderClaimer{claimableByStream: map[int64]bool{2: false}},
+	)
+
+	result, err := service.GetPendingReminder(ctx, 100)
+
+	assert.NoError(t, err)
+	assert.False(t, result.HasReminder)
+	assert.Nil(t, result.Stream)
+	followDAO.AssertExpectations(t)
+}
+```
+
+Run:
+
+```bash
+cd /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/auction
+go test ./service -run TestLiveReminderService -v
+```
+
+Expected: FAIL because `NewLiveReminderService` and the receipt claimer interface are not implemented yet.
+
+- [ ] **Step 6: Add live reminder service**
 
 Create `backend/auction/service/live_reminder.go`:
 
@@ -992,12 +1107,17 @@ package service
 import (
 	"context"
 
-	"auction-service/dao"
 	"auction-service/model"
 )
 
+const liveReminderCandidateLimit = 50
+
 type LiveSessionResolver interface {
 	GetActiveSession(ctx context.Context, liveStreamID int64) (*model.StreamInfo, error)
+}
+
+type LiveReminderReceiptClaimer interface {
+	Claim(ctx context.Context, userID, liveStreamID, startedAt int64) (bool, error)
 }
 
 type LiveStatsSessionResolver struct {
@@ -1029,49 +1149,53 @@ func (r *LiveStatsSessionResolver) GetActiveSession(ctx context.Context, liveStr
 type LiveReminderService struct {
 	followDAO            FollowDAO
 	liveSessionResolver LiveSessionResolver
-	receiptDAO           *dao.LiveStreamReminderReceiptDAO
+	receiptClaimer       LiveReminderReceiptClaimer
 }
 
-func NewLiveReminderService(followDAO FollowDAO, liveSessionResolver LiveSessionResolver, receiptDAO *dao.LiveStreamReminderReceiptDAO) *LiveReminderService {
-	return &LiveReminderService{followDAO: followDAO, liveSessionResolver: liveSessionResolver, receiptDAO: receiptDAO}
+func NewLiveReminderService(followDAO FollowDAO, liveSessionResolver LiveSessionResolver, receiptClaimer LiveReminderReceiptClaimer) *LiveReminderService {
+	return &LiveReminderService{followDAO: followDAO, liveSessionResolver: liveSessionResolver, receiptClaimer: receiptClaimer}
 }
 
 func (s *LiveReminderService) GetPendingReminder(ctx context.Context, userID int64) (*model.PendingLiveReminderResponse, error) {
-	follows, err := s.followDAO.GetUserFollows(ctx, userID, 0, 1)
+	follows, err := s.followDAO.GetUserFollows(ctx, userID, 0, liveReminderCandidateLimit)
 	if err != nil {
 		return nil, err
 	}
-	if len(follows) == 0 || !follows[0].NotificationEnabled {
-		return &model.PendingLiveReminderResponse{HasReminder: false, Stream: nil}, nil
+
+	for _, follow := range follows {
+		if !follow.NotificationEnabled {
+			continue
+		}
+
+		session, err := s.liveSessionResolver.GetActiveSession(ctx, follow.LiveStreamID)
+		if err != nil {
+			return nil, err
+		}
+		if session == nil || session.StartedAt <= 0 {
+			continue
+		}
+
+		claimed, err := s.receiptClaimer.Claim(ctx, userID, follow.LiveStreamID, session.StartedAt)
+		if err != nil {
+			return nil, err
+		}
+		if !claimed {
+			continue
+		}
+
+		return &model.PendingLiveReminderResponse{
+			HasReminder: true,
+			Stream:      session,
+		}, nil
 	}
 
-	liveStreamID := follows[0].LiveStreamID
-	session, err := s.liveSessionResolver.GetActiveSession(ctx, liveStreamID)
-	if err != nil {
-		return nil, err
-	}
-	if session == nil || session.StartedAt <= 0 {
-		return &model.PendingLiveReminderResponse{HasReminder: false, Stream: nil}, nil
-	}
-
-	claimed, err := s.receiptDAO.Claim(ctx, userID, liveStreamID, session.StartedAt)
-	if err != nil {
-		return nil, err
-	}
-	if !claimed {
-		return &model.PendingLiveReminderResponse{HasReminder: false, Stream: nil}, nil
-	}
-
-	return &model.PendingLiveReminderResponse{
-		HasReminder: true,
-		Stream:      session,
-	}, nil
+	return &model.PendingLiveReminderResponse{HasReminder: false, Stream: nil}, nil
 }
 ```
 
-语义要求：`StartedAt` 必须来自 `StartLive` 写入的真实直播 session。不要在 `GetPendingReminder` 中用请求时间、小时桶或登录时间合成 `StartedAt`。
+语义要求：`StartedAt` 必须来自 `StartLive` 写入的真实直播 session。不要在 `GetPendingReminder` 中用请求时间、小时桶或登录时间合成 `StartedAt`。服务必须遍历一批关注候选：跳过未开启通知、未开播、无真实 `StartedAt` 或 receipt 已存在的候选，直到找到第一个可原子 claim 的直播 session；只有所有候选都不可 claim 时才返回 `hasReminder=false`。
 
-- [ ] **Step 6: Add handler**
+- [ ] **Step 7: Add handler**
 
 Create `backend/auction/handler/live_reminder.go`:
 
@@ -1110,7 +1234,7 @@ func (h *LiveReminderHandler) GetPendingReminder(ctx context.Context, c *app.Req
 }
 ```
 
-- [ ] **Step 7: Wire main and route**
+- [ ] **Step 8: Wire main and route**
 
 Modify `backend/auction/main.go`:
 
@@ -1134,24 +1258,24 @@ Extend `registerRoutes` signature with `liveReminderHandler *handler.LiveReminde
 v1.GET("/live/pending-reminder", liveReminderHandler.GetPendingReminder)
 ```
 
-- [ ] **Step 8: Verify auction service**
+- [ ] **Step 9: Verify auction service**
 
 Run:
 
 ```bash
 cd /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/auction
-gofmt -w model/live_stream_reminder_receipt.go dao/live_stream_reminder_receipt.go service/live_reminder.go service/live_stream_stats.go handler/live_reminder.go main.go
+gofmt -w model/live_stream_reminder_receipt.go dao/live_stream_reminder_receipt.go service/live_reminder.go service/live_reminder_test.go service/live_stream_stats.go handler/live_reminder.go main.go
 go test ./dao ./service ./handler
 ```
 
 Expected: PASS.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 10: Commit**
 
 Run:
 
 ```bash
-git add backend/auction/migration/002_create_live_stream_reminder_receipts.sql backend/auction/model/live_stream_reminder_receipt.go backend/auction/dao/live_stream_reminder_receipt.go backend/auction/service/live_reminder.go backend/auction/service/live_stream_stats.go backend/auction/handler/live_reminder.go backend/auction/main.go
+git add backend/auction/migration/002_create_live_stream_reminder_receipts.sql backend/auction/model/live_stream_reminder_receipt.go backend/auction/dao/live_stream_reminder_receipt.go backend/auction/service/live_reminder.go backend/auction/service/live_reminder_test.go backend/auction/service/live_stream_stats.go backend/auction/handler/live_reminder.go backend/auction/main.go
 git commit -m "feat(auction): add pending live reminder endpoint"
 ```
 
@@ -1257,7 +1381,20 @@ export function useTouchpointNotifications(): TouchpointNotifications {
 
 - [ ] **Step 3: Replace local live reminder marker**
 
-In `frontend/h5/src/components/MobileShell/MobileContainer.tsx`, replace the `localStorage.getItem('pending_live_reminder')` effect with:
+In `frontend/h5/src/components/MobileShell/MobileContainer.tsx`, remove `mockLiveReminderStream` and import the real API:
+
+```ts
+import { notificationApi } from '../../services/notification';
+```
+
+Store the backend stream in state:
+
+```ts
+const [isReminderOpen, setIsReminderOpen] = useState(false);
+const [reminderStream, setReminderStream] = useState<StreamInfo | null>(null);
+```
+
+Replace the `localStorage.getItem('pending_live_reminder')` effect with an API-only effect:
 
 ```ts
 useEffect(() => {
@@ -1272,11 +1409,8 @@ useEffect(() => {
       setIsReminderOpen(true);
     })
     .catch(() => {
-      if (localStorage.getItem('pending_live_reminder') === '1') {
-        localStorage.removeItem('pending_live_reminder');
-        setReminderStream(mockLiveReminderStream);
-        setIsReminderOpen(true);
-      }
+      // Do not show mock production reminders when the backend is unavailable.
+      localStorage.removeItem('pending_live_reminder');
     });
 
   return () => {
@@ -1289,6 +1423,64 @@ Also change modal `stream` prop to:
 
 ```tsx
 stream={reminderStream}
+```
+
+Update `frontend/h5/src/__tests__/components/MobileShell.test.tsx` so reminder tests mock `notificationApi.getPendingLiveReminder` instead of `localStorage`:
+
+```tsx
+import { render, screen, waitFor } from '@testing-library/react';
+import { notificationApi } from '../../services/notification';
+
+jest.mock('../../services/notification', () => ({
+  notificationApi: {
+    getPendingLiveReminder: jest.fn(),
+  },
+}));
+
+const mockGetPendingLiveReminder = notificationApi.getPendingLiveReminder as jest.MockedFunction<typeof notificationApi.getPendingLiveReminder>;
+
+function renderMobileContainer() {
+  return render(
+    <MemoryRouter>
+      <ThemeProvider>
+        <MobileContainer>
+          <main>页面内容</main>
+        </MobileContainer>
+      </ThemeProvider>
+    </MemoryRouter>,
+  );
+}
+
+it('opens live reminder once when backend returns a pending stream', async () => {
+  mockGetPendingLiveReminder.mockResolvedValue({
+    hasReminder: true,
+    stream: { id: 1, name: '云端珍藏直播间', avatarUrl: '', statusText: '正在直播', liveRoomId: 1, startedAt: 1717000000000 },
+  });
+
+  renderMobileContainer();
+
+  expect(await screen.findByRole('dialog')).toBeInTheDocument();
+});
+
+it('does not open live reminder when backend returns empty', async () => {
+  mockGetPendingLiveReminder.mockResolvedValue({ hasReminder: false, stream: null });
+
+  renderMobileContainer();
+
+  await waitFor(() => expect(mockGetPendingLiveReminder).toHaveBeenCalled());
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+it('does not fall back to mock reminder when backend fails', async () => {
+  localStorage.setItem('pending_live_reminder', '1');
+  mockGetPendingLiveReminder.mockRejectedValue(new Error('network'));
+
+  renderMobileContainer();
+
+  await waitFor(() => expect(mockGetPendingLiveReminder).toHaveBeenCalled());
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(localStorage.getItem('pending_live_reminder')).toBeNull();
+});
 ```
 
 - [ ] **Step 4: Verify frontend tests**
@@ -1321,16 +1513,22 @@ Expected: commit succeeds.
 **Files:**
 - Modify: `frontend/h5/src/services/websocket.ts`
 - Modify: `frontend/h5/src/pages/Live/index.tsx`
+- Modify: `frontend/h5/src/pages/Live/Live.module.css`
 - Test: `frontend/h5/src/components/Toast/__tests__/ToastProvider.test.tsx`
 
 - [ ] **Step 1: Ensure notification messages are observable**
 
-In `frontend/h5/src/services/websocket.ts`, ensure `handleMessage` routes `notification` messages through existing handlers. The final branch should contain:
+In `frontend/h5/src/services/websocket.ts`, use the current `onNotification` / `on(type, handler)` API; do not add a new event-emitter abstraction. Ensure `handleMessage` routes `notification` messages to both existing notification callbacks and generic `on('notification')` handlers. The final branch should contain:
 
 ```ts
 if (message.type === 'notification') {
-  this.notificationHandlers.forEach((handler) => handler(message.data as NotificationData));
-  this.emit('notification', message.data);
+  const notification = message.data as NotificationMessage;
+  this.notificationCallbacks.forEach((callback) => callback(notification));
+
+  const handlers = this.handlers.get('notification');
+  if (handlers) {
+    handlers.forEach((handler) => handler(notification));
+  }
   return;
 }
 ```
@@ -1368,12 +1566,20 @@ function toastPayloadFromNotification(notification: any) {
 }
 ```
 
-Inside WS setup:
+Add `useNavigate` to the React Router import and initialize it in `LiveRoomPage`:
+
+```ts
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+
+const navigate = useNavigate();
+```
+
+Inside WS setup, subscribe through the existing `onNotification` API and unsubscribe on cleanup:
 
 ```ts
 const shownNotificationIds = new Set<number | string>();
 
-ws.on('notification', (notification: any) => {
+const unsubscribeNotification = ws.onNotification((notification) => {
   const id = notification.id;
   if (id && shownNotificationIds.has(id)) {
     return;
@@ -1395,6 +1601,18 @@ ws.on('notification', (notification: any) => {
   });
 });
 ```
+
+Update the effect cleanup:
+
+```ts
+return () => {
+  unsubscribeNotification();
+  ws.disconnect();
+  setConnected(false);
+};
+```
+
+Add `navigate` and `showGlobalToast` to the effect dependency list.
 
 - [ ] **Step 3: Remove development Toast Demo panel**
 

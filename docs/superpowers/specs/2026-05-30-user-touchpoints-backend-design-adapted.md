@@ -31,7 +31,7 @@
 - H5 API Base 已统一为 `/api/v1`。
 - 所有前端 HTTP / WS 流量必须经过 `gateway-service`。
 - 当前触达 Mock 数据源在 `frontend/h5/src/hooks/useTouchpointNotifications.ts`。
-- 当前登录后弹窗仍由 `pending_live_reminder` 本地标记触发，后端接入后应替换为接口查询。
+- 当前登录后弹窗仍由 `pending_live_reminder` 本地标记触发，后端接入后应替换为接口查询；接口失败不得回退展示 Mock 弹窗。
 - 当前 WebSocket 连接为 `/api/v1/ws?auction_id={id}&token={token}`。
 
 ### 2.2 后端已有能力
@@ -328,12 +328,13 @@ CREATE TABLE IF NOT EXISTS live_stream_reminder_receipts (
 
 ### 7.3 查询语义
 
-1. 找到当前用户已关注且 `notification_enabled = true` 的直播间。
-2. 找到“正在直播”的直播间。
+1. 查询当前用户已关注的一批直播间候选，只保留 `notification_enabled = true` 的候选。
+2. 按确定性顺序检查候选是否“正在直播”，并要求存在真实直播 session `started_at`。
 3. 使用真实直播 session 的 `started_at` 作为 `live_started_at`；该值必须来自直播状态模型或开播事件，不能用请求时间、小时取整或登录时间合成。
-4. 原子写入 `live_stream_reminder_receipts`，唯一键为 `user_id + live_stream_id + live_started_at`。
-5. 只有本次写入成功时返回提醒；唯一键冲突表示其他请求已消费该 session，返回 `hasReminder=false`。
-6. 返回最新一条。
+4. 对每个有效候选原子写入 `live_stream_reminder_receipts`，唯一键为 `user_id + live_stream_id + live_started_at`。
+5. 只有本次写入成功时返回提醒；唯一键冲突表示该候选 session 已消费，应继续检查下一个候选，而不是直接返回无提醒。
+6. 只有全部候选都未开播、无真实 `started_at`、通知关闭或已被消费时，才返回 `hasReminder=false`。
+7. 返回第一个可成功 claim 的候选，排序策略必须稳定，避免同一次请求内随机弹不同直播间。
 
 ### 7.4 开播状态来源
 
@@ -407,7 +408,7 @@ CREATE TABLE IF NOT EXISTS live_stream_reminder_receipts (
 
 验收：
 
-- 有关注直播间开播时，登录后弹一次。
+- 有任一已关注且开启通知的直播间开播时，登录后弹一次；首个候选已消费时继续检查后续候选。
 - 接口第二次调用返回 `hasReminder=false`。
 - 用户关闭弹窗后不影响后续新一期开播提醒。
 
