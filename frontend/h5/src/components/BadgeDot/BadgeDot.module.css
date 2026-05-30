@@ -1,0 +1,37 @@
+.badge {
+  /* Theme-ready variables with dark mode default fallbacks */
+  --touchpoint-danger: var(--color-danger, #ff3b30);
+  --touchpoint-badge-text: var(--color-on-danger, #ffffff);
+  --touchpoint-border: var(--color-surface, #1a1a1a);
+
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  min-width: 8px;
+  height: 8px;
+  border: 1px solid var(--touchpoint-border);
+  border-radius: 9999px;
+  background: var(--touchpoint-danger);
+  box-shadow: 0 2px 8px rgba(255, 59, 48, 0.35);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  color: var(--touchpoint-badge-text);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.dot {
+  width: 8px;
+  padding: 0;
+}

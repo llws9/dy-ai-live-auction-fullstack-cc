@@ -1,78 +1,107 @@
-// components/Toast/index.tsx
+import { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
+import styles from './Toast.module.css';
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+export type ToastType = 'success' | 'warning' | 'danger' | 'error' | 'info' | 'loading';
 
-type ToastType = 'success' | 'error' | 'warning' | 'info' | 'loading';
-
-interface ToastMessage {
-  id: number;
+export interface ToastConfig {
+  type?: ToastType;
+  title?: string;
   message: string;
-  type: ToastType;
   duration?: number;
+  actionText?: string;
+  onAction?: () => void;
+}
+
+interface ToastMessage extends ToastConfig {
+  id: number;
+  type: ToastType;
+  duration: number;
 }
 
 interface ToastContextType {
-  showToast: (message: string, type?: ToastType, duration?: number) => void;
+  showToast: {
+    (message: string, type?: ToastType, duration?: number): number;
+    (config: ToastConfig): number;
+  };
   showLoading: (message: string) => () => void;
 }
 
 const ToastContext = createContext<ToastContextType | null>(null);
-
 let toastId = 0;
+const MAX_VISIBLE_TOASTS = 3;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const showToast = useCallback((message: string, type: ToastType = 'info', duration: number = 2000) => {
-    const id = ++toastId;
-    setToasts((prev) => [...prev, { id, message, type, duration }]);
+  const removeToast = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
 
-    if (duration > 0 && type !== 'loading') {
-      setTimeout(() => {
-        setToasts((prev) => prev.filter((t) => t.id !== id));
-      }, duration);
+  const showToast = useCallback((input: string | ToastConfig, type: ToastType = 'info', duration = 3000) => {
+    const config: ToastConfig = typeof input === 'string' ? { message: input, type, duration } : input;
+    const id = ++toastId;
+    const toast: ToastMessage = {
+      id,
+      type: config.type || 'info',
+      title: config.title,
+      message: config.message,
+      duration: config.duration ?? duration,
+      actionText: config.actionText,
+      onAction: config.onAction,
+    };
+
+    setToasts((prev) => [...prev, toast]);
+
+    if (toast.duration > 0 && toast.type !== 'loading') {
+      window.setTimeout(() => removeToast(id), toast.duration);
     }
 
     return id;
-  }, []);
+  }, [removeToast]);
 
   const showLoading = useCallback((message: string) => {
-    const id = showToast(message, 'loading', 0);
+    const id = showToast({ message, type: 'loading', duration: 0 });
+    return () => removeToast(id);
+  }, [removeToast, showToast]);
 
-    return () => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    };
-  }, [showToast]);
-
-  const removeToast = useCallback((id: number) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+  const visibleToasts = useMemo(() => toasts.slice(0, MAX_VISIBLE_TOASTS), [toasts]);
 
   return (
     <ToastContext.Provider value={{ showToast, showLoading }}>
       {children}
-      {/* Toast 容器 - 居中显示 */}
-      <div style={styles.container}>
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            style={{
-              ...styles.toast,
-              ...(toast.type === 'loading' ? styles.loading : {}),
-            }}
-            onClick={() => removeToast(toast.id)}
-          >
-            {toast.type === 'loading' ? (
-              <>
-                <div style={styles.spinner}></div>
-                <span style={styles.message}>{toast.message}</span>
-              </>
-            ) : (
-              <>
-                <span style={styles.icon}>{getIcon(toast.type)}</span>
-                <span style={styles.message}>{toast.message}</span>
-              </>
+      <div className={styles.container} aria-live="polite">
+        {visibleToasts.map((toast) => (
+          <div key={toast.id} className={`${styles.toast} ${styles[toast.type]}`} role="status">
+            <div className={styles.icon} aria-hidden="true">
+              {getIcon(toast.type)}
+            </div>
+            <div className={styles.body}>
+              {toast.title && <strong className={styles.title}>{toast.title}</strong>}
+              <span className={styles.message}>{toast.message}</span>
+            </div>
+            {toast.actionText && (
+              <button
+                type="button"
+                className={styles.action}
+                onClick={() => {
+                  toast.onAction?.();
+                  removeToast(toast.id);
+                }}
+              >
+                {toast.actionText}
+              </button>
             )}
+            <button
+              type="button"
+              className={styles.close}
+              aria-label="关闭提示"
+              onClick={() => removeToast(toast.id)}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
           </div>
         ))}
       </div>
@@ -88,95 +117,41 @@ export function useToast() {
   return context;
 }
 
-function getIcon(type: ToastType): string {
+function getIcon(type: ToastType): ReactNode {
   switch (type) {
     case 'success':
-      return '✓';
+      return (
+        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      );
     case 'error':
-      return '✕';
+    case 'danger':
+      return (
+        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+      );
     case 'warning':
-      return '⚠';
-    case 'info':
-      return 'ℹ';
+      return (
+        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+      );
     case 'loading':
-      return '';
+      return <div className={styles.spinner} />;
+    case 'info':
+    default:
+      return (
+        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+      );
   }
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    zIndex: 9999,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '10px',
-    pointerEvents: 'none',
-  },
-  toast: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    padding: '14px 20px',
-    borderRadius: '8px',
-    backgroundColor: 'rgba(50, 50, 51, 0.88)',
-    color: 'white',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-    maxWidth: '70vw',
-    minWidth: '96px',
-    animation: 'fadeIn 0.2s ease-out',
-    pointerEvents: 'auto',
-  },
-  loading: {
-    flexDirection: 'column',
-    padding: '20px',
-  },
-  icon: {
-    fontSize: '16px',
-    fontWeight: 'bold',
-  },
-  message: {
-    fontSize: '14px',
-    lineHeight: 1.4,
-    textAlign: 'center',
-  },
-  spinner: {
-    width: '32px',
-    height: '32px',
-    border: '3px solid rgba(255, 255, 255, 0.3)',
-    borderTopColor: 'white',
-    borderRadius: '50%',
-    animation: 'spin 0.8s linear infinite',
-  },
-};
-
-// 添加动画样式
-const styleSheet = document.createElement('style');
-styleSheet.textContent = `
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: scale(0.8);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-
-  @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-`;
-document.head.appendChild(styleSheet);
 
 export default ToastProvider;
