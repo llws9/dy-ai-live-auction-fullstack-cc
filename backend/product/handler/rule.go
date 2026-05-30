@@ -70,7 +70,8 @@ func (h *RuleHandler) Get(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// 临时使用 product_id 作为 auction_id
+	// path id 即 product_id（spec C §4.4：规则归属于 product，
+	// 已移除历史的 product_id↔auction_id 兼容映射）。
 	rule, err := h.productService.GetAuctionRule(ctx, productID)
 	if err != nil {
 		c.JSON(500, map[string]interface{}{
