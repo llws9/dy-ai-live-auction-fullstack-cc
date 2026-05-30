@@ -1392,12 +1392,17 @@ Store the backend stream in state:
 ```ts
 const [isReminderOpen, setIsReminderOpen] = useState(false);
 const [reminderStream, setReminderStream] = useState<StreamInfo | null>(null);
+const { isAuthenticated, loading: authLoading } = useAuth();
 ```
 
 Replace the `localStorage.getItem('pending_live_reminder')` effect with an API-only effect:
 
 ```ts
 useEffect(() => {
+  if (authLoading || !isAuthenticated) {
+    return;
+  }
+
   let alive = true;
 
   notificationApi.getPendingLiveReminder()
@@ -1416,8 +1421,10 @@ useEffect(() => {
   return () => {
     alive = false;
   };
-}, []);
+}, [authLoading, isAuthenticated]);
 ```
+
+The request is login-gated by `useAuth()`. Public pages and `/login` must not call `getPendingLiveReminder`, because that endpoint requires Bearer Token and `api.ts` redirects on `401`.
 
 Also change modal `stream` prop to:
 
@@ -1430,14 +1437,48 @@ Update `frontend/h5/src/__tests__/components/MobileShell.test.tsx` so reminder t
 ```tsx
 import { render, screen, waitFor } from '@testing-library/react';
 import { notificationApi } from '../../services/notification';
+import { useAuth } from '../../store/authContext';
 
 jest.mock('../../services/notification', () => ({
   notificationApi: {
+    getTouchpointSummary: jest.fn().mockResolvedValue({
+      unreadTotal: 0,
+      pendingPayment: 0,
+      wonNotPaid: 0,
+      outbid: 0,
+      endingSoon: 0,
+    }),
     getPendingLiveReminder: jest.fn(),
   },
 }));
 
+jest.mock('../../store/authContext', () => ({
+  useAuth: jest.fn(),
+}));
+
 const mockGetPendingLiveReminder = notificationApi.getPendingLiveReminder as jest.MockedFunction<typeof notificationApi.getPendingLiveReminder>;
+const mockGetTouchpointSummary = notificationApi.getTouchpointSummary as jest.MockedFunction<typeof notificationApi.getTouchpointSummary>;
+const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
+
+beforeEach(() => {
+  mockUseAuth.mockReturnValue({
+    isAuthenticated: true,
+    loading: false,
+    user: { id: 1, email: 'buyer@example.com', name: '测试用户', role: 0 },
+    token: 'token-1',
+    logout: jest.fn(),
+    login: jest.fn(),
+    register: jest.fn(),
+  });
+  mockGetTouchpointSummary.mockResolvedValue({
+    unreadTotal: 0,
+    pendingPayment: 0,
+    wonNotPaid: 0,
+    outbid: 0,
+    endingSoon: 0,
+  });
+  mockGetPendingLiveReminder.mockResolvedValue({ hasReminder: false, stream: null });
+});
 
 function renderMobileContainer() {
   return render(
@@ -1460,6 +1501,32 @@ it('opens live reminder once when backend returns a pending stream', async () =>
   renderMobileContainer();
 
   expect(await screen.findByRole('dialog')).toBeInTheDocument();
+});
+
+it('does not request pending reminder before login is confirmed', async () => {
+  mockUseAuth.mockReturnValue({
+    isAuthenticated: false,
+    loading: false,
+    user: null,
+    token: null,
+    logout: jest.fn(),
+    login: jest.fn(),
+    register: jest.fn(),
+  });
+  mockGetPendingLiveReminder.mockResolvedValue({ hasReminder: true, stream: { id: 1, name: '直播间', avatarUrl: '' } });
+  mockGetTouchpointSummary.mockResolvedValue({
+    unreadTotal: 0,
+    pendingPayment: 0,
+    wonNotPaid: 0,
+    outbid: 0,
+    endingSoon: 0,
+  });
+
+  renderMobileContainer();
+
+  await waitFor(() => expect(mockGetTouchpointSummary).toHaveBeenCalled());
+  expect(mockGetPendingLiveReminder).not.toHaveBeenCalled();
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
 it('does not open live reminder when backend returns empty', async () => {
