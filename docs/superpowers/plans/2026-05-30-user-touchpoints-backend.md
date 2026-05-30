@@ -1339,6 +1339,7 @@ Replace `frontend/h5/src/hooks/useTouchpointNotifications.ts` with:
 ```ts
 import { useEffect, useState } from 'react';
 import { notificationApi, TouchpointSummary } from '../services/notification';
+import { useAuth } from '../store/authContext';
 
 export interface TouchpointNotifications {
   pendingPayment: number;
@@ -1355,8 +1356,14 @@ const EMPTY: TouchpointSummary = {
 
 export function useTouchpointNotifications(): TouchpointNotifications {
   const [summary, setSummary] = useState<TouchpointSummary>(EMPTY);
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
   useEffect(() => {
+    if (authLoading || !isAuthenticated) {
+      setSummary(EMPTY);
+      return;
+    }
+
     let alive = true;
 
     notificationApi.getTouchpointSummary()
@@ -1370,7 +1377,7 @@ export function useTouchpointNotifications(): TouchpointNotifications {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [authLoading, isAuthenticated]);
 
   return {
     pendingPayment: summary.pendingPayment,
@@ -1381,10 +1388,11 @@ export function useTouchpointNotifications(): TouchpointNotifications {
 
 - [ ] **Step 3: Replace local live reminder marker**
 
-In `frontend/h5/src/components/MobileShell/MobileContainer.tsx`, remove `mockLiveReminderStream` and import the real API:
+In `frontend/h5/src/components/MobileShell/MobileContainer.tsx`, remove `mockLiveReminderStream` and import the real API/auth hook:
 
 ```ts
 import { notificationApi } from '../../services/notification';
+import { useAuth } from '../../store/authContext';
 ```
 
 Store the backend stream in state:
@@ -1466,9 +1474,11 @@ beforeEach(() => {
     loading: false,
     user: { id: 1, email: 'buyer@example.com', name: '测试用户', role: 0 },
     token: 'token-1',
-    logout: jest.fn(),
     login: jest.fn(),
-    register: jest.fn(),
+    setAuth: jest.fn(),
+    logout: jest.fn(),
+    isAdmin: jest.fn(() => false),
+    isMerchant: jest.fn(() => false),
   });
   mockGetTouchpointSummary.mockResolvedValue({
     unreadTotal: 0,
@@ -1509,9 +1519,11 @@ it('does not request pending reminder before login is confirmed', async () => {
     loading: false,
     user: null,
     token: null,
-    logout: jest.fn(),
     login: jest.fn(),
-    register: jest.fn(),
+    setAuth: jest.fn(),
+    logout: jest.fn(),
+    isAdmin: jest.fn(() => false),
+    isMerchant: jest.fn(() => false),
   });
   mockGetPendingLiveReminder.mockResolvedValue({ hasReminder: true, stream: { id: 1, name: '直播间', avatarUrl: '' } });
   mockGetTouchpointSummary.mockResolvedValue({
@@ -1524,7 +1536,8 @@ it('does not request pending reminder before login is confirmed', async () => {
 
   renderMobileContainer();
 
-  await waitFor(() => expect(mockGetTouchpointSummary).toHaveBeenCalled());
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(mockGetTouchpointSummary).not.toHaveBeenCalled();
   expect(mockGetPendingLiveReminder).not.toHaveBeenCalled();
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
