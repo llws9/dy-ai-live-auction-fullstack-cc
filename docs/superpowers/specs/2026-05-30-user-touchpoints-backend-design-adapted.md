@@ -86,7 +86,7 @@
     "pendingPayment": 1,
     "wonNotPaid": 1,
     "outbid": 0,
-    "endingSoon": 1
+    "endingSoon": 0
   }
 }
 ```
@@ -99,7 +99,7 @@
 | `pendingPayment` | int | `product-service.orders` | 待支付订单数，用于「我的竞拍」红点 |
 | `wonNotPaid` | int | `product-service.orders` | 中标未支付数，本期可等同 `pendingPayment` |
 | `outbid` | int | `auction-service.notifications` | 未读 `bid_outbid` 通知数 |
-| `endingSoon` | int | `auction-service.notifications` 或调度器 | 未读截拍预警数；本期可先返回 `0` |
+| `endingSoon` | int | 固定值 | 一期不接截拍调度器，必须返回 `0`；不得临时映射到 `auction_starting` |
 
 ### 4.2 实现边界
 
@@ -149,6 +149,16 @@
 }
 ```
 
+### 4.4 gateway 错误策略
+
+`gateway-service` 是前端唯一入口，错误处理必须区分“身份错误”和“业务计数降级”：
+
+- gateway JWT 校验失败：直接返回 `401`，不请求上游服务。
+- 上游返回 `401/403`：视为身份链路错误，透传为 `401/403`，不能降级成 0，避免掩盖鉴权配置问题。
+- 上游超时、5xx、非 JSON 或 `code != 0 && code != 200`：该上游负责的字段降级为 0，整体仍返回 `200`，保证红点失败不阻塞 H5 页面。
+- `auction-service` 失败只影响 `unreadTotal/outbid/endingSoon`；`product-service` 失败只影响 `pendingPayment/wonNotPaid`。
+- 一期不新增 `partial` 字段；服务端记录日志即可，避免前端契约扩大。
+
 ---
 
 ## 5. 通知分类已读
@@ -172,7 +182,7 @@
 | category | 后端行为 |
 |---|---|
 | `outbid` | 标记当前用户未读 `bid_outbid` 通知为已读 |
-| `endingSoon` | 标记当前用户截拍预警通知为已读 |
+| `endingSoon` | 一期 no-op 返回成功；等截拍调度器落地后再绑定真实通知类型 |
 | `all` | 复用当前 `read-all` 语义 |
 | `pendingPayment` | 不建议直接标记订单为已读；本期可 no-op 返回成功 |
 
@@ -320,9 +330,10 @@ CREATE TABLE IF NOT EXISTS live_stream_reminder_receipts (
 
 1. 找到当前用户已关注且 `notification_enabled = true` 的直播间。
 2. 找到“正在直播”的直播间。
-3. 排除 `live_stream_reminder_receipts` 中已提醒过的 `user_id + live_stream_id + live_started_at`。
-4. 返回最新一条。
-5. 接口返回前写入 receipt，确保刷新不重复弹。
+3. 使用真实直播 session 的 `started_at` 作为 `live_started_at`；该值必须来自直播状态模型或开播事件，不能用请求时间、小时取整或登录时间合成。
+4. 原子写入 `live_stream_reminder_receipts`，唯一键为 `user_id + live_stream_id + live_started_at`。
+5. 只有本次写入成功时返回提醒；唯一键冲突表示其他请求已消费该 session，返回 `hasReminder=false`。
+6. 返回最新一条。
 
 ### 7.4 开播状态来源
 
@@ -330,10 +341,10 @@ CREATE TABLE IF NOT EXISTS live_stream_reminder_receipts (
 
 | 方案 | 说明 | 推荐 |
 |---|---|---|
-| A | 使用 `product-service.live_streams.status = Active` 近似表示正在直播 | 可作为 MVP，但语义弱 |
+| A | 使用 `product-service.live_streams.status = Active` 且已有真实 `started_at` | 可作为 MVP |
 | B | 为直播间补 `live_status`、`started_at` 字段 | 推荐，符合真实业务 |
 
-本期若只做联调 MVP，可先使用 A；若要避免后续返工，应使用 B。
+本期若没有真实 `started_at`，不要用 `time.Now()` 或小时桶伪造开播 session；接口应返回 `hasReminder=false`，或先补齐 `started_at` 后再接入弹窗。
 
 ---
 
@@ -363,7 +374,7 @@ CREATE TABLE IF NOT EXISTS live_stream_reminder_receipts (
 |---|---|---|
 | `unreadTotal` | `auction.notifications WHERE read_at IS NULL` | 已有 DAO 可扩展 |
 | `outbid` | `auction.notifications.type = bid_outbid` | 需要按 type count |
-| `endingSoon` | 截拍调度器或通知表 | 本期可先返回 0 |
+| `endingSoon` | 固定值 | 本期必须返回 0，等截拍调度器落地后再接真实来源 |
 | `pendingPayment` | `product.orders.status = 0` | 需要 product count 接口 |
 | `wonNotPaid` | `product.orders.status = 0` | 本期可等同 `pendingPayment` |
 | Toast outbid | `NotificationTypeBidOutbid` | 已有发送方法 |

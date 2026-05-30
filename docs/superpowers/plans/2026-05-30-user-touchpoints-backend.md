@@ -58,7 +58,9 @@ This plan implements the adapted backend design in `docs/superpowers/specs/2026-
 - Create `backend/auction/dao/live_stream_reminder_receipt.go`
   - Receipt existence check and insert.
 - Create `backend/auction/service/live_reminder.go`
-  - Query pending reminder and consume it atomically enough for MVP.
+  - Query pending reminder and claim the receipt atomically with the unique key.
+- Modify `backend/auction/service/live_stream_stats.go`
+  - Preserve real live session `StartedAt` when a stream enters `live`.
 - Create `backend/auction/handler/live_reminder.go`
   - Expose pending reminder endpoint.
 - Modify `backend/auction/main.go`
@@ -83,7 +85,7 @@ This plan implements the adapted backend design in `docs/superpowers/specs/2026-
 - Create `backend/gateway/handler/touchpoint.go`
   - Aggregate auction summary and product order summary.
 - Create `backend/gateway/handler/touchpoint_test.go`
-  - Test aggregation and partial upstream failure fallback.
+  - Test aggregation, partial upstream failure fallback, and auth error propagation.
 - Modify `backend/gateway/router/router.go`
   - Register frontend-facing `/api/v1/notifications/summary`.
   - Register `/api/v1/live/pending-reminder`.
@@ -180,7 +182,7 @@ func TestNotificationCategoryTypes(t *testing.T) {
 		wantErr  bool
 	}{
 		{category: "outbid", want: []model.NotificationType{model.NotificationTypeBidOutbid}},
-		{category: "endingSoon", want: []model.NotificationType{model.NotificationTypeAuctionStarting}},
+		{category: "endingSoon", want: nil},
 		{category: "pendingPayment", want: nil},
 		{category: "all", want: nil},
 		{category: "unknown", wantErr: true},
@@ -266,9 +268,7 @@ func notificationTypesForCategory(category string) ([]model.NotificationType, er
 	switch category {
 	case "outbid":
 		return []model.NotificationType{model.NotificationTypeBidOutbid}, nil
-	case "endingSoon":
-		return []model.NotificationType{model.NotificationTypeAuctionStarting}, nil
-	case "pendingPayment", "all":
+	case "pendingPayment", "endingSoon", "all":
 		return nil, nil
 	default:
 		return nil, fmt.Errorf("unsupported notification category: %s", category)
@@ -284,19 +284,15 @@ func (s *NotificationService) GetSummary(ctx context.Context, userID int64) (*mo
 	if err != nil {
 		return nil, err
 	}
-	endingSoon, err := s.notificationDAO.CountUnreadByTypes(ctx, userID, []model.NotificationType{model.NotificationTypeAuctionStarting})
-	if err != nil {
-		return nil, err
-	}
 	return &model.NotificationSummaryResponse{
 		UnreadTotal: unreadTotal,
 		Outbid:      outbid,
-		EndingSoon:  endingSoon,
+		EndingSoon:  0,
 	}, nil
 }
 
 func (s *NotificationService) MarkCategoryAsRead(ctx context.Context, userID int64, category string) error {
-	if category == "pendingPayment" {
+	if category == "pendingPayment" || category == "endingSoon" {
 		return nil
 	}
 	if category == "all" {
@@ -598,6 +594,57 @@ func TestTouchpointHandlerSummary(t *testing.T) {
 	assert.Contains(t, body, `"wonNotPaid":1`)
 	assert.Contains(t, body, `"outbid":1`)
 }
+
+func TestTouchpointHandlerSummaryFallsBackForUpstreamFailure(t *testing.T) {
+	auctionServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer auctionServer.Close()
+
+	productServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"code":0,"message":"success","data":{"pendingPayment":1,"wonNotPaid":1}}`))
+	}))
+	defer productServer.Close()
+
+	h := NewTouchpointHandler(auctionServer.URL, productServer.URL)
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/notifications/summary")
+	c.Set("user_id", int64(123))
+
+	h.GetNotificationSummary(context.Background(), c)
+
+	assert.Equal(t, http.StatusOK, c.Response.StatusCode())
+	body := string(c.Response.Body())
+	assert.Contains(t, body, `"unreadTotal":0`)
+	assert.Contains(t, body, `"outbid":0`)
+	assert.Contains(t, body, `"endingSoon":0`)
+	assert.Contains(t, body, `"pendingPayment":1`)
+}
+
+func TestTouchpointHandlerSummaryPropagatesAuthFailure(t *testing.T) {
+	auctionServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer auctionServer.Close()
+
+	productServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("product upstream must not be called after auth failure")
+	}))
+	defer productServer.Close()
+
+	h := NewTouchpointHandler(auctionServer.URL, productServer.URL)
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/notifications/summary")
+	c.Set("user_id", int64(123))
+
+	h.GetNotificationSummary(context.Background(), c)
+
+	assert.Equal(t, http.StatusUnauthorized, c.Response.StatusCode())
+}
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -674,10 +721,16 @@ func (h *TouchpointHandler) GetNotificationSummary(ctx context.Context, c *app.R
 	userID := toString(c.GetInt64("user_id"))
 
 	auctionData := auctionSummary{}
-	_ = h.fetch(ctx, h.auctionURL+"/api/v1/notifications/summary", token, userID, &auctionData)
+	if err := h.fetch(ctx, h.auctionURL+"/api/v1/notifications/summary", token, userID, &auctionData); isAuthUpstreamError(err) {
+		writeUpstreamAuthError(c, err)
+		return
+	}
 
 	orderData := orderSummary{}
-	_ = h.fetch(ctx, h.productURL+"/api/v1/orders/summary", token, userID, &orderData)
+	if err := h.fetch(ctx, h.productURL+"/api/v1/orders/summary", token, userID, &orderData); isAuthUpstreamError(err) {
+		writeUpstreamAuthError(c, err)
+		return
+	}
 
 	c.JSON(http.StatusOK, map[string]interface{}{
 		"code":    0,
@@ -710,7 +763,7 @@ func (h *TouchpointHandler) fetch(ctx context.Context, url, token, userID string
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("upstream status %d", resp.StatusCode)
+		return upstreamStatusError{status: resp.StatusCode}
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -721,10 +774,34 @@ func (h *TouchpointHandler) fetch(ctx context.Context, url, token, userID string
 	if err := json.Unmarshal(body, &env); err != nil {
 		return err
 	}
+	if env.Code != 0 && env.Code != 200 {
+		return fmt.Errorf("upstream code %d: %s", env.Code, env.Message)
+	}
 	if len(env.Data) == 0 {
 		return nil
 	}
 	return json.Unmarshal(env.Data, out)
+}
+
+type upstreamStatusError struct {
+	status int
+}
+
+func (e upstreamStatusError) Error() string {
+	return fmt.Sprintf("upstream status %d", e.status)
+}
+
+func isAuthUpstreamError(err error) bool {
+	statusErr, ok := err.(upstreamStatusError)
+	return ok && (statusErr.status == http.StatusUnauthorized || statusErr.status == http.StatusForbidden)
+}
+
+func writeUpstreamAuthError(c *app.RequestContext, err error) {
+	statusErr := err.(upstreamStatusError)
+	c.JSON(statusErr.status, map[string]interface{}{
+		"code":    statusErr.status,
+		"message": "authentication failed",
+	})
 }
 ```
 
@@ -777,6 +854,7 @@ Expected: commit succeeds.
 - Create: `backend/auction/dao/live_stream_reminder_receipt.go`
 - Create: `backend/auction/service/live_reminder.go`
 - Create: `backend/auction/handler/live_reminder.go`
+- Modify: `backend/auction/service/live_stream_stats.go`
 - Modify: `backend/auction/main.go`
 - Test: `backend/auction/service/live_reminder_test.go`
 
@@ -834,7 +912,38 @@ type StreamInfo struct {
 }
 ```
 
-- [ ] **Step 3: Add receipt DAO**
+- [ ] **Step 3: Preserve live session start time**
+
+Modify `backend/auction/service/live_stream_stats.go`:
+
+```go
+type LiveStreamStats struct {
+	LiveStreamID   int64      `json:"live_stream_id"`
+	FollowerCount  int        `json:"follower_count"`
+	IsHot          bool       `json:"is_hot"`
+	ScheduledStart *time.Time `json:"scheduled_start,omitempty"`
+	StartedAt      *time.Time `json:"started_at,omitempty"`
+	Status         string     `json:"status"` // "pending", "live", "ended"
+}
+```
+
+In `StartLive`, set a real session start timestamp when the stream enters `live`:
+
+```go
+now := time.Now()
+stats.Status = "live"
+stats.StartedAt = &now
+stats.ScheduledStart = nil
+```
+
+In `EndLive`, clear the session marker before saving or deleting stats:
+
+```go
+stats.Status = "ended"
+stats.StartedAt = nil
+```
+
+- [ ] **Step 4: Add receipt DAO**
 
 Create `backend/auction/dao/live_stream_reminder_receipt.go`:
 
@@ -847,6 +956,7 @@ import (
 
 	"auction-service/model"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type LiveStreamReminderReceiptDAO struct {
@@ -857,26 +967,22 @@ func NewLiveStreamReminderReceiptDAO(db *gorm.DB) *LiveStreamReminderReceiptDAO 
 	return &LiveStreamReminderReceiptDAO{db: db}
 }
 
-func (d *LiveStreamReminderReceiptDAO) Exists(ctx context.Context, userID, liveStreamID, startedAt int64) (bool, error) {
-	var count int64
-	err := d.db.WithContext(ctx).Model(&model.LiveStreamReminderReceipt{}).
-		Where("user_id = ? AND live_stream_id = ? AND live_started_at = ?", userID, liveStreamID, startedAt).
-		Count(&count).Error
-	return count > 0, err
-}
-
-func (d *LiveStreamReminderReceiptDAO) Create(ctx context.Context, userID, liveStreamID, startedAt int64) error {
+func (d *LiveStreamReminderReceiptDAO) Claim(ctx context.Context, userID, liveStreamID, startedAt int64) (bool, error) {
 	receipt := &model.LiveStreamReminderReceipt{
 		UserID:        userID,
 		LiveStreamID:  liveStreamID,
 		LiveStartedAt: startedAt,
 		RemindedAt:    time.Now(),
 	}
-	return d.db.WithContext(ctx).Create(receipt).Error
+	result := d.db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(receipt)
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return result.RowsAffected == 1, nil
 }
 ```
 
-- [ ] **Step 4: Add MVP service**
+- [ ] **Step 5: Add live reminder service**
 
 Create `backend/auction/service/live_reminder.go`:
 
@@ -885,19 +991,49 @@ package service
 
 import (
 	"context"
-	"time"
 
 	"auction-service/dao"
 	"auction-service/model"
 )
 
-type LiveReminderService struct {
-	followDAO  FollowDAO
-	receiptDAO *dao.LiveStreamReminderReceiptDAO
+type LiveSessionResolver interface {
+	GetActiveSession(ctx context.Context, liveStreamID int64) (*model.StreamInfo, error)
 }
 
-func NewLiveReminderService(followDAO FollowDAO, receiptDAO *dao.LiveStreamReminderReceiptDAO) *LiveReminderService {
-	return &LiveReminderService{followDAO: followDAO, receiptDAO: receiptDAO}
+type LiveStatsSessionResolver struct {
+	statsService *LiveStreamStatsService
+}
+
+func NewLiveStatsSessionResolver(statsService *LiveStreamStatsService) *LiveStatsSessionResolver {
+	return &LiveStatsSessionResolver{statsService: statsService}
+}
+
+func (r *LiveStatsSessionResolver) GetActiveSession(ctx context.Context, liveStreamID int64) (*model.StreamInfo, error) {
+	stats, err := r.statsService.GetStats(ctx, liveStreamID)
+	if err != nil {
+		return nil, err
+	}
+	if stats == nil || stats.Status != "live" || stats.StartedAt == nil {
+		return nil, nil
+	}
+	return &model.StreamInfo{
+		ID:         liveStreamID,
+		Name:       "关注直播间",
+		AvatarURL:  "",
+		StatusText: "正在直播",
+		LiveRoomID: liveStreamID,
+		StartedAt:  stats.StartedAt.UnixMilli(),
+	}, nil
+}
+
+type LiveReminderService struct {
+	followDAO            FollowDAO
+	liveSessionResolver LiveSessionResolver
+	receiptDAO           *dao.LiveStreamReminderReceiptDAO
+}
+
+func NewLiveReminderService(followDAO FollowDAO, liveSessionResolver LiveSessionResolver, receiptDAO *dao.LiveStreamReminderReceiptDAO) *LiveReminderService {
+	return &LiveReminderService{followDAO: followDAO, liveSessionResolver: liveSessionResolver, receiptDAO: receiptDAO}
 }
 
 func (s *LiveReminderService) GetPendingReminder(ctx context.Context, userID int64) (*model.PendingLiveReminderResponse, error) {
@@ -910,35 +1046,32 @@ func (s *LiveReminderService) GetPendingReminder(ctx context.Context, userID int
 	}
 
 	liveStreamID := follows[0].LiveStreamID
-	startedAt := time.Now().Truncate(time.Hour).UnixMilli()
-	exists, err := s.receiptDAO.Exists(ctx, userID, liveStreamID, startedAt)
+	session, err := s.liveSessionResolver.GetActiveSession(ctx, liveStreamID)
 	if err != nil {
 		return nil, err
 	}
-	if exists {
+	if session == nil || session.StartedAt <= 0 {
 		return &model.PendingLiveReminderResponse{HasReminder: false, Stream: nil}, nil
 	}
-	if err := s.receiptDAO.Create(ctx, userID, liveStreamID, startedAt); err != nil {
+
+	claimed, err := s.receiptDAO.Claim(ctx, userID, liveStreamID, session.StartedAt)
+	if err != nil {
 		return nil, err
+	}
+	if !claimed {
+		return &model.PendingLiveReminderResponse{HasReminder: false, Stream: nil}, nil
 	}
 
 	return &model.PendingLiveReminderResponse{
 		HasReminder: true,
-		Stream: &model.StreamInfo{
-			ID:         liveStreamID,
-			Name:       "关注直播间",
-			AvatarURL:  "",
-			StatusText: "正在直播",
-			LiveRoomID: liveStreamID,
-			StartedAt:  startedAt,
-		},
+		Stream:      session,
 	}, nil
 }
 ```
 
-MVP 说明：这里使用关注直播间 + 小时级 `startedAt` 作为可联调版本。后续直播间补真实 `live_status/started_at` 后，替换 `startedAt` 和直播间详情来源。
+语义要求：`StartedAt` 必须来自 `StartLive` 写入的真实直播 session。不要在 `GetPendingReminder` 中用请求时间、小时桶或登录时间合成 `StartedAt`。
 
-- [ ] **Step 5: Add handler**
+- [ ] **Step 6: Add handler**
 
 Create `backend/auction/handler/live_reminder.go`:
 
@@ -977,13 +1110,15 @@ func (h *LiveReminderHandler) GetPendingReminder(ctx context.Context, c *app.Req
 }
 ```
 
-- [ ] **Step 6: Wire main and route**
+- [ ] **Step 7: Wire main and route**
 
 Modify `backend/auction/main.go`:
 
 ```go
 liveStreamReminderReceiptDAO := dao.NewLiveStreamReminderReceiptDAO(db)
-liveReminderService := service.NewLiveReminderService(userLiveStreamFollowDAO, liveStreamReminderReceiptDAO)
+liveStreamStatsService := service.NewLiveStreamStatsService()
+liveSessionResolver := service.NewLiveStatsSessionResolver(liveStreamStatsService)
+liveReminderService := service.NewLiveReminderService(userLiveStreamFollowDAO, liveSessionResolver, liveStreamReminderReceiptDAO)
 liveReminderHandler := handler.NewLiveReminderHandler(liveReminderService)
 ```
 
@@ -999,24 +1134,24 @@ Extend `registerRoutes` signature with `liveReminderHandler *handler.LiveReminde
 v1.GET("/live/pending-reminder", liveReminderHandler.GetPendingReminder)
 ```
 
-- [ ] **Step 7: Verify auction service**
+- [ ] **Step 8: Verify auction service**
 
 Run:
 
 ```bash
 cd /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/auction
-gofmt -w model/live_stream_reminder_receipt.go dao/live_stream_reminder_receipt.go service/live_reminder.go handler/live_reminder.go main.go
+gofmt -w model/live_stream_reminder_receipt.go dao/live_stream_reminder_receipt.go service/live_reminder.go service/live_stream_stats.go handler/live_reminder.go main.go
 go test ./dao ./service ./handler
 ```
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 Run:
 
 ```bash
-git add backend/auction/migration/002_create_live_stream_reminder_receipts.sql backend/auction/model/live_stream_reminder_receipt.go backend/auction/dao/live_stream_reminder_receipt.go backend/auction/service/live_reminder.go backend/auction/handler/live_reminder.go backend/auction/main.go
+git add backend/auction/migration/002_create_live_stream_reminder_receipts.sql backend/auction/model/live_stream_reminder_receipt.go backend/auction/dao/live_stream_reminder_receipt.go backend/auction/service/live_reminder.go backend/auction/service/live_stream_stats.go backend/auction/handler/live_reminder.go backend/auction/main.go
 git commit -m "feat(auction): add pending live reminder endpoint"
 ```
 
@@ -1355,7 +1490,7 @@ Expected:
 
 - `gateway-service` aggregation must treat upstream failures as zeros for badge data; badge failure must not block H5 render.
 - `product-service` route `/orders/summary` must be registered before `/orders/:id`.
-- The MVP live reminder uses a weak “关注直播间 + hourly startedAt” model. It is acceptable for first联调 but should be replaced when live status fields are added.
+- Live reminder receipts must be keyed by a real live session `StartedAt`; `GetPendingReminder` must never synthesize the session key from request time.
 - Existing WebSocket auth failure behavior is HTTP 401 before upgrade, while H5 also supports close code `4401`. This plan keeps backend behavior unchanged.
 - Worktree has known unrelated changes. During execution, only add files listed in each task.
 
