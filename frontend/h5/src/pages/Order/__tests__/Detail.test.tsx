@@ -173,4 +173,35 @@ describe('OrderDetail page (T3.5 / F-D1)', () => {
 
     expect(await screen.findByText('客服功能即将上线')).toBeInTheDocument();
   });
+
+  // ---- 边界用例（PR #15 评审补充）----
+
+  it('does NOT call orderApi.get when path id is non-numeric (e.g. "abc"); shows not-found', async () => {
+    renderAt('abc');
+
+    expect(await screen.findByText('订单不存在')).toBeInTheDocument();
+    expect(mockedOrderApi.get).not.toHaveBeenCalled();
+  });
+
+  it('does NOT call orderApi.get when path id is "0" (invalid); shows not-found', async () => {
+    renderAt('0');
+
+    expect(await screen.findByText('订单不存在')).toBeInTheDocument();
+    expect(mockedOrderApi.get).not.toHaveBeenCalled();
+  });
+
+  it('does NOT call orderApi.get when path id is negative; shows not-found', async () => {
+    renderAt('-5');
+
+    expect(await screen.findByText('订单不存在')).toBeInTheDocument();
+    expect(mockedOrderApi.get).not.toHaveBeenCalled();
+  });
+
+  it('falls back to not-found when backend returns 200 with null body (defensive)', async () => {
+    mockedOrderApi.get.mockResolvedValue(null as unknown as typeof baseOrder);
+
+    renderAt('56');
+
+    expect(await screen.findByText('订单不存在')).toBeInTheDocument();
+  });
 });

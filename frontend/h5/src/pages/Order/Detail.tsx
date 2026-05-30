@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ApiError, orderApi } from '@/services/api';
 import PageHeader from '@/components/shared/PageHeader';
@@ -49,21 +49,52 @@ const formatTime = (value?: string | null) => {
 const OrderDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const orderId = Number(id);
+  // 严格校验：必须是正整数，否则直接归 not-found，不发请求
+  const parsed = Number(id);
+  const isValidId = Number.isInteger(parsed) && parsed > 0;
+  const orderId = isValidId ? parsed : 0;
 
-  const [state, setState] = useState<LoadState>({ kind: 'loading' });
+  const [state, setState] = useState<LoadState>(
+    isValidId ? { kind: 'loading' } : { kind: 'not-found' }
+  );
   const [toast, setToast] = useState('');
+  const toastTimerRef = useRef<number | null>(null);
 
   const showToast = (msg: string) => {
     setToast(msg);
-    window.setTimeout(() => setToast(''), 2500);
+    if (toastTimerRef.current !== null) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast('');
+      toastTimerRef.current = null;
+    }, 2500);
   };
 
+  // 卸载时清理 toast timer，避免 setState on unmounted
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current !== null) {
+        window.clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = null;
+      }
+    };
+  }, []);
+
   const load = useCallback(async () => {
+    if (!isValidId) {
+      setState({ kind: 'not-found' });
+      return;
+    }
     setState({ kind: 'loading' });
     try {
       const data = await orderApi.get(orderId);
-      setState({ kind: 'success', data });
+      // 防御性：后端返回空 body 或缺关键字段时归 not-found，避免渲染 NaN
+      if (!data || typeof (data as OrderRecord).id !== 'number') {
+        setState({ kind: 'not-found' });
+        return;
+      }
+      setState({ kind: 'success', data: data as OrderRecord });
     } catch (err: unknown) {
       if (err instanceof ApiError && err.status === 404) {
         setState({ kind: 'not-found' });
@@ -72,7 +103,7 @@ const OrderDetailPage: React.FC = () => {
       const message = err instanceof Error ? err.message : '加载失败';
       setState({ kind: 'error', message });
     }
-  }, [orderId]);
+  }, [orderId, isValidId]);
 
   useEffect(() => {
     load();
