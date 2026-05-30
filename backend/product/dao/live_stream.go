@@ -40,6 +40,26 @@ func (d *LiveStreamDAO) GetByID(ctx context.Context, id int64) (*model.LiveStrea
 	return &liveStream, nil
 }
 
+// GetByIDs 批量根据 ID 获取直播间，返回 id -> *LiveStream 映射
+// （T3.3 / spec B §4.1：/internal/live-streams/batch 内部接口）。
+func (d *LiveStreamDAO) GetByIDs(ctx context.Context, ids []int64) (map[int64]*model.LiveStream, error) {
+	if len(ids) == 0 {
+		return map[int64]*model.LiveStream{}, nil
+	}
+	var items []model.LiveStream
+	err := d.db.WithContext(ctx).
+		Where("id IN ?", ids).
+		Find(&items).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[int64]*model.LiveStream, len(items))
+	for i := range items {
+		result[items[i].ID] = &items[i]
+	}
+	return result, nil
+}
+
 // Create 创建直播间
 func (d *LiveStreamDAO) Create(ctx context.Context, liveStream *model.LiveStream) error {
 	return d.db.WithContext(ctx).Create(liveStream).Error

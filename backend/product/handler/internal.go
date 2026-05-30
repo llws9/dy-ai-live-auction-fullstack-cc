@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 
+	"product-service/dao"
 	"product-service/model"
 	"product-service/service"
 )
@@ -14,11 +15,22 @@ import (
 // 禁止注册到 Gateway（spec C §5.3 / §6.3）。
 type InternalHandler struct {
 	productService *service.ProductService
+	liveStreamDAO  liveStreamBatchProvider
+}
+
+// liveStreamBatchProvider 抽象 LiveStreamDAO.GetByIDs，便于 handler 单测注入 fake。
+type liveStreamBatchProvider interface {
+	GetByIDs(ctx context.Context, ids []int64) (map[int64]*model.LiveStream, error)
 }
 
 // NewInternalHandler 创建内部接口 Handler。
 func NewInternalHandler(productService *service.ProductService) *InternalHandler {
 	return &InternalHandler{productService: productService}
+}
+
+// SetLiveStreamDAO 注入 LiveStreamDAO，用于 /internal/live-streams/batch（T3.3）。
+func (h *InternalHandler) SetLiveStreamDAO(d *dao.LiveStreamDAO) {
+	h.liveStreamDAO = d
 }
 
 // productSummary 是 list 场景下回给调用方的精简摘要。
@@ -108,6 +120,73 @@ func (h *InternalHandler) BatchByIDs(ctx context.Context, c *app.RequestContext)
 	summaries := make([]productSummary, 0, len(items))
 	for _, p := range items {
 		summaries = append(summaries, toSummary(p))
+	}
+
+	c.JSON(200, map[string]interface{}{
+		"code":    200,
+		"message": "success",
+		"data": map[string]interface{}{
+			"items": summaries,
+		},
+	})
+}
+
+// liveStreamSummary 是 /internal/live-streams/batch 的返回单元（spec B §4.1 契约）。
+type liveStreamSummary struct {
+	ID         int64  `json:"id"`
+	Name       string `json:"name"`
+	CoverImage string `json:"cover_image"`
+	Status     int    `json:"status"`
+	CreatorID  int64  `json:"creator_id"`
+}
+
+const internalLiveStreamBatchMaxIDs = 200
+
+// BatchLiveStreams 处理 POST /internal/live-streams/batch（T3.3 / spec B §4.1）。
+// 入参 ids（非空、长度 ≤ 200），返回按 id 命中的直播间摘要列表，缺失 id 跳过。
+func (h *InternalHandler) BatchLiveStreams(ctx context.Context, c *app.RequestContext) {
+	var req BatchByIDsRequest
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "请求参数错误: " + err.Error()})
+		return
+	}
+	if len(req.IDs) == 0 {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "ids 不能为空"})
+		return
+	}
+	if len(req.IDs) > internalLiveStreamBatchMaxIDs {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "ids 超出上限"})
+		return
+	}
+	if h.liveStreamDAO == nil {
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "live stream batch not configured"})
+		return
+	}
+
+	items, err := h.liveStreamDAO.GetByIDs(ctx, req.IDs)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "查询失败: " + err.Error()})
+		return
+	}
+
+	summaries := make([]liveStreamSummary, 0, len(items))
+	seen := make(map[int64]struct{}, len(req.IDs))
+	for _, id := range req.IDs {
+		if _, dup := seen[id]; dup {
+			continue
+		}
+		seen[id] = struct{}{}
+		ls, ok := items[id]
+		if !ok {
+			continue
+		}
+		summaries = append(summaries, liveStreamSummary{
+			ID:         ls.ID,
+			Name:       ls.Name,
+			CoverImage: ls.CoverImage,
+			Status:     int(ls.Status),
+			CreatorID:  ls.CreatorID,
+		})
 	}
 
 	c.JSON(200, map[string]interface{}{

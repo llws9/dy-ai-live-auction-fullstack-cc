@@ -10,7 +10,10 @@ import (
 
 // FollowHandler 关注处理器
 type FollowHandler struct {
-	followService *service.FollowService
+	followService  *service.FollowService
+	lsFetcher      LiveStreamBatchFetcher
+	userFetcher    UserAvatarFetcher
+	auctionFetcher AuctionCountFetcher
 }
 
 // NewFollowHandler 创建关注处理器
@@ -18,6 +21,17 @@ func NewFollowHandler(followService *service.FollowService) *FollowHandler {
 	return &FollowHandler{
 		followService: followService,
 	}
+}
+
+// SetFollowedListFetchers 注入 GetUserFollowsHandler 编排所需的批量取数依赖（T3.3 / spec B §2.3）。
+func (h *FollowHandler) SetFollowedListFetchers(
+	ls LiveStreamBatchFetcher,
+	user UserAvatarFetcher,
+	auction AuctionCountFetcher,
+) {
+	h.lsFetcher = ls
+	h.userFetcher = user
+	h.auctionFetcher = auction
 }
 
 // FollowHandler 关注直播间
@@ -88,18 +102,35 @@ func (h *FollowHandler) UnfollowHandler(ctx context.Context, c *app.RequestConte
 	})
 }
 
-// GetUserFollowsHandler 获取用户关注的直播间列表
+// GetUserFollowsHandler 获取用户关注的直播间列表（T3.3 / spec B §2.3 / F-B3）
+//
+// 通过 BuildFollowedLiveStreams 编排：拉关注列表 → 跨服务批量取直播间 →
+// 批量取主播头像 → 批量取进行中竞拍数。返回字段固定全量（含 viewer_count=0）。
 func (h *FollowHandler) GetUserFollowsHandler(ctx context.Context, c *app.RequestContext) {
-	// 获取用户ID
 	userID := c.GetInt64("user_id")
 
-	// 获取分页参数
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 
-	// 获取关注列表
-	follows, total, err := h.followService.GetUserFollows(ctx, userID, page, pageSize)
+	if h.lsFetcher == nil || h.userFetcher == nil || h.auctionFetcher == nil {
+		c.JSON(500, map[string]interface{}{
+			"code":    500,
+			"message": "服务未就绪",
+		})
+		return
+	}
+
+	resp, err := BuildFollowedLiveStreams(ctx, h.followService,
+		h.lsFetcher, h.userFetcher, h.auctionFetcher,
+		userID, page, pageSize)
 	if err != nil {
+		if err.Error() == "invalid user_id" {
+			c.JSON(400, map[string]interface{}{
+				"code":    400,
+				"message": err.Error(),
+			})
+			return
+		}
 		c.JSON(500, map[string]interface{}{
 			"code":    500,
 			"message": "获取关注列表失败",
@@ -107,15 +138,9 @@ func (h *FollowHandler) GetUserFollowsHandler(ctx context.Context, c *app.Reques
 		return
 	}
 
-	// 返回响应
 	c.JSON(200, map[string]interface{}{
 		"code": 200,
-		"data": map[string]interface{}{
-			"items":     follows,
-			"total":     total,
-			"page":      page,
-			"page_size": pageSize,
-		},
+		"data": resp,
 	})
 }
 

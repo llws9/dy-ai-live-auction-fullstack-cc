@@ -43,14 +43,15 @@ func (d *UserDAO) GetByID(ctx context.Context, userID int64) (*model.User, error
 }
 
 // GetByIDs 批量根据 ID 获取用户，返回 id -> user 映射
-// 仅查询 id 和 name 字段，避免无关字段开销（broadcastRanking 等场景使用）
+// 仅查询 id、name、avatar 字段，覆盖排行榜与 follow 卡片回填两类场景
+// （T3.3 / spec B §4.1：/internal/users/batch 内部接口）。
 func (d *UserDAO) GetByIDs(ctx context.Context, userIDs []int64) (map[int64]*model.User, error) {
 	if len(userIDs) == 0 {
 		return map[int64]*model.User{}, nil
 	}
 	var users []model.User
 	err := d.db.WithContext(ctx).
-		Select("id", "name").
+		Select("id", "name", "avatar").
 		Where("id IN ?", userIDs).
 		Find(&users).Error
 	if err != nil {

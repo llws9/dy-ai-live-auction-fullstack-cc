@@ -41,11 +41,13 @@ type ProductClient interface {
 
 // HTTPProductClient 基于 net/http 的实现。
 type HTTPProductClient struct {
-	baseURL string
-	hc      *http.Client
+	baseURL       string
+	hc            *http.Client
+	internalToken string
 }
 
 // NewHTTPProductClient 构造一个 HTTP 客户端。baseURL 形如 "http://product-service:8081"。
+// internalToken 来自 INTERNAL_API_TOKEN 环境变量，用于 X-Internal-Token 鉴权（spec B §4.1）。
 func NewHTTPProductClient(baseURL string, timeout time.Duration) *HTTPProductClient {
 	if timeout <= 0 {
 		timeout = 2 * time.Second
@@ -54,6 +56,11 @@ func NewHTTPProductClient(baseURL string, timeout time.Duration) *HTTPProductCli
 		baseURL: baseURL,
 		hc:      &http.Client{Timeout: timeout},
 	}
+}
+
+// SetInternalToken 注入服务间鉴权 token。
+func (c *HTTPProductClient) SetInternalToken(token string) {
+	c.internalToken = token
 }
 
 // internalListResponse 对应 product-service /internal/products 的响应结构。
@@ -86,6 +93,9 @@ func (c *HTTPProductClient) ListProductIDsByCategory(ctx context.Context, catego
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
+	}
+	if c.internalToken != "" {
+		req.Header.Set("X-Internal-Token", c.internalToken)
 	}
 	resp, err := c.hc.Do(req)
 	if err != nil {
@@ -121,6 +131,9 @@ func (c *HTTPProductClient) BatchGetSummaries(ctx context.Context, ids []int64) 
 		return nil, fmt.Errorf("build request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if c.internalToken != "" {
+		req.Header.Set("X-Internal-Token", c.internalToken)
+	}
 
 	resp, err := c.hc.Do(req)
 	if err != nil {
