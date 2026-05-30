@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 
+	"product-service/client"
 	"product-service/config"
 	"product-service/dao"
 	"product-service/handler"
@@ -73,6 +75,11 @@ func main() {
 	statisticsHandler := handler.NewStatisticsHandler(statisticsService)
 	productPublishHandler := handler.NewProductHandler(productService)
 	liveStreamHandler := handler.NewLiveStreamHandler(liveStreamService)
+	auctionSvcURL := os.Getenv("AUCTION_SERVICE_URL")
+	if auctionSvcURL == "" {
+		auctionSvcURL = "http://localhost:8082"
+	}
+	liveStreamHandler.SetAuctionClient(client.NewAuctionClient(auctionSvcURL, 2*time.Second))
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 	internalHandler := handler.NewInternalHandler(productService)
 	internalHandler.SetLiveStreamDAO(liveStreamDAO)

@@ -33,19 +33,27 @@ func NewOrderHandler(orderService *service.OrderService) *OrderHandler {
 // @Failure 500 {object} map[string]interface{}
 // @Router /orders [get]
 func (h *OrderHandler) List(ctx context.Context, c *app.RequestContext) {
-	userIDStr := c.Query("user_id")
-	var userID *int64
-	if userIDStr != "" {
-		id, err := strconv.ParseInt(userIDStr, 10, 64)
-		if err == nil {
-			userID = &id
-		}
+	userIDStr := string(c.GetHeader("X-User-ID"))
+	if userIDStr == "" {
+		c.JSON(401, map[string]interface{}{
+			"code":    401,
+			"message": "未认证",
+		})
+		return
+	}
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil || userID <= 0 {
+		c.JSON(401, map[string]interface{}{
+			"code":    401,
+			"message": "无效的用户身份",
+		})
+		return
 	}
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 
-	orders, total, err := h.orderService.ListOrders(ctx, userID, page, pageSize)
+	orders, total, err := h.orderService.ListOrders(ctx, &userID, page, pageSize)
 	if err != nil {
 		c.JSON(500, map[string]interface{}{
 			"code":    500,
