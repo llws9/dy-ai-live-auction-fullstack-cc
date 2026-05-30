@@ -1,0 +1,156 @@
+.page {
+  min-height: 100vh;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  background:
+    radial-gradient(circle at 16% 0, rgba(212, 175, 55, 0.15), transparent 32%),
+    linear-gradient(180deg, var(--bg-page-start, #1a1a1a) 0%, var(--bg-page-end, #111) 100%);
+  color: var(--text-primary);
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: var(--spacing-3);
+  align-items: center;
+  padding: calc(var(--spacing-4) + env(safe-area-inset-top, 0px)) var(--spacing-5) var(--spacing-4);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  backdrop-filter: blur(14px);
+}
+
+.header h1 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: var(--font-weight-bold);
+}
+
+.backButton {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid rgba(201, 169, 110, 0.22);
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font-size: 30px;
+  line-height: 1;
+}
+
+.content {
+  padding: var(--spacing-4);
+}
+
+.errorBanner,
+.loading,
+.emptyState {
+  margin: var(--spacing-4) 0;
+  padding: var(--spacing-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: 22px;
+  background: var(--bg-surface);
+  text-align: center;
+}
+
+.errorBanner {
+  color: #ffb3b3;
+  font-size: var(--font-size-sm);
+}
+
+.loading {
+  color: var(--text-brand);
+}
+
+.emptyState {
+  padding: var(--spacing-9) var(--spacing-4);
+  color: var(--text-secondary);
+}
+
+.emptyMark {
+  color: var(--text-brand);
+  font-size: 52px;
+}
+
+.emptyState p {
+  margin: var(--spacing-3) 0 var(--spacing-1);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.emptyState span {
+  font-size: var(--font-size-xs);
+}
+
+.list {
+  display: grid;
+  gap: var(--spacing-4);
+}
+
+.card {
+  padding: var(--spacing-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: 22px;
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-key);
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  align-items: center;
+  margin-bottom: var(--spacing-2);
+}
+
+.recipient {
+  color: var(--text-primary);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.phone {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.defaultBadge {
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #d4af37 0%, #8a6f2a 100%);
+  color: #17130b;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.05em;
+}
+
+.address {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--spacing-3);
+}
+
+.setDefaultButton {
+  min-height: 36px;
+  padding: 0 var(--spacing-3);
+  border: 1px solid rgba(201, 169, 110, 0.22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-brand);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+}
+
+.setDefaultButton:disabled {
+  opacity: 0.58;
+}
