@@ -1,54 +1,58 @@
 import { test, expect } from '@playwright/test';
+import { mockNewUiApis, seedAuthenticatedUser } from './utils/new-ui-fixtures';
 
-test.describe('Live Page', () => {
+test.describe('Live Page - 新版 H5 UI', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/live');
+    await mockNewUiApis(page);
+    await page.goto('/live?id=301&auction_id=101');
   });
 
-  test('displays live container', async ({ page }) => {
-    // Page should have live container
-    await expect(page.locator('.container')).toBeVisible();
+  test('displays live auction room', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: '星河钻石腕表' })).toBeVisible();
+    await expect(page.getByText('当前最高价').first()).toBeVisible();
+    await expect(page.getByText('正在竞拍')).toBeVisible();
   });
 
-  test('displays close button', async ({ page }) => {
-    // Close button should be visible
-    const closeButton = page.locator('.closeBtn');
-    await expect(closeButton).toBeVisible();
+  test('displays back link', async ({ page }) => {
+    await expect(page.getByRole('link', { name: '‹' })).toBeVisible();
   });
 
-  test('displays live info badge', async ({ page }) => {
-    // Live badge with viewer count should be visible
-    const liveBadge = page.locator('.liveInfo');
-    await expect(liveBadge).toBeVisible();
+  test('displays host and viewer info', async ({ page }) => {
+    await expect(page.getByText('拍卖师')).toBeVisible();
+    await expect(page.getByText(/在线/)).toBeVisible();
   });
 
-  test('displays product list', async ({ page }) => {
-    // Product list should be visible
-    await page.waitForSelector('.productList', { timeout: 5000 });
-    await expect(page.locator('.productList')).toBeVisible();
+  test('displays product and ranking block', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: '星河钻石腕表' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '出价排行' })).toBeVisible();
+    await expect(page.getByText('测试用户')).toBeVisible();
   });
 
-  test('product cards are interactive', async ({ page }) => {
-    await page.waitForSelector('.productCard', { timeout: 5000 });
-
-    // Product cards should be visible
-    const productCards = page.locator('.productCard');
-    const count = await productCards.count();
-
-    if (count > 0) {
-      // Hover effect should work
-      await productCards.first().hover();
-    }
+  test('bid controls are visible', async ({ page }) => {
+    await expect(page.getByLabel('输入出价金额')).toBeVisible();
+    await expect(page.getByRole('button', { name: '最低价' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '立即出价' })).toBeVisible();
   });
 
-  test('close button returns to home', async ({ page }) => {
-    await page.waitForSelector('.closeBtn', { timeout: 5000 });
+  test('unauthenticated bid shows login hint', async ({ page }) => {
+    await page.getByRole('button', { name: '立即出价' }).click();
+    await expect(page.getByRole('status')).toContainText('请先登录后出价');
+  });
 
-    // Click close button
-    await page.locator('.closeBtn').click();
+  test('authenticated bid succeeds', async ({ page }) => {
+    await seedAuthenticatedUser(page);
+    await page.goto('/live?id=301&auction_id=101');
 
-    // Should navigate back
-    await page.goBack();
-    await expect(page).toHaveURL('/');
+    await page.getByLabel('输入出价金额').fill('12900');
+    await page.getByRole('button', { name: '立即出价' }).click();
+
+    await expect(page.getByText('出价成功')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('back link returns to home', async ({ page }) => {
+    await page.getByRole('link', { name: '‹' }).click();
+
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole('heading', { name: '奢华竞拍' })).toBeVisible();
   });
 });

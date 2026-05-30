@@ -1,50 +1,50 @@
 import { test, expect } from '@playwright/test';
+import { mockNewUiApis } from './utils/new-ui-fixtures';
 
-test.describe('Home Page', () => {
+test.describe('Home Page - 新版 H5 UI', () => {
   test.beforeEach(async ({ page }) => {
+    await mockNewUiApis(page);
     await page.goto('/');
   });
 
   test('displays header with navigation', async ({ page }) => {
-    await expect(page.getByText('直播竞拍')).toBeVisible();
-    await expect(page.getByRole('button', { name: /关注/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: /历史/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '奢华竞拍' })).toBeVisible();
+    await expect(page.getByLabel('我的关注')).toBeVisible();
+    await expect(page.getByLabel('消息通知')).toBeVisible();
   });
 
-  test('displays live entry card', async ({ page }) => {
-    await expect(page.getByText('进入直播间')).toBeVisible();
-    await expect(page.getByText('实时竞拍 · 互动体验')).toBeVisible();
+  test('displays auction cards', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: '星河钻石腕表' })).toBeVisible();
+    await expect(page.getByText('宋代青瓷珍藏')).toBeVisible();
+    await expect(page.getByRole('link', { name: '详情' }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: '进入直播' }).first()).toBeVisible();
   });
 
-  test('displays auction tabs', async ({ page }) => {
+  test('displays auction category tabs', async ({ page }) => {
     await expect(page.getByRole('button', { name: '全部' })).toBeVisible();
-    await expect(page.getByRole('button', { name: '进行中' })).toBeVisible();
-    await expect(page.getByRole('button', { name: '已结束' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '收藏', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '珠宝腕表' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '艺术品' })).toBeVisible();
   });
 
   test('filters auctions by tab', async ({ page }) => {
-    // Wait for auctions to load
-    await page.waitForSelector('.card', { timeout: 5000 });
+    await page.getByRole('button', { name: '珠宝腕表' }).click();
 
-    // Click "进行中" tab
-    await page.getByRole('button', { name: '进行中' }).click();
-
-    // Verify tab is active
-    await expect(page.getByRole('button', { name: '进行中' })).toHaveClass(/tabActive/);
+    await expect(page.getByRole('heading', { name: '星河钻石腕表' })).toBeVisible();
+    await expect(page.getByText('宋代青瓷珍藏')).not.toBeVisible();
   });
 
   test('navigates to auction detail', async ({ page }) => {
-    await page.waitForSelector('.card', { timeout: 5000 });
+    await page.getByRole('link', { name: '详情' }).first().click();
 
-    // Click first auction card
-    await page.locator('.card').first().click();
-
-    // Should navigate to auction detail page
-    await expect(page).toHaveURL(/\/auction\/\d+/);
+    await expect(page).toHaveURL(/\/detail\?id=101/);
+    await expect(page.getByRole('heading', { name: '商品详情' })).toBeVisible();
   });
 
   test('navigates to live page', async ({ page }) => {
-    await page.getByText('进入直播间').click();
-    await expect(page).toHaveURL('/live');
+    await page.getByRole('link', { name: '进入直播' }).first().click();
+
+    await expect(page).toHaveURL(/\/live\?id=301&auction_id=101/);
+    await expect(page.getByRole('heading', { name: '星河钻石腕表' })).toBeVisible();
   });
 });
