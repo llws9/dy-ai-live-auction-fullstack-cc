@@ -362,6 +362,8 @@ func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bid
 	// ========== 通知相关路由 ==========
 	v1.GET("/notifications", notificationHandler.List)
 	v1.GET("/notifications/unread-count", notificationHandler.GetUnreadCount)
+	v1.GET("/notifications/summary", notificationHandler.GetSummary)
+	v1.POST("/notifications/read-category", notificationHandler.MarkCategoryAsRead)
 	v1.PUT("/notifications/:id/read", notificationHandler.MarkAsRead)
 	v1.PUT("/notifications/read-all", notificationHandler.MarkAllAsRead)
 	v1.POST("/notifications/hot-pull", notificationHandler.HotPullNotifications)

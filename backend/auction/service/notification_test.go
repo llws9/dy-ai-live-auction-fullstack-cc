@@ -3,6 +3,8 @@ package service
 import (
 	"testing"
 
+	"auction-service/model"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -50,4 +52,28 @@ func TestNotificationService_SendAuctionWonNotification(t *testing.T) {
 	assert.Equal(t, int64(1), userID)
 	assert.Equal(t, int64(100), auctionID)
 	assert.True(t, finalPrice > 0)
+}
+
+func TestNotificationCategoryTypes(t *testing.T) {
+	tests := []struct {
+		category string
+		want     []model.NotificationType
+		wantErr  bool
+	}{
+		{category: "outbid", want: []model.NotificationType{model.NotificationTypeBidOutbid}},
+		{category: "endingSoon", want: nil},
+		{category: "pendingPayment", want: nil},
+		{category: "all", want: nil},
+		{category: "unknown", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		got, err := notificationTypesForCategory(tt.category)
+		if tt.wantErr {
+			assert.Error(t, err)
+			continue
+		}
+		assert.NoError(t, err)
+		assert.Equal(t, tt.want, got)
+	}
 }

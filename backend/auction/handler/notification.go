@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 
+	"auction-service/model"
 	"auction-service/service"
 )
 
@@ -102,6 +103,49 @@ func (h *NotificationHandler) GetUnreadCount(ctx context.Context, c *app.Request
 		"data": map[string]interface{}{
 			"count": count,
 		},
+	})
+}
+
+func (h *NotificationHandler) GetSummary(ctx context.Context, c *app.RequestContext) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, map[string]interface{}{"code": 401, "message": "未认证，请先登录"})
+		return
+	}
+	userID := userIDInterface.(int64)
+
+	summary, err := h.notificationService.GetSummary(ctx, userID)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "获取通知汇总失败: " + err.Error()})
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{"code": 0, "message": "success", "data": summary})
+}
+
+func (h *NotificationHandler) MarkCategoryAsRead(ctx context.Context, c *app.RequestContext) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, map[string]interface{}{"code": 401, "message": "未认证，请先登录"})
+		return
+	}
+	userID := userIDInterface.(int64)
+
+	var req model.MarkCategoryReadRequest
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "请求参数错误"})
+		return
+	}
+
+	if err := h.notificationService.MarkCategoryAsRead(ctx, userID, req.Category); err != nil {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": err.Error()})
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{
+		"code":    0,
+		"message": "success",
+		"data":    map[string]interface{}{"success": true},
 	})
 }
 
