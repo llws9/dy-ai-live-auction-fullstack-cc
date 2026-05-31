@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { notificationApi, TouchpointSummary } from '../services/notification';
 import { useAuth } from '../store/authContext';
 
@@ -17,25 +17,36 @@ const EMPTY: TouchpointSummary = {
 
 export function useTouchpointNotifications(): TouchpointNotifications {
   const [summary, setSummary] = useState<TouchpointSummary>(EMPTY);
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, token, user } = useAuth();
+  const userId = user?.id ?? null;
+  const identityRef = useRef({ token, userId });
+
+  identityRef.current = { token, userId };
 
   useEffect(() => {
-    if (authLoading || !isAuthenticated) {
+    if (authLoading || !isAuthenticated || !token || userId === null) {
       setSummary(EMPTY);
       return;
     }
 
     let alive = true;
+    const identitySnapshot = { token, userId };
+    setSummary(EMPTY);
+
+    const isCurrentIdentity = () => {
+      const latest = identityRef.current;
+      return latest.token === identitySnapshot.token && latest.userId === identitySnapshot.userId;
+    };
 
     notificationApi
       .getTouchpointSummary()
       .then((next) => {
-        if (alive) {
+        if (alive && isCurrentIdentity()) {
           setSummary(next);
         }
       })
       .catch(() => {
-        if (alive) {
+        if (alive && isCurrentIdentity()) {
           setSummary(EMPTY);
         }
       });
@@ -43,7 +54,7 @@ export function useTouchpointNotifications(): TouchpointNotifications {
     return () => {
       alive = false;
     };
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, isAuthenticated, token, userId]);
 
   return {
     pendingPayment: summary.pendingPayment,

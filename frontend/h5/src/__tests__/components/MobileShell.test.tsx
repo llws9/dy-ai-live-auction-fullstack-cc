@@ -25,19 +25,34 @@ const mockGetPendingLiveReminder = notificationApi.getPendingLiveReminder as jes
 >;
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, resolve, reject };
+}
+
+const authenticatedAuthState = {
+  isAuthenticated: true,
+  user: { id: 1, email: 'buyer@example.com', name: '测试用户', role: 0 },
+  token: 'token-1',
+  loading: false,
+  login: jest.fn(),
+  setAuth: jest.fn(),
+  logout: jest.fn(),
+  isAdmin: jest.fn(() => false),
+  isMerchant: jest.fn(() => false),
+};
+
 describe('MobileShell', () => {
+  let authState = authenticatedAuthState;
+
   beforeEach(() => {
-    mockUseAuth.mockReturnValue({
-      isAuthenticated: true,
-      user: { id: 1, email: 'buyer@example.com', name: '测试用户', role: 0 },
-      token: 'token-1',
-      loading: false,
-      login: jest.fn(),
-      setAuth: jest.fn(),
-      logout: jest.fn(),
-      isAdmin: jest.fn(() => false),
-      isMerchant: jest.fn(() => false),
-    });
+    authState = authenticatedAuthState;
+    mockUseAuth.mockImplementation(() => authState);
     mockGetTouchpointSummary.mockResolvedValue({
       unreadTotal: 7,
       pendingPayment: 2,
@@ -100,6 +115,58 @@ describe('MobileShell', () => {
     expect(mockGetTouchpointSummary).toHaveBeenCalledTimes(1);
   });
 
+  it('refetches touchpoint summary for account changes and ignores stale responses', async () => {
+    const firstRequest = createDeferred<{
+      unreadTotal: number;
+      pendingPayment: number;
+      wonNotPaid: number;
+      outbid: number;
+      endingSoon: number;
+    }>();
+    mockGetTouchpointSummary
+      .mockReturnValueOnce(firstRequest.promise)
+      .mockResolvedValueOnce({
+        unreadTotal: 4,
+        pendingPayment: 1,
+        wonNotPaid: 1,
+        outbid: 1,
+        endingSoon: 1,
+      });
+
+    const { rerender } = render(
+      <MemoryRouter initialEntries={['/']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <BottomNav />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(mockGetTouchpointSummary).toHaveBeenCalledTimes(1));
+
+    authState = {
+      ...authenticatedAuthState,
+      user: { id: 2, email: 'buyer2@example.com', name: '新用户', role: 0 },
+      token: 'token-2',
+    };
+    rerender(
+      <MemoryRouter initialEntries={['/']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <BottomNav />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(mockGetTouchpointSummary).toHaveBeenCalledTimes(2));
+    expect(await screen.findByLabelText('4 条待处理提醒')).toHaveTextContent('4');
+
+    firstRequest.resolve({
+      unreadTotal: 9,
+      pendingPayment: 9,
+      wonNotPaid: 9,
+      outbid: 9,
+      endingSoon: 9,
+    });
+
+    await waitFor(() => expect(screen.queryByLabelText('9 条待处理提醒')).not.toBeInTheDocument());
+    expect(screen.getByLabelText('4 条待处理提醒')).toHaveTextContent('4');
+  });
+
   it.each(['/detail', '/result', '/notifications', '/following', '/history', '/login'])(
     'hides bottom navigation on %s',
     async (path) => {
@@ -143,6 +210,59 @@ describe('MobileShell', () => {
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('直播开播提醒')).toBeInTheDocument();
     expect(mockGetPendingLiveReminder).toHaveBeenCalledTimes(1);
+  });
+
+  it('refetches pending reminder for account changes and ignores stale responses', async () => {
+    const firstRequest = createDeferred<{
+      hasReminder: boolean;
+      stream: {
+        id: string | number;
+        name: string;
+        avatarUrl: string;
+        statusText?: string;
+      } | null;
+    }>();
+    mockGetPendingLiveReminder.mockReturnValueOnce(firstRequest.promise).mockResolvedValueOnce({
+      hasReminder: false,
+      stream: null,
+    });
+
+    const { rerender } = render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>页面内容</main>
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(mockGetPendingLiveReminder).toHaveBeenCalledTimes(1));
+
+    authState = {
+      ...authenticatedAuthState,
+      user: { id: 2, email: 'buyer2@example.com', name: '新用户', role: 0 },
+      token: 'token-2',
+    };
+    rerender(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>页面内容</main>
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(mockGetPendingLiveReminder).toHaveBeenCalledTimes(2));
+
+    firstRequest.resolve({
+      hasReminder: true,
+      stream: { id: 1, name: '旧账号直播间', avatarUrl: '', statusText: '正在直播' },
+    });
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.queryByText('旧账号直播间')).not.toBeInTheDocument();
   });
 
   it('does not request pending reminder before login is confirmed', async () => {

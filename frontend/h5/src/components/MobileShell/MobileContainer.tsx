@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { notificationApi } from '../../services/notification';
 import { useAuth } from '../../store/authContext';
 import LiveReminderModal, { StreamInfo } from '../LiveReminderModal';
@@ -12,19 +12,33 @@ interface MobileContainerProps {
 function MobileContainer({ children }: MobileContainerProps) {
   const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [reminderStream, setReminderStream] = useState<StreamInfo | null>(null);
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, token, user } = useAuth();
+  const userId = user?.id ?? null;
+  const identityRef = useRef({ token, userId });
+
+  identityRef.current = { token, userId };
 
   useEffect(() => {
-    if (authLoading || !isAuthenticated) {
+    if (authLoading || !isAuthenticated || !token || userId === null) {
+      setIsReminderOpen(false);
+      setReminderStream(null);
       return;
     }
 
     let alive = true;
+    const identitySnapshot = { token, userId };
+    setIsReminderOpen(false);
+    setReminderStream(null);
+
+    const isCurrentIdentity = () => {
+      const latest = identityRef.current;
+      return latest.token === identitySnapshot.token && latest.userId === identitySnapshot.userId;
+    };
 
     notificationApi
       .getPendingLiveReminder()
       .then((result) => {
-        if (!alive || !result.hasReminder || !result.stream) {
+        if (!alive || !isCurrentIdentity() || !result.hasReminder || !result.stream) {
           return;
         }
         setReminderStream(result.stream);
@@ -38,7 +52,7 @@ function MobileContainer({ children }: MobileContainerProps) {
     return () => {
       alive = false;
     };
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, isAuthenticated, token, userId]);
 
   return (
     <div className={styles.shell} data-testid="mobile-shell">
