@@ -22,6 +22,7 @@ type LiveStreamStats struct {
 	FollowerCount  int        `json:"follower_count"`
 	IsHot          bool       `json:"is_hot"`
 	ScheduledStart *time.Time `json:"scheduled_start,omitempty"`
+	StartedAt      *time.Time `json:"started_at,omitempty"`
 	Status         string     `json:"status"` // "pending", "live", "ended"
 }
 
@@ -180,8 +181,10 @@ func (s *LiveStreamStatsService) StartLive(ctx context.Context, liveStreamID int
 		}
 	}
 
-	// 更新状态为live
+	// 更新状态为live；StartedAt 是 pending-reminder 的真实 session key。
+	now := time.Now()
 	stats.Status = "live"
+	stats.StartedAt = &now
 	stats.ScheduledStart = nil // 清空计划开播时间
 
 	if err := s.saveStats(ctx, stats); err != nil {
@@ -202,6 +205,12 @@ func (s *LiveStreamStatsService) EndLive(ctx context.Context, liveStreamID int64
 	// 从ZSET中移除（如果还存在）
 	s.redis.ZRem(ctx, dao.ColdLiveStreamZSET, liveStreamID)
 	s.redis.ZRem(ctx, dao.HotLiveStreamZSET, liveStreamID)
+
+	if stats, err := s.GetStats(ctx, liveStreamID); err == nil && stats != nil {
+		stats.Status = "ended"
+		stats.StartedAt = nil
+		_ = s.saveStats(ctx, stats)
+	}
 
 	// 删除缓存
 	key := s.getStatsKey(liveStreamID)

@@ -69,6 +69,7 @@ func main() {
 		&model.SkyLampSubscription{},
 		&model.UserBalance{},
 		&model.UserAddress{},
+		&model.LiveStreamReminderReceipt{},
 	); err != nil {
 		log.Printf("Warning: AutoMigrate failed (tables may already exist): %v", err)
 	}
@@ -84,6 +85,7 @@ func main() {
 	skyLampDAO := dao.NewSkyLampDAO(db)
 	userBalanceDAO := dao.NewUserBalanceDAO(db)
 	userAddressDAO := dao.NewUserAddressDAO(db)
+	liveStreamReminderReceiptDAO := dao.NewLiveStreamReminderReceiptDAO(db)
 
 	// 初始化 WebSocket Hub
 	hub := websocket.NewHub()
@@ -202,6 +204,10 @@ func main() {
 
 	// 启动热度自动更新定时任务
 	liveStreamStatsService := service.NewLiveStreamStatsService()
+	liveSessionResolver := service.NewLiveStatsSessionResolver(liveStreamStatsService)
+	liveReminderService := service.NewLiveReminderService(userLiveStreamFollowDAO, liveSessionResolver, liveStreamReminderReceiptDAO)
+	liveReminderHandler := handler.NewLiveReminderHandler(liveReminderService)
+	liveStreamStatsHandler := handler.NewLiveStreamStatsHandler(liveStreamStatsService)
 	statsCron := cron.NewStatsCron(userLiveStreamFollowDAO, liveStreamStatsService)
 	statsCron.Start(ctx)
 	defer statsCron.Stop()
@@ -226,7 +232,7 @@ func main() {
 	h.Use(gatewayIdentityMiddleware())
 
 	// 注册路由
-	registerRoutes(h, auctionHandler, bidHandler, wsHandler, userHandler, authHandler, notificationHandler, followHandler, productReminderHandler, skyLampHandler, userBalanceHandler, userAddressHandler)
+	registerRoutes(h, auctionHandler, bidHandler, wsHandler, userHandler, authHandler, notificationHandler, followHandler, productReminderHandler, skyLampHandler, userBalanceHandler, userAddressHandler, liveReminderHandler, liveStreamStatsHandler)
 
 	// ========== 内部接口（仅服务间调用，不经过 Gateway） ==========
 	// spec: docs/superpowers/specs/2026-05-30-h5-missing-b-livestream.md §4.1
@@ -335,7 +341,7 @@ func parseGatewayRole(role string) int {
 }
 
 // registerRoutes 注册路由
-func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bidHandler *handler.BidHandler, wsHandler *handler.WSHandler, userHandler *handler.UserHandler, authHandler *handler.AuthHandler, notificationHandler *handler.NotificationHandler, followHandler *handler.FollowHandler, productReminderHandler *handler.ProductReminderHandler, skyLampHandler *handler.SkyLampHandler, userBalanceHandler *handler.UserBalanceHandler, userAddressHandler *handler.UserAddressHandler) {
+func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bidHandler *handler.BidHandler, wsHandler *handler.WSHandler, userHandler *handler.UserHandler, authHandler *handler.AuthHandler, notificationHandler *handler.NotificationHandler, followHandler *handler.FollowHandler, productReminderHandler *handler.ProductReminderHandler, skyLampHandler *handler.SkyLampHandler, userBalanceHandler *handler.UserBalanceHandler, userAddressHandler *handler.UserAddressHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler) {
 	v1 := h.Group("/api/v1")
 
 	// ========== 认证相关路由 ==========
@@ -374,6 +380,8 @@ func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bid
 	v1.GET("/live-streams/:id/follow-status", followHandler.GetFollowStatusHandler) // T2.6 (F-B2)
 	v1.GET("/user/followed-live-streams", followHandler.GetUserFollowsHandler)
 	v1.PUT("/live-streams/:id/notification", followHandler.ToggleNotificationHandler)
+	v1.GET("/live/pending-reminder", liveReminderHandler.GetPendingReminder)
+	v1.POST("/live-streams/:id/start", liveStreamStatsHandler.StartLive)
 
 	// ========== 商品提醒订阅相关路由 ==========
 	v1.POST("/products/:id/remind", productReminderHandler.SubscribeProductReminder)

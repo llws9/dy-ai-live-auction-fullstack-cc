@@ -140,6 +140,8 @@ func TestLiveStreamStatsService_StartLive(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "live", stats.Status)
 	assert.Nil(t, stats.ScheduledStart)
+	assert.NotNil(t, stats.StartedAt)
+	assert.WithinDuration(t, time.Now(), *stats.StartedAt, 2*time.Second)
 
 	// 验证在live_now集合中
 	liveNowList, err := service.GetLiveNowHotStreams(ctx)
