@@ -15,13 +15,14 @@ type Config struct {
 	RabbitMQ RabbitMQConfig
 	JWT      JWTConfig
 	SkyLamp  SkyLampConfig
+	Internal InternalConfig
 }
 
 // ServerConfig 服务器配置
 type ServerConfig struct {
-	HTTPPort    string
-	WSPort      string
-	ReadTimeout int
+	HTTPPort     string
+	WSPort       string
+	ReadTimeout  int
 	WriteTimeout int
 }
 
@@ -54,7 +55,7 @@ type RabbitMQConfig struct {
 
 // JWTConfig JWT配置
 type JWTConfig struct {
-	Secret     string
+	Secret      string
 	ExpireHours int
 }
 
@@ -64,6 +65,10 @@ type SkyLampConfig struct {
 	MaxPriceOffset    int  // 上限偏移量X（相对于开启时的价格）
 	MinFollowInterval int  // 自动跟价最小间隔（毫秒）
 	MaxAutoBidCount   int  // 单次点天灯最大自动跟价次数
+}
+
+type InternalConfig struct {
+	Token string
 }
 
 // DefaultConfig 返回默认配置
@@ -101,6 +106,9 @@ func DefaultConfig() *Config {
 			ExpireHours: 24,
 		},
 		SkyLamp: DefaultSkyLampConfig(),
+		Internal: InternalConfig{
+			Token: "",
+		},
 	}
 }
 
@@ -176,6 +184,8 @@ func LoadFromEnv() *Config {
 	if v := getEnvInt("SKYLAMP_MAX_AUTO_BID_COUNT"); v != nil {
 		cfg.SkyLamp.MaxAutoBidCount = *v
 	}
+
+	cfg.Internal.Token = getEnvOrDefault("INTERNAL_API_TOKEN", cfg.Internal.Token)
 
 	return cfg
 }

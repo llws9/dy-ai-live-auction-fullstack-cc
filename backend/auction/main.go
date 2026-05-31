@@ -160,6 +160,9 @@ func main() {
 		productSvcURL = "http://localhost:8081"
 	}
 	internalAPIToken := os.Getenv("INTERNAL_API_TOKEN")
+	if internalAPIToken == "" {
+		internalAPIToken = cfg.Internal.Token
+	}
 	productClient := client.NewHTTPProductClient(productSvcURL, 2*time.Second)
 	productClient.SetInternalToken(internalAPIToken)
 	auctionHandler.SetProductClient(productClient)
@@ -239,9 +242,13 @@ func main() {
 	if internalAPIToken == "" {
 		log.Println("Warning: INTERNAL_API_TOKEN not set; /internal/* endpoints will reject all calls")
 	}
-	internal := h.Group("/internal", middleware.InternalAuthMiddleware(internalAPIToken))
-	internal.POST("/users/batch", internalUserHandler.BatchByIDs)
-	internal.POST("/live-streams/:id/start", liveStreamStatsHandler.StartLive)
+	registerInternalRoutes(
+		h,
+		middleware.InternalAuthMiddleware(internalAPIToken),
+		internalUserHandler,
+		liveReminderHandler,
+		liveStreamStatsHandler,
+	)
 
 	// 注册 Prometheus metrics 端点
 	h.GET("/metrics", func(ctx context.Context, c *app.RequestContext) {
@@ -381,7 +388,6 @@ func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bid
 	v1.GET("/live-streams/:id/follow-status", followHandler.GetFollowStatusHandler) // T2.6 (F-B2)
 	v1.GET("/user/followed-live-streams", followHandler.GetUserFollowsHandler)
 	v1.PUT("/live-streams/:id/notification", followHandler.ToggleNotificationHandler)
-	v1.GET("/live/pending-reminder", liveReminderHandler.GetPendingReminder)
 
 	// ========== 商品提醒订阅相关路由 ==========
 	v1.POST("/products/:id/remind", productReminderHandler.SubscribeProductReminder)
@@ -403,4 +409,13 @@ func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bid
 	v1.PUT("/users/me/addresses/:id", userAddressHandler.Update)
 	v1.DELETE("/users/me/addresses/:id", userAddressHandler.Delete)
 	v1.POST("/users/me/addresses/:id/default", userAddressHandler.SetDefault)
+}
+
+func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, internalUserHandler *handler.InternalUserHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler) {
+	internal := h.Group("/internal", internalAuth)
+	if internalUserHandler != nil {
+		internal.POST("/users/batch", internalUserHandler.BatchByIDs)
+	}
+	internal.GET("/live/pending-reminder", liveReminderHandler.GetPendingReminder)
+	internal.POST("/live-streams/:id/start", liveStreamStatsHandler.StartLive)
 }

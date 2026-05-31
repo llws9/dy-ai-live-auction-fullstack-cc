@@ -135,7 +135,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.PUT("/notifications/read-all", auctionProxy.Forward)
 	authGroup.POST("/notifications/read-category", auctionProxy.Forward)
 	authGroup.POST("/notifications/hot-pull", auctionProxy.Forward)
-	authGroup.GET("/live/pending-reminder", auctionProxy.Forward)
+	authGroup.GET("/live/pending-reminder", liveStartHandler.GetPendingReminder)
 
 	// ========== 点天灯订阅路由 ==========
 	authGroup.POST("/sky-lamp/subscriptions", auctionProxy.Forward)

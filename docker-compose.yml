@@ -17,6 +17,7 @@ services:
       - TEST_SERVICE_URL=http://test-service:18090
       # Browser connects directly to host-exposed WS port after gateway endpoint discovery.
       - TEST_SERVICE_WS_URL=ws://localhost:18092
+      - INTERNAL_API_TOKEN=dev-internal-api-token
     depends_on:
       - nacos
       - redis
@@ -60,6 +61,7 @@ services:
       - NACOS_NAMESPACE=auction-dev
       - NACOS_GROUP=auction
       - NACOS_DATA_ID=auction-config.yaml
+      - INTERNAL_API_TOKEN=dev-internal-api-token
     depends_on:
       - nacos
       - mysql

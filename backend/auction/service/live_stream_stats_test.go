@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -181,6 +182,70 @@ func TestLiveStreamStatsService_StartLiveIsIdempotent(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, second.StartedAt)
 	assert.Equal(t, first.StartedAt.UnixNano(), second.StartedAt.UnixNano())
+}
+
+func TestLiveStreamStatsService_StartLiveConcurrentCallsShareStartedAt(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	_, err := dao.InitRedis("localhost:6379", "")
+	require.NoError(t, err)
+	service := NewLiveStreamStatsService()
+	if service.redis == nil {
+		t.Skip("redis client not initialized")
+	}
+	ctx := context.Background()
+
+	liveStreamID := time.Now().UnixNano()%1_000_000_000 + 3_000_000_000
+	err = service.SetScheduledStartTime(ctx, liveStreamID, time.Now().Add(30*time.Minute), 300)
+	require.NoError(t, err)
+
+	const workers = 80
+	startedAtValues := make(chan int64, workers)
+	errs := make(chan error, workers)
+	var ready sync.WaitGroup
+	var done sync.WaitGroup
+	start := make(chan struct{})
+
+	for i := 0; i < workers; i++ {
+		ready.Add(1)
+		done.Add(1)
+		go func() {
+			defer done.Done()
+			ready.Done()
+			<-start
+			if err := service.StartLive(ctx, liveStreamID); err != nil {
+				errs <- err
+				return
+			}
+			stats, err := service.GetStats(ctx, liveStreamID)
+			if err != nil {
+				errs <- err
+				return
+			}
+			if stats == nil || stats.StartedAt == nil {
+				errs <- assert.AnError
+				return
+			}
+			startedAtValues <- stats.StartedAt.UnixNano()
+		}()
+	}
+
+	ready.Wait()
+	close(start)
+	done.Wait()
+	close(errs)
+	close(startedAtValues)
+
+	for err := range errs {
+		require.NoError(t, err)
+	}
+	uniqueStartedAt := map[int64]struct{}{}
+	for value := range startedAtValues {
+		uniqueStartedAt[value] = struct{}{}
+	}
+	require.Len(t, uniqueStartedAt, 1)
 }
 
 // TestLiveStreamStatsService_EndLive 测试结束直播
