@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 )
@@ -21,7 +22,7 @@ func NewLiveStartHandler(auctionURL, internalToken string) *LiveStartHandler {
 	return &LiveStartHandler{
 		auctionURL:    strings.TrimRight(auctionURL, "/"),
 		internalToken: internalToken,
-		client:        &http.Client{},
+		client:        &http.Client{Timeout: 2 * time.Second},
 	}
 }
 
