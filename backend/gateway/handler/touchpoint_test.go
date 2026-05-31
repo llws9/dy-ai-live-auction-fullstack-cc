@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"bytes"
 	"context"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -49,6 +51,11 @@ func TestTouchpointHandlerSummary(t *testing.T) {
 }
 
 func TestTouchpointHandlerSummaryFallsBackForUpstreamFailure(t *testing.T) {
+	var logs bytes.Buffer
+	originalLogOutput := log.Writer()
+	log.SetOutput(&logs)
+	defer log.SetOutput(originalLogOutput)
+
 	auctionServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
@@ -75,6 +82,8 @@ func TestTouchpointHandlerSummaryFallsBackForUpstreamFailure(t *testing.T) {
 	assert.Contains(t, body, `"outbid":0`)
 	assert.Contains(t, body, `"endingSoon":0`)
 	assert.Contains(t, body, `"pendingPayment":1`)
+	assert.Contains(t, logs.String(), "touchpoint summary upstream failed")
+	assert.Contains(t, logs.String(), "/api/v1/notifications/summary")
 }
 
 func TestTouchpointHandlerSummaryPropagatesAuthFailure(t *testing.T) {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -56,15 +57,23 @@ func (h *TouchpointHandler) GetNotificationSummary(ctx context.Context, c *app.R
 	userID := toString(c.GetInt64("user_id"))
 
 	auctionData := auctionSummary{}
-	if err := h.fetch(ctx, h.auctionURL+"/api/v1/notifications/summary", token, userID, &auctionData); isAuthUpstreamError(err) {
-		writeUpstreamAuthError(c, err)
-		return
+	auctionSummaryURL := h.auctionURL + "/api/v1/notifications/summary"
+	if err := h.fetch(ctx, auctionSummaryURL, token, userID, &auctionData); err != nil {
+		if isAuthUpstreamError(err) {
+			writeUpstreamAuthError(c, err)
+			return
+		}
+		log.Printf("touchpoint summary upstream failed: url=%s err=%v", auctionSummaryURL, err)
 	}
 
 	orderData := orderSummary{}
-	if err := h.fetch(ctx, h.productURL+"/api/v1/orders/summary", token, userID, &orderData); isAuthUpstreamError(err) {
-		writeUpstreamAuthError(c, err)
-		return
+	orderSummaryURL := h.productURL + "/api/v1/orders/summary"
+	if err := h.fetch(ctx, orderSummaryURL, token, userID, &orderData); err != nil {
+		if isAuthUpstreamError(err) {
+			writeUpstreamAuthError(c, err)
+			return
+		}
+		log.Printf("touchpoint summary upstream failed: url=%s err=%v", orderSummaryURL, err)
 	}
 
 	c.JSON(http.StatusOK, map[string]interface{}{

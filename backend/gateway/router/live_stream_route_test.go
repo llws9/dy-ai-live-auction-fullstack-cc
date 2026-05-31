@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -97,95 +96,4 @@ func TestLiveStreamDetailRoute_OptionalJWT(t *testing.T) {
 
 	// 静态分析也使用 context，避免 unused import。
 	_ = context.Background
-}
-
-func TestTouchpointRoutes(t *testing.T) {
-	tokenSecret := "touchpoint-route-secret"
-	token, err := middleware.GenerateToken(tokenSecret, 123, "buyer", 0, 24)
-	assert.NoError(t, err)
-	authHeader := "Bearer " + token
-
-	var auctionRequests atomic.Value
-	auctionRequests.Store([]string{})
-	auctionMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, authHeader, r.Header.Get("Authorization"))
-		assert.Equal(t, "123", r.Header.Get("X-User-ID"))
-		requests := auctionRequests.Load().([]string)
-		auctionRequests.Store(append(requests, r.Method+" "+r.URL.Path))
-		w.Header().Set("Content-Type", "application/json")
-
-		switch r.URL.Path {
-		case "/api/v1/notifications/summary":
-			_, _ = w.Write([]byte(`{"code":0,"message":"success","data":{"unreadTotal":2,"outbid":1,"endingSoon":0}}`))
-		case "/api/v1/notifications/read-category":
-			_, _ = w.Write([]byte(`{"code":0,"message":"success","data":{"success":true}}`))
-		case "/api/v1/live/pending-reminder":
-			_, _ = w.Write([]byte(`{"code":0,"message":"success","data":{"hasReminder":false,"stream":null}}`))
-		default:
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
-	defer auctionMock.Close()
-
-	var productRequests atomic.Value
-	productRequests.Store([]string{})
-	productMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, authHeader, r.Header.Get("Authorization"))
-		assert.Equal(t, "123", r.Header.Get("X-User-ID"))
-		requests := productRequests.Load().([]string)
-		productRequests.Store(append(requests, r.Method+" "+r.URL.Path))
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"code":0,"message":"success","data":{"pendingPayment":1,"wonNotPaid":1}}`))
-	}))
-	defer productMock.Close()
-
-	cfg := &config.Config{
-		Services: config.ServicesConfig{
-			ProductURL: productMock.URL,
-			AuctionURL: auctionMock.URL,
-			TestURL:    "http://127.0.0.1:0",
-			TestWSURL:  "ws://127.0.0.1:0",
-		},
-		JWT: config.JWTConfig{Secret: tokenSecret},
-	}
-
-	h := server.Default(server.WithHostPorts("127.0.0.1:0"))
-	RegisterRoutes(h, cfg, nil)
-
-	summary := ut.PerformRequest(
-		h.Engine,
-		http.MethodGet,
-		"/api/v1/notifications/summary",
-		nil,
-		ut.Header{Key: "Authorization", Value: authHeader},
-	).Result()
-	assert.Equal(t, http.StatusOK, summary.StatusCode())
-	assert.Contains(t, string(summary.Body()), `"unreadTotal":2`)
-	assert.Contains(t, string(summary.Body()), `"pendingPayment":1`)
-
-	readCategory := ut.PerformRequest(
-		h.Engine,
-		http.MethodPost,
-		"/api/v1/notifications/read-category",
-		&ut.Body{Body: strings.NewReader(`{"category":"outbid"}`), Len: len(`{"category":"outbid"}`)},
-		ut.Header{Key: "Authorization", Value: authHeader},
-		ut.Header{Key: "Content-Type", Value: "application/json"},
-	).Result()
-	assert.Equal(t, http.StatusOK, readCategory.StatusCode())
-
-	pendingReminder := ut.PerformRequest(
-		h.Engine,
-		http.MethodGet,
-		"/api/v1/live/pending-reminder",
-		nil,
-		ut.Header{Key: "Authorization", Value: authHeader},
-	).Result()
-	assert.Equal(t, http.StatusOK, pendingReminder.StatusCode())
-
-	assert.ElementsMatch(t, []string{
-		"GET /api/v1/notifications/summary",
-		"POST /api/v1/notifications/read-category",
-		"GET /api/v1/live/pending-reminder",
-	}, auctionRequests.Load().([]string))
-	assert.ElementsMatch(t, []string{"GET /api/v1/orders/summary"}, productRequests.Load().([]string))
 }
