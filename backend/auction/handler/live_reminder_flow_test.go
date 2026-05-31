@@ -75,7 +75,7 @@ func TestProductionStartLiveTransitionFeedsPendingReminderOnce(t *testing.T) {
 	c := app.NewContext(1)
 	c.Params = append(c.Params, param.Param{Key: "id", Value: strconv.FormatInt(liveStreamID, 10)})
 	c.Set("user_id", int64(10001))
-	c.Set("user_role", 1)
+	c.Set("user_role", 2)
 
 	startHandler.StartLive(ctx, c)
 
@@ -103,4 +103,28 @@ func TestProductionStartLiveTransitionFeedsPendingReminderOnce(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, second.HasReminder)
 	require.Nil(t, second.Stream)
+}
+
+func TestStartLiveTransitionRejectsNonAdminOperator(t *testing.T) {
+	ctx := context.Background()
+	_, err := dao.InitRedis("localhost:6379", "")
+	require.NoError(t, err)
+
+	liveStreamID := time.Now().UnixNano()%1_000_000_000 + 1_000_000_000
+	statsService := service.NewLiveStreamStatsService()
+	require.NoError(t, statsService.SetScheduledStartTime(ctx, liveStreamID, time.Now().Add(time.Hour), 80))
+
+	startHandler := NewLiveStreamStatsHandler(statsService)
+	c := app.NewContext(1)
+	c.Params = append(c.Params, param.Param{Key: "id", Value: strconv.FormatInt(liveStreamID, 10)})
+	c.Set("user_id", int64(10001))
+	c.Set("user_role", 1)
+
+	startHandler.StartLive(ctx, c)
+
+	require.Equal(t, http.StatusForbidden, c.Response.StatusCode())
+	stats, err := statsService.GetStats(ctx, liveStreamID)
+	require.NoError(t, err)
+	require.Equal(t, "pending", stats.Status)
+	require.Nil(t, stats.StartedAt)
 }

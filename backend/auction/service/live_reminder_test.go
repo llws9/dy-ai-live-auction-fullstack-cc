@@ -6,6 +6,7 @@ import (
 
 	"auction-service/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeLiveSessionResolver struct {
@@ -94,5 +95,41 @@ func TestLiveReminderServiceReturnsEmptyWhenNoCandidateCanBeClaimed(t *testing.T
 	assert.NoError(t, err)
 	assert.False(t, result.HasReminder)
 	assert.Nil(t, result.Stream)
+	followDAO.AssertExpectations(t)
+}
+
+func TestLiveReminderServiceScansNextPageWhenFirstPageHasNoLiveCandidate(t *testing.T) {
+	ctx := context.Background()
+	userID := int64(100)
+	firstPage := make([]model.UserLiveStreamFollow, 50)
+	for i := range firstPage {
+		firstPage[i] = model.UserLiveStreamFollow{
+			UserID:              userID,
+			LiveStreamID:        int64(i + 1),
+			NotificationEnabled: true,
+		}
+	}
+	secondPage := []model.UserLiveStreamFollow{
+		{UserID: userID, LiveStreamID: 51, NotificationEnabled: true},
+	}
+
+	followDAO := new(MockUserLiveStreamFollowDAO)
+	followDAO.On("GetUserFollows", ctx, userID, 0, 50).Return(firstPage, nil).Once()
+	followDAO.On("GetUserFollows", ctx, userID, 50, 50).Return(secondPage, nil).Once()
+
+	service := NewLiveReminderService(
+		followDAO,
+		&fakeLiveSessionResolver{sessions: map[int64]*model.StreamInfo{
+			51: {ID: 51, LiveRoomID: 51, Name: "直播间 51", StatusText: "正在直播", StartedAt: 1717000051000},
+		}},
+		&fakeReminderClaimer{claimableByStream: map[int64]bool{51: true}},
+	)
+
+	result, err := service.GetPendingReminder(ctx, userID)
+
+	assert.NoError(t, err)
+	require.True(t, result.HasReminder)
+	require.NotNil(t, result.Stream)
+	assert.Equal(t, int64(51), result.Stream.ID)
 	followDAO.AssertExpectations(t)
 }

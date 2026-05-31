@@ -5,7 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"auction-service/dao"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestLiveStreamStatsService_NewService 测试服务创建
@@ -147,6 +149,38 @@ func TestLiveStreamStatsService_StartLive(t *testing.T) {
 	liveNowList, err := service.GetLiveNowHotStreams(ctx)
 	assert.NoError(t, err)
 	assert.Contains(t, liveNowList, int64(3001))
+}
+
+func TestLiveStreamStatsService_StartLiveIsIdempotent(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	_, err := dao.InitRedis("localhost:6379", "")
+	require.NoError(t, err)
+	service := NewLiveStreamStatsService()
+	if service.redis == nil {
+		t.Skip("redis client not initialized")
+	}
+	ctx := context.Background()
+
+	liveStreamID := time.Now().UnixNano()%1_000_000_000 + 2_000_000_000
+	err = service.SetScheduledStartTime(ctx, liveStreamID, time.Now().Add(30*time.Minute), 300)
+	assert.NoError(t, err)
+
+	err = service.StartLive(ctx, liveStreamID)
+	assert.NoError(t, err)
+	first, err := service.GetStats(ctx, liveStreamID)
+	assert.NoError(t, err)
+	assert.NotNil(t, first.StartedAt)
+
+	time.Sleep(10 * time.Millisecond)
+	err = service.StartLive(ctx, liveStreamID)
+	assert.NoError(t, err)
+	second, err := service.GetStats(ctx, liveStreamID)
+	assert.NoError(t, err)
+	assert.NotNil(t, second.StartedAt)
+	assert.Equal(t, first.StartedAt.UnixNano(), second.StartedAt.UnixNano())
 }
 
 // TestLiveStreamStatsService_EndLive 测试结束直播

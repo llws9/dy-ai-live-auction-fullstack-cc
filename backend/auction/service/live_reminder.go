@@ -53,36 +53,42 @@ func NewLiveReminderService(followDAO FollowDAO, liveSessionResolver LiveSession
 }
 
 func (s *LiveReminderService) GetPendingReminder(ctx context.Context, userID int64) (*model.PendingLiveReminderResponse, error) {
-	follows, err := s.followDAO.GetUserFollows(ctx, userID, 0, liveReminderCandidateLimit)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, follow := range follows {
-		if !follow.NotificationEnabled {
-			continue
-		}
-
-		session, err := s.liveSessionResolver.GetActiveSession(ctx, follow.LiveStreamID)
+	for offset := 0; ; offset += liveReminderCandidateLimit {
+		follows, err := s.followDAO.GetUserFollows(ctx, userID, offset, liveReminderCandidateLimit)
 		if err != nil {
 			return nil, err
 		}
-		if session == nil || session.StartedAt <= 0 {
-			continue
+
+		for _, follow := range follows {
+			if !follow.NotificationEnabled {
+				continue
+			}
+
+			session, err := s.liveSessionResolver.GetActiveSession(ctx, follow.LiveStreamID)
+			if err != nil {
+				return nil, err
+			}
+			if session == nil || session.StartedAt <= 0 {
+				continue
+			}
+
+			claimed, err := s.receiptClaimer.Claim(ctx, userID, follow.LiveStreamID, session.StartedAt)
+			if err != nil {
+				return nil, err
+			}
+			if !claimed {
+				continue
+			}
+
+			return &model.PendingLiveReminderResponse{
+				HasReminder: true,
+				Stream:      session,
+			}, nil
 		}
 
-		claimed, err := s.receiptClaimer.Claim(ctx, userID, follow.LiveStreamID, session.StartedAt)
-		if err != nil {
-			return nil, err
+		if len(follows) < liveReminderCandidateLimit {
+			break
 		}
-		if !claimed {
-			continue
-		}
-
-		return &model.PendingLiveReminderResponse{
-			HasReminder: true,
-			Stream:      session,
-		}, nil
 	}
 
 	return &model.PendingLiveReminderResponse{HasReminder: false, Stream: nil}, nil

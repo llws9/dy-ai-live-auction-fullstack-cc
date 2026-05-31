@@ -21,7 +21,7 @@ func (h *LiveStreamStatsHandler) StartLive(ctx context.Context, c *app.RequestCo
 		c.JSON(401, map[string]interface{}{"code": 401, "message": "未认证，请先登录"})
 		return
 	}
-	if role := c.GetInt("user_role"); role < 1 {
+	if role := c.GetInt("user_role"); role < 2 {
 		c.JSON(403, map[string]interface{}{"code": 403, "message": "无权限操作直播间"})
 		return
 	}

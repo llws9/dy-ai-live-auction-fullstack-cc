@@ -181,10 +181,16 @@ func (s *LiveStreamStatsService) StartLive(ctx context.Context, liveStreamID int
 		}
 	}
 
+	if stats.Status == "live" && stats.StartedAt != nil {
+		return nil
+	}
+
 	// 更新状态为live；StartedAt 是 pending-reminder 的真实 session key。
-	now := time.Now()
 	stats.Status = "live"
-	stats.StartedAt = &now
+	if stats.StartedAt == nil {
+		now := time.Now()
+		stats.StartedAt = &now
+	}
 	stats.ScheduledStart = nil // 清空计划开播时间
 
 	if err := s.saveStats(ctx, stats); err != nil {
