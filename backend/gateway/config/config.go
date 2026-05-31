@@ -117,6 +117,7 @@ func LoadFromNacos() (*Config, *nacospkg.ConfigLoader, error) {
 	}
 
 	log.Printf("Config loaded from Nacos: [group=%s, dataId=%s]", group, dataId)
+	injectRuntimeSecrets(cfg)
 	return cfg, loader, nil
 }
 
@@ -136,7 +137,14 @@ func LoadFromYAML(content string) (*Config, error) {
 	if err := yaml.Unmarshal([]byte(content), cfg); err != nil {
 		return nil, err
 	}
+	injectRuntimeSecrets(cfg)
 	return cfg, nil
+}
+
+func injectRuntimeSecrets(cfg *Config) {
+	if token := os.Getenv("INTERNAL_API_TOKEN"); token != "" {
+		cfg.Services.InternalToken = token
+	}
 }
 
 func getEnvOrDefault(key, defaultValue string) string {

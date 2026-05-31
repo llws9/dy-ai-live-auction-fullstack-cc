@@ -69,7 +69,6 @@ func TestProductionStartLiveTransitionFeedsPendingReminderOnce(t *testing.T) {
 	userID := int64(991)
 	liveStreamID := time.Now().UnixNano() % 1_000_000_000
 	statsService := service.NewLiveStreamStatsService()
-	require.NoError(t, statsService.SetScheduledStartTime(ctx, liveStreamID, time.Now().Add(time.Hour), 80))
 
 	startHandler := NewLiveStreamStatsHandler(statsService)
 	c := app.NewContext(1)

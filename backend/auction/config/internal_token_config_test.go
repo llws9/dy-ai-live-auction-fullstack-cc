@@ -8,11 +8,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestNacosAuctionConfigLoadsInternalToken(t *testing.T) {
+func TestNacosAuctionConfigDoesNotContainUsablePlaintextInternalToken(t *testing.T) {
+	forbiddenToken := "dev-" + "internal-" + "api-" + "token"
 	configBytes, err := os.ReadFile("../../../configs/nacos/auction-config.yaml")
 	require.NoError(t, err)
 
 	var cfg Config
 	require.NoError(t, yaml.Unmarshal(configBytes, &cfg))
-	require.Equal(t, "dev-internal-api-token", cfg.Internal.Token)
+	require.Empty(t, cfg.Internal.Token)
+	require.NotContains(t, string(configBytes), forbiddenToken)
 }

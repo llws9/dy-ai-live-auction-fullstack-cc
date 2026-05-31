@@ -16,7 +16,15 @@ const HotnessThreshold = 200 // 热门直播间阈值
 var startLiveScript = redis.NewScript(`
 local stats_json = redis.call("GET", KEYS[1])
 if not stats_json then
-	return "missing"
+	local stats = {
+		live_stream_id = tonumber(ARGV[1]),
+		follower_count = 0,
+		is_hot = false,
+		status = "live",
+		started_at = ARGV[2]
+	}
+	redis.call("SET", KEYS[1], cjson.encode(stats), "EX", ARGV[3])
+	return "started"
 end
 
 local stats = cjson.decode(stats_json)
@@ -188,7 +196,7 @@ func (s *LiveStreamStatsService) SetScheduledStartTime(ctx context.Context, live
 // StartLive 开始直播
 // 从ZSET移除，如果是热门直播间则加入live_now集合
 func (s *LiveStreamStatsService) StartLive(ctx context.Context, liveStreamID int64) error {
-	result, err := startLiveScript.Run(ctx, s.redis, []string{
+	_, err := startLiveScript.Run(ctx, s.redis, []string{
 		s.getStatsKey(liveStreamID),
 		dao.ColdLiveStreamZSET,
 		dao.HotLiveStreamZSET,
@@ -196,9 +204,6 @@ func (s *LiveStreamStatsService) StartLive(ctx context.Context, liveStreamID int
 	}, liveStreamID, time.Now().Format(time.RFC3339Nano), int((24 * time.Hour).Seconds())).Text()
 	if err != nil {
 		return fmt.Errorf("开始直播失败: %w", err)
-	}
-	if result == "missing" {
-		return fmt.Errorf("直播间状态不存在")
 	}
 	return nil
 }

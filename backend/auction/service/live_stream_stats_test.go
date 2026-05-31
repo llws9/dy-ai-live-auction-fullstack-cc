@@ -248,6 +248,33 @@ func TestLiveStreamStatsService_StartLiveConcurrentCallsShareStartedAt(t *testin
 	require.Len(t, uniqueStartedAt, 1)
 }
 
+func TestLiveStreamStatsService_StartLiveCreatesMinimalStatsWhenMissing(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	_, err := dao.InitRedis("localhost:6379", "")
+	require.NoError(t, err)
+	service := NewLiveStreamStatsService()
+	if service.redis == nil {
+		t.Skip("redis client not initialized")
+	}
+	ctx := context.Background()
+
+	liveStreamID := time.Now().UnixNano()%1_000_000_000 + 4_000_000_000
+	err = service.StartLive(ctx, liveStreamID)
+	require.NoError(t, err)
+
+	stats, err := service.GetStats(ctx, liveStreamID)
+	require.NoError(t, err)
+	require.NotNil(t, stats)
+	require.Equal(t, liveStreamID, stats.LiveStreamID)
+	require.Equal(t, "live", stats.Status)
+	require.NotNil(t, stats.StartedAt)
+	require.Nil(t, stats.ScheduledStart)
+	require.False(t, stats.IsHot)
+}
+
 // TestLiveStreamStatsService_EndLive 测试结束直播
 func TestLiveStreamStatsService_EndLive(t *testing.T) {
 	if testing.Short() {

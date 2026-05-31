@@ -2,27 +2,36 @@ package config
 
 import (
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
-func TestDefaultConfigsIncludeSharedInternalToken(t *testing.T) {
+func TestDefaultConfigsDoNotContainUsablePlaintextInternalToken(t *testing.T) {
+	forbiddenToken := "dev-" + "internal-" + "api-" + "token"
 	gatewayConfigBytes, err := os.ReadFile("../../../configs/nacos/gateway-config.yaml")
 	require.NoError(t, err)
 	var gatewayCfg Config
 	require.NoError(t, yaml.Unmarshal(gatewayConfigBytes, &gatewayCfg))
-	require.NotEmpty(t, gatewayCfg.Services.InternalToken)
+	require.Empty(t, gatewayCfg.Services.InternalToken)
 
 	auctionConfigBytes, err := os.ReadFile("../../../configs/nacos/auction-config.yaml")
 	require.NoError(t, err)
-	require.Contains(t, string(auctionConfigBytes), "token: \""+gatewayCfg.Services.InternalToken+"\"")
+	require.NotContains(t, string(auctionConfigBytes), forbiddenToken)
 
 	dockerComposeBytes, err := os.ReadFile("../../../docker-compose.yml")
 	require.NoError(t, err)
 	dockerCompose := string(dockerComposeBytes)
-	require.Contains(t, dockerCompose, "INTERNAL_API_TOKEN="+gatewayCfg.Services.InternalToken)
-	require.Equal(t, 2, strings.Count(dockerCompose, "INTERNAL_API_TOKEN="+gatewayCfg.Services.InternalToken))
+	require.NotContains(t, dockerCompose, forbiddenToken)
+	require.Contains(t, dockerCompose, "INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}")
+}
+
+func TestInjectRuntimeSecretsLoadsInternalTokenFromEnvironment(t *testing.T) {
+	t.Setenv("INTERNAL_API_TOKEN", "runtime-secret")
+
+	cfg := &Config{}
+	injectRuntimeSecrets(cfg)
+
+	require.Equal(t, "runtime-secret", cfg.Services.InternalToken)
 }

@@ -26,6 +26,3 @@ rabbitmq:
 
 jwt:
   secret: "your-secret-key-change-in-production"
-
-internal:
-  token: "dev-internal-api-token"
