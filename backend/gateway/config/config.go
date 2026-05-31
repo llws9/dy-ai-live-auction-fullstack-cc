@@ -34,10 +34,11 @@ type ServerConfig struct {
 
 // ServicesConfig 后端服务配置
 type ServicesConfig struct {
-	ProductURL string `yaml:"product_url"`
-	AuctionURL string `yaml:"auction_url"`
-	TestURL    string `yaml:"test_url"`    // test-service HTTP 入口
-	TestWSURL  string `yaml:"test_ws_url"` // test-service WS 入口（前端直连）
+	ProductURL    string `yaml:"product_url"`
+	AuctionURL    string `yaml:"auction_url"`
+	TestURL       string `yaml:"test_url"`       // test-service HTTP 入口
+	TestWSURL     string `yaml:"test_ws_url"`    // test-service WS 入口（前端直连）
+	InternalToken string `yaml:"internal_token"` // service-to-service internal auth token
 }
 
 // RateLimitConfig 限流配置
@@ -65,10 +66,11 @@ func Load() *Config {
 			Port: getEnvOrDefault("GATEWAY_PORT", ":8080"),
 		},
 		Services: ServicesConfig{
-			ProductURL: getEnvOrDefault("PRODUCT_SERVICE_URL", "http://localhost:8081"),
-			AuctionURL: getEnvOrDefault("AUCTION_SERVICE_URL", "http://localhost:8082"),
-			TestURL:    getEnvOrDefault("TEST_SERVICE_URL", "http://localhost:18090"),
-			TestWSURL:  getEnvOrDefault("TEST_SERVICE_WS_URL", "ws://localhost:18092"),
+			ProductURL:    getEnvOrDefault("PRODUCT_SERVICE_URL", "http://localhost:8081"),
+			AuctionURL:    getEnvOrDefault("AUCTION_SERVICE_URL", "http://localhost:8082"),
+			TestURL:       getEnvOrDefault("TEST_SERVICE_URL", "http://localhost:18090"),
+			TestWSURL:     getEnvOrDefault("TEST_SERVICE_WS_URL", "ws://localhost:18092"),
+			InternalToken: getEnvOrDefault("INTERNAL_API_TOKEN", ""),
 		},
 		RateLimit: RateLimitConfig{
 			RequestsPerSecond: 1000,

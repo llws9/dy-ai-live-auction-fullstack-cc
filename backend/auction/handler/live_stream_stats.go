@@ -4,15 +4,18 @@ import (
 	"context"
 	"strconv"
 
-	"auction-service/service"
 	"github.com/cloudwego/hertz/pkg/app"
 )
 
 type LiveStreamStatsHandler struct {
-	service *service.LiveStreamStatsService
+	service LiveStarter
 }
 
-func NewLiveStreamStatsHandler(service *service.LiveStreamStatsService) *LiveStreamStatsHandler {
+type LiveStarter interface {
+	StartLive(ctx context.Context, liveStreamID int64) error
+}
+
+func NewLiveStreamStatsHandler(service LiveStarter) *LiveStreamStatsHandler {
 	return &LiveStreamStatsHandler{service: service}
 }
 
@@ -33,7 +36,7 @@ func (h *LiveStreamStatsHandler) StartLive(ctx context.Context, c *app.RequestCo
 	}
 
 	if err := h.service.StartLive(ctx, liveStreamID); err != nil {
-		c.JSON(500, map[string]interface{}{"code": 500, "message": "开始直播失败: " + err.Error()})
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "开始直播失败"})
 		return
 	}
 

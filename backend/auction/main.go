@@ -241,6 +241,7 @@ func main() {
 	}
 	internal := h.Group("/internal", middleware.InternalAuthMiddleware(internalAPIToken))
 	internal.POST("/users/batch", internalUserHandler.BatchByIDs)
+	internal.POST("/live-streams/:id/start", liveStreamStatsHandler.StartLive)
 
 	// 注册 Prometheus metrics 端点
 	h.GET("/metrics", func(ctx context.Context, c *app.RequestContext) {
@@ -381,7 +382,6 @@ func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bid
 	v1.GET("/user/followed-live-streams", followHandler.GetUserFollowsHandler)
 	v1.PUT("/live-streams/:id/notification", followHandler.ToggleNotificationHandler)
 	v1.GET("/live/pending-reminder", liveReminderHandler.GetPendingReminder)
-	v1.POST("/live-streams/:id/start", liveStreamStatsHandler.StartLive)
 
 	// ========== 商品提醒订阅相关路由 ==========
 	v1.POST("/products/:id/remind", productReminderHandler.SubscribeProductReminder)

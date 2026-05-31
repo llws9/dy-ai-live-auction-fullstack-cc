@@ -26,6 +26,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	auctionProxy := handler.NewProxyHandler(cfg.Services.AuctionURL)
 	testProxy := handler.NewProxyHandler(cfg.Services.TestURL)
 	touchpointHandler := handler.NewTouchpointHandler(cfg.Services.AuctionURL, cfg.Services.ProductURL)
+	liveStartHandler := handler.NewLiveStartHandler(cfg.Services.AuctionURL, cfg.Services.InternalToken)
 
 	// 创建实验处理器
 	experimentHandler := handler.NewExperimentHandler(gbClient)
@@ -92,6 +93,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.GET("/live-streams/:id/follow-status", auctionProxy.Forward) // T2.6 (F-B2)
 	authGroup.GET("/user/followed-live-streams", auctionProxy.Forward)
 	authGroup.PUT("/live-streams/:id/notification", auctionProxy.Forward)
+	authGroup.POST("/live-streams/:id/start", middleware.RequireAdmin(), liveStartHandler.StartLive)
 
 	// ========== 用户余额（T3.1 F-A2 只读） ==========
 	authGroup.GET("/user/balance", auctionProxy.Forward)

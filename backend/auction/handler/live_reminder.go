@@ -3,15 +3,19 @@ package handler
 import (
 	"context"
 
-	"auction-service/service"
+	"auction-service/model"
 	"github.com/cloudwego/hertz/pkg/app"
 )
 
 type LiveReminderHandler struct {
-	service *service.LiveReminderService
+	service LiveReminderProvider
 }
 
-func NewLiveReminderHandler(service *service.LiveReminderService) *LiveReminderHandler {
+type LiveReminderProvider interface {
+	GetPendingReminder(ctx context.Context, userID int64) (*model.PendingLiveReminderResponse, error)
+}
+
+func NewLiveReminderHandler(service LiveReminderProvider) *LiveReminderHandler {
 	return &LiveReminderHandler{service: service}
 }
 
@@ -25,7 +29,7 @@ func (h *LiveReminderHandler) GetPendingReminder(ctx context.Context, c *app.Req
 
 	result, err := h.service.GetPendingReminder(ctx, userID)
 	if err != nil {
-		c.JSON(500, map[string]interface{}{"code": 500, "message": "获取开播提醒失败: " + err.Error()})
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "获取开播提醒失败"})
 		return
 	}
 	c.JSON(200, map[string]interface{}{"code": 0, "message": "success", "data": result})
