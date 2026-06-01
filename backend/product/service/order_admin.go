@@ -20,19 +20,19 @@ var ErrAdminDAOMissing = errors.New("admin order DAO is not configured")
 //   - product_image 取 products.images 数组首图（mysql 上是 JSON，sqlite 上是字符串，统一按字符串解析）；
 //   - user_name 留空，前端通过 fallback 渲染 `用户 #${user_id}`，不在此处跨库 JOIN auction 服务的 users 表。
 type OrderAdminVO struct {
-	ID           int64              `json:"id"`
-	AuctionID    int64              `json:"auction_id"`
-	ProductID    int64              `json:"product_id"`
-	ProductName  string             `json:"product_name"`
-	ProductImage string             `json:"product_image"`
-	WinnerID     int64              `json:"winner_id"`
-	UserID       int64              `json:"user_id"`
-	FinalPrice   decimal.Decimal    `json:"final_price"`
-	Status       model.OrderStatus  `json:"status"`
-	PaidAt       *time.Time         `json:"paid_at,omitempty"`
-	ShippedAt    *time.Time         `json:"shipped_at,omitempty"`
-	CompletedAt  *time.Time         `json:"completed_at,omitempty"`
-	CreatedAt    time.Time          `json:"created_at"`
+	ID           int64             `json:"id"`
+	AuctionID    int64             `json:"auction_id"`
+	ProductID    int64             `json:"product_id"`
+	ProductName  string            `json:"product_name"`
+	ProductImage string            `json:"product_image"`
+	WinnerID     int64             `json:"winner_id"`
+	UserID       int64             `json:"user_id"`
+	FinalPrice   decimal.Decimal   `json:"final_price"`
+	Status       model.OrderStatus `json:"status"`
+	PaidAt       *time.Time        `json:"paid_at,omitempty"`
+	ShippedAt    *time.Time        `json:"shipped_at,omitempty"`
+	CompletedAt  *time.Time        `json:"completed_at,omitempty"`
+	CreatedAt    time.Time         `json:"created_at"`
 }
 
 func toAdminVO(row dao.OrderAdminRow) OrderAdminVO {
@@ -70,10 +70,10 @@ func firstProductImage(raw string) string {
 
 // ListAdminOrders admin 端订单列表，不按 winner_id 强过滤。
 //   - 入参 status 与 userID 均为可选过滤条件；userID 等价于 winner_id 过滤（admin 想查某用户）；
-//   - adminDAO 未注入时返回空列表（用于历史调用方降级）。
+//   - adminDAO 未注入时返回错误，避免 admin 接口静默降级成空列表。
 func (s *OrderService) ListAdminOrders(ctx context.Context, status *model.OrderStatus, userID *int64, page, pageSize int) ([]OrderAdminVO, int64, error) {
 	if s.adminDAO == nil {
-		return []OrderAdminVO{}, 0, nil
+		return nil, 0, ErrAdminDAOMissing
 	}
 	rows, total, err := s.adminDAO.ListAdminOrders(ctx, status, userID, page, pageSize)
 	if err != nil {

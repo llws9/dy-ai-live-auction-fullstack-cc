@@ -76,3 +76,76 @@ func TestOrderRoutes_RequireJWTAndForwardUserID(t *testing.T) {
 		assert.Equal(t, "42", lastUserID.Load().(string))
 	})
 }
+
+func TestAdminOrderRoutes_RequireAdminAndForwardInternalToken(t *testing.T) {
+	var calls atomic.Int64
+	var lastInternalToken atomic.Value
+	var lastUserRole atomic.Value
+	lastInternalToken.Store("")
+	lastUserRole.Store("")
+
+	productMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		lastInternalToken.Store(r.Header.Get("X-Internal-Token"))
+		lastUserRole.Store(r.Header.Get("X-User-Role"))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"code":200,"message":"success","data":{"list":[],"total":0}}`))
+	}))
+	defer productMock.Close()
+
+	auctionMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer auctionMock.Close()
+
+	cfg := &config.Config{
+		Services: config.ServicesConfig{
+			ProductURL:    productMock.URL,
+			AuctionURL:    auctionMock.URL,
+			TestURL:       "http://127.0.0.1:0",
+			TestWSURL:     "ws://127.0.0.1:0",
+			InternalToken: "internal-secret",
+		},
+		JWT: config.JWTConfig{Secret: "admin-order-route-secret"},
+	}
+
+	h := server.Default(server.WithHostPorts("127.0.0.1:0"))
+	RegisterRoutes(h, cfg, nil)
+
+	t.Run("non-admin is rejected before product service", func(t *testing.T) {
+		calls.Store(0)
+		token, err := middleware.GenerateToken(cfg.JWT.Secret, 42, "buyer", 0, 24)
+		assert.NoError(t, err)
+
+		w := ut.PerformRequest(
+			h.Engine,
+			http.MethodGet,
+			"/api/v1/admin/orders",
+			nil,
+			ut.Header{Key: "Authorization", Value: "Bearer " + token},
+		)
+
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode())
+		assert.Equal(t, int64(0), calls.Load())
+	})
+
+	t.Run("admin request forwards internal token and role", func(t *testing.T) {
+		calls.Store(0)
+		token, err := middleware.GenerateToken(cfg.JWT.Secret, 7, "admin", 2, 24)
+		assert.NoError(t, err)
+
+		w := ut.PerformRequest(
+			h.Engine,
+			http.MethodGet,
+			"/api/v1/admin/orders",
+			nil,
+			ut.Header{Key: "Authorization", Value: "Bearer " + token},
+		)
+
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode())
+		assert.Equal(t, int64(1), calls.Load())
+		assert.Equal(t, "internal-secret", lastInternalToken.Load().(string))
+		assert.Equal(t, "admin", lastUserRole.Load().(string))
+	})
+}

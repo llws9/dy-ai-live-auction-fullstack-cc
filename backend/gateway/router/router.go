@@ -23,6 +23,7 @@ type RouterConfig struct {
 func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Client) {
 	// 创建代理处理器
 	productProxy := handler.NewProxyHandler(cfg.Services.ProductURL)
+	adminOrderProxy := handler.NewProxyHandlerWithInternalToken(cfg.Services.ProductURL, cfg.Services.InternalToken)
 	auctionProxy := handler.NewProxyHandler(cfg.Services.AuctionURL)
 	testProxy := handler.NewProxyHandler(cfg.Services.TestURL)
 	touchpointHandler := handler.NewTouchpointHandler(cfg.Services.AuctionURL, cfg.Services.ProductURL)
@@ -123,8 +124,8 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 
 	// 订单 admin 路由：管理员查看全量订单，不再被 X-User-ID 强过滤；
 	// product-service 侧 /admin/orders 不读 X-User-ID，鉴权由这里的 RequireAdmin 中间件保证。
-	authGroup.GET("/admin/orders", middleware.RequireAdmin(), productProxy.Forward)
-	authGroup.GET("/admin/orders/:id", middleware.RequireAdmin(), productProxy.Forward)
+	authGroup.GET("/admin/orders", middleware.RequireAdmin(), adminOrderProxy.Forward)
+	authGroup.GET("/admin/orders/:id", middleware.RequireAdmin(), adminOrderProxy.Forward)
 
 	// ========== 直播间路由 ==========
 	authGroup.GET("/admin/live-streams", middleware.RequireAdmin(), productProxy.Forward) // T009: 管理端直播间列表

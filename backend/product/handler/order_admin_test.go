@@ -50,20 +50,27 @@ func TestOrderHandler_AdminList_NoXUserID(t *testing.T) {
 	c := app.NewContext(0)
 	c.Request.SetMethod("GET")
 	c.Request.SetRequestURI("/api/v1/admin/orders?page=1&page_size=20")
+	c.Request.Header.Set("X-User-Role", "admin")
 	// 不带 X-User-ID
 
 	h.AdminList(context.Background(), c)
 
 	assert.Equal(t, 200, c.Response.StatusCode())
 	var body struct {
-		List     []map[string]interface{} `json:"list"`
-		Total    int64                    `json:"total"`
-		Page     int                      `json:"page"`
-		PageSize int                      `json:"page_size"`
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+		Data    struct {
+			List     []map[string]interface{} `json:"list"`
+			Total    int64                    `json:"total"`
+			Page     int                      `json:"page"`
+			PageSize int                      `json:"page_size"`
+		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
-	assert.EqualValues(t, 3, body.Total)
-	assert.Len(t, body.List, 3)
+	assert.Equal(t, 200, body.Code)
+	assert.Equal(t, "success", body.Message)
+	assert.EqualValues(t, 3, body.Data.Total)
+	assert.Len(t, body.Data.List, 3)
 }
 
 // TestOrderHandler_AdminList_StatusFilter 验证 status 筛选生效。
@@ -78,16 +85,19 @@ func TestOrderHandler_AdminList_StatusFilter(t *testing.T) {
 	c := app.NewContext(0)
 	c.Request.SetMethod("GET")
 	c.Request.SetRequestURI("/api/v1/admin/orders?status=1")
+	c.Request.Header.Set("X-User-Role", "admin")
 	h.AdminList(context.Background(), c)
 
 	assert.Equal(t, 200, c.Response.StatusCode())
 	var body struct {
-		List  []map[string]interface{} `json:"list"`
-		Total int64                    `json:"total"`
+		Data struct {
+			List  []map[string]interface{} `json:"list"`
+			Total int64                    `json:"total"`
+		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
-	assert.EqualValues(t, 2, body.Total)
-	for _, o := range body.List {
+	assert.EqualValues(t, 2, body.Data.Total)
+	for _, o := range body.Data.List {
 		assert.EqualValues(t, 1, o["status"])
 	}
 }
@@ -104,19 +114,78 @@ func TestOrderHandler_AdminList_UserIDFilter(t *testing.T) {
 	c := app.NewContext(0)
 	c.Request.SetMethod("GET")
 	c.Request.SetRequestURI("/api/v1/admin/orders?user_id=901")
+	c.Request.Header.Set("X-User-Role", "admin")
 	h.AdminList(context.Background(), c)
 
 	assert.Equal(t, 200, c.Response.StatusCode())
 	var body struct {
-		List  []map[string]interface{} `json:"list"`
-		Total int64                    `json:"total"`
+		Data struct {
+			List  []map[string]interface{} `json:"list"`
+			Total int64                    `json:"total"`
+		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
-	assert.EqualValues(t, 2, body.Total)
-	for _, o := range body.List {
+	assert.EqualValues(t, 2, body.Data.Total)
+	for _, o := range body.Data.List {
 		assert.EqualValues(t, 901, o["winner_id"])
 		assert.EqualValues(t, 901, o["user_id"]) // 前端 fallback 兼容字段
 	}
+}
+
+func TestOrderHandler_AdminList_RequiresAdminRole(t *testing.T) {
+	h := newAdminOrderHandlerWithSeed(t, nil)
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/admin/orders")
+
+	h.AdminList(context.Background(), c)
+
+	assert.Equal(t, 403, c.Response.StatusCode())
+}
+
+func TestOrderHandler_AdminList_ClampsPageSize(t *testing.T) {
+	h := newAdminOrderHandlerWithSeed(t, func(db *gorm.DB) {
+		require.NoError(t, db.Create(&model.Product{ID: 11, Name: "茶杯"}).Error)
+		for i := int64(1); i <= 3; i++ {
+			require.NoError(t, db.Create(&model.Order{ID: 100 + i, AuctionID: 200 + i, ProductID: 11, WinnerID: 900 + i, FinalPrice: decimal.NewFromInt(100)}).Error)
+		}
+	})
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/admin/orders?page=1&page_size=10000")
+	c.Request.Header.Set("X-User-Role", "admin")
+
+	h.AdminList(context.Background(), c)
+
+	assert.Equal(t, 200, c.Response.StatusCode())
+	var body struct {
+		Data struct {
+			PageSize int `json:"page_size"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.Equal(t, 100, body.Data.PageSize)
+}
+
+func TestOrderHandler_AdminList_DoesNotLeakInternalError(t *testing.T) {
+	h := newAdminOrderHandlerWithSeed(t, nil)
+	h.orderService.SetAdminOrderDAO(nil)
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/admin/orders")
+	c.Request.Header.Set("X-User-Role", "admin")
+
+	h.AdminList(context.Background(), c)
+
+	assert.Equal(t, 500, c.Response.StatusCode())
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.Equal(t, float64(500), body["code"])
+	assert.Equal(t, "获取订单列表失败", body["message"])
+	assert.NotContains(t, body["message"], "admin order DAO")
 }
 
 // TestOrderHandler_AdminGet 单条返回 product_name 与首图。
@@ -129,18 +198,55 @@ func TestOrderHandler_AdminGet(t *testing.T) {
 	c := app.NewContext(0)
 	c.Request.SetMethod("GET")
 	c.Request.SetRequestURI("/api/v1/admin/orders/101")
+	c.Request.Header.Set("X-User-Role", "admin")
 	c.Params = append(c.Params, param.Param{Key: "id", Value: "101"})
 
 	h.AdminGet(context.Background(), c)
 
 	assert.Equal(t, 200, c.Response.StatusCode())
+	var body struct {
+		Code int                    `json:"code"`
+		Data map[string]interface{} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.Equal(t, 200, body.Code)
+	assert.EqualValues(t, 101, body.Data["id"])
+	assert.EqualValues(t, 901, body.Data["winner_id"])
+	assert.EqualValues(t, 901, body.Data["user_id"])
+	assert.Equal(t, "茶杯", body.Data["product_name"])
+	assert.Equal(t, "https://cdn/first.jpg", body.Data["product_image"])
+}
+
+func TestOrderHandler_AdminGet_RequiresAdminRole(t *testing.T) {
+	h := newAdminOrderHandlerWithSeed(t, nil)
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/admin/orders/101")
+	c.Params = append(c.Params, param.Param{Key: "id", Value: "101"})
+
+	h.AdminGet(context.Background(), c)
+
+	assert.Equal(t, 403, c.Response.StatusCode())
+}
+
+func TestOrderHandler_AdminGet_DoesNotLeakInternalError(t *testing.T) {
+	h := newAdminOrderHandlerWithSeed(t, nil)
+	h.orderService.SetAdminOrderDAO(nil)
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/admin/orders/101")
+	c.Request.Header.Set("X-User-Role", "admin")
+	c.Params = append(c.Params, param.Param{Key: "id", Value: "101"})
+
+	h.AdminGet(context.Background(), c)
+
+	assert.Equal(t, 500, c.Response.StatusCode())
 	var body map[string]interface{}
 	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
-	assert.EqualValues(t, 101, body["id"])
-	assert.EqualValues(t, 901, body["winner_id"])
-	assert.EqualValues(t, 901, body["user_id"])
-	assert.Equal(t, "茶杯", body["product_name"])
-	assert.Equal(t, "https://cdn/first.jpg", body["product_image"])
+	assert.Equal(t, "获取订单详情失败", body["message"])
+	assert.NotContains(t, body["message"], "admin order DAO")
 }
 
 // TestOrderHandler_AdminGet_NotFound 不存在订单返回 404。
@@ -150,6 +256,7 @@ func TestOrderHandler_AdminGet_NotFound(t *testing.T) {
 	c := app.NewContext(0)
 	c.Request.SetMethod("GET")
 	c.Request.SetRequestURI("/api/v1/admin/orders/999")
+	c.Request.Header.Set("X-User-Role", "admin")
 	c.Params = append(c.Params, param.Param{Key: "id", Value: "999"})
 
 	h.AdminGet(context.Background(), c)
