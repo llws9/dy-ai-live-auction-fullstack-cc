@@ -305,13 +305,13 @@ func (suite *OrderTestSuite) TestGetSummary() {
 	ctx := context.Background()
 	userID := int64(100)
 
-	_, err := suite.service.CreateOrder(ctx, 101, 1, userID, 500.0)
+	_, err := suite.service.CreateOrder(ctx, 101, 1, userID, decimal.NewFromInt(500))
 	suite.NoError(err)
-	paid, err := suite.service.CreateOrder(ctx, 102, 1, userID, 600.0)
+	paid, err := suite.service.CreateOrder(ctx, 102, 1, userID, decimal.NewFromInt(600))
 	suite.NoError(err)
 	_, err = suite.service.PayOrder(ctx, paid.ID)
 	suite.NoError(err)
-	_, err = suite.service.CreateOrder(ctx, 103, 1, 200, 700.0)
+	_, err = suite.service.CreateOrder(ctx, 103, 1, 200, decimal.NewFromInt(700))
 	suite.NoError(err)
 
 	summary, err := suite.service.GetSummary(ctx, userID)
