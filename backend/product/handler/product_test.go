@@ -213,7 +213,7 @@ func TestProductHandler_ResponseFormat(t *testing.T) {
 
 	t.Run("should return correct list format", func(t *testing.T) {
 		listResp := map[string]interface{}{
-			"items":     []interface{}{},
+			"list":      []interface{}{},
 			"total":     10,
 			"page":      1,
 			"page_size": 20,
@@ -226,7 +226,7 @@ func TestProductHandler_ResponseFormat(t *testing.T) {
 		err = json.Unmarshal(body, &parsed)
 		assert.NoError(t, err)
 
-		assert.NotNil(t, parsed["items"])
+		assert.NotNil(t, parsed["list"])
 		assert.Equal(t, float64(10), parsed["total"])
 		assert.Equal(t, float64(1), parsed["page"])
 		assert.Equal(t, float64(20), parsed["page_size"])

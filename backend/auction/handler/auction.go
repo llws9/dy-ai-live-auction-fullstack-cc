@@ -252,7 +252,7 @@ func (h *AuctionHandler) List(ctx context.Context, c *app.RequestContext) {
 			"code":    200,
 			"message": "success",
 			"data": map[string]interface{}{
-				"items":     items,
+				"list":      items,
 				"total":     total,
 				"page":      page,
 				"page_size": pageSize,
@@ -291,7 +291,7 @@ func (h *AuctionHandler) List(ctx context.Context, c *app.RequestContext) {
 		"code":    200,
 		"message": "success",
 		"data": map[string]interface{}{
-			"items":     auctions,
+			"list":      auctions,
 			"total":     total,
 			"page":      page,
 			"page_size": pageSize,

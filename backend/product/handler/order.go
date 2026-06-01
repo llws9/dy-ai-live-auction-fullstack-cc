@@ -59,7 +59,7 @@ func (h *OrderHandler) List(ctx context.Context, c *app.RequestContext) {
 	}
 
 	c.JSON(200, map[string]interface{}{
-		"items": orders,
+		"list":  orders,
 		"total": total,
 	})
 }
@@ -283,7 +283,7 @@ func (h *OrderHandler) GetUserHistory(ctx context.Context, c *app.RequestContext
 	}
 
 	c.JSON(200, map[string]interface{}{
-		"items":     items,
+		"list":      items,
 		"total":     total,
 		"page":      page,
 		"page_size": pageSize,
