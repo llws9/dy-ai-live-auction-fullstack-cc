@@ -21,16 +21,16 @@ type Metrics struct {
 	LiveRoomPeakViewers *prometheus.GaugeVec
 
 	// 竞拍
-	AuctionCreated      *prometheus.CounterVec
-	AuctionBidTotal     *prometheus.CounterVec
-	AuctionBidAmount    *prometheus.HistogramVec
-	AuctionCompleted    *prometheus.CounterVec
-	AuctionSuccessRate  *prometheus.GaugeVec
+	AuctionCreated     *prometheus.CounterVec
+	AuctionBidTotal    *prometheus.CounterVec
+	AuctionBidAmount   *prometheus.HistogramVec
+	AuctionCompleted   *prometheus.CounterVec
+	AuctionSuccessRate *prometheus.GaugeVec
 
 	// 订单/成交
-	OrderCreated   *prometheus.CounterVec
-	OrderCompleted *prometheus.CounterVec
-	OrderAmount    *prometheus.HistogramVec
+	OrderCreated     *prometheus.CounterVec
+	OrderCompleted   *prometheus.CounterVec
+	OrderAmount      *prometheus.HistogramVec
 	OrderSuccessRate prometheus.Gauge
 
 	// 用户
@@ -39,9 +39,9 @@ type Metrics struct {
 	UserActive   prometheus.Gauge
 
 	// WebSocket
-	WSConnections   prometheus.Gauge
-	WSMessages      *prometheus.CounterVec
-	WSErrors        *prometheus.CounterVec
+	WSConnections prometheus.Gauge
+	WSMessages    *prometheus.CounterVec
+	WSErrors      *prometheus.CounterVec
 
 	// 支付
 	PaymentInitiated *prometheus.CounterVec
@@ -53,6 +53,7 @@ type Metrics struct {
 	ExperimentAssigned  *prometheus.CounterVec
 	ExperimentViewed    *prometheus.CounterVec
 	ExperimentCompleted *prometheus.CounterVec
+	TouchpointEvent     *prometheus.CounterVec
 
 	// SQL 查询
 	SQLQueryDuration *prometheus.HistogramVec
@@ -62,8 +63,12 @@ type Metrics struct {
 
 var defaultMetrics *Metrics
 
-// Init 初始化指标
-func Init(serviceName string) *Metrics {
+type registerer interface {
+	MustRegister(...prometheus.Collector)
+}
+
+// NewMetrics 初始化指标并注册到指定 registry，便于测试隔离全局 registry。
+func NewMetrics(serviceName string, reg registerer) *Metrics {
 	m := &Metrics{
 		// 请求指标
 		RequestsTotal: prometheus.NewCounterVec(
@@ -256,42 +261,50 @@ func Init(serviceName string) *Metrics {
 		),
 
 		PaymentAmount: prometheus.NewHistogramVec(
-				prometheus.HistogramOpts{
-					Name:    "payment_amount",
-					Help:    "支付金额分布",
-					Buckets: []float64{10, 50, 100, 500, 1000, 5000, 10000},
-				},
-				[]string{"method"},
-			),
+			prometheus.HistogramOpts{
+				Name:    "payment_amount",
+				Help:    "支付金额分布",
+				Buckets: []float64{10, 50, 100, 500, 1000, 5000, 10000},
+			},
+			[]string{"method"},
+		),
 
-			// A/B 测试实验指标
-			ExperimentAssigned: prometheus.NewCounterVec(
-				prometheus.CounterOpts{
-					Name: "experiment_assigned_total",
-					Help: "实验分配总数",
-				},
-				[]string{"experiment", "variation"},
-			),
+		// A/B 测试实验指标
+		ExperimentAssigned: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "experiment_assigned_total",
+				Help: "实验分配总数",
+			},
+			[]string{"experiment", "variation"},
+		),
 
-			ExperimentViewed: prometheus.NewCounterVec(
-				prometheus.CounterOpts{
-					Name: "experiment_viewed_total",
-					Help: "实验查看总数",
-				},
-				[]string{"experiment", "variation"},
-			),
+		ExperimentViewed: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "experiment_viewed_total",
+				Help: "实验查看总数",
+			},
+			[]string{"experiment", "variation"},
+		),
 
-			ExperimentCompleted: prometheus.NewCounterVec(
-				prometheus.CounterOpts{
-					Name: "experiment_completed_total",
-					Help: "实验完成总数",
-				},
-				[]string{"experiment", "variation"},
-			),
-		}
+		ExperimentCompleted: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "experiment_completed_total",
+				Help: "实验完成总数",
+			},
+			[]string{"experiment", "variation"},
+		),
+
+		TouchpointEvent: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "touchpoint_event_total",
+				Help: "用户触达曝光和交互事件总数",
+			},
+			[]string{"event", "source", "entry", "type", "result"},
+		),
+	}
 
 	// 注册所有指标
-	prometheus.MustRegister(
+	reg.MustRegister(
 		m.RequestsTotal,
 		m.RequestDuration,
 		m.LiveRoomEnter,
@@ -319,8 +332,15 @@ func Init(serviceName string) *Metrics {
 		m.ExperimentAssigned,
 		m.ExperimentViewed,
 		m.ExperimentCompleted,
+		m.TouchpointEvent,
 	)
 
+	return m
+}
+
+// Init 初始化指标
+func Init(serviceName string) *Metrics {
+	m := NewMetrics(serviceName, prometheus.DefaultRegisterer)
 	defaultMetrics = m
 	return m
 }
@@ -380,6 +400,10 @@ func (m *Metrics) RecordPayment(method string, amount float64, success bool, err
 	} else {
 		m.PaymentFailed.WithLabelValues(method, errorCode).Inc()
 	}
+}
+
+func (m *Metrics) RecordTouchpointEvent(event, source, entry, touchpointType, result string) {
+	m.TouchpointEvent.WithLabelValues(event, source, entry, touchpointType, result).Inc()
 }
 
 // IncWSConnections 增加 WebSocket 连接
