@@ -40,17 +40,36 @@ func (h *OrderHandler) AdminList(ctx context.Context, c *app.RequestContext) {
 
 	var statusPtr *model.OrderStatus
 	if statusStr := string(c.Query("status")); statusStr != "" {
-		if v, err := strconv.Atoi(statusStr); err == nil {
-			st := model.OrderStatus(v)
-			statusPtr = &st
+		v, err := strconv.Atoi(statusStr)
+		if err != nil {
+			c.JSON(400, map[string]interface{}{
+				"code":    400,
+				"message": "无效的订单状态",
+			})
+			return
 		}
+		st := model.OrderStatus(v)
+		if !isValidOrderStatus(st) {
+			c.JSON(400, map[string]interface{}{
+				"code":    400,
+				"message": "无效的订单状态",
+			})
+			return
+		}
+		statusPtr = &st
 	}
 
 	var userIDPtr *int64
 	if userIDStr := string(c.Query("user_id")); userIDStr != "" {
-		if v, err := strconv.ParseInt(userIDStr, 10, 64); err == nil && v > 0 {
-			userIDPtr = &v
+		v, err := strconv.ParseInt(userIDStr, 10, 64)
+		if err != nil || v <= 0 {
+			c.JSON(400, map[string]interface{}{
+				"code":    400,
+				"message": "无效的用户ID",
+			})
+			return
 		}
+		userIDPtr = &v
 	}
 
 	items, total, err := h.orderService.ListAdminOrders(ctx, statusPtr, userIDPtr, page, pageSize)
@@ -125,4 +144,13 @@ func requireAdminRole(c *app.RequestContext) bool {
 		"message": "权限不足：需要管理员权限",
 	})
 	return false
+}
+
+func isValidOrderStatus(status model.OrderStatus) bool {
+	switch status {
+	case model.OrderStatusPending, model.OrderStatusPaid, model.OrderStatusShipped, model.OrderStatusCompleted:
+		return true
+	default:
+		return false
+	}
 }

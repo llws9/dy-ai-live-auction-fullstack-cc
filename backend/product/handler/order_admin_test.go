@@ -169,6 +169,29 @@ func TestOrderHandler_AdminList_ClampsPageSize(t *testing.T) {
 	assert.Equal(t, 100, body.Data.PageSize)
 }
 
+func TestOrderHandler_AdminList_RejectsInvalidFilters(t *testing.T) {
+	h := newAdminOrderHandlerWithSeed(t, nil)
+
+	tests := []string{
+		"/api/v1/admin/orders?status=abc",
+		"/api/v1/admin/orders?status=99",
+		"/api/v1/admin/orders?user_id=abc",
+		"/api/v1/admin/orders?user_id=-1",
+	}
+	for _, uri := range tests {
+		t.Run(uri, func(t *testing.T) {
+			c := app.NewContext(0)
+			c.Request.SetMethod("GET")
+			c.Request.SetRequestURI(uri)
+			c.Request.Header.Set("X-User-Role", "admin")
+
+			h.AdminList(context.Background(), c)
+
+			assert.Equal(t, 400, c.Response.StatusCode())
+		})
+	}
+}
+
 func TestOrderHandler_AdminList_DoesNotLeakInternalError(t *testing.T) {
 	h := newAdminOrderHandlerWithSeed(t, nil)
 	h.orderService.SetAdminOrderDAO(nil)
