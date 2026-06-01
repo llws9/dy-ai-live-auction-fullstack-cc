@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { notificationApi, NotificationItem } from '../../services/notification';
+import { getCountBucket, trackEvent } from '../../utils/trackEvent';
 import PageHeader from '@/components/shared/PageHeader';
 import styles from './Notifications.module.css';
 
@@ -85,6 +86,13 @@ function getMeta(type: NotificationType) {
   }
 }
 
+function getTouchpointType(type: NotificationType) {
+  if (type === 'live_start' || type === 'live_stream_starting_soon' || type === 'live_stream_now_live') {
+    return 'live_start';
+  }
+  return 'notification';
+}
+
 function getTarget(notification: NotificationRecord) {
   const type = notification.type;
   const liveStreamId = readField(notification, 'live_stream_id');
@@ -134,8 +142,16 @@ const NotificationsPage: React.FC = () => {
           notificationApi.getUnreadCount(),
         ]);
         if (!alive) return;
-        setNotifications(extractList(listResponse));
+        const items = extractList(listResponse);
+        setNotifications(items);
         setUnreadCount(unreadResponse.count || 0);
+        trackEvent('notification_list_exposed', {
+          source: 'notification_center',
+          entry: 'notification_center',
+          type: 'notification',
+          result: 'success',
+          countBucket: getCountBucket(items.length),
+        });
       } catch (err) {
         if (!alive) return;
         console.error('获取通知列表失败:', err);
@@ -184,6 +200,13 @@ const NotificationsPage: React.FC = () => {
       console.error('标记通知已读失败:', err);
     }
 
+    trackEvent('notification_item_clicked', {
+      source: 'notification_center',
+      entry: 'notification_item',
+      type: getTouchpointType(notification.type),
+      result: 'clicked',
+    });
+
     if (target) {
       navigate(target);
     }
@@ -196,8 +219,20 @@ const NotificationsPage: React.FC = () => {
       const now = new Date().toISOString();
       setNotifications((items) => items.map((item) => ({ ...item, read_at: item.read_at || now, is_read: true })));
       setUnreadCount(0);
+      trackEvent('mark_read', {
+        source: 'notification_center',
+        entry: 'mark_all_read',
+        type: 'all',
+        result: 'success',
+      });
     } catch (err) {
       console.error('全部标记已读失败:', err);
+      trackEvent('mark_read', {
+        source: 'notification_center',
+        entry: 'mark_all_read',
+        type: 'all',
+        result: 'failed',
+      });
       setError('全部标记已读失败，请稍后重试');
     } finally {
       setMarkingAll(false);
