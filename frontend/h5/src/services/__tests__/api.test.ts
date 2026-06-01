@@ -67,6 +67,33 @@ describe('api service auth header', () => {
     );
   });
 
+  it('pays orders through the documented POST action endpoint', async () => {
+    localStorage.setItem('auth_token', 'auth-token-1');
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: {
+        get: () => 'application/json',
+      },
+      json: async () => ({
+        code: 200,
+        data: { id: 88, status: 1 },
+      }),
+    } as Response);
+    global.fetch = fetchMock;
+
+    await orderApi.pay(88);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/orders/88/pay',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer auth-token-1',
+        }),
+      })
+    );
+  });
+
   it('builds the login path with the current page as redirect target', () => {
     window.history.pushState({}, '', '/profile?from=history');
 

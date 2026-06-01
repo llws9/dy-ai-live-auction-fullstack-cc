@@ -2,6 +2,7 @@ import { GrowthBook, GrowthBookProvider as GBProvider } from '@growthbook/growth
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuth } from './authContext';
 import { post } from '../services/api';
+import { ENV, IS_DEV } from '../utils/env';
 
 interface GrowthBookContextValue {
   growthbook: GrowthBook;
@@ -40,9 +41,9 @@ export function GrowthBookContextProvider({ children }: GrowthBookContextProvide
   const gb = useMemo(
     () =>
       new GrowthBook({
-        apiHost: import.meta.env.VITE_GROWTHBOOK_API_HOST || 'http://localhost:3200',
-        clientKey: import.meta.env.VITE_GROWTHBOOK_CLIENT_KEY || 'dev-client-key',
-        enableDevMode: import.meta.env.DEV,
+        apiHost: ENV.GROWTHBOOK_API_HOST,
+        clientKey: ENV.GROWTHBOOK_CLIENT_KEY,
+        enableDevMode: IS_DEV,
         trackingCallback: (experiment, result) => {
           reportExperimentViewed(experiment.key, String(result.variationId));
         },

@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import ProductDetail from '../index';
 import { auctionApi, bidApi, productApi } from '../../../services/api';
+import { ThemeProvider } from '../../../store/themeContext';
 
 jest.mock('../../../services/api', () => ({
   auctionApi: {
@@ -65,12 +66,14 @@ describe('ProductDetail migration', () => {
 
   it('loads auction, product, bid records and places a quick bid', async () => {
     render(
-      <MemoryRouter
-        initialEntries={['/detail?id=12']}
-        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
-      >
-        <ProductDetail />
-      </MemoryRouter>
+      <ThemeProvider>
+        <MemoryRouter
+          initialEntries={['/detail?id=12']}
+          future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+        >
+          <ProductDetail />
+        </MemoryRouter>
+      </ThemeProvider>
     );
 
     expect(await screen.findByText('清代青花瓷瓶')).toBeInTheDocument();

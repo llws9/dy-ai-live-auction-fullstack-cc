@@ -14,6 +14,8 @@ interface ToastProps {
   onClose?: () => void;
   /** 是否显示 */
   visible?: boolean;
+  /** 自定义类名 */
+  className?: string;
 }
 
 /**
@@ -25,6 +27,7 @@ export const Toast: React.FC<ToastProps> = ({
   duration = 3000,
   onClose,
   visible = true,
+  className,
 }) => {
   const [isVisible, setIsVisible] = useState(visible);
 
@@ -42,7 +45,7 @@ export const Toast: React.FC<ToastProps> = ({
   if (!isVisible) return null;
 
   return (
-    <div className={`${styles.toast} ${styles[type]}`} role="alert">
+    <div className={[styles.toast, styles[type], className || ''].filter(Boolean).join(' ')} role="alert">
       <span className={styles.icon}>
         {type === 'success' && '✓'}
         {type === 'error' && '✕'}

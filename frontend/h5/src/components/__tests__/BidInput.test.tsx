@@ -1,19 +1,18 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import BidInput from '../BidInput';
 import { AuthProvider } from '../../store/authContext';
 
 // Mock useNavigate
-const mockNavigate = vi.fn();
-vi.mock('react-router-dom', () => ({
+const mockNavigate = jest.fn();
+jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
 
 // Mock bidApi
-vi.mock('../../services/api', () => ({
+jest.mock('../../services/api', () => ({
   bidApi: {
-    placeBid: vi.fn(),
+    placeBid: jest.fn(),
   },
 }));
 
@@ -29,7 +28,7 @@ describe('BidInput Component', () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   it('should render bid input with current price', () => {

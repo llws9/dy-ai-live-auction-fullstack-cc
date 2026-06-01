@@ -29,6 +29,7 @@ describe('Login migration', () => {
 
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true,
+      headers: { get: jest.fn(() => 'application/json') },
       json: async () => ({
         data: {
           token: 'token-1',

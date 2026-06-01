@@ -1,8 +1,11 @@
-import { useMemo, useState } from 'react';
-import { startAntiSnipe, discoverWS, cancelTest, getReport } from '@/api/test';
+import { useEffect, useMemo, useState } from 'react';
+import { startAntiSnipe, discoverWS, cancelTest } from '@/api/test';
 import { useWSStore } from '@/store/wsStore';
+import { usePollReport } from '@/hooks/usePollReport';
 import ProgressBar from '@/components/ProgressBar';
 import AntiSnipeTimeline, { AntiSnipeTimelineEvent } from '@/components/AntiSnipeTimeline';
+import { Metric } from '@/components/ui/Metric';
+import { cardStyle, titleStyle, inputStyle, codeStyle, primaryBtn, secondaryBtn, caseChipStyle } from '@/components/ui/styles';
 
 const ALL_CASES = [
   { key: 'last_second', label: '末刻出价触发延时' },
@@ -50,6 +53,10 @@ export default function AntiSnipe() {
   const [report, setReport] = useState<ScenarioReport | null>(null);
   const [activeCase, setActiveCase] = useState<string | null>(null);
   const { connected, testID, progress, step, history, connect, disconnect } = useWSStore();
+  const poll = usePollReport<ScenarioReport>();
+
+  // 卸载时清理 WS 与全局 store
+  useEffect(() => () => disconnect(), [disconnect]);
 
   const lastWS = useMemo(() => history[history.length - 1], [history]);
 
@@ -69,7 +76,7 @@ export default function AntiSnipe() {
       });
       const wsURL = await discoverWS(id);
       connect(wsURL, id);
-      pollReport(id, (r) => {
+      poll.start(id, (r) => {
         setReport(r);
         if (r.cases && r.cases.length > 0) {
           setActiveCase(r.cases[0].name);
@@ -212,92 +219,3 @@ export default function AntiSnipe() {
     </div>
   );
 }
-
-function pollReport(testID: string, setReport: (r: ScenarioReport) => void) {
-  let n = 0;
-  const max = 120;
-  const tick = async () => {
-    n += 1;
-    try {
-      const t = await getReport(testID);
-      if (t.Status === 'completed' || t.Status === 'failed' || t.Status === 'cancelled') {
-        try {
-          const r = JSON.parse(t.ResultJSON || '{}') as ScenarioReport;
-          setReport(r);
-        } catch {
-          setReport({ error: t.ErrorMsg || 'parse error' });
-        }
-        return;
-      }
-    } catch {
-      /* ignore */
-    }
-    if (n < max) setTimeout(tick, 1000);
-  };
-  setTimeout(tick, 1000);
-}
-
-function Metric({ label, value, ok }: { label: string; value: string; ok?: boolean }) {
-  return (
-    <div style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 6, padding: '10px 12px' }}>
-      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>{label}</div>
-      <div
-        style={{
-          fontSize: 18,
-          fontFamily: 'monospace',
-          fontWeight: 600,
-          color: ok === undefined ? '#1f2937' : ok ? '#10b981' : '#ef4444',
-        }}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-const cardStyle: React.CSSProperties = {
-  padding: 16,
-  border: '1px solid #e5e7eb',
-  borderRadius: 8,
-  marginBottom: 16,
-};
-const titleStyle: React.CSSProperties = { fontSize: 16, marginBottom: 12 };
-const inputStyle: React.CSSProperties = {
-  padding: '6px 10px',
-  border: '1px solid #d1d5db',
-  borderRadius: 6,
-  fontSize: 14,
-};
-const codeStyle: React.CSSProperties = {
-  background: '#f1f5f9',
-  padding: '1px 6px',
-  borderRadius: 3,
-  fontSize: 12,
-};
-const primaryBtn = (disabled: boolean): React.CSSProperties => ({
-  padding: '8px 16px',
-  background: 'var(--color-primary, #3b82f6)',
-  color: '#fff',
-  border: 'none',
-  borderRadius: 6,
-  cursor: disabled ? 'not-allowed' : 'pointer',
-  opacity: disabled ? 0.6 : 1,
-});
-const secondaryBtn = (disabled: boolean): React.CSSProperties => ({
-  padding: '8px 16px',
-  background: '#fff',
-  color: '#1f2937',
-  border: '1px solid #d1d5db',
-  borderRadius: 6,
-  cursor: disabled ? 'not-allowed' : 'pointer',
-  opacity: disabled ? 0.6 : 1,
-});
-const caseChipStyle = (ok: boolean, active: boolean): React.CSSProperties => ({
-  padding: '6px 12px',
-  borderRadius: 16,
-  border: `1px solid ${ok ? '#10b981' : '#ef4444'}`,
-  background: active ? (ok ? '#10b981' : '#ef4444') : '#fff',
-  color: active ? '#fff' : ok ? '#10b981' : '#ef4444',
-  fontSize: 13,
-  cursor: 'pointer',
-});

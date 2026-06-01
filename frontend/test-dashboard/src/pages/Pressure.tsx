@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -14,6 +14,9 @@ import {
 import { startPressure, discoverWS, cancelTest } from '@/api/test';
 import { useWSStore } from '@/store/wsStore';
 import ProgressBar from '@/components/ProgressBar';
+import { Metric } from '@/components/ui/Metric';
+import { NumField } from '@/components/ui/Field';
+import { cardStyle, titleStyle, primaryBtn, secondaryBtn } from '@/components/ui/styles';
 
 interface PressureForm {
   concurrent_users: number;
@@ -41,6 +44,9 @@ export default function Pressure() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { connected, testID, progress, step, metrics, history, connect, disconnect } = useWSStore();
+
+  // 卸载时清理 WS 与全局 store
+  useEffect(() => () => disconnect(), [disconnect]);
 
   // 时序图数据：从 history 提炼 [{t, qps, p99}]
   const series = useMemo(
@@ -185,77 +191,9 @@ export default function Pressure() {
   );
 }
 
-function NumField({
-  label,
-  value,
-  min,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <label style={{ display: 'flex', flexDirection: 'column', fontSize: 13 }}>
-      <span style={{ color: '#6b7280', marginBottom: 4 }}>{label}</span>
-      <input
-        type="number"
-        value={value}
-        min={min}
-        onChange={(e) => onChange(Number(e.target.value) || min)}
-        style={{
-          padding: '6px 10px',
-          border: '1px solid #d1d5db',
-          borderRadius: 6,
-          fontSize: 14,
-        }}
-      />
-    </label>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 6, padding: '10px 12px' }}>
-      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 18, fontFamily: 'monospace', fontWeight: 600 }}>{value}</div>
-    </div>
-  );
-}
-
 function fmt(v: unknown, digits = 0): string {
   if (v == null) return '-';
   const n = Number(v);
   if (Number.isNaN(n)) return String(v);
   return digits > 0 ? n.toFixed(digits) : n.toLocaleString();
 }
-
-const cardStyle: React.CSSProperties = {
-  padding: 16,
-  border: '1px solid #e5e7eb',
-  borderRadius: 8,
-  marginBottom: 16,
-};
-
-const titleStyle: React.CSSProperties = { fontSize: 16, marginBottom: 12 };
-
-const primaryBtn = (disabled: boolean): React.CSSProperties => ({
-  padding: '8px 16px',
-  background: 'var(--color-primary, #3b82f6)',
-  color: '#fff',
-  border: 'none',
-  borderRadius: 6,
-  cursor: disabled ? 'not-allowed' : 'pointer',
-  opacity: disabled ? 0.6 : 1,
-});
-
-const secondaryBtn = (disabled: boolean): React.CSSProperties => ({
-  padding: '8px 16px',
-  background: '#fff',
-  color: '#1f2937',
-  border: '1px solid #d1d5db',
-  borderRadius: 6,
-  cursor: disabled ? 'not-allowed' : 'pointer',
-  opacity: disabled ? 0.6 : 1,
-});

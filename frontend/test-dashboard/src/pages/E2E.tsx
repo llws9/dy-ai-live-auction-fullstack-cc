@@ -1,8 +1,12 @@
-import { useMemo, useState } from 'react';
-import { startE2E, discoverWS, cancelTest, getReport } from '@/api/test';
+import { useEffect, useMemo, useState } from 'react';
+import { startE2E, discoverWS, cancelTest } from '@/api/test';
 import { useWSStore } from '@/store/wsStore';
+import { usePollReport } from '@/hooks/usePollReport';
 import ProgressBar from '@/components/ProgressBar';
 import StepTimeline, { StepEvent } from '@/components/StepTimeline';
+import { Metric } from '@/components/ui/Metric';
+import { NumField, TextField } from '@/components/ui/Field';
+import { cardStyle, titleStyle, primaryBtn, secondaryBtn } from '@/components/ui/styles';
 
 interface E2EForm {
   seller_id: number;
@@ -39,6 +43,10 @@ export default function E2E() {
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<E2EReport | null>(null);
   const { connected, testID, progress, step, history, connect, disconnect } = useWSStore();
+  const pollReport = usePollReport<E2EReport>({ maxAttempts: 60 });
+
+  // 卸载时清理 WS 与全局 store
+  useEffect(() => () => disconnect(), [disconnect]);
 
   // 把 WS 历史转成 StepEvent[]
   const events: StepEvent[] = useMemo(
@@ -76,8 +84,7 @@ export default function E2E() {
       });
       const wsURL = await discoverWS(id);
       connect(wsURL, id);
-      // 异步轮询拿 report（后端把结果落到 result_json）
-      pollReport(id, setReport);
+      pollReport.start(id, setReport);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -158,102 +165,3 @@ export default function E2E() {
     </div>
   );
 }
-
-// 轮询 report（每 1s，最多 30 次）
-function pollReport(testID: string, setReport: (r: E2EReport) => void) {
-  let n = 0;
-  const max = 60;
-  const tick = async () => {
-    n += 1;
-    try {
-      const t = await getReport(testID);
-      if (t.Status === 'completed' || t.Status === 'failed' || t.Status === 'cancelled') {
-        try {
-          const r = JSON.parse(t.ResultJSON || '{}') as E2EReport;
-          setReport(r);
-        } catch {
-          setReport({ error: t.ErrorMsg || 'parse error' });
-        }
-        return;
-      }
-    } catch {
-      /* ignore */
-    }
-    if (n < max) setTimeout(tick, 1000);
-  };
-  setTimeout(tick, 1000);
-}
-
-function NumField({ label, value, min, onChange }: { label: string; value: number; min: number; onChange: (v: number) => void }) {
-  return (
-    <label style={{ display: 'flex', flexDirection: 'column', fontSize: 13 }}>
-      <span style={{ color: '#6b7280', marginBottom: 4 }}>{label}</span>
-      <input
-        type="number"
-        value={value}
-        min={min}
-        onChange={(e) => onChange(Number(e.target.value) || min)}
-        style={inputStyle}
-      />
-    </label>
-  );
-}
-
-function TextField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <label style={{ display: 'flex', flexDirection: 'column', fontSize: 13 }}>
-      <span style={{ color: '#6b7280', marginBottom: 4 }}>{label}</span>
-      <input type="text" value={value} onChange={(e) => onChange(e.target.value)} style={inputStyle} />
-    </label>
-  );
-}
-
-function Metric({ label, value, ok }: { label: string; value: string; ok?: boolean }) {
-  return (
-    <div style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 6, padding: '10px 12px' }}>
-      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>{label}</div>
-      <div
-        style={{
-          fontSize: 18,
-          fontFamily: 'monospace',
-          fontWeight: 600,
-          color: ok === undefined ? '#1f2937' : ok ? '#10b981' : '#ef4444',
-        }}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-const cardStyle: React.CSSProperties = {
-  padding: 16,
-  border: '1px solid #e5e7eb',
-  borderRadius: 8,
-  marginBottom: 16,
-};
-const titleStyle: React.CSSProperties = { fontSize: 16, marginBottom: 12 };
-const inputStyle: React.CSSProperties = {
-  padding: '6px 10px',
-  border: '1px solid #d1d5db',
-  borderRadius: 6,
-  fontSize: 14,
-};
-const primaryBtn = (disabled: boolean): React.CSSProperties => ({
-  padding: '8px 16px',
-  background: 'var(--color-primary, #3b82f6)',
-  color: '#fff',
-  border: 'none',
-  borderRadius: 6,
-  cursor: disabled ? 'not-allowed' : 'pointer',
-  opacity: disabled ? 0.6 : 1,
-});
-const secondaryBtn = (disabled: boolean): React.CSSProperties => ({
-  padding: '8px 16px',
-  background: '#fff',
-  color: '#1f2937',
-  border: '1px solid #d1d5db',
-  borderRadius: 6,
-  cursor: disabled ? 'not-allowed' : 'pointer',
-  opacity: disabled ? 0.6 : 1,
-});

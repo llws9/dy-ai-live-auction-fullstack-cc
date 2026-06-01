@@ -1,7 +1,11 @@
-import { useState } from 'react';
-import { startChaos, discoverWS, cancelTest, getReport, type ChaosConfig } from '@/api/test';
+import { useEffect, useState } from 'react';
+import { startChaos, discoverWS, cancelTest, type ChaosConfig } from '@/api/test';
 import { useWSStore } from '@/store/wsStore';
+import { usePollReport } from '@/hooks/usePollReport';
 import ProgressBar from '@/components/ProgressBar';
+import { Metric } from '@/components/ui/Metric';
+import { NumField } from '@/components/ui/Field';
+import { cardStyle as card, titleStyle as title, inputStyle as input, primaryBtn as btnP, secondaryBtn as btnS } from '@/components/ui/styles';
 
 interface Bucket {
   ts: string;
@@ -40,6 +44,10 @@ export default function Chaos() {
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<Report | null>(null);
   const { connected, testID, progress, step, connect, disconnect } = useWSStore();
+  const poll = usePollReport<Report>();
+
+  // 卸载时清理 WS 与全局 store
+  useEffect(() => () => disconnect(), [disconnect]);
 
   const start = async () => {
     setError(null);
@@ -49,7 +57,7 @@ export default function Chaos() {
       const id = await startChaos(form);
       const wsURL = await discoverWS(id);
       connect(wsURL, id);
-      pollReport(id, setReport);
+      poll.start(id, setReport);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -83,12 +91,12 @@ export default function Chaos() {
             ]}
             onChange={(v) => setForm({ ...form, fault_type: v as ChaosConfig['fault_type'] })}
           />
-          <Num label="Probe QPS" value={form.probe_qps ?? 20} min={1} onChange={(v) => setForm({ ...form, probe_qps: v })} />
-          <Num label="基线时长(s)" value={form.baseline_sec ?? 3} min={1} onChange={(v) => setForm({ ...form, baseline_sec: v })} />
-          <Num label="注入时长(s)" value={form.inject_sec ?? 8} min={1} onChange={(v) => setForm({ ...form, inject_sec: v })} />
-          <Num label="恢复时长(s)" value={form.recover_sec ?? 5} min={1} onChange={(v) => setForm({ ...form, recover_sec: v })} />
+          <NumField label="Probe QPS" value={form.probe_qps ?? 20} min={1} onChange={(v) => setForm({ ...form, probe_qps: v })} />
+          <NumField label="基线时长(s)" value={form.baseline_sec ?? 3} min={1} onChange={(v) => setForm({ ...form, baseline_sec: v })} />
+          <NumField label="注入时长(s)" value={form.inject_sec ?? 8} min={1} onChange={(v) => setForm({ ...form, inject_sec: v })} />
+          <NumField label="恢复时长(s)" value={form.recover_sec ?? 5} min={1} onChange={(v) => setForm({ ...form, recover_sec: v })} />
           {form.fault_type === 'error_rate' && (
-            <Num
+            <NumField
               label="错误率(0-1)"
               value={form.error_rate ?? 0.5}
               step={0.05}
@@ -98,8 +106,8 @@ export default function Chaos() {
           )}
           {form.fault_type === 'latency' && (
             <>
-              <Num label="延迟基础(ms)" value={form.latency_ms ?? 200} min={0} onChange={(v) => setForm({ ...form, latency_ms: v })} />
-              <Num label="抖动(ms)" value={form.jitter_ms ?? 0} min={0} onChange={(v) => setForm({ ...form, jitter_ms: v })} />
+              <NumField label="延迟基础(ms)" value={form.latency_ms ?? 200} min={0} onChange={(v) => setForm({ ...form, latency_ms: v })} />
+              <NumField label="抖动(ms)" value={form.jitter_ms ?? 0} min={0} onChange={(v) => setForm({ ...form, jitter_ms: v })} />
             </>
           )}
         </div>
@@ -146,29 +154,6 @@ function pct(v?: number): string {
   return `${(v * 100).toFixed(1)}%`;
 }
 
-function pollReport(testID: string, setReport: (r: Report) => void) {
-  let n = 0;
-  const max = 120;
-  const tick = async () => {
-    n += 1;
-    try {
-      const t = await getReport(testID);
-      if (t.Status === 'completed' || t.Status === 'failed' || t.Status === 'cancelled') {
-        try {
-          setReport(JSON.parse(t.ResultJSON || '{}') as Report);
-        } catch {
-          setReport({ error: t.ErrorMsg || 'parse error' });
-        }
-        return;
-      }
-    } catch {
-      /* ignore */
-    }
-    if (n < max) setTimeout(tick, 1000);
-  };
-  setTimeout(tick, 1000);
-}
-
 function ErrorChart({ buckets }: { buckets: Bucket[] }) {
   const W = 720;
   const H = 200;
@@ -204,34 +189,6 @@ function ErrorChart({ buckets }: { buckets: Bucket[] }) {
   );
 }
 
-function Num({
-  label,
-  value,
-  min,
-  step,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  step?: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <label style={{ display: 'flex', flexDirection: 'column', fontSize: 13 }}>
-      <span style={{ color: '#6b7280', marginBottom: 4 }}>{label}</span>
-      <input
-        type="number"
-        value={value}
-        min={min}
-        step={step ?? 1}
-        onChange={(e) => onChange(Number(e.target.value) || 0)}
-        style={input}
-      />
-    </label>
-  );
-}
-
 function Select({
   label,
   value,
@@ -257,39 +214,8 @@ function Select({
   );
 }
 
-function Metric({ label, value, ok, bad }: { label: string; value: string; ok?: boolean; bad?: boolean }) {
-  const color = ok ? '#10b981' : bad ? '#ef4444' : '#1f2937';
-  return (
-    <div style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 6, padding: '10px 12px' }}>
-      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 18, fontFamily: 'monospace', fontWeight: 600, color }}>{value}</div>
-    </div>
-  );
-}
-
-const card: React.CSSProperties = { padding: 16, border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 16 };
-const title: React.CSSProperties = { fontSize: 16, marginBottom: 12 };
-const input: React.CSSProperties = { padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14 };
 const grid: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
   gap: 12,
 };
-const btnP = (d: boolean): React.CSSProperties => ({
-  padding: '8px 16px',
-  background: 'var(--color-primary, #3b82f6)',
-  color: '#fff',
-  border: 'none',
-  borderRadius: 6,
-  cursor: d ? 'not-allowed' : 'pointer',
-  opacity: d ? 0.6 : 1,
-});
-const btnS = (d: boolean): React.CSSProperties => ({
-  padding: '8px 16px',
-  background: '#fff',
-  color: '#1f2937',
-  border: '1px solid #d1d5db',
-  borderRadius: 6,
-  cursor: d ? 'not-allowed' : 'pointer',
-  opacity: d ? 0.6 : 1,
-});

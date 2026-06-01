@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
-// WS 推送的进度消息（与后端 ws.Message 对应）
+const MAX_HISTORY = 200;
+
 export interface ProgressMsg {
   test_id: string;
   progress: number;
@@ -67,7 +68,7 @@ export const useWSStore = create<WSStoreState>((set, get) => ({
           progress: msg.progress,
           step: msg.step,
           metrics: msg.metrics || {},
-          history: [...s.history, msg],
+          history: [...s.history, msg].slice(-MAX_HISTORY),
         }));
       } catch (err) {
         console.warn('[ws] non-json message', e.data, err);
@@ -81,6 +82,14 @@ export const useWSStore = create<WSStoreState>((set, get) => ({
       console.info('[ws] disconnect requested');
       try { s.close(); } catch { /* noop */ }
     }
-    set({ socket: null, connected: false });
+    set({
+      socket: null,
+      connected: false,
+      testID: null,
+      progress: 0,
+      step: '',
+      metrics: {},
+      history: [],
+    });
   },
 }));

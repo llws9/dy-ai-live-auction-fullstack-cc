@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import HistoryPage from '../index';
 import { orderApi } from '../../../services/api';
+import { ThemeProvider } from '../../../store/themeContext';
 
 jest.mock('../../../services/api', () => ({
   orderApi: {
@@ -50,9 +51,11 @@ describe('AuctionHistory migration', () => {
 
   it('loads documented history records without order payment behavior', async () => {
     render(
-      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
-        <HistoryPage />
-      </MemoryRouter>
+      <ThemeProvider>
+        <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+          <HistoryPage />
+        </MemoryRouter>
+      </ThemeProvider>
     );
 
     expect(await screen.findByText('鎏金香炉')).toBeInTheDocument();
