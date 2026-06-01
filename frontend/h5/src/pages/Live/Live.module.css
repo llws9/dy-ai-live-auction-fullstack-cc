@@ -553,26 +553,6 @@
   transform: translate(-50%, -50%);
 }
 
-.toastDemoPanel {
-  position: fixed;
-  right: 16px;
-  bottom: calc(88px + var(--safe-bottom));
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.toastDemoPanel button {
-  min-height: 36px;
-  padding: 0 12px;
-  border: 1px solid rgba(212, 175, 55, 0.45);
-  border-radius: 999px;
-  color: #f5f0e8;
-  background: rgba(26, 26, 26, 0.88);
-  font-size: 12px;
-}
-
 .statePage {
   display: flex;
   min-height: 100vh;

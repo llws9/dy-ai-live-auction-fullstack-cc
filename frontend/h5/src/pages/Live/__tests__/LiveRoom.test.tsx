@@ -3,6 +3,17 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import LiveRoom from '../index';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '../../../services/api';
+import WebSocketService from '../../../services/websocket';
+
+const mockShowGlobalToast = jest.fn();
+const mockNavigate = jest.fn();
+const mockWebSocketInstance = {
+  on: jest.fn(),
+  onNotification: jest.fn(),
+  connect: jest.fn().mockResolvedValue(undefined),
+  requestSync: jest.fn(),
+  disconnect: jest.fn(),
+};
 
 jest.mock('../../../services/api', () => ({
   auctionApi: {
@@ -29,13 +40,26 @@ jest.mock('../../../services/api', () => ({
 
 jest.mock('../../../services/websocket', () => ({
   __esModule: true,
-  default: jest.fn().mockImplementation(() => ({
-    on: jest.fn(),
-    connect: jest.fn().mockResolvedValue(undefined),
-    requestSync: jest.fn(),
-    disconnect: jest.fn(),
-  })),
+  default: jest.fn(() => mockWebSocketInstance),
 }));
+
+jest.mock('@/utils/env', () => ({
+  IS_DEV: true,
+  IS_PROD: false,
+  ENV: {
+    API_BASE_URL: '',
+    GROWTHBOOK_API_HOST: 'http://localhost:3200',
+    GROWTHBOOK_CLIENT_KEY: 'dev-client-key',
+  },
+}));
+
+jest.mock('react-router-dom', () => {
+  const actual = jest.requireActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
 
 jest.mock('../../../store/authContext', () => ({
   useAuth: () => ({
@@ -49,7 +73,7 @@ jest.mock('../../../store/authContext', () => ({
 jest.mock('../../../components/Toast', () => ({
   __esModule: true,
   useToast: () => ({
-    showToast: jest.fn(),
+    showToast: mockShowGlobalToast,
     hideToast: jest.fn(),
   }),
   showGlobalToast: jest.fn(),
@@ -60,10 +84,13 @@ const mockedBidApi = bidApi as jest.Mocked<typeof bidApi>;
 const mockedFollowApi = followApi as jest.Mocked<typeof followApi>;
 const mockedLiveStreamApi = liveStreamApi as jest.Mocked<typeof liveStreamApi>;
 const mockedProductApi = productApi as jest.Mocked<typeof productApi>;
+const MockedWebSocketService = WebSocketService as jest.MockedClass<typeof WebSocketService>;
 
 describe('LiveRoom migration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockWebSocketInstance.connect.mockResolvedValue(undefined);
+    mockWebSocketInstance.onNotification.mockReturnValue(jest.fn());
 
     mockedAuctionApi.get.mockResolvedValue({
       id: 5,
@@ -158,5 +185,48 @@ describe('LiveRoom migration', () => {
     const followBtn = await screen.findByRole('button', { name: /已收藏/ });
     fireEvent.click(followBtn);
     await waitFor(() => expect(mockedFollowApi.unfollowLiveStream).toHaveBeenCalledWith(3));
+  });
+
+  it('maps notification websocket messages to global toast and removes demo triggers', async () => {
+    const unsubscribeNotification = jest.fn();
+    let notificationHandler: ((notification: any) => void) | undefined;
+    mockWebSocketInstance.onNotification.mockImplementation((handler) => {
+      notificationHandler = handler;
+      return unsubscribeNotification;
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={['/live?id=3&auction_id=5']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <LiveRoom />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(MockedWebSocketService).toHaveBeenCalledWith(5, 'token-1'));
+    expect(mockWebSocketInstance.onNotification).toHaveBeenCalledTimes(1);
+    expect(screen.queryByLabelText('触达 Toast 测试')).not.toBeInTheDocument();
+
+    notificationHandler?.({
+      id: 101,
+      type: 'bid_outbid',
+      title: '您已被超价',
+      content: '当前最高价已更新',
+    });
+    notificationHandler?.({
+      id: 101,
+      type: 'bid_outbid',
+      title: '您已被超价',
+      content: '重复消息',
+    });
+
+    expect(mockShowGlobalToast).toHaveBeenCalledTimes(1);
+    expect(mockShowGlobalToast).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'danger',
+      title: '您已被超价',
+      message: '当前最高价已更新',
+      actionText: '重新出价',
+    }));
   });
 });
