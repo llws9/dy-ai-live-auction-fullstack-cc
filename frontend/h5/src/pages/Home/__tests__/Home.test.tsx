@@ -5,6 +5,7 @@ import HomePage from '../index';
 import { auctionApi, productApi } from '../../../services/api';
 import { notificationApi } from '../../../services/notification';
 import { useAuth } from '../../../store/authContext';
+import { trackEvent } from '../../../utils/trackEvent';
 
 jest.mock('../../../services/api', () => ({
   auctionApi: {
@@ -31,10 +32,17 @@ jest.mock('../../../components/ThemeToggle', () => ({
   default: () => null,
 }));
 
+jest.mock('../../../utils/trackEvent', () => ({
+  trackEvent: jest.fn(),
+  getCountBucket: (count: number) =>
+    count <= 0 ? '0' : count === 1 ? '1' : count <= 5 ? '2_5' : count <= 10 ? '6_10' : '10_plus',
+}));
+
 const mockedAuctionApi = auctionApi as jest.Mocked<typeof auctionApi>;
 const mockedProductApi = productApi as jest.Mocked<typeof productApi>;
 const mockedNotificationApi = notificationApi as jest.Mocked<typeof notificationApi>;
 const mockedUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
+const mockTrackEvent = trackEvent as jest.MockedFunction<typeof trackEvent>;
 
 const renderHome = () =>
   render(
@@ -177,5 +185,19 @@ describe('HomePage 未读消息红点 (T3.6 / F-D2)', () => {
     });
 
     await waitFor(() => expect(mockedNotificationApi.getUnreadCount).toHaveBeenCalledTimes(2));
+  });
+
+  it('点击通知铃铛时记录首页入口点击埋点', async () => {
+    renderHome();
+
+    const notificationLink = await screen.findByRole('link', { name: '消息通知' });
+    fireEvent.click(notificationLink);
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('entry_clicked', {
+      source: 'home',
+      entry: 'notification_bell',
+      type: 'notification',
+      result: 'clicked',
+    });
   });
 });

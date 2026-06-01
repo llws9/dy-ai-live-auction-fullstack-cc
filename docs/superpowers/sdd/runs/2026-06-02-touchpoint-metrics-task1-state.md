@@ -15,6 +15,7 @@
 | --- | --- | --- | --- | --- | --- |
 | `T001` | `Gateway Touchpoint Metric` | `done` | `main-agent` | `Task 1 only` | `backend/gateway/pkg/metrics/*`, `backend/gateway/go.mod` |
 | `T002` | `Frontend Tracking Utility` | `done` | `main-agent` | `Task 2 only` | `frontend/h5/src/utils/trackEvent.ts`, `frontend/h5/src/utils/__tests__/trackEvent.test.ts` |
+| `T003` | `Summary Exposure and Entry Click Tracking` | `done` | `main-agent` | `Task 3 only` | `frontend/h5/src/hooks/useTouchpointNotifications.ts`, `frontend/h5/src/components/MobileShell/BottomNav.tsx`, `frontend/h5/src/pages/User/Index.tsx`, `frontend/h5/src/pages/Home/index.tsx`, related tests |
 
 ## T001 Evidence
 
@@ -60,10 +61,31 @@
 - `frontend/h5/src/utils/__tests__/trackEvent.test.ts`
 - `docs/superpowers/sdd/runs/2026-06-02-touchpoint-metrics-task1-state.md`
 
+## T003 Evidence
+
+- RED command: `cd frontend/h5 && npm test -- src/__tests__/components/MobileShell.test.tsx src/pages/User/__tests__/Profile.test.tsx src/pages/Home/__tests__/Home.test.tsx --runInBand`
+- RED result: `FAIL`, 4 new assertions failed because `trackEvent` was not called for `summary_exposed` and `entry_clicked`.
+- GREEN command: `cd frontend/h5 && npm test -- src/__tests__/components/MobileShell.test.tsx src/pages/User/__tests__/Profile.test.tsx src/pages/Home/__tests__/Home.test.tsx --runInBand`
+- GREEN result: `PASS`, `3 passed, 29 passed, 29 total`.
+- Build command: `cd frontend/h5 && npm run build`
+- Build result: `PASS`, `tsc && vite build` completed successfully.
+- Diagnostics: editor diagnostics for the isolated worktree paths returned `Access denied`; TypeScript validation is covered by `npm run build`.
+
+## T003 Modified Files
+
+- `frontend/h5/src/__tests__/components/MobileShell.test.tsx`
+- `frontend/h5/src/hooks/useTouchpointNotifications.ts`
+- `frontend/h5/src/components/MobileShell/BottomNav.tsx`
+- `frontend/h5/src/pages/User/Index.tsx`
+- `frontend/h5/src/pages/User/__tests__/Profile.test.tsx`
+- `frontend/h5/src/pages/Home/index.tsx`
+- `frontend/h5/src/pages/Home/__tests__/Home.test.tsx`
+- `docs/superpowers/sdd/runs/2026-06-02-touchpoint-metrics-task1-state.md`
+
 ## Risks
 
 - `go.mod` gained an indirect `github.com/kylelemons/godebug` dependency required by `prometheus/testutil`.
-- Remaining tasks are intentionally not implemented: H5 touchpoint call sites for summary exposure, entry clicks, notification center, hot pull, and live reminder modal.
+- Remaining tasks are intentionally not implemented: H5 touchpoint call sites for notification center, hot pull, and live reminder modal.
 
 ## Handoff
 
@@ -72,3 +94,5 @@
 Task 1 is complete with TDD evidence and gateway regression tests passing.
 
 Task 2 is complete with TDD evidence, focused utility tests passing, and H5 production build passing.
+
+Task 3 is complete with TDD evidence, focused H5 tests passing, and H5 production build passing.

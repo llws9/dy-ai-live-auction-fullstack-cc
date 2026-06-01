@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import BadgeDot from '../BadgeDot';
 import { useTouchpointNotifications } from '../../hooks/useTouchpointNotifications';
+import { trackEvent } from '../../utils/trackEvent';
 import styles from './MobileShell.module.css';
 
 const hiddenNavPaths = new Set([
@@ -26,6 +27,17 @@ function isActivePath(pathname: string, itemPath: string) {
   return itemPath === '/' ? pathname === '/' : pathname.startsWith(itemPath);
 }
 
+function trackNavClick(path: string) {
+  if (path === '/profile') {
+    trackEvent('entry_clicked', {
+      source: 'bottom_nav',
+      entry: 'profile_tab',
+      type: 'all',
+      result: 'clicked',
+    });
+  }
+}
+
 function BottomNav() {
   const { pathname } = useLocation();
   const { unreadTotal } = useTouchpointNotifications();
@@ -45,6 +57,7 @@ function BottomNav() {
             to={item.path}
             className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
             aria-current={isActive ? 'page' : undefined}
+            onClick={() => trackNavClick(item.path)}
           >
             <span className={styles.navIconWrap}>
               <span className={styles.navIcon} aria-hidden="true">

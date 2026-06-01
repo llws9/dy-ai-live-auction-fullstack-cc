@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { notificationApi, TouchpointSummary } from '../services/notification';
 import { useAuth } from '../store/authContext';
+import { getCountBucket, trackEvent } from '../utils/trackEvent';
 
 export interface TouchpointNotifications {
   pendingPayment: number;
@@ -43,6 +44,13 @@ export function useTouchpointNotifications(): TouchpointNotifications {
       .then((next) => {
         if (alive && isCurrentIdentity()) {
           setSummary(next);
+          trackEvent('summary_exposed', {
+            source: 'bottom_nav',
+            entry: 'profile_tab',
+            type: 'all',
+            result: 'success',
+            countBucket: getCountBucket(next.unreadTotal ?? 0),
+          });
         }
       })
       .catch(() => {

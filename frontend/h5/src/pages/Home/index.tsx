@@ -5,6 +5,7 @@ import { notificationApi } from '@/services/notification';
 import { useAuth } from '@/store/authContext';
 import PageHeader from '@/components/shared/PageHeader';
 import BadgeDot from '@/components/BadgeDot';
+import { trackEvent } from '@/utils/trackEvent';
 import styles from './Home.module.css';
 
 // 固定 tab：「全部」「收藏」无需 category_id；动态 tab 来自 GET /categories
@@ -223,7 +224,19 @@ const HomePage: React.FC = () => {
             <Link className={styles.iconButton} to="/following" aria-label="我的收藏">
               收
             </Link>
-            <Link className={styles.iconButton} to="/notifications" aria-label="消息通知">
+            <Link
+              className={styles.iconButton}
+              to="/notifications"
+              aria-label="消息通知"
+              onClick={() =>
+                trackEvent('entry_clicked', {
+                  source: 'home',
+                  entry: 'notification_bell',
+                  type: 'notification',
+                  result: 'clicked',
+                })
+              }
+            >
               铃
               {unreadCount > 0 && (
                 <BadgeDot count={unreadCount} className={styles.notificationBadge} />
