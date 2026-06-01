@@ -1,6 +1,6 @@
 // API统一封装入口
 
-import { request, get, post, put, del, buildQuery, ApiError, setToastFunction } from './request';
+import { get, post, put, del, buildQuery, ApiError, setToastFunction } from './request';
 
 // 重新导出类型
 export * from './types';
@@ -102,7 +102,7 @@ export const liveStreamApi = {
     return get<{ list: any[]; total: number }>(`/live-streams?${query}`);
   },
 
-  adminList: (params?: { page?: number; page_size?: number }) => {
+  adminList: (params?: { status?: number; page?: number; page_size?: number }) => {
     const query = buildQuery(params || {});
     return get<{ list: any[]; total: number }>(`/admin/live-streams?${query}`);
   },
@@ -119,6 +119,12 @@ export const liveStreamApi = {
   unfollow: (id: number) => del<void>(`/live-streams/${id}/follow`),
 
   toggleNotification: (id: number, enabled: boolean) => put<void>(`/live-streams/${id}/notification`, { enabled }),
+
+  start: (id: number) => post<any>(`/live-streams/${id}/start`),
+
+  end: (id: number) => put<any>(`/admin/live-streams/${id}/end`),
+
+  ban: (id: number, reason: string) => put<any>(`/admin/live-streams/${id}/ban`, { reason }),
 };
 
 // 通知API

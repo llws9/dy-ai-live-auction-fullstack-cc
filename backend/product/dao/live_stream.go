@@ -72,10 +72,35 @@ func (d *LiveStreamDAO) Update(ctx context.Context, liveStream *model.LiveStream
 
 // UpdateStatus 更新直播间状态
 func (d *LiveStreamDAO) UpdateStatus(ctx context.Context, id int64, status model.LiveStreamStatus) error {
-	return d.db.WithContext(ctx).
+	result := d.db.WithContext(ctx).
 		Model(&model.LiveStream{}).
 		Where("id = ?", id).
-		Update("status", status).Error
+		Update("status", status)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
+// Ban marks a live stream as banned and records the admin reason.
+func (d *LiveStreamDAO) Ban(ctx context.Context, id int64, reason string) error {
+	result := d.db.WithContext(ctx).
+		Model(&model.LiveStream{}).
+		Where("id = ?", id).
+		Updates(map[string]interface{}{
+			"status":     model.LiveStreamStatusBanned,
+			"ban_reason": reason,
+		})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 // GetAll 获取所有直播间（管理员用）

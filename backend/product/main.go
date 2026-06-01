@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/redis/go-redis/v9"
 
 	"product-service/client"
 	"product-service/config"
@@ -67,7 +68,11 @@ func main() {
 	orderService := service.NewOrderService(orderDAO, historyDAO)
 	orderService.SetAdminOrderDAO(orderAdminDAO)
 	statisticsService := service.NewStatisticsService(statisticsDAO)
-	liveStreamService := service.NewLiveStreamService(liveStreamDAO)
+	var viewerCounter service.LiveViewerCounter = service.ZeroLiveViewerCounter{}
+	if redisAddr := os.Getenv("REDIS_ADDR"); redisAddr != "" {
+		viewerCounter = service.NewRedisLiveViewerCounter(redis.NewClient(&redis.Options{Addr: redisAddr}))
+	}
+	liveStreamService := service.NewLiveStreamServiceWithMetrics(liveStreamDAO, viewerCounter)
 	categoryService := service.NewCategoryService(categoryDAO)
 
 	// 初始化 Handler 层
@@ -145,8 +150,10 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	v1.GET("/admin/orders", internalAuth, orderHandler.AdminList)
 	v1.GET("/admin/orders/:id", internalAuth, orderHandler.AdminGet)
 
-	// 直播间相关路由
-	v1.GET("/admin/live-streams", liveStreamHandler.ListAdmin)
+	// 直播间 admin 路由：必须经 Gateway 透传内部 token，且由 Gateway 校验管理员身份。
+	v1.GET("/admin/live-streams", internalAuth, liveStreamHandler.ListAdmin)
+	v1.PUT("/admin/live-streams/:id/end", internalAuth, liveStreamHandler.EndAdmin)
+	v1.PUT("/admin/live-streams/:id/ban", internalAuth, liveStreamHandler.BanAdmin)
 	v1.GET("/live-streams/:id", liveStreamHandler.GetDetail)
 
 	// 统计相关路由
