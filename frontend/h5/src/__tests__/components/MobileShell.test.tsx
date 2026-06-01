@@ -252,6 +252,80 @@ describe('MobileShell', () => {
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('直播开播提醒')).toBeInTheDocument();
     expect(mockGetPendingLiveReminder).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(mockTrackEvent).toHaveBeenCalledWith('live_reminder_exposed', {
+        source: 'mobile_shell',
+        entry: 'live_reminder_modal',
+        type: 'live_start',
+        result: 'success',
+      }),
+    );
+  });
+
+  it('tracks live reminder click action', async () => {
+    mockGetPendingLiveReminder.mockResolvedValue({
+      hasReminder: true,
+      stream: {
+        id: 1,
+        name: '云端珍藏直播间',
+        avatarUrl: '',
+        statusText: '正在直播',
+        liveRoomId: 1,
+        startedAt: 1717000000000,
+      },
+    });
+
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>页面内容</main>
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: '立即前往' }));
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('live_reminder_clicked', {
+      source: 'mobile_shell',
+      entry: 'live_reminder_modal',
+      type: 'live_start',
+      result: 'clicked',
+    });
+  });
+
+  it('tracks live reminder dismiss action', async () => {
+    mockGetPendingLiveReminder.mockResolvedValue({
+      hasReminder: true,
+      stream: {
+        id: 1,
+        name: '云端珍藏直播间',
+        avatarUrl: '',
+        statusText: '正在直播',
+        liveRoomId: 1,
+        startedAt: 1717000000000,
+      },
+    });
+
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>页面内容</main>
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: '稍后再看' }));
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('live_reminder_dismissed', {
+      source: 'mobile_shell',
+      entry: 'live_reminder_modal',
+      type: 'live_start',
+      result: 'dismissed',
+    });
   });
 
   it('refetches pending reminder for account changes and ignores stale responses', async () => {

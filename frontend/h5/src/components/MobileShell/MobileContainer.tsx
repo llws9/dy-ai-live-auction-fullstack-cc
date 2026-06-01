@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { notificationApi } from '../../services/notification';
 import { useAuth } from '../../store/authContext';
+import { trackEvent } from '../../utils/trackEvent';
 import LiveReminderModal, { StreamInfo } from '../LiveReminderModal';
 import BottomNav from './BottomNav';
 import styles from './MobileShell.module.css';
@@ -43,6 +44,12 @@ function MobileContainer({ children }: MobileContainerProps) {
         }
         setReminderStream(result.stream);
         setIsReminderOpen(true);
+        trackEvent('live_reminder_exposed', {
+          source: 'mobile_shell',
+          entry: 'live_reminder_modal',
+          type: 'live_start',
+          result: 'success',
+        });
       })
       .catch(() => {
         // 不在后端不可用时继续消费历史 mock 弹窗标记。

@@ -1,11 +1,11 @@
-# SDD Run State - Touchpoint Metrics Tasks 1-4
+# SDD Run State - Touchpoint Metrics Tasks 1-5
 
 ## Run Metadata
 
 - Branch: `feat/touchpoints-backend-task1`
 - Worktree: `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-touchpoints-backend-task1`
 - Plan: `docs/superpowers/plans/2026-06-02-touchpoint-metrics-tracking.md`
-- Scope: `Task 1: Gateway Touchpoint Metric`; `Task 2: Frontend Tracking Utility`; `Task 3: Summary Exposure and Entry Click Tracking`; `Task 4: Notification Center and Hot Pull Tracking`
+- Scope: `Task 1: Gateway Touchpoint Metric`; `Task 2: Frontend Tracking Utility`; `Task 3: Summary Exposure and Entry Click Tracking`; `Task 4: Notification Center and Hot Pull Tracking`; `Task 5: Live Reminder Modal Tracking and Final Verification`
 - Mode: `inline TDD`
 - Bootstrap note: `docs/superpowers/sdd/scripts/sdd_run.py` was absent in this worktree, so this state file was created manually.
 
@@ -17,6 +17,7 @@
 | `T002` | `Frontend Tracking Utility` | `done` | `main-agent` | `Task 2 only` | `frontend/h5/src/utils/trackEvent.ts`, `frontend/h5/src/utils/__tests__/trackEvent.test.ts` |
 | `T003` | `Summary Exposure and Entry Click Tracking` | `done` | `main-agent` | `Task 3 only` | `frontend/h5/src/hooks/useTouchpointNotifications.ts`, `frontend/h5/src/components/MobileShell/BottomNav.tsx`, `frontend/h5/src/pages/User/Index.tsx`, `frontend/h5/src/pages/Home/index.tsx`, related tests |
 | `T004` | `Notification Center and Hot Pull Tracking` | `done` | `main-agent` | `Task 4 only` | `frontend/h5/src/pages/Notifications/index.tsx`, `frontend/h5/src/pages/Notifications/__tests__/Notifications.test.tsx`, `frontend/h5/src/hooks/useNotification.ts`, `frontend/h5/src/hooks/__tests__/useNotification.test.ts` |
+| `T005` | `Live Reminder Modal Tracking and Final Verification` | `done` | `main-agent` | `Task 5 only` | `frontend/h5/src/components/MobileShell/MobileContainer.tsx`, `frontend/h5/src/components/LiveReminderModal/index.tsx`, `frontend/h5/src/__tests__/components/MobileShell.test.tsx` |
 
 ## T001 Evidence
 
@@ -129,10 +130,31 @@
 - GREEN result: `PASS`, `5 passed, 5 total`.
 - Modified files: `frontend/h5/src/pages/Notifications/__tests__/Notifications.test.tsx`, `docs/superpowers/sdd/runs/2026-06-02-touchpoint-metrics-task1-state.md`.
 
+## T005 Evidence
+
+- RED command: `cd frontend/h5 && npm test -- src/__tests__/components/MobileShell.test.tsx --runInBand`
+- RED result: `FAIL`, because `live_reminder_exposed`, `live_reminder_clicked`, and `live_reminder_dismissed` were not emitted.
+- GREEN command: `cd frontend/h5 && npm test -- src/__tests__/components/MobileShell.test.tsx --runInBand`
+- GREEN result: `PASS`, `18 passed, 18 total`.
+- Backend focused verification: `cd backend/gateway && go test ./pkg/metrics ./handler ./router`
+- Backend result: `PASS`, `pkg/metrics`, `handler`, and `router` passed.
+- Frontend focused verification: `cd frontend/h5 && npm test -- src/utils/__tests__/trackEvent.test.ts src/__tests__/components/MobileShell.test.tsx src/pages/Notifications/__tests__/Notifications.test.tsx --runInBand`
+- Frontend result: `PASS`, `3 passed`, `33 passed, 33 total`.
+- Build command: `cd frontend/h5 && npm run build`
+- Build result: `PASS`, `tsc && vite build` completed successfully.
+- Diagnostics: editor diagnostics for isolated worktree file path returned `Access denied`; TypeScript validation is covered by `npm run build`.
+
+## T005 Modified Files
+
+- `frontend/h5/src/components/MobileShell/MobileContainer.tsx`
+- `frontend/h5/src/components/LiveReminderModal/index.tsx`
+- `frontend/h5/src/__tests__/components/MobileShell.test.tsx`
+- `docs/superpowers/sdd/runs/2026-06-02-touchpoint-metrics-task1-state.md`
+
 ## Risks
 
 - `go.mod` gained an indirect `github.com/kylelemons/godebug` dependency required by `prometheus/testutil`.
-- Remaining task is intentionally not implemented: H5 touchpoint call sites for live reminder modal.
+- Task 6 final review and delivery remains intentionally not implemented in this run.
 
 ## Handoff
 
@@ -149,3 +171,5 @@ Task 3 spec fix is complete with TDD evidence, focused H5 tests passing, and H5 
 Task 4 is complete with TDD evidence, focused H5 tests passing, and H5 production build passing.
 
 Task 4 review fix is complete with RED/GREEN evidence for `markAllAsRead` failure tracking.
+
+Task 5 is complete with TDD evidence, focused backend/H5 tests passing, and H5 production build passing.

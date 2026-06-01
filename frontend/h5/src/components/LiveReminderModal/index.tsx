@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { trackEvent } from '../../utils/trackEvent';
 import styles from './LiveReminderModal.module.css';
 
 export interface StreamInfo {
@@ -38,16 +39,31 @@ const LiveReminderModal: React.FC<LiveReminderModalProps> = ({ isOpen, onClose, 
 
   if (!shouldRender || !stream) return null;
 
-  const handleJump = () => {
+  const trackDismiss = () => {
+    trackEvent('live_reminder_dismissed', {
+      source: 'mobile_shell',
+      entry: 'live_reminder_modal',
+      type: 'live_start',
+      result: 'dismissed',
+    });
     onClose();
-    // 假设跳转到直播间路由，具体路径根据实际情况调整
+  };
+
+  const handleJump = () => {
+    trackEvent('live_reminder_clicked', {
+      source: 'mobile_shell',
+      entry: 'live_reminder_modal',
+      type: 'live_start',
+      result: 'clicked',
+    });
+    onClose();
     navigate(`/live`);
   };
 
   return (
     <div 
       className={`${styles.overlay} ${!isOpen ? styles.fadeOut : ''}`} 
-      onClick={onClose}
+      onClick={trackDismiss}
     >
       <div 
         className={`${styles.modal} ${!isOpen ? styles.slideDown : ''}`} 
@@ -87,7 +103,7 @@ const LiveReminderModal: React.FC<LiveReminderModalProps> = ({ isOpen, onClose, 
         <div className={styles.footer}>
           <button 
             className={`${styles.button} ${styles.buttonCancel}`} 
-            onClick={onClose}
+            onClick={trackDismiss}
           >
             稍后再看
           </button>
