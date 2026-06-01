@@ -34,6 +34,12 @@
 ## Impact
 
 - **Affected specs**：以本 spec 为唯一 SSOT；`docs/admin-api-audit.md` 为输入证据。
+- **现有可复用资产**（避免重复造轮子）：
+  - `POST /api/v1/live-streams/:id/start`：admin 开播 [router.go#L96](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/gateway/router/router.go#L96)
+  - `GET /api/v1/users/me/stats`：BFF 用户统计聚合 [router.go#L61](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/gateway/router/router.go#L61)
+  - `GET /api/v1/orders/summary`：订单触点摘要 [main.go#L129](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/product/main.go#L129)
+  - `AuctionListItem` 已嵌入 `product` 摘要 [auction_list.go#L36](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/auction/handler/auction_list.go#L36)
+  - `AuctionFilters{Search, LiveStreamName, LiveStreamID, Status, ProductIDs}`：列表过滤入参对象已存在，DAO 实现需复核
 - **Affected code**（关键文件）：
   - 后端
     - `backend/gateway/router/router.go`（新增 admin 路由 + 透传）
@@ -117,11 +123,11 @@ The system SHALL return time-series statistics as arrays grouped by `group_by`.
 - **THEN** 返回 `Array<{ date, new_users, active_users }>`
 
 ### Requirement: 直播间管理与控制
-The system SHALL allow admins to create live streams and force-end / ban them.
+The system SHALL allow admins to start, force-end, and ban live streams.
 
-#### Scenario: 创建直播间
-- **WHEN** admin 调用 `POST /live-streams { name, streamer_id, scheduled_at? }`
-- **THEN** 返回新建直播间对象
+#### Scenario: 开启直播（已存在）
+- **WHEN** admin 调用 `POST /live-streams/:id/start`
+- **THEN** 复用已实现的 [liveStartHandler.StartLive](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/gateway/handler/live_start.go)；前端 Dashboard 解除 disabled 直接调用，本 spec 不重复建接口
 
 #### Scenario: 强制结束
 - **WHEN** admin 调用 `PUT /admin/live-streams/:id/end`
@@ -173,7 +179,7 @@ The system SHALL embed product / live stream / winner info in auction list and d
 
 #### Scenario: 列表项含商品与直播间
 - **WHEN** 调用 `GET /auctions`
-- **THEN** 每项含 `product:{id,name,images}`、`live_stream_name`、`bid_count`、`current_price`、`status`、`start_time`、`end_time`
+- **THEN** 每项含 `product:{id,name,image,category_id}`（已实现，见 `AuctionListItem`）、`live_stream_name`（**新增**）、`bid_count`（**新增**）、`current_price`、`status`、`start_time`、`end_time`
 
 #### Scenario: 详情含赢家与规则
 - **WHEN** 调用 `GET /auctions/:id`
@@ -202,12 +208,12 @@ The system SHALL include `ongoing_auctions, today_revenue, total_orders` in `/st
 - **WHEN** 调用 `GET /statistics/overview`
 - **THEN** 返回 `{ total_auctions, ongoing_auctions, total_revenue, today_revenue, total_users, total_orders }`
 
-### Requirement: `/orders/:id/pay` 方法一致
-The system SHALL use the same HTTP method between gateway and product service for `/orders/:id/pay`.
+### Requirement: `/orders/:id/pay` 方法收敛
+The system SHALL register `/orders/:id/pay` with a single HTTP method `POST` in product service.
 
 #### Scenario: gateway 与 service 方法一致
 - **WHEN** 复核 [router.go](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/gateway/router/router.go) 与 [product/main.go](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/product/main.go)
-- **THEN** 两端均为 `POST /orders/:id/pay`（以前端 `orderApi.pay` 为准）
+- **THEN** product 服务删除冗余 `PUT /orders/:id/pay` 注册（[main.go#L133](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/product/main.go#L133)），仅保留 `POST`，与 gateway/前端 `orderApi.pay` 一致
 
 ---
 
