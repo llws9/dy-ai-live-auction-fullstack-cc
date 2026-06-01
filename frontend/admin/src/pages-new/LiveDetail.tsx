@@ -1,5 +1,5 @@
 import React from "react"
-import { ArrowLeft, Video, Settings, Users, MessageSquare, Loader2 } from "lucide-react"
+import { ArrowLeft, Video, Loader2 } from "lucide-react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -35,6 +35,32 @@ export default function LiveDetail() {
     }
     fetchLiveStream()
   }, [liveStreamId, navigate])
+
+  const handleEnd = async () => {
+    if (!liveStreamId || !window.confirm("确认强制结束该直播间？")) return
+    try {
+      const data = await liveStreamApi.end(Number(liveStreamId))
+      setLiveStream((prev: any) => ({ ...prev, status: data?.status ?? 2 }))
+      alert("直播间已结束")
+    } catch (e) {
+      console.error("结束直播失败:", e)
+      alert("结束直播失败")
+    }
+  }
+
+  const handleBan = async () => {
+    if (!liveStreamId) return
+    const reason = window.prompt("请输入封禁原因")
+    if (!reason) return
+    try {
+      const data = await liveStreamApi.ban(Number(liveStreamId), reason)
+      setLiveStream((prev: any) => ({ ...prev, status: data?.status ?? 3, ban_reason: data?.ban_reason ?? reason }))
+      alert("直播间已封禁")
+    } catch (e) {
+      console.error("封禁直播失败:", e)
+      alert("封禁直播失败")
+    }
+  }
 
   if (loading) {
     return (
@@ -116,12 +142,10 @@ export default function LiveDetail() {
               <Button className="w-full bg-amber-500 text-[#0f172a]" disabled>
                 推送商品
               </Button>
-              {/* 静音/禁言 - 后端无接口，暂空置 */}
-              <Button variant="outline" className="w-full" disabled>
-                静音/禁言
+              <Button variant="outline" className="w-full" onClick={handleBan}>
+                封禁直播间
               </Button>
-              {/* 关闭直播 - 后端无接口，暂空置 */}
-              <Button variant="destructive" className="w-full" disabled>
+              <Button variant="destructive" className="w-full" onClick={handleEnd} disabled={liveStream.status === 2}>
                 关闭直播
               </Button>
             </CardContent>

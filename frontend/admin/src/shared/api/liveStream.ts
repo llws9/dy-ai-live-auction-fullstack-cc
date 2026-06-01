@@ -1,11 +1,12 @@
 // 直播间API
 
-import { get, post, del, buildQuery } from './request';
+import { get, post, put, del, buildQuery } from './request';
 import { LiveStream, PaginatedResponse } from './types';
 
 export interface LiveStreamListParams {
   page?: number;
   page_size?: number;
+  status?: number;
 }
 
 export const liveStreamApi = {
@@ -32,4 +33,13 @@ export const liveStreamApi = {
 
   // 切换通知开关
   toggleNotification: (id: number, enabled: boolean) => put<void>(`/live-streams/${id}/notification`, { enabled }),
+
+  // 开启直播：复用已有 gateway admin start route
+  start: (id: number) => post<void>(`/live-streams/${id}/start`),
+
+  // 强制结束直播
+  end: (id: number) => put<void>(`/admin/live-streams/${id}/end`),
+
+  // 封禁直播间
+  ban: (id: number, reason: string) => put<void>(`/admin/live-streams/${id}/ban`, { reason }),
 };

@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"product-service/client"
+	"product-service/model"
 	"product-service/service"
 )
 
@@ -48,8 +49,91 @@ func (h *LiveStreamHandler) ListAdmin(ctx context.Context, c *app.RequestContext
 	c.JSON(200, map[string]interface{}{
 		"code": 200,
 		"data": map[string]interface{}{
-			"list":  liveStreams,
-			"total": total,
+			"list":      h.buildAdminList(ctx, liveStreams),
+			"total":     total,
+			"page":      page,
+			"page_size": pageSize,
+		},
+	})
+}
+
+func (h *LiveStreamHandler) buildAdminList(ctx context.Context, liveStreams []model.LiveStream) []map[string]interface{} {
+	items := make([]map[string]interface{}, 0, len(liveStreams))
+	for _, liveStream := range liveStreams {
+		auctionCount := int64(0)
+		if h.auctionClient != nil {
+			if count, err := h.auctionClient.CountAuctionsByLiveStreamID(ctx, liveStream.ID); err == nil {
+				auctionCount = count
+			}
+		}
+		items = append(items, h.buildAdminItem(ctx, liveStream, auctionCount))
+	}
+	return items
+}
+
+func (h *LiveStreamHandler) buildAdminItem(ctx context.Context, liveStream model.LiveStream, auctionCount int64) map[string]interface{} {
+	streamerName := liveStream.StreamerName
+	if streamerName == "" {
+		streamerName = liveStream.Name
+	}
+	return map[string]interface{}{
+		"id":              liveStream.ID,
+		"name":            liveStream.Name,
+		"description":     liveStream.Description,
+		"cover_image":     liveStream.CoverImage,
+		"status":          liveStream.Status,
+		"streamer_id":     liveStream.CreatorID,
+		"streamer_name":   streamerName,
+		"streamer_avatar": liveStream.StreamerAvatar,
+		"viewer_count":    h.liveStreamService.ViewerCount(ctx, liveStream.ID),
+		"auction_count":   auctionCount,
+		"ban_reason":      liveStream.BanReason,
+		"created_at":      liveStream.CreatedAt,
+	}
+}
+
+func (h *LiveStreamHandler) EndAdmin(ctx context.Context, c *app.RequestContext) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "无效的直播间ID"})
+		return
+	}
+	liveStream, err := h.liveStreamService.End(ctx, id)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "结束直播间失败"})
+		return
+	}
+	c.JSON(200, map[string]interface{}{
+		"code": 200,
+		"data": map[string]interface{}{
+			"id":     liveStream.ID,
+			"status": liveStream.Status,
+			"event":  "live_stream_ended",
+		},
+	})
+}
+
+func (h *LiveStreamHandler) BanAdmin(ctx context.Context, c *app.RequestContext) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "无效的直播间ID"})
+		return
+	}
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	_ = c.BindJSON(&req)
+	liveStream, err := h.liveStreamService.Ban(ctx, id, req.Reason)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "封禁直播间失败"})
+		return
+	}
+	c.JSON(200, map[string]interface{}{
+		"code": 200,
+		"data": map[string]interface{}{
+			"id":         liveStream.ID,
+			"status":     liveStream.Status,
+			"ban_reason": liveStream.BanReason,
 		},
 	})
 }
@@ -105,10 +189,15 @@ func (h *LiveStreamHandler) GetDetail(ctx context.Context, c *app.RequestContext
 		"cover_image":     detail.CoverImage,
 		"status":          detail.Status,
 		"creator_id":      detail.CreatorID,
+		"streamer_id":     detail.CreatorID,
+		"streamer_name":   detail.StreamerName,
+		"streamer_avatar": detail.StreamerAvatar,
 		"created_at":      detail.CreatedAt,
 		"host_name":       "",
 		"host_avatar":     "",
-		"viewer_count":    0,
+		"viewer_count":    h.liveStreamService.ViewerCount(ctx, detail.ID),
+		"auction_count":   0,
+		"ban_reason":      detail.BanReason,
 		"video_url":       videoURL,
 		"is_following":    isFollowing,
 		"followers_count": followersCount,
