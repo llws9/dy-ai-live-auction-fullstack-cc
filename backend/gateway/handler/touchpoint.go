@@ -155,7 +155,15 @@ func isAuthUpstreamError(err error) bool {
 }
 
 func writeUpstreamAuthError(c *app.RequestContext, err error) {
-	statusErr := err.(upstreamStatusError)
+	statusErr, ok := err.(upstreamStatusError)
+	if !ok {
+		log.Printf("unexpected upstream auth error type: %T", err)
+		c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"code":    http.StatusInternalServerError,
+			"message": "authentication failed",
+		})
+		return
+	}
 	c.JSON(statusErr.status, map[string]interface{}{
 		"code":    statusErr.status,
 		"message": "authentication failed",

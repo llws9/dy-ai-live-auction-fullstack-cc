@@ -62,6 +62,8 @@ type notificationStore interface {
 
 var errNotificationSummaryUnavailable = errors.New("notification summary unavailable")
 
+var ErrInvalidCategory = errors.New("unsupported notification category")
+
 // NewNotificationService 创建通知服务
 func NewNotificationService(notificationDAO *dao.NotificationDAO, redis *redis.Client) *NotificationService {
 	return &NotificationService{
@@ -282,7 +284,7 @@ func notificationTypesForCategory(category string) ([]model.NotificationType, er
 	case "pendingPayment", "endingSoon", "all":
 		return nil, nil
 	default:
-		return nil, fmt.Errorf("unsupported notification category: %s", category)
+		return nil, ErrInvalidCategory
 	}
 }
 

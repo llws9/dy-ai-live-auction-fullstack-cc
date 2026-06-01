@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -138,4 +139,19 @@ func TestTouchpointHandlerSummaryPropagatesAuthFailure(t *testing.T) {
 	h.GetNotificationSummary(context.Background(), c)
 
 	assert.Equal(t, http.StatusUnauthorized, c.Response.StatusCode())
+}
+
+func TestWriteUpstreamAuthErrorHandlesUnexpectedErrorType(t *testing.T) {
+	var logs bytes.Buffer
+	originalLogOutput := log.Writer()
+	log.SetOutput(&logs)
+	defer log.SetOutput(originalLogOutput)
+
+	c := app.NewContext(0)
+
+	assert.NotPanics(t, func() {
+		writeUpstreamAuthError(c, fmt.Errorf("not an upstream status error"))
+	})
+	assert.Equal(t, http.StatusInternalServerError, c.Response.StatusCode())
+	assert.Contains(t, logs.String(), "unexpected upstream auth error type")
 }

@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 	"testing"
@@ -26,6 +28,11 @@ func (s *failingLiveStarter) StartLive(ctx context.Context, liveStreamID int64) 
 }
 
 func TestLiveReminderHandlerHidesInternalErrorDetails(t *testing.T) {
+	var logs bytes.Buffer
+	originalLogOutput := log.Writer()
+	log.SetOutput(&logs)
+	defer log.SetOutput(originalLogOutput)
+
 	h := NewLiveReminderHandler(&failingLiveReminderService{})
 	c := app.NewContext(0)
 	c.Set("user_id", int64(100))
@@ -37,9 +44,16 @@ func TestLiveReminderHandlerHidesInternalErrorDetails(t *testing.T) {
 	assert.Contains(t, body, "获取开播提醒失败")
 	assert.NotContains(t, body, "mysql password")
 	assert.False(t, strings.Contains(body, "driver error"))
+	assert.Contains(t, logs.String(), "GetPendingReminder failed")
+	assert.Contains(t, logs.String(), "mysql password leaked in driver error")
 }
 
 func TestLiveStreamStatsHandlerHidesInternalStartErrorDetails(t *testing.T) {
+	var logs bytes.Buffer
+	originalLogOutput := log.Writer()
+	log.SetOutput(&logs)
+	defer log.SetOutput(originalLogOutput)
+
 	h := NewLiveStreamStatsHandler(&failingLiveStarter{})
 	c := app.NewContext(1)
 	c.Params = append(c.Params, param.Param{Key: "id", Value: "123"})
@@ -53,4 +67,6 @@ func TestLiveStreamStatsHandlerHidesInternalStartErrorDetails(t *testing.T) {
 	assert.Contains(t, body, "开始直播失败")
 	assert.NotContains(t, body, "redis password")
 	assert.False(t, strings.Contains(body, "driver error"))
+	assert.Contains(t, logs.String(), "StartLive failed")
+	assert.Contains(t, logs.String(), "redis password leaked in driver error")
 }

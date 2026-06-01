@@ -72,7 +72,7 @@ func TestNotificationCategoryTypes(t *testing.T) {
 	for _, tt := range tests {
 		got, err := notificationTypesForCategory(tt.category)
 		if tt.wantErr {
-			assert.Error(t, err)
+			assert.ErrorIs(t, err, ErrInvalidCategory)
 			continue
 		}
 		assert.NoError(t, err)
@@ -224,7 +224,7 @@ func TestNotificationServiceMarkCategoryAsRead(t *testing.T) {
 
 		err := svc.MarkCategoryAsRead(context.Background(), 42, "unknown")
 
-		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrInvalidCategory)
 		assert.Empty(t, store.markTypeCalls)
 		assert.Empty(t, store.markAllUserIDs)
 	})

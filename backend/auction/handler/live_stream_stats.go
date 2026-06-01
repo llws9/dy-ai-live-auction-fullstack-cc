@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log"
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -36,6 +37,7 @@ func (h *LiveStreamStatsHandler) StartLive(ctx context.Context, c *app.RequestCo
 	}
 
 	if err := h.service.StartLive(ctx, liveStreamID); err != nil {
+		log.Printf("StartLive failed: liveStreamID=%d err=%v", liveStreamID, err)
 		c.JSON(500, map[string]interface{}{"code": 500, "message": "开始直播失败"})
 		return
 	}

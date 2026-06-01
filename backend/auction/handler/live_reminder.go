@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log"
 
 	"auction-service/model"
 	"github.com/cloudwego/hertz/pkg/app"
@@ -29,6 +30,7 @@ func (h *LiveReminderHandler) GetPendingReminder(ctx context.Context, c *app.Req
 
 	result, err := h.service.GetPendingReminder(ctx, userID)
 	if err != nil {
+		log.Printf("GetPendingReminder failed: userID=%d err=%v", userID, err)
 		c.JSON(500, map[string]interface{}{"code": 500, "message": "获取开播提醒失败"})
 		return
 	}
