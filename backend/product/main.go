@@ -132,7 +132,6 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	v1.GET("/orders/:id", orderHandler.Get)
 	v1.PUT("/orders/:id", orderHandler.Update)
 	v1.POST("/orders/:id/pay", orderHandler.Pay)
-	v1.PUT("/orders/:id/pay", orderHandler.Pay)
 	v1.PUT("/orders/:id/ship", orderHandler.Ship)
 	v1.GET("/orders/history", orderHandler.GetUserHistory)
 
