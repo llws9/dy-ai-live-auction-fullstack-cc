@@ -40,21 +40,25 @@
 
 ## T3 拍卖列表/详情聚合 VO（P1）
 
-- [ ] T3.1 List：DAO 增加联表 `products` 与 `live_streams`，VO 增加 `product:{id,name,images}` / `live_stream_name` / `bid_count`
+> 已存在：`AuctionListItem` 已嵌入 `product` 摘要（[auction_list.go](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/auction/handler/auction_list.go)），`AuctionFilters` 已识别 `Search/LiveStreamName/LiveStreamID/Status`。
+
+- [ ] T3.1 List：补 `live_stream_name`（沿用 `BuildFollowedLiveStreams` 思路联表 / 内部批量接口）和 `bid_count`（按 `auction_id` 聚合 bids 表）
 - [ ] T3.2 Detail：增加 `winner_name / bid_count`，并嵌套 `product` 与 `rules`（rules 由 product 服务内部接口聚合或 auction 直接读 `auction_rules` 表）
 - [ ] T3.3 Bids：联表 `users` 返回 `bid.user_name`
-- [ ] T3.4 列表过滤：`search`（拍卖名 LIKE）、`live_stream_name`（直播间名 LIKE）、`live_stream_id`、`status`
+- [ ] T3.4 列表过滤 DAO 实现复核：确认 [backend/auction/dao/auction.go](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/auction/dao/auction.go) 中 `Search`（拍卖名 LIKE）、`LiveStreamName`（直播间名 LIKE）的 WHERE 子句已生效；缺失则补
 - [ ] T3.5 测试：handler 单测覆盖以上字段与过滤；含旧字段兼容断言
 
 ## T4 直播间字段对齐与控制（P1）
 
+> 已存在：`POST /api/v1/live-streams/:id/start`（admin）已实现 [router.go#L96](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/gateway/router/router.go#L96)。本次只需"对接"而非"新建"。
+
 - [ ] T4.1 数据库：迁移 `live_streams`：`host_name → streamer_name`、新增 `streamer_avatar VARCHAR(255)`、`viewer_count INT DEFAULT 0`、`ban_reason VARCHAR(255) NULL`
 - [ ] T4.2 后端列表：`viewer_count` 取自 Redis `live:viewer:{id}`（缺省 0）；`auction_count` 由 `auctions WHERE live_stream_id=?` 聚合
 - [ ] T4.3 后端：`status` 入参过滤
-- [ ] T4.4 创建直播间：`POST /live-streams`（admin/streamer 可调用），字段 `name, streamer_id, scheduled_at?`
+- [ ] T4.4 ~~创建直播间~~ → **接入已有 `POST /live-streams/:id/start`**：前端 Dashboard"开启直播"按钮解除 disabled，点击后弹直播间选择器后调用此接口
 - [ ] T4.5 强制结束：`PUT /admin/live-streams/:id/end`，状态置 `ended` + WS 广播 `live_stream_ended`
 - [ ] T4.6 封禁：`PUT /admin/live-streams/:id/ban { reason }`
-- [ ] T4.7 前端：`pages-new/LiveDetail.tsx` 三个 disabled 按钮接入 `liveStreamApi.end / ban`，`api/index.ts` 增加方法
+- [ ] T4.7 前端：`pages-new/LiveDetail.tsx` 三个 disabled 按钮接入 `liveStreamApi.end / ban`，`api/index.ts` 增加方法（`start` 接口已存在则直接封装）
 - [ ] T4.8 测试：DAO + handler 单测；rename 字段的兼容性 grep
 
 ## T5 Statistics 整改（P1）
@@ -108,15 +112,16 @@
 - [ ] T9.4 前端：`GoodsEdit.tsx` 图片上传接 `uploadApi.upload`
 - [ ] T9.5 测试：超大文件 / 错误 mime 拒绝
 
-## T10 `/orders/:id/pay` 方法复核（P2）
+## T10 `/orders/:id/pay` 方法收敛（P2）
 
-- [ ] T10.1 复核 [backend/product/main.go](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/product/main.go) 中 `/orders/:id/pay` 注册方法
-- [ ] T10.2 与 [backend/gateway/router/router.go](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/gateway/router/router.go) 对齐为 `POST`
-- [ ] T10.3 端到端冒烟测试
+> 已发现：[product/main.go#L132-L133](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/product/main.go#L132-L133) 同时注册了 `POST` 和 `PUT`，gateway 仅透传 `POST`，与前端 `orderApi.pay` 一致。
+
+- [ ] T10.1 删除 [product/main.go#L133](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/product/main.go#L133) 的 `v1.PUT("/orders/:id/pay", orderHandler.Pay)` 冗余注册
+- [ ] T10.2 端到端冒烟：admin/user 走 `POST /api/v1/orders/:id/pay` 仍能成功
 
 ## T11 前端联调与回归
 
-- [ ] T11.1 [api/index.ts](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/admin/src/shared/api/index.ts)：补 `endLive / banLive / createLive / auctionRuleTemplateApi / roleApi / adminUserApi / uploadApi / profileApi`
+- [ ] T11.1 [api/index.ts](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/admin/src/shared/api/index.ts)：补 `liveStreamApi.{start, end, ban}`、`auctionRuleTemplateApi`、`roleApi`、`adminUserApi`、`uploadApi`、`profileApi`
 - [ ] T11.2 各页面跑通：Dashboard / OrderList / OrderDetail / Stats / AuctionRules / Permissions / Profile
 - [ ] T11.3 Jest：核心 API 调用快照 + 字段断言
 

@@ -24,13 +24,14 @@
 - [ ] `POST /products/:id/apply-rule-template` 能 upsert `auction_rules`
 - [ ] 角色 CRUD 可用，`PUT /admin/roles/:id/permissions` 全量替换权限
 - [ ] 管理员账户 CRUD 可用，密码字段不出现在响应
-- [ ] `POST /live-streams` 可创建直播间
+- [ ] **复用** `POST /live-streams/:id/start` 完成 admin 开播（不重复造接口）
 - [ ] `PUT /admin/live-streams/:id/end` 状态置 `ended` + WS 广播
 - [ ] `PUT /admin/live-streams/:id/ban` 状态置 `banned` + 写 `ban_reason`
 - [ ] `PUT /users/me` 更新基本信息成功
 - [ ] `PUT /users/me/password` 旧密码错误返回 400；正确返回 200 后旧密码无法登录
 - [ ] `PUT /users/me/preferences` 写入 `users.preferences` JSON
 - [ ] `POST /uploads` 上传 jpg/png/webp 成功；超过 5MB 拒绝；mime 不匹配拒绝
+- [ ] product 服务删除冗余 `PUT /orders/:id/pay` 注册，仅保留 `POST`
 
 ## 三、权限与安全
 
@@ -48,8 +49,9 @@
 
 ## 五、前端联动
 
-- [ ] [api/index.ts](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/admin/src/shared/api/index.ts) 增加新模块封装：`auctionRuleTemplateApi / roleApi / adminUserApi / uploadApi / profileApi`，并补 `liveStreamApi.{create, end, ban}`
+- [ ] [api/index.ts](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/admin/src/shared/api/index.ts) 增加新模块封装：`auctionRuleTemplateApi / roleApi / adminUserApi / uploadApi / profileApi`，并补 `liveStreamApi.{start, end, ban}`
 - [ ] [Dashboard.tsx](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/admin/src/pages-new/Dashboard.tsx) 改用 `/statistics/dashboard`，6 卡片有真实数据
+- [ ] [Dashboard.tsx](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/admin/src/pages-new/Dashboard.tsx) "开启直播"按钮解除 disabled，对接 `POST /live-streams/:id/start`
 - [ ] [Dashboard.tsx](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/admin/src/pages-new/Dashboard.tsx) 待办事项卡片仍为静态占位（spec 明确不接入）
 - [ ] [OrderList.tsx](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/admin/src/pages-new/OrderList.tsx) / [OrderDetail.tsx](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/admin/src/pages-new/OrderDetail.tsx) admin 视角能看到全量订单与完整字段
 - [ ] [Stats.tsx](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/admin/src/pages-new/Stats.tsx) 三 Tab 不再 runtime 报错，图表渲染正常
