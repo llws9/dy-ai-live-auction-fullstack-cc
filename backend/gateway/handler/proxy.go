@@ -72,6 +72,9 @@ func (p *ProxyHandler) Forward(ctx context.Context, c *app.RequestContext) {
 		if strings.EqualFold(keyStr, "Host") {
 			return
 		}
+		if strings.EqualFold(keyStr, "X-Internal-Token") {
+			return
+		}
 		req.Header.Set(keyStr, string(value))
 	})
 
