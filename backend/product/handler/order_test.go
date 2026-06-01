@@ -73,7 +73,6 @@ func TestOrderHandler_GetUserHistory_AuthContract(t *testing.T) {
 		assert.Equal(t, 200, c.Response.StatusCode())
 		var body map[string]interface{}
 		assert.NoError(t, json.Unmarshal(c.Response.Body(), &body))
-		// 期望 items 是空数组，total=0；page/page_size 透传。
 		assert.EqualValues(t, 0, body["total"])
 		assert.EqualValues(t, 1, body["page"])
 		assert.EqualValues(t, 20, body["page_size"])
@@ -154,6 +153,46 @@ func TestOrderHandler_Summary_XUserIDContract(t *testing.T) {
 		assert.Equal(t, 0, body.Code)
 		assert.Equal(t, int64(1), body.Data.PendingPayment)
 		assert.Equal(t, int64(1), body.Data.WonNotPaid)
+	})
+}
+
+// TestOrderHandler_List_AuthContract 验证 GET /orders 的安全契约（与 GetUserHistory 对齐）：
+//   - 未携带 X-User-ID → 401；
+//   - X-User-ID 非法 → 401；
+//   - 合法 X-User-ID → 200，query user_id 被忽略。
+func TestOrderHandler_List_AuthContract(t *testing.T) {
+	h := NewOrderHandler(service.NewOrderService(nil, nil))
+
+	t.Run("missing X-User-ID returns 401", func(t *testing.T) {
+		c := app.NewContext(0)
+		c.Request.SetMethod("GET")
+		c.Request.SetRequestURI("/api/v1/orders")
+
+		h.List(context.Background(), c)
+
+		assert.Equal(t, 401, c.Response.StatusCode())
+	})
+
+	t.Run("non-numeric X-User-ID returns 401", func(t *testing.T) {
+		c := app.NewContext(0)
+		c.Request.SetMethod("GET")
+		c.Request.SetRequestURI("/api/v1/orders")
+		c.Request.Header.Set("X-User-ID", "abc")
+
+		h.List(context.Background(), c)
+
+		assert.Equal(t, 401, c.Response.StatusCode())
+	})
+
+	t.Run("valid X-User-ID returns 200", func(t *testing.T) {
+		c := app.NewContext(0)
+		c.Request.SetMethod("GET")
+		c.Request.SetRequestURI("/api/v1/orders?page=1&page_size=20")
+		c.Request.Header.Set("X-User-ID", "42")
+
+		h.List(context.Background(), c)
+
+		assert.Equal(t, 200, c.Response.StatusCode())
 	})
 }
 

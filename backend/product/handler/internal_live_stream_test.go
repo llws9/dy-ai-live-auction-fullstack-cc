@@ -28,9 +28,7 @@ func (f *fakeLiveStreamProvider) GetByIDs(_ context.Context, _ []int64) (map[int
 }
 
 func newInternalHandlerWithLiveStreams(p liveStreamBatchProvider) *InternalHandler {
-	h := &InternalHandler{}
-	h.liveStreamDAO = p
-	return h
+	return NewInternalHandler(nil, p)
 }
 
 // TestInternalHandler_BatchLiveStreams_OK 验证按入参顺序、缺失 id 跳过、id 去重。
@@ -128,8 +126,11 @@ func TestInternalHandler_BatchLiveStreams_InvalidJSON(t *testing.T) {
 	assert.Equal(t, 400, c.Response.StatusCode())
 }
 
-func TestInternalHandler_BatchLiveStreams_NotConfigured(t *testing.T) {
-	// liveStreamDAO 未注入 → 5xx，避免静默返回空。
+func TestInternalHandler_BatchLiveStreams_NilDAOPanics(t *testing.T) {
+	defer func() {
+		r := recover()
+		assert.NotNil(t, r, "BatchLiveStreams with nil liveStreamDAO should panic")
+	}()
 	h := &InternalHandler{}
 	raw, _ := json.Marshal(map[string]interface{}{"ids": []int64{1}})
 	c := app.NewContext(0)
@@ -139,6 +140,4 @@ func TestInternalHandler_BatchLiveStreams_NotConfigured(t *testing.T) {
 	c.Request.SetBody(raw)
 
 	h.BatchLiveStreams(context.Background(), c)
-
-	assert.Equal(t, 500, c.Response.StatusCode())
 }

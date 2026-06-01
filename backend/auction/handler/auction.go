@@ -13,12 +13,9 @@ import (
 	"auction-service/service"
 )
 
-// AuctionHandler 竞拍 Handler
 type AuctionHandler struct {
 	auctionService *service.AuctionService
-	// productClient 用于在 List 中按 category_id 过滤、批量回填商品摘要。
-	// 可为 nil（向后兼容），但若客户端传 category_id 会得到 503。
-	productClient client.ProductClient
+	productClient  client.ProductClient
 }
 
 // NewAuctionHandler 创建竞拍 Handler
@@ -230,6 +227,13 @@ func (h *AuctionHandler) List(ctx context.Context, c *app.RequestContext) {
 	}
 	if categoryIDStr != "" {
 		if cid, err := strconv.ParseInt(categoryIDStr, 10, 64); err == nil && cid > 0 {
+			if h.productClient == nil {
+				c.JSON(400, map[string]interface{}{
+					"code":    400,
+					"message": "分类过滤服务不可用",
+				})
+				return
+			}
 			params.CategoryID = &cid
 		}
 	}

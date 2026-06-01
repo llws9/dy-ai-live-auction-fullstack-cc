@@ -6,7 +6,6 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 
-	"product-service/dao"
 	"product-service/model"
 	"product-service/service"
 )
@@ -24,13 +23,11 @@ type liveStreamBatchProvider interface {
 }
 
 // NewInternalHandler 创建内部接口 Handler。
-func NewInternalHandler(productService *service.ProductService) *InternalHandler {
-	return &InternalHandler{productService: productService}
-}
-
-// SetLiveStreamDAO 注入 LiveStreamDAO，用于 /internal/live-streams/batch（T3.3）。
-func (h *InternalHandler) SetLiveStreamDAO(d *dao.LiveStreamDAO) {
-	h.liveStreamDAO = d
+func NewInternalHandler(productService *service.ProductService, liveStreamDAO liveStreamBatchProvider) *InternalHandler {
+	return &InternalHandler{
+		productService: productService,
+		liveStreamDAO:  liveStreamDAO,
+	}
 }
 
 // productSummary 是 list 场景下回给调用方的精简摘要。
@@ -156,10 +153,6 @@ func (h *InternalHandler) BatchLiveStreams(ctx context.Context, c *app.RequestCo
 	}
 	if len(req.IDs) > internalLiveStreamBatchMaxIDs {
 		c.JSON(400, map[string]interface{}{"code": 400, "message": "ids 超出上限"})
-		return
-	}
-	if h.liveStreamDAO == nil {
-		c.JSON(500, map[string]interface{}{"code": 500, "message": "live stream batch not configured"})
 		return
 	}
 

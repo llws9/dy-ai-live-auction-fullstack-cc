@@ -5,19 +5,23 @@ import (
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"product-service/client"
 	"product-service/service"
 )
 
-// LiveStreamHandler 直播间Handler
 type LiveStreamHandler struct {
 	liveStreamService *service.LiveStreamService
+	auctionClient     *client.AuctionClient
 }
 
-// NewLiveStreamHandler 创建直播间Handler
 func NewLiveStreamHandler(liveStreamService *service.LiveStreamService) *LiveStreamHandler {
 	return &LiveStreamHandler{
 		liveStreamService: liveStreamService,
 	}
+}
+
+func (h *LiveStreamHandler) SetAuctionClient(ac *client.AuctionClient) {
+	h.auctionClient = ac
 }
 
 // ListAdmin 管理端直播间列表 (T011)
@@ -78,19 +82,36 @@ func (h *LiveStreamHandler) GetDetail(ctx context.Context, c *app.RequestContext
 	if detail.VideoURL != "" {
 		videoURL = detail.VideoURL
 	}
+
+	isFollowing := false
+	followersCount := int64(0)
+	if h.auctionClient != nil {
+		if uidStr := string(c.GetHeader("X-User-ID")); uidStr != "" {
+			if uid, err := strconv.ParseInt(uidStr, 10, 64); err == nil && uid > 0 {
+				if fs, err := h.auctionClient.GetFollowStatus(ctx, uid, id); err == nil {
+					isFollowing = fs.IsFollowing
+				}
+			}
+		}
+		if fc, err := h.auctionClient.GetFollowersCount(ctx, id); err == nil {
+			followersCount = fc
+		}
+	}
+
 	result := map[string]interface{}{
-		"id":           detail.ID,
-		"name":         detail.Name,
-		"description":  detail.Description,
-		"cover_image":  detail.CoverImage,
-		"status":       detail.Status,
-		"creator_id":   detail.CreatorID,
-		"created_at":   detail.CreatedAt,
-		"host_name":    "",      // TODO: 跨服务回填 auction-service users.username
-		"host_avatar":  "",      // TODO: 跨服务回填 users.avatar
-		"viewer_count": 0,       // TODO: 接入 hub 房间在线人数
-		"video_url":    videoURL, // null 当未配置
-		"is_following": false,   // TODO: T2.6 实现 follow-status 后由调用方回填
+		"id":              detail.ID,
+		"name":            detail.Name,
+		"description":     detail.Description,
+		"cover_image":     detail.CoverImage,
+		"status":          detail.Status,
+		"creator_id":      detail.CreatorID,
+		"created_at":      detail.CreatedAt,
+		"host_name":       "",
+		"host_avatar":     "",
+		"viewer_count":    0,
+		"video_url":       videoURL,
+		"is_following":    isFollowing,
+		"followers_count": followersCount,
 	}
 
 	c.JSON(200, map[string]interface{}{

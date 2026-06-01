@@ -90,10 +90,12 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	// ========== 直播间关注路由 ==========
 	authGroup.POST("/live-streams/:id/follow", auctionProxy.Forward)
 	authGroup.DELETE("/live-streams/:id/follow", auctionProxy.Forward)
-	authGroup.GET("/live-streams/:id/follow-status", auctionProxy.Forward) // T2.6 (F-B2)
+	authGroup.GET("/live-streams/:id/follow-status", auctionProxy.Forward)
 	authGroup.GET("/user/followed-live-streams", auctionProxy.Forward)
 	authGroup.PUT("/live-streams/:id/notification", auctionProxy.Forward)
 	authGroup.POST("/live-streams/:id/start", middleware.RequireAdmin(), liveStartHandler.StartLive)
+	v1.GET("/live-streams/:id/followers/stats", auctionProxy.Forward)
+	v1.GET("/live-streams/:id/followers/count", auctionProxy.Forward)
 
 	// ========== 用户余额（T3.1 F-A2 只读） ==========
 	authGroup.GET("/user/balance", auctionProxy.Forward)
@@ -112,7 +114,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	})
 
 	// ========== 订单服务路由 ==========
-	v1.GET("/orders", productProxy.Forward)
+	authGroup.GET("/orders", productProxy.Forward)
 	v1.GET("/orders/:id", productProxy.Forward)
 	v1.POST("/orders/:id/pay", productProxy.Forward)
 	v1.PUT("/orders/:id/ship", productProxy.Forward) // T007: 订单发货

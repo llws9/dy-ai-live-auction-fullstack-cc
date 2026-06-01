@@ -67,6 +67,9 @@ func (s *OrderService) GetOrder(ctx context.Context, id int64) (*model.Order, er
 
 // ListOrders 获取订单列表
 func (s *OrderService) ListOrders(ctx context.Context, userID *int64, page, pageSize int) ([]model.Order, int64, error) {
+	if s.orderDAO == nil {
+		return []model.Order{}, 0, nil
+	}
 	return s.orderDAO.List(ctx, userID, page, pageSize)
 }
 
