@@ -57,6 +57,7 @@ func main() {
 	ruleDAO := dao.NewAuctionRuleDAO(db)
 	orderDAO := dao.NewOrderDAO(db)
 	historyDAO := dao.NewHistoryDAO(db)
+	orderAdminDAO := dao.NewOrderAdminDAO(db)
 	statisticsDAO := dao.NewStatisticsDAO(db)
 	liveStreamDAO := dao.NewLiveStreamDAO(db)
 	categoryDAO := dao.NewCategoryDAO(db)
@@ -64,6 +65,7 @@ func main() {
 	// 初始化 Service 层
 	productService := service.NewProductService(productDAO, ruleDAO, liveStreamDAO)
 	orderService := service.NewOrderService(orderDAO, historyDAO)
+	orderService.SetAdminOrderDAO(orderAdminDAO)
 	statisticsService := service.NewStatisticsService(statisticsDAO)
 	liveStreamService := service.NewLiveStreamService(liveStreamDAO)
 	categoryService := service.NewCategoryService(categoryDAO)
@@ -133,6 +135,10 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	v1.PUT("/orders/:id/pay", orderHandler.Pay)
 	v1.PUT("/orders/:id/ship", orderHandler.Ship)
 	v1.GET("/orders/history", orderHandler.GetUserHistory)
+
+	// 订单 admin 路由：不依赖 X-User-ID，由 Gateway 的 RequireAdmin 中间件保证鉴权
+	v1.GET("/admin/orders", orderHandler.AdminList)
+	v1.GET("/admin/orders/:id", orderHandler.AdminGet)
 
 	// 直播间相关路由
 	v1.GET("/admin/live-streams", liveStreamHandler.ListAdmin)

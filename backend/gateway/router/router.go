@@ -121,6 +121,11 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	// 订单列表 & 历史均需 JWT 认证；下游通过 X-User-ID header 识别本人，禁止接受 query user_id。
 	authGroup.GET("/orders/history", productProxy.Forward)
 
+	// 订单 admin 路由：管理员查看全量订单，不再被 X-User-ID 强过滤；
+	// product-service 侧 /admin/orders 不读 X-User-ID，鉴权由这里的 RequireAdmin 中间件保证。
+	authGroup.GET("/admin/orders", middleware.RequireAdmin(), productProxy.Forward)
+	authGroup.GET("/admin/orders/:id", middleware.RequireAdmin(), productProxy.Forward)
+
 	// ========== 直播间路由 ==========
 	authGroup.GET("/admin/live-streams", middleware.RequireAdmin(), productProxy.Forward) // T009: 管理端直播间列表
 	// T010: 直播间详情。公开访问，但若客户端带合法 Bearer token，

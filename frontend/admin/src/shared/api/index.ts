@@ -74,19 +74,23 @@ export const auctionApi = {
 
 // 订单API
 export const orderApi = {
+  // admin 端订单列表：使用 /admin/orders（不被 X-User-ID 过滤），可透传 user_id 筛某用户。
   list: (params?: { user_id?: number; status?: number; page?: number; page_size?: number }) => {
     const query = buildQuery(params || {});
-    return get<{ list: any[]; total: number }>(`/orders?${query}`);
+    return get<{ list: any[]; total: number; page: number; page_size: number }>(`/admin/orders?${query}`);
   },
 
-  get: (id: number) => get<any>(`/orders/${id}`),
+  // admin 端订单详情：使用 /admin/orders/:id（不被 winner_id 过滤）。
+  get: (id: number) => get<any>(`/admin/orders/${id}`),
 
   updateStatus: (id: number, status: number) => put<any>(`/orders/${id}`, { status }),
 
+  // pay 是用户行为，仍走用户路由
   pay: (id: number) => post<any>(`/orders/${id}/pay`),
 
   ship: (id: number) => put<any>(`/orders/${id}/ship`),
 
+  // 用户视角的竞拍历史，保持原路由
   getUserHistory: () => get<any[]>('/orders/history'),
 };
 

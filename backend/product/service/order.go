@@ -27,6 +27,7 @@ type NotificationCallback interface {
 type OrderService struct {
 	orderDAO             *dao.OrderDAO
 	historyDAO           *dao.HistoryDAO
+	adminDAO             *dao.OrderAdminDAO
 	notificationCallback NotificationCallback // 通知回调（Mock触发）
 	logger               *logger.Logger
 }
@@ -38,6 +39,11 @@ func NewOrderService(orderDAO *dao.OrderDAO, historyDAO *dao.HistoryDAO) *OrderS
 		historyDAO: historyDAO,
 		logger:     logger.NewLogger("product-service"),
 	}
+}
+
+// SetAdminOrderDAO 注入 admin 视图 DAO。可选：未注入时 admin 接口返回空列表。
+func (s *OrderService) SetAdminOrderDAO(adminDAO *dao.OrderAdminDAO) {
+	s.adminDAO = adminDAO
 }
 
 // SetNotificationCallback 设置通知回调
