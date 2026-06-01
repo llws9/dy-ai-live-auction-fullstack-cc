@@ -82,6 +82,20 @@
 - `frontend/h5/src/pages/Home/__tests__/Home.test.tsx`
 - `docs/superpowers/sdd/runs/2026-06-02-touchpoint-metrics-task1-state.md`
 
+## T003 Spec Fix Evidence
+
+- Issue: `summary_exposed` was emitted from `useTouchpointNotifications`, so Profile page and hidden BottomNav paths could report a bottom-nav exposure without a visible BottomNav.
+- Root cause: tracking lived in the shared data hook instead of the UI exposure boundary.
+- RED command: `cd frontend/h5 && npm test -- src/__tests__/components/MobileShell.test.tsx src/pages/User/__tests__/Profile.test.tsx --runInBand`
+- RED result: `FAIL`, hidden paths and Profile page asserted no `summary_exposed`, but the hook emitted it.
+- GREEN command: `cd frontend/h5 && npm test -- src/__tests__/components/MobileShell.test.tsx src/pages/User/__tests__/Profile.test.tsx --runInBand`
+- GREEN result: `PASS`, `2 passed, 20 passed, 20 total`.
+- Regression command: `cd frontend/h5 && npm test -- src/__tests__/components/MobileShell.test.tsx src/pages/User/__tests__/Profile.test.tsx src/pages/Home/__tests__/Home.test.tsx --runInBand`
+- Regression result: `PASS`, `3 passed, 30 passed, 30 total`.
+- Build command: `cd frontend/h5 && npm run build`
+- Build result: `PASS`, `tsc && vite build` completed successfully.
+- Diagnostics: editor diagnostics for the isolated worktree paths returned `Access denied`; TypeScript validation is covered by `npm run build`.
+
 ## Risks
 
 - `go.mod` gained an indirect `github.com/kylelemons/godebug` dependency required by `prometheus/testutil`.
@@ -96,3 +110,5 @@ Task 1 is complete with TDD evidence and gateway regression tests passing.
 Task 2 is complete with TDD evidence, focused utility tests passing, and H5 production build passing.
 
 Task 3 is complete with TDD evidence, focused H5 tests passing, and H5 production build passing.
+
+Task 3 spec fix is complete with TDD evidence, focused H5 tests passing, and H5 production build passing.

@@ -137,6 +137,17 @@ describe('Profile migration', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/login');
   });
 
+  it('does not track summary exposure from profile page data hook', async () => {
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <Profile />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByLabelText('2 条待处理提醒')).toHaveTextContent('2');
+    expect(mockTrackEvent).not.toHaveBeenCalledWith('summary_exposed', expect.anything());
+  });
+
   it('tracks profile touchpoint entry clicks', async () => {
     render(
       <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>

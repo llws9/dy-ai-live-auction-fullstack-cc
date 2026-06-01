@@ -205,7 +205,13 @@ describe('MobileShell', () => {
   it.each(['/detail', '/result', '/notifications', '/following', '/history', '/login'])(
     'hides bottom navigation on %s',
     async (path) => {
-      mockGetTouchpointSummary.mockRejectedValue(new Error('hidden nav should not render badges'));
+      mockGetTouchpointSummary.mockResolvedValue({
+        unreadTotal: 7,
+        pendingPayment: 2,
+        wonNotPaid: 1,
+        outbid: 3,
+        endingSoon: 1,
+      });
 
       render(
         <MemoryRouter initialEntries={[path]} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
@@ -215,6 +221,7 @@ describe('MobileShell', () => {
 
       expect(screen.queryByRole('navigation', { name: '底部导航' })).not.toBeInTheDocument();
       await waitFor(() => expect(screen.queryByRole('navigation', { name: '底部导航' })).not.toBeInTheDocument());
+      expect(mockTrackEvent).not.toHaveBeenCalledWith('summary_exposed', expect.anything());
     },
   );
 

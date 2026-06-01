@@ -1,7 +1,8 @@
+import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import BadgeDot from '../BadgeDot';
 import { useTouchpointNotifications } from '../../hooks/useTouchpointNotifications';
-import { trackEvent } from '../../utils/trackEvent';
+import { getCountBucket, trackEvent } from '../../utils/trackEvent';
 import styles from './MobileShell.module.css';
 
 const hiddenNavPaths = new Set([
@@ -40,9 +41,22 @@ function trackNavClick(path: string) {
 
 function BottomNav() {
   const { pathname } = useLocation();
-  const { unreadTotal } = useTouchpointNotifications();
+  const { summaryLoaded, unreadTotal } = useTouchpointNotifications();
+  const hidden = isHiddenPath(pathname);
 
-  if (isHiddenPath(pathname)) {
+  useEffect(() => {
+    if (hidden || !summaryLoaded) return;
+
+    trackEvent('summary_exposed', {
+      source: 'bottom_nav',
+      entry: 'profile_tab',
+      type: 'all',
+      result: 'success',
+      countBucket: getCountBucket(unreadTotal),
+    });
+  }, [hidden, summaryLoaded, unreadTotal]);
+
+  if (hidden) {
     return null;
   }
 
