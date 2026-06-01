@@ -28,11 +28,26 @@
 
 ## 🚀 快速启动
 
+### 必填运行时密钥
+
+后端本地启动前必须先注入 `INTERNAL_API_TOKEN`。这是 Gateway 调用 Auction `/internal/*` 接口的服务间凭证，`gateway-service` 与 `auction-service` 必须使用同一个值。
+
+```bash
+export INTERNAL_API_TOKEN="$(openssl rand -hex 32)"
+```
+
+注意：
+- 不要把真实 token 写入 `configs/nacos/*.yaml`、`docker-compose.yml`、README 或前端环境变量。
+- 如果未设置该变量，开播提醒相关的内部转发会按 fail closed 处理。
+
 ### 使用启动脚本（推荐）
 
 ```bash
 # 回到项目根目录
 cd /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc
+
+# 注入 Gateway/Auction 共享的内部服务 token
+export INTERNAL_API_TOKEN="$(openssl rand -hex 32)"
 
 # 运行启动脚本
 ./scripts/start-frontend.sh
@@ -68,6 +83,9 @@ npm run dev &
 ### 启动监控平台
 
 ```bash
+# 如果同时启动应用服务，先注入 Gateway/Auction 共享 token
+export INTERNAL_API_TOKEN="$(openssl rand -hex 32)"
+
 # 方式一：使用启动脚本
 cd observability
 ./start.sh start

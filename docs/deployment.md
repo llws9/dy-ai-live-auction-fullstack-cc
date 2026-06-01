@@ -48,13 +48,16 @@
 git clone <repository-url>
 cd dy-ai-live-auction-fullstack-cc
 
-# 2. 启动所有服务
+# 2. 注入 Gateway/Auction 共享的内部服务 token
+export INTERNAL_API_TOKEN="$(openssl rand -hex 32)"
+
+# 3. 启动所有服务
 docker-compose up -d
 
-# 3. 查看服务状态
+# 4. 查看服务状态
 docker-compose ps
 
-# 4. 查看日志
+# 5. 查看日志
 docker-compose logs -f
 ```
 
@@ -108,11 +111,26 @@ REDIS_ADDR=redis:6379
 # 服务地址
 PRODUCT_SERVICE_ADDR=product:8081
 AUCTION_SERVICE_ADDR=auction:8082
+
+# Gateway 调用 Auction /internal/* 的服务间凭证
+# 必须由部署环境注入同一个值给 gateway 与 auction。
+# 不要把真实值提交到仓库或写入 Nacos 明文配置。
+INTERNAL_API_TOKEN=<generate-with-openssl-rand-hex-32>
 ```
+
+`INTERNAL_API_TOKEN` 是运行时必填项：
+
+- `gateway-service` 与 `auction-service` 必须使用同一个 `INTERNAL_API_TOKEN`。
+- 生产环境应从 Secret Manager、CI/CD secret 或宿主机环境变量注入。
+- 不要把真实 token 写入 `configs/nacos/*.yaml`、`docker-compose.yml`、README 或前端环境变量。
+- 未设置该变量时，Gateway 到 Auction 的内部开播/提醒转发会 fail closed。
 
 ### 3. 启动服务
 
 ```bash
+# 先注入 Gateway/Auction 共享 token
+export INTERNAL_API_TOKEN="${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}"
+
 # 启动基础设施（MySQL、Redis）
 docker-compose up -d mysql redis
 
