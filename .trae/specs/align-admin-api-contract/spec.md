@@ -14,8 +14,8 @@
 
 - **L1 统一分页响应**：`GET /products`、`GET /orders`、`GET /auctions` 后端响应统一为 `{ list, total, page, page_size }`。
 - **L2 订单管理端语义**：新增 `GET /admin/orders`、`GET /admin/orders/:id`，仅 admin 可访问，返回联表后的扁平 VO；保留 C 端 `/orders` 的本人语义。
-- **L3 拍卖详情聚合 VO**：`GET /auctions`、`GET /auctions/:id`、`GET /auctions/:id/bids` 增加 `product / live_stream / winner / bid_count / bid.user_name` 等聚合字段，并支持 `search / live_stream_name` 查询。
-- **L4 直播间字段对齐与控制接口**：列表/详情字段重命名为 `streamer_name / streamer_avatar`、补 `viewer_count / auction_count`，支持 `status` 过滤；新增 `POST /live-streams`、`PUT /admin/live-streams/:id/end`、`PUT /admin/live-streams/:id/ban`。
+- **L3 拍卖详情聚合 VO**：`GET /auctions` **list 已嵌入 `product` 摘要**（见 [auction_list.go](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/auction/handler/auction_list.go) `AuctionListItem`），本次只需在列表补 `live_stream_name / bid_count`；`GET /auctions/:id` 补 `product / rules / winner_name / bid_count`；`GET /auctions/:id/bids` 联表补 `bid.user_name`；列表已支持 `search / live_stream_name`（`AuctionFilters` 已识别），重点是 DAO 层 `WHERE` 实现是否覆盖。
+- **L4 直播间字段对齐与控制接口**：列表/详情字段重命名为 `streamer_name / streamer_avatar`、补 `viewer_count / auction_count`，支持 `status` 过滤；**Dashboard "开启直播" 按钮直接对接已有 `POST /api/v1/live-streams/:id/start`**（admin only，已存在 [liveStartHandler.StartLive](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/gateway/handler/live_start.go)），不再新增创建接口；新增 `PUT /admin/live-streams/:id/end`、`PUT /admin/live-streams/:id/ban`。
 - **L5 统计接口结构整改**：
   - `GET /statistics/overview` 补 `ongoing_auctions / today_revenue / total_orders`；
   - `GET /statistics/auctions|revenue|users` 改为按 `start_date/end_date`+`group_by` 返回**数组**；
@@ -24,7 +24,7 @@
 - **L7 权限管理**：新增 `roles`、`role_permissions`、`admin_users` 三类资源的 CRUD 接口（仅 admin）。
 - **L8 个人资料编辑**：新增 `PUT /users/me`、`PUT /users/me/password`、`PUT /users/me/preferences`。
 - **L9 媒体上传**：新增 `POST /uploads`（本地存储或 OSS 预签名，v1 走本地存储）。
-- **L10 方法一致性**：复核并对齐 `/orders/:id/pay` 在 gateway 与 product 之间的 HTTP 方法。
+- **L10 方法一致性**：[product/main.go](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/backend/product/main.go#L132-L133) 已同时注册 `POST` + `PUT /orders/:id/pay`，与 gateway `POST` 已兼容。任务降级为：删除冗余 `PUT` 注册，保留 `POST` 单一方法。
 - **L11 Dashboard 待办静态化**（用户明确指定）：v1 阶段 Dashboard 待办事项卡片保留**纯静态 UI 占位**，**不**进入本次接口对齐范围。
 
 **BREAKING**：
