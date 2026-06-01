@@ -126,10 +126,14 @@ func (h *ProductHandler) List(ctx context.Context, c *app.RequestContext) {
 	}
 
 	c.JSON(200, map[string]interface{}{
-		"items":     products,
-		"total":     total,
-		"page":      page,
-		"page_size": pageSize,
+		"code":    200,
+		"message": "success",
+		"data": map[string]interface{}{
+			"list":      products,
+			"total":     total,
+			"page":      page,
+			"page_size": pageSize,
+		},
 	})
 }
 

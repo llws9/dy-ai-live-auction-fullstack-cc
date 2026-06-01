@@ -39,6 +39,7 @@ services:
       - NACOS_NAMESPACE=auction-dev
       - NACOS_GROUP=product
       - NACOS_DATA_ID=product-config.yaml
+      - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}
     depends_on:
       - nacos
       - mysql

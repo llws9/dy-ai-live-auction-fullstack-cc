@@ -57,6 +57,7 @@ func main() {
 	ruleDAO := dao.NewAuctionRuleDAO(db)
 	orderDAO := dao.NewOrderDAO(db)
 	historyDAO := dao.NewHistoryDAO(db)
+	orderAdminDAO := dao.NewOrderAdminDAO(db)
 	statisticsDAO := dao.NewStatisticsDAO(db)
 	liveStreamDAO := dao.NewLiveStreamDAO(db)
 	categoryDAO := dao.NewCategoryDAO(db)
@@ -64,6 +65,7 @@ func main() {
 	// 初始化 Service 层
 	productService := service.NewProductService(productDAO, ruleDAO, liveStreamDAO)
 	orderService := service.NewOrderService(orderDAO, historyDAO)
+	orderService.SetAdminOrderDAO(orderAdminDAO)
 	statisticsService := service.NewStatisticsService(statisticsDAO)
 	liveStreamService := service.NewLiveStreamService(liveStreamDAO)
 	categoryService := service.NewCategoryService(categoryDAO)
@@ -124,15 +126,24 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	v1.POST("/products/:id/rules", ruleHandler.Create)
 	v1.GET("/products/:id/rules", ruleHandler.Get)
 
+	internalToken := os.Getenv("INTERNAL_API_TOKEN")
+	if internalToken == "" {
+		log.Println("Warning: INTERNAL_API_TOKEN not set; protected internal endpoints will reject all calls")
+	}
+	internalAuth := middleware.InternalAuthMiddleware(internalToken)
+
 	// 订单相关路由
 	v1.GET("/orders", orderHandler.List)
 	v1.GET("/orders/summary", orderHandler.Summary)
 	v1.GET("/orders/:id", orderHandler.Get)
 	v1.PUT("/orders/:id", orderHandler.Update)
 	v1.POST("/orders/:id/pay", orderHandler.Pay)
-	v1.PUT("/orders/:id/pay", orderHandler.Pay)
 	v1.PUT("/orders/:id/ship", orderHandler.Ship)
 	v1.GET("/orders/history", orderHandler.GetUserHistory)
+
+	// 订单 admin 路由：必须经 Gateway 透传内部 token，且下游二次校验 X-User-Role=admin。
+	v1.GET("/admin/orders", internalAuth, orderHandler.AdminList)
+	v1.GET("/admin/orders/:id", internalAuth, orderHandler.AdminGet)
 
 	// 直播间相关路由
 	v1.GET("/admin/live-streams", liveStreamHandler.ListAdmin)
@@ -153,11 +164,7 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	// 内部接口（仅服务间调用，不经过 Gateway）
 	// spec: docs/superpowers/specs/2026-05-30-h5-missing-c-product-auction.md §5
 	// spec: docs/superpowers/specs/2026-05-30-h5-missing-b-livestream.md §4.1
-	internalToken := os.Getenv("INTERNAL_API_TOKEN")
-	if internalToken == "" {
-		log.Println("Warning: INTERNAL_API_TOKEN not set; /internal/* endpoints will reject all calls")
-	}
-	internal := h.Group("/internal", middleware.InternalAuthMiddleware(internalToken))
+	internal := h.Group("/internal", internalAuth)
 	internal.GET("/products", internalHandler.ListByCategory)
 	internal.POST("/products/batch", internalHandler.BatchByIDs)
 	internal.POST("/live-streams/batch", internalHandler.BatchLiveStreams)

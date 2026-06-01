@@ -77,7 +77,7 @@ func TestOrderHandler_GetUserHistory_AuthContract(t *testing.T) {
 		assert.EqualValues(t, 0, body["total"])
 		assert.EqualValues(t, 1, body["page"])
 		assert.EqualValues(t, 20, body["page_size"])
-		assert.NotNil(t, body["items"])
+		assert.NotNil(t, body["list"])
 	})
 }
 
