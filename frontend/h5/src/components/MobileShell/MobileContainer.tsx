@@ -1,4 +1,6 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
+import { notificationApi } from '../../services/notification';
+import { useAuth } from '../../store/authContext';
 import LiveReminderModal, { StreamInfo } from '../LiveReminderModal';
 import BottomNav from './BottomNav';
 import styles from './MobileShell.module.css';
@@ -7,24 +9,50 @@ interface MobileContainerProps {
   children: ReactNode;
 }
 
-const mockLiveReminderStream: StreamInfo = {
-  id: 'mock-live-reminder',
-  name: '云端珍藏直播间',
-  avatarUrl: 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22 viewBox=%220 0 120 120%22%3E%3Crect width=%22120%22 height=%22120%22 rx=%2232%22 fill=%22%2327272a%22/%3E%3Ccircle cx=%2260%22 cy=%2252%22 r=%2222%22 fill=%22%23d4af37%22/%3E%3Cpath d=%22M28 104c5-20 18-30 32-30s27 10 32 30%22 fill=%22%23f5f0e8%22/%3E%3C/svg%3E',
-  statusText: '正在直播',
-};
-
 function MobileContainer({ children }: MobileContainerProps) {
   const [isReminderOpen, setIsReminderOpen] = useState(false);
+  const [reminderStream, setReminderStream] = useState<StreamInfo | null>(null);
+  const { isAuthenticated, loading: authLoading, token, user } = useAuth();
+  const userId = user?.id ?? null;
+  const identityRef = useRef({ token, userId });
+
+  identityRef.current = { token, userId };
 
   useEffect(() => {
-    if (localStorage.getItem('pending_live_reminder') !== '1') {
+    if (authLoading || !isAuthenticated || !token || userId === null) {
+      setIsReminderOpen(false);
+      setReminderStream(null);
       return;
     }
 
-    localStorage.removeItem('pending_live_reminder');
-    setIsReminderOpen(true);
-  }, []);
+    let alive = true;
+    const identitySnapshot = { token, userId };
+    setIsReminderOpen(false);
+    setReminderStream(null);
+
+    const isCurrentIdentity = () => {
+      const latest = identityRef.current;
+      return latest.token === identitySnapshot.token && latest.userId === identitySnapshot.userId;
+    };
+
+    notificationApi
+      .getPendingLiveReminder()
+      .then((result) => {
+        if (!alive || !isCurrentIdentity() || !result.hasReminder || !result.stream) {
+          return;
+        }
+        setReminderStream(result.stream);
+        setIsReminderOpen(true);
+      })
+      .catch(() => {
+        // 不在后端不可用时继续消费历史 mock 弹窗标记。
+        localStorage.removeItem('pending_live_reminder');
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [authLoading, isAuthenticated, token, userId]);
 
   return (
     <div className={styles.shell} data-testid="mobile-shell">
@@ -34,7 +62,7 @@ function MobileContainer({ children }: MobileContainerProps) {
         <LiveReminderModal
           isOpen={isReminderOpen}
           onClose={() => setIsReminderOpen(false)}
-          stream={mockLiveReminderStream}
+          stream={reminderStream}
         />
       </div>
     </div>

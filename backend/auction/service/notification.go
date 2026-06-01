@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -41,11 +42,27 @@ type EventHandler func(ctx context.Context, event interface{}) error
 
 // NotificationService 通知服务
 type NotificationService struct {
-	notificationDAO *dao.NotificationDAO
+	notificationDAO notificationStore
 	hub             *websocket.Hub
 	redis           *redis.Client
 	followDAO       *dao.UserLiveStreamFollowDAO
 }
+
+type notificationStore interface {
+	Create(ctx context.Context, notification *model.Notification) error
+	CreateBatch(ctx context.Context, notifications []*model.Notification) error
+	GetByUserID(ctx context.Context, userID int64, page, pageSize int, unreadOnly bool) (*model.NotificationListResponse, error)
+	GetUnreadCount(ctx context.Context, userID int64) (int64, error)
+	CountUnreadByTypes(ctx context.Context, userID int64, types []model.NotificationType) (int64, error)
+	MarkUnreadByTypesAsRead(ctx context.Context, userID int64, types []model.NotificationType) error
+	MarkAsRead(ctx context.Context, id int64, userID int64) error
+	MarkAllAsRead(ctx context.Context, userID int64) error
+	GetUnreadByUserID(ctx context.Context, userID int64, limit int) ([]model.Notification, error)
+}
+
+var errNotificationSummaryUnavailable = errors.New("notification summary unavailable")
+
+var ErrInvalidCategory = errors.New("unsupported notification category")
 
 // NewNotificationService 创建通知服务
 func NewNotificationService(notificationDAO *dao.NotificationDAO, redis *redis.Client) *NotificationService {
@@ -152,10 +169,10 @@ func (s *NotificationService) pushNotification(ctx context.Context, notification
 // SendBidOutbidNotification 发送出价被超越通知
 func (s *NotificationService) SendBidOutbidNotification(ctx context.Context, userID int64, auctionID int64, oldBid, newBid float64) error {
 	return s.SendNotification(ctx, &model.NotificationRequest{
-		UserID:     userID,
-		Type:       model.NotificationTypeBidOutbid,
-		Title:      "出价被超越",
-		Content:    fmt.Sprintf("您在竞拍中的出价 %.2f 元已被超越，当前最高价为 %.2f 元", oldBid, newBid),
+		UserID:      userID,
+		Type:        model.NotificationTypeBidOutbid,
+		Title:       "出价被超越",
+		Content:     fmt.Sprintf("您在竞拍中的出价 %.2f 元已被超越，当前最高价为 %.2f 元", oldBid, newBid),
 		Immediately: true,
 		Data: map[string]interface{}{
 			"auction_id": auctionID,
@@ -168,10 +185,10 @@ func (s *NotificationService) SendBidOutbidNotification(ctx context.Context, use
 // SendAuctionWonNotification 发送竞拍中标通知
 func (s *NotificationService) SendAuctionWonNotification(ctx context.Context, userID int64, auctionID int64, finalPrice float64) error {
 	return s.SendNotification(ctx, &model.NotificationRequest{
-		UserID:     userID,
-		Type:       model.NotificationTypeAuctionWon,
-		Title:      "竞拍中标",
-		Content:    fmt.Sprintf("恭喜！您以 %.2f 元中标了竞拍", finalPrice),
+		UserID:      userID,
+		Type:        model.NotificationTypeAuctionWon,
+		Title:       "竞拍中标",
+		Content:     fmt.Sprintf("恭喜！您以 %.2f 元中标了竞拍", finalPrice),
 		Immediately: true,
 		Data: map[string]interface{}{
 			"auction_id":  auctionID,
@@ -183,10 +200,10 @@ func (s *NotificationService) SendAuctionWonNotification(ctx context.Context, us
 // SendAuctionLostNotification 发送竞拍未中标通知
 func (s *NotificationService) SendAuctionLostNotification(ctx context.Context, userID int64, auctionID int64, winnerPrice float64) error {
 	return s.SendNotification(ctx, &model.NotificationRequest{
-		UserID:     userID,
-		Type:       model.NotificationTypeAuctionLost,
-		Title:      "竞拍未中标",
-		Content:    fmt.Sprintf("很遗憾，您未能中标。最终成交价为 %.2f 元", winnerPrice),
+		UserID:      userID,
+		Type:        model.NotificationTypeAuctionLost,
+		Title:       "竞拍未中标",
+		Content:     fmt.Sprintf("很遗憾，您未能中标。最终成交价为 %.2f 元", winnerPrice),
 		Immediately: true,
 		Data: map[string]interface{}{
 			"auction_id":   auctionID,
@@ -198,10 +215,10 @@ func (s *NotificationService) SendAuctionLostNotification(ctx context.Context, u
 // SendOrderPaidNotification 发送订单已支付通知（Mock触发）
 func (s *NotificationService) SendOrderPaidNotification(ctx context.Context, userID int64, orderID int64) error {
 	return s.SendNotification(ctx, &model.NotificationRequest{
-		UserID:     userID,
-		Type:       model.NotificationTypeOrderPaid,
-		Title:      "订单已支付",
-		Content:    fmt.Sprintf("您的订单 #%d 已支付成功", orderID),
+		UserID:      userID,
+		Type:        model.NotificationTypeOrderPaid,
+		Title:       "订单已支付",
+		Content:     fmt.Sprintf("您的订单 #%d 已支付成功", orderID),
 		Immediately: true,
 		Data: map[string]interface{}{
 			"order_id": orderID,
@@ -212,10 +229,10 @@ func (s *NotificationService) SendOrderPaidNotification(ctx context.Context, use
 // SendOrderShippedNotification 发送订单已发货通知（Mock触发）
 func (s *NotificationService) SendOrderShippedNotification(ctx context.Context, userID int64, orderID int64) error {
 	return s.SendNotification(ctx, &model.NotificationRequest{
-		UserID:     userID,
-		Type:       model.NotificationTypeOrderShipped,
-		Title:      "订单已发货",
-		Content:    fmt.Sprintf("您的订单 #%d 已发货，请留意查收", orderID),
+		UserID:      userID,
+		Type:        model.NotificationTypeOrderShipped,
+		Title:       "订单已发货",
+		Content:     fmt.Sprintf("您的订单 #%d 已发货，请留意查收", orderID),
 		Immediately: true,
 		Data: map[string]interface{}{
 			"order_id": orderID,
@@ -226,10 +243,10 @@ func (s *NotificationService) SendOrderShippedNotification(ctx context.Context, 
 // SendOrderCompletedNotification 发送订单已完成通知（Mock触发）
 func (s *NotificationService) SendOrderCompletedNotification(ctx context.Context, userID int64, orderID int64) error {
 	return s.SendNotification(ctx, &model.NotificationRequest{
-		UserID:     userID,
-		Type:       model.NotificationTypeOrderCompleted,
-		Title:      "订单已完成",
-		Content:    fmt.Sprintf("您的订单 #%d 已完成，感谢您的购买！", orderID),
+		UserID:      userID,
+		Type:        model.NotificationTypeOrderCompleted,
+		Title:       "订单已完成",
+		Content:     fmt.Sprintf("您的订单 #%d 已完成，感谢您的购买！", orderID),
 		Immediately: true,
 		Data: map[string]interface{}{
 			"order_id": orderID,
@@ -258,6 +275,47 @@ func (s *NotificationService) GetNotifications(ctx context.Context, userID int64
 // GetUnreadCount 获取未读通知数量
 func (s *NotificationService) GetUnreadCount(ctx context.Context, userID int64) (int64, error) {
 	return s.notificationDAO.GetUnreadCount(ctx, userID)
+}
+
+func notificationTypesForCategory(category string) ([]model.NotificationType, error) {
+	switch category {
+	case "outbid":
+		return []model.NotificationType{model.NotificationTypeBidOutbid}, nil
+	case "pendingPayment", "endingSoon", "all":
+		return nil, nil
+	default:
+		return nil, ErrInvalidCategory
+	}
+}
+
+func (s *NotificationService) GetSummary(ctx context.Context, userID int64) (*model.NotificationSummaryResponse, error) {
+	unreadTotal, err := s.notificationDAO.CountUnreadByTypes(ctx, userID, nil)
+	if err != nil {
+		return nil, errNotificationSummaryUnavailable
+	}
+	outbid, err := s.notificationDAO.CountUnreadByTypes(ctx, userID, []model.NotificationType{model.NotificationTypeBidOutbid})
+	if err != nil {
+		return nil, errNotificationSummaryUnavailable
+	}
+	return &model.NotificationSummaryResponse{
+		UnreadTotal: unreadTotal,
+		Outbid:      outbid,
+		EndingSoon:  0,
+	}, nil
+}
+
+func (s *NotificationService) MarkCategoryAsRead(ctx context.Context, userID int64, category string) error {
+	if category == "pendingPayment" || category == "endingSoon" {
+		return nil
+	}
+	if category == "all" {
+		return s.MarkAllAsRead(ctx, userID)
+	}
+	types, err := notificationTypesForCategory(category)
+	if err != nil {
+		return err
+	}
+	return s.notificationDAO.MarkUnreadByTypesAsRead(ctx, userID, types)
 }
 
 // MarkAsRead 标记通知为已读

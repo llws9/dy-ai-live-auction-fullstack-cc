@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Profile from '../Index';
 import { orderApi, userApi } from '../../../services/api';
+import { notificationApi } from '../../../services/notification';
 
 const mockNavigate = jest.fn();
 const mockLogout = jest.fn();
@@ -24,6 +25,12 @@ jest.mock('../../../services/api', () => ({
   },
 }));
 
+jest.mock('../../../services/notification', () => ({
+  notificationApi: {
+    getTouchpointSummary: jest.fn(),
+  },
+}));
+
 jest.mock('../../../store/authContext', () => ({
   useAuth: () => ({
     isAuthenticated: true,
@@ -36,6 +43,7 @@ jest.mock('../../../store/authContext', () => ({
 
 const mockedUserApi = userApi as jest.Mocked<typeof userApi>;
 const mockedOrderApi = orderApi as jest.Mocked<typeof orderApi>;
+const mockedNotificationApi = notificationApi as jest.Mocked<typeof notificationApi>;
 
 describe('Profile migration', () => {
   beforeEach(() => {
@@ -70,6 +78,13 @@ describe('Profile migration', () => {
         created_at: '2026-05-29T12:00:00Z',
       },
     ]);
+    mockedNotificationApi.getTouchpointSummary.mockResolvedValue({
+      unreadTotal: 7,
+      pendingPayment: 2,
+      wonNotPaid: 1,
+      outbid: 3,
+      endingSoon: 1,
+    });
   });
 
   it('loads profile, balance and order entry from service wrappers', async () => {
@@ -99,7 +114,8 @@ describe('Profile migration', () => {
 
     expect(await screen.findByText('林见山')).toBeInTheDocument();
 
-    expect(screen.getByLabelText('1 条待处理提醒')).toHaveTextContent('1');
+    expect(await screen.findByLabelText('2 条待处理提醒')).toHaveTextContent('2');
+    expect(mockedNotificationApi.getTouchpointSummary).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('link', { name: /我的竞拍/ })).toHaveAttribute('href', '/history');
     expect(screen.getByRole('link', { name: /我的收藏/ })).toHaveAttribute('href', '/following');
     expect(screen.getByRole('link', { name: /消息通知/ })).toHaveAttribute('href', '/notifications');

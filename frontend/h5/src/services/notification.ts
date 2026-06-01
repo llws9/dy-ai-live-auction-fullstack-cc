@@ -33,6 +33,26 @@ export interface HotPullResponse {
   has_more: boolean;
 }
 
+export interface TouchpointSummary {
+  unreadTotal: number;
+  pendingPayment: number;
+  wonNotPaid: number;
+  outbid: number;
+  endingSoon: number;
+}
+
+export interface PendingLiveReminderResponse {
+  hasReminder: boolean;
+  stream: {
+    id: string | number;
+    name: string;
+    avatarUrl: string;
+    statusText?: string;
+    liveRoomId?: string | number;
+    startedAt?: number;
+  } | null;
+}
+
 // 通知 API
 export const notificationApi = {
   // 获取通知列表
@@ -58,5 +78,17 @@ export const notificationApi = {
   // 热拉通知 - 用户切换前台或登录时主动拉取
   hotPull: (): Promise<HotPullResponse> => {
     return post<HotPullResponse>('/notifications/hot-pull');
+  },
+
+  getTouchpointSummary: (): Promise<TouchpointSummary> => {
+    return get<TouchpointSummary>('/notifications/summary');
+  },
+
+  markCategoryAsRead: (category: 'pendingPayment' | 'outbid' | 'endingSoon' | 'all'): Promise<void> => {
+    return post<void>('/notifications/read-category', { category });
+  },
+
+  getPendingLiveReminder: (): Promise<PendingLiveReminderResponse> => {
+    return get<PendingLiveReminderResponse>('/live/pending-reminder');
   },
 };

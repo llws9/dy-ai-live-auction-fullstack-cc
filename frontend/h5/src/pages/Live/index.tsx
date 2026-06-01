@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '@/services/api';
 import WebSocketService from '@/services/websocket';
 import { useAuth } from '@/store/authContext';
 import { useToast } from '../../components/Toast';
-import { IS_DEV } from '@/utils/env';
 import styles from './Live.module.css';
 
 interface Auction {
@@ -94,8 +93,41 @@ const getStatusText = (status?: number) => {
   return '即将开始';
 };
 
+function toastPayloadFromNotification(notification: any) {
+  switch (notification.type) {
+    case 'bid_outbid':
+      return {
+        type: 'danger' as const,
+        title: notification.title || '您已被超价',
+        message: notification.content || '当前最高价已更新',
+        actionText: '重新出价',
+      };
+    case 'auction_won':
+      return {
+        type: 'success' as const,
+        title: notification.title || '恭喜中标',
+        message: notification.content || '请尽快完成支付',
+        actionText: '去支付',
+      };
+    case 'auction_starting':
+      return {
+        type: 'warning' as const,
+        title: notification.title || '截拍预警',
+        message: notification.content || '拍品即将截拍',
+      };
+    default:
+      return null;
+  }
+}
+
+function auctionResultPathFromNotification(notification: any, fallbackAuctionId: number) {
+  const auctionID = notification?.data?.auction_id ?? fallbackAuctionId;
+  return auctionID ? `/result?id=${auctionID}` : '/result';
+}
+
 const LiveRoomPage: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { isAuthenticated, token } = useAuth();
   const auctionId = Number(searchParams.get('auction_id') || searchParams.get('id') || 0);
   const queryLiveStreamId = Number(searchParams.get('id') || 0);
@@ -241,6 +273,7 @@ const LiveRoomPage: React.FC = () => {
     if (!auctionId) return;
 
     const ws = new WebSocketService(auctionId, token ?? undefined);
+    const shownNotificationIds = new Set<number | string>();
     ws.on('rank_update', (data) => {
       setRanking(normalizeRanking(extractList(data)));
     });
@@ -269,6 +302,27 @@ const LiveRoomPage: React.FC = () => {
     ws.on('auction_ended', (data) => {
       setAuction((previous) => previous ? { ...previous, status: 3, current_price: data?.final_price ?? previous.current_price } : previous);
     });
+    const unsubscribeNotification = ws.onNotification((notification) => {
+      const id = notification.id;
+      if (id && shownNotificationIds.has(id)) {
+        return;
+      }
+      if (id) {
+        shownNotificationIds.add(id);
+      }
+
+      const payload = toastPayloadFromNotification(notification);
+      if (!payload) {
+        return;
+      }
+
+      showGlobalToast({
+        ...payload,
+        onAction: notification.type === 'auction_won'
+          ? () => navigate(auctionResultPathFromNotification(notification, auctionId))
+          : () => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }),
+      });
+    });
 
     ws.connect()
       .then(() => {
@@ -281,10 +335,11 @@ const LiveRoomPage: React.FC = () => {
       });
 
     return () => {
+      unsubscribeNotification();
       ws.disconnect();
       setConnected(false);
     };
-  }, [auctionId, normalizeRanking, token]);
+  }, [auctionId, normalizeRanking, token, showGlobalToast, navigate]);
 
   const handleBid = async () => {
     if (!isAuthenticated) {
@@ -516,54 +571,6 @@ const LiveRoomPage: React.FC = () => {
           <p>聊天协议尚未开放，当前仅保留直播间互动入口。</p>
         </section>
       </div>
-
-      {IS_DEV && (
-        <div className={styles.toastDemoPanel} aria-label="触达 Toast 测试">
-          <button
-            type="button"
-            onClick={() =>
-              showGlobalToast({
-                type: 'warning',
-                title: '截拍预警',
-                message: '当前拍品即将截拍，请及时确认出价',
-                duration: 3000,
-              })
-            }
-          >
-            截拍预警
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              showGlobalToast({
-                type: 'danger',
-                title: '您已被超价',
-                message: '当前最高价已更新，可立即重新出价',
-                actionText: '重新出价',
-                onAction: () => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }),
-                duration: 3000,
-              })
-            }
-          >
-            被超价
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              showGlobalToast({
-                type: 'success',
-                title: '恭喜中标',
-                message: '您已成功拍下当前拍品，请尽快支付',
-                actionText: '去支付',
-                onAction: () => window.location.assign('/result'),
-                duration: 3000,
-              })
-            }
-          >
-            中标结果
-          </button>
-        </div>
-      )}
 
       {toast && <div className={styles.toast} role="status">{toast}</div>}
     </section>

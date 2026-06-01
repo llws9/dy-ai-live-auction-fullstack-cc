@@ -91,6 +91,16 @@ type UnreadCountResponse struct {
 	Count int64 `json:"count"`
 }
 
+type NotificationSummaryResponse struct {
+	UnreadTotal int64 `json:"unreadTotal"`
+	Outbid      int64 `json:"outbid"`
+	EndingSoon  int64 `json:"endingSoon"`
+}
+
+type MarkCategoryReadRequest struct {
+	Category string `json:"category"`
+}
+
 // OrderEvent 订单事件（二期实现）
 type OrderEvent struct {
 	OrderID   int64

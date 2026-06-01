@@ -2,10 +2,13 @@ package handler
 
 import (
 	"context"
+	"errors"
+	"log"
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
 
+	"auction-service/model"
 	"auction-service/service"
 )
 
@@ -19,6 +22,11 @@ func NewNotificationHandler(notificationService *service.NotificationService) *N
 	return &NotificationHandler{
 		notificationService: notificationService,
 	}
+}
+
+func writeNotificationInternalError(c *app.RequestContext, operation string, err error, userID int64) {
+	log.Printf("%s failed: userID=%d err=%v", operation, userID, err)
+	c.JSON(500, map[string]interface{}{"code": 500, "message": operation})
 }
 
 // List 获取通知列表
@@ -54,10 +62,7 @@ func (h *NotificationHandler) List(ctx context.Context, c *app.RequestContext) {
 	// 获取通知列表
 	result, err := h.notificationService.GetNotifications(ctx, userID, page, pageSize, unreadOnly)
 	if err != nil {
-		c.JSON(500, map[string]interface{}{
-			"code":    500,
-			"message": "获取通知列表失败: " + err.Error(),
-		})
+		writeNotificationInternalError(c, "获取通知列表失败", err, userID)
 		return
 	}
 
@@ -89,10 +94,7 @@ func (h *NotificationHandler) GetUnreadCount(ctx context.Context, c *app.Request
 	// 获取未读数量
 	count, err := h.notificationService.GetUnreadCount(ctx, userID)
 	if err != nil {
-		c.JSON(500, map[string]interface{}{
-			"code":    500,
-			"message": "获取未读数量失败: " + err.Error(),
-		})
+		writeNotificationInternalError(c, "获取未读数量失败", err, userID)
 		return
 	}
 
@@ -102,6 +104,54 @@ func (h *NotificationHandler) GetUnreadCount(ctx context.Context, c *app.Request
 		"data": map[string]interface{}{
 			"count": count,
 		},
+	})
+}
+
+func (h *NotificationHandler) GetSummary(ctx context.Context, c *app.RequestContext) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, map[string]interface{}{"code": 401, "message": "未认证，请先登录"})
+		return
+	}
+	userID := userIDInterface.(int64)
+
+	summary, err := h.notificationService.GetSummary(ctx, userID)
+	if err != nil {
+		writeNotificationInternalError(c, "获取通知汇总失败", err, userID)
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{"code": 0, "message": "success", "data": summary})
+}
+
+func (h *NotificationHandler) MarkCategoryAsRead(ctx context.Context, c *app.RequestContext) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, map[string]interface{}{"code": 401, "message": "未认证，请先登录"})
+		return
+	}
+	userID := userIDInterface.(int64)
+
+	var req model.MarkCategoryReadRequest
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "请求参数错误"})
+		return
+	}
+
+	if err := h.notificationService.MarkCategoryAsRead(ctx, userID, req.Category); err != nil {
+		if errors.Is(err, service.ErrInvalidCategory) {
+			c.JSON(400, map[string]interface{}{"code": 400, "message": "不支持的通知类别"})
+			return
+		}
+		log.Printf("MarkCategoryAsRead failed: userID=%d category=%s err=%v", userID, req.Category, err)
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "标记已读失败"})
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{
+		"code":    0,
+		"message": "success",
+		"data":    map[string]interface{}{"success": true},
 	})
 }
 
@@ -142,10 +192,7 @@ func (h *NotificationHandler) MarkAsRead(ctx context.Context, c *app.RequestCont
 
 	// 标记已读
 	if err := h.notificationService.MarkAsRead(ctx, id, userID); err != nil {
-		c.JSON(500, map[string]interface{}{
-			"code":    500,
-			"message": "标记已读失败: " + err.Error(),
-		})
+		writeNotificationInternalError(c, "标记已读失败", err, userID)
 		return
 	}
 
@@ -179,10 +226,7 @@ func (h *NotificationHandler) MarkAllAsRead(ctx context.Context, c *app.RequestC
 
 	// 标记所有已读
 	if err := h.notificationService.MarkAllAsRead(ctx, userID); err != nil {
-		c.JSON(500, map[string]interface{}{
-			"code":    500,
-			"message": "标记已读失败: " + err.Error(),
-		})
+		writeNotificationInternalError(c, "标记已读失败", err, userID)
 		return
 	}
 
@@ -217,10 +261,7 @@ func (h *NotificationHandler) HotPullNotifications(ctx context.Context, c *app.R
 	// 热拉通知
 	notifications, err := h.notificationService.HotPullNotifications(ctx, userID)
 	if err != nil {
-		c.JSON(500, map[string]interface{}{
-			"code":    500,
-			"message": "热拉通知失败: " + err.Error(),
-		})
+		writeNotificationInternalError(c, "热拉通知失败", err, userID)
 		return
 	}
 

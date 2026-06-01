@@ -2,10 +2,13 @@ package service
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
+	"auction-service/dao"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestLiveStreamStatsService_NewService 测试服务创建
@@ -140,11 +143,136 @@ func TestLiveStreamStatsService_StartLive(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "live", stats.Status)
 	assert.Nil(t, stats.ScheduledStart)
+	assert.NotNil(t, stats.StartedAt)
+	assert.WithinDuration(t, time.Now(), *stats.StartedAt, 2*time.Second)
 
 	// 验证在live_now集合中
 	liveNowList, err := service.GetLiveNowHotStreams(ctx)
 	assert.NoError(t, err)
 	assert.Contains(t, liveNowList, int64(3001))
+}
+
+func TestLiveStreamStatsService_StartLiveIsIdempotent(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	_, err := dao.InitRedis("localhost:6379", "")
+	require.NoError(t, err)
+	service := NewLiveStreamStatsService()
+	if service.redis == nil {
+		t.Skip("redis client not initialized")
+	}
+	ctx := context.Background()
+
+	liveStreamID := time.Now().UnixNano()%1_000_000_000 + 2_000_000_000
+	err = service.SetScheduledStartTime(ctx, liveStreamID, time.Now().Add(30*time.Minute), 300)
+	assert.NoError(t, err)
+
+	err = service.StartLive(ctx, liveStreamID)
+	assert.NoError(t, err)
+	first, err := service.GetStats(ctx, liveStreamID)
+	assert.NoError(t, err)
+	assert.NotNil(t, first.StartedAt)
+
+	time.Sleep(10 * time.Millisecond)
+	err = service.StartLive(ctx, liveStreamID)
+	assert.NoError(t, err)
+	second, err := service.GetStats(ctx, liveStreamID)
+	assert.NoError(t, err)
+	assert.NotNil(t, second.StartedAt)
+	assert.Equal(t, first.StartedAt.UnixNano(), second.StartedAt.UnixNano())
+}
+
+func TestLiveStreamStatsService_StartLiveConcurrentCallsShareStartedAt(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	_, err := dao.InitRedis("localhost:6379", "")
+	require.NoError(t, err)
+	service := NewLiveStreamStatsService()
+	if service.redis == nil {
+		t.Skip("redis client not initialized")
+	}
+	ctx := context.Background()
+
+	liveStreamID := time.Now().UnixNano()%1_000_000_000 + 3_000_000_000
+	err = service.SetScheduledStartTime(ctx, liveStreamID, time.Now().Add(30*time.Minute), 300)
+	require.NoError(t, err)
+
+	const workers = 80
+	startedAtValues := make(chan int64, workers)
+	errs := make(chan error, workers)
+	var ready sync.WaitGroup
+	var done sync.WaitGroup
+	start := make(chan struct{})
+
+	for i := 0; i < workers; i++ {
+		ready.Add(1)
+		done.Add(1)
+		go func() {
+			defer done.Done()
+			ready.Done()
+			<-start
+			if err := service.StartLive(ctx, liveStreamID); err != nil {
+				errs <- err
+				return
+			}
+			stats, err := service.GetStats(ctx, liveStreamID)
+			if err != nil {
+				errs <- err
+				return
+			}
+			if stats == nil || stats.StartedAt == nil {
+				errs <- assert.AnError
+				return
+			}
+			startedAtValues <- stats.StartedAt.UnixNano()
+		}()
+	}
+
+	ready.Wait()
+	close(start)
+	done.Wait()
+	close(errs)
+	close(startedAtValues)
+
+	for err := range errs {
+		require.NoError(t, err)
+	}
+	uniqueStartedAt := map[int64]struct{}{}
+	for value := range startedAtValues {
+		uniqueStartedAt[value] = struct{}{}
+	}
+	require.Len(t, uniqueStartedAt, 1)
+}
+
+func TestLiveStreamStatsService_StartLiveCreatesMinimalStatsWhenMissing(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	_, err := dao.InitRedis("localhost:6379", "")
+	require.NoError(t, err)
+	service := NewLiveStreamStatsService()
+	if service.redis == nil {
+		t.Skip("redis client not initialized")
+	}
+	ctx := context.Background()
+
+	liveStreamID := time.Now().UnixNano()%1_000_000_000 + 4_000_000_000
+	err = service.StartLive(ctx, liveStreamID)
+	require.NoError(t, err)
+
+	stats, err := service.GetStats(ctx, liveStreamID)
+	require.NoError(t, err)
+	require.NotNil(t, stats)
+	require.Equal(t, liveStreamID, stats.LiveStreamID)
+	require.Equal(t, "live", stats.Status)
+	require.NotNil(t, stats.StartedAt)
+	require.Nil(t, stats.ScheduledStart)
+	require.False(t, stats.IsHot)
 }
 
 // TestLiveStreamStatsService_EndLive 测试结束直播

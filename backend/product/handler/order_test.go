@@ -3,11 +3,18 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"log"
+	"os"
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 
+	"product-service/dao"
+	"product-service/model"
 	"product-service/service"
 )
 
@@ -73,6 +80,82 @@ func TestOrderHandler_GetUserHistory_AuthContract(t *testing.T) {
 	})
 }
 
+func TestOrderHandler_Summary_XUserIDContract(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	assert.NoError(t, err)
+	assert.NoError(t, db.AutoMigrate(&model.Order{}))
+
+	h := NewOrderHandler(service.NewOrderService(dao.NewOrderDAO(db), nil))
+
+	t.Run("missing X-User-ID returns 401", func(t *testing.T) {
+		c := app.NewContext(0)
+		c.Request.SetMethod("GET")
+		c.Request.SetRequestURI("/api/v1/orders/summary")
+
+		h.Summary(context.Background(), c)
+
+		assert.Equal(t, 401, c.Response.StatusCode())
+		var body map[string]interface{}
+		assert.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+		assert.EqualValues(t, 401, body["code"])
+	})
+
+	t.Run("non-numeric X-User-ID returns 401", func(t *testing.T) {
+		c := app.NewContext(0)
+		c.Request.SetMethod("GET")
+		c.Request.SetRequestURI("/api/v1/orders/summary")
+		c.Request.Header.Set("X-User-ID", "not-a-number")
+
+		h.Summary(context.Background(), c)
+
+		assert.Equal(t, 401, c.Response.StatusCode())
+	})
+
+	t.Run("non-positive X-User-ID returns 401", func(t *testing.T) {
+		c := app.NewContext(0)
+		c.Request.SetMethod("GET")
+		c.Request.SetRequestURI("/api/v1/orders/summary")
+		c.Request.Header.Set("X-User-ID", "0")
+
+		h.Summary(context.Background(), c)
+
+		assert.Equal(t, 401, c.Response.StatusCode())
+	})
+
+	t.Run("valid X-User-ID returns header user's summary and ignores query user_id", func(t *testing.T) {
+		assert.NoError(t, db.Exec("DELETE FROM orders").Error)
+		ctx := context.Background()
+		svc := service.NewOrderService(dao.NewOrderDAO(db), nil)
+		_, err := svc.CreateOrder(ctx, 1, 1, 123, 100.0)
+		assert.NoError(t, err)
+		_, err = svc.CreateOrder(ctx, 2, 1, 999, 200.0)
+		assert.NoError(t, err)
+		_, err = svc.CreateOrder(ctx, 3, 1, 999, 300.0)
+		assert.NoError(t, err)
+
+		c := app.NewContext(0)
+		c.Request.SetMethod("GET")
+		// query 中伪造不同 user_id：Summary 必须忽略 query，只信 Gateway 透传的 X-User-ID。
+		c.Request.SetRequestURI("/api/v1/orders/summary?user_id=999")
+		c.Request.Header.Set("X-User-ID", "123")
+
+		h.Summary(context.Background(), c)
+
+		assert.Equal(t, 200, c.Response.StatusCode())
+		var body struct {
+			Code int `json:"code"`
+			Data struct {
+				PendingPayment int64 `json:"pendingPayment"`
+				WonNotPaid     int64 `json:"wonNotPaid"`
+			} `json:"data"`
+		}
+		assert.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+		assert.Equal(t, 0, body.Code)
+		assert.Equal(t, int64(1), body.Data.PendingPayment)
+		assert.Equal(t, int64(1), body.Data.WonNotPaid)
+	})
+}
+
 // TestOrderHandler_List_AuthContract 验证 GET /orders 的安全契约（与 GetUserHistory 对齐）：
 //   - 未携带 X-User-ID → 401；
 //   - X-User-ID 非法 → 401；
@@ -111,4 +194,56 @@ func TestOrderHandler_List_AuthContract(t *testing.T) {
 
 		assert.Equal(t, 200, c.Response.StatusCode())
 	})
+}
+
+type stubSummaryGetter struct {
+	err error
+}
+
+func (s *stubSummaryGetter) GetSummary(_ context.Context, _ int64) (*model.OrderSummaryResponse, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	return &model.OrderSummaryResponse{PendingPayment: 0, WonNotPaid: 0}, nil
+}
+
+func TestOrderHandler_Summary_ErrorNoLeak(t *testing.T) {
+	internalErr := errors.New("db connection refused: password=secret")
+	h := &OrderHandler{
+		orderService:   service.NewOrderService(nil, nil),
+		summaryService: &stubSummaryGetter{err: internalErr},
+	}
+
+	writer := &testLogWriter{}
+	log.SetOutput(writer)
+	defer log.SetOutput(os.Stderr)
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/orders/summary")
+	c.Request.Header.Set("X-User-ID", "1")
+
+	h.Summary(context.Background(), c)
+
+	assert.Equal(t, 500, c.Response.StatusCode())
+	var body map[string]interface{}
+	assert.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.EqualValues(t, 500, body["code"])
+	assert.Equal(t, "获取订单汇总失败", body["message"])
+	assert.NotContains(t, body["message"], "secret")
+	assert.NotContains(t, body["message"], "db connection")
+	assert.Contains(t, writer.String(), "db connection refused")
+}
+
+type testLogWriter struct {
+	data []byte
+}
+
+func (w *testLogWriter) Write(p []byte) (n int, err error) {
+	w.data = append(w.data, p...)
+	return len(p), nil
+}
+
+func (w *testLogWriter) String() string {
+	return string(w.data)
 }

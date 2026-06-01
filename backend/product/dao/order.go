@@ -56,6 +56,15 @@ func (d *OrderDAO) List(ctx context.Context, userID *int64, page, pageSize int) 
 	return orders, total, nil
 }
 
+// CountByWinnerAndStatus 统计指定用户指定状态的订单数量
+func (d *OrderDAO) CountByWinnerAndStatus(ctx context.Context, winnerID int64, status model.OrderStatus) (int64, error) {
+	var count int64
+	err := d.db.WithContext(ctx).Model(&model.Order{}).
+		Where("winner_id = ? AND status = ?", winnerID, status).
+		Count(&count).Error
+	return count, err
+}
+
 // UpdateStatus 更新订单状态
 func (d *OrderDAO) UpdateStatus(ctx context.Context, id int64, status model.OrderStatus) error {
 	return d.db.WithContext(ctx).

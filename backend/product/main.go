@@ -126,6 +126,7 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 
 	// 订单相关路由
 	v1.GET("/orders", orderHandler.List)
+	v1.GET("/orders/summary", orderHandler.Summary)
 	v1.GET("/orders/:id", orderHandler.Get)
 	v1.PUT("/orders/:id", orderHandler.Update)
 	v1.PUT("/orders/:id/pay", orderHandler.Pay)

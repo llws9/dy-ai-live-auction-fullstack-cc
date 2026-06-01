@@ -15,8 +15,8 @@ import (
 
 // RouterConfig 路由配置
 type RouterConfig struct {
-	Config    *config.Config
-	GBClient  *growthbook.Client
+	Config   *config.Config
+	GBClient *growthbook.Client
 }
 
 // RegisterRoutes 注册所有路由
@@ -25,6 +25,8 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	productProxy := handler.NewProxyHandler(cfg.Services.ProductURL)
 	auctionProxy := handler.NewProxyHandler(cfg.Services.AuctionURL)
 	testProxy := handler.NewProxyHandler(cfg.Services.TestURL)
+	touchpointHandler := handler.NewTouchpointHandler(cfg.Services.AuctionURL, cfg.Services.ProductURL)
+	liveStartHandler := handler.NewLiveStartHandler(cfg.Services.AuctionURL, cfg.Services.InternalToken)
 
 	// 创建实验处理器
 	experimentHandler := handler.NewExperimentHandler(gbClient)
@@ -49,7 +51,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	// ========== 需要JWT认证的路由 ==========
 	authGroup := v1.Group("")
 	authGroup.Use(middleware.JWTAuth(cfg.JWT.Secret))
-	authGroup.Use(middleware.ExperimentMiddleware(gbClient))  // 实验中间件
+	authGroup.Use(middleware.ExperimentMiddleware(gbClient)) // 实验中间件
 
 	// 用户信息
 	authGroup.GET("/users/me", auctionProxy.Forward)
@@ -91,6 +93,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.GET("/live-streams/:id/follow-status", auctionProxy.Forward)
 	authGroup.GET("/user/followed-live-streams", auctionProxy.Forward)
 	authGroup.PUT("/live-streams/:id/notification", auctionProxy.Forward)
+	authGroup.POST("/live-streams/:id/start", middleware.RequireAdmin(), liveStartHandler.StartLive)
 	v1.GET("/live-streams/:id/followers/stats", auctionProxy.Forward)
 	v1.GET("/live-streams/:id/followers/count", auctionProxy.Forward)
 
@@ -111,11 +114,12 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	})
 
 	// ========== 订单服务路由 ==========
+	authGroup.GET("/orders", productProxy.Forward)
 	v1.GET("/orders/:id", productProxy.Forward)
 	v1.POST("/orders/:id/pay", productProxy.Forward)
-	v1.PUT("/orders/:id/ship", productProxy.Forward)          // T007: 订单发货
-	// 订单列表 & 历史均需 JWT 认证；下游通过 X-User-ID header 识别本人，禁止接受 query user_id。
-	authGroup.GET("/orders", productProxy.Forward)
+	v1.PUT("/orders/:id/ship", productProxy.Forward) // T007: 订单发货
+	// T008: 用户订单历史 — JWT 化（spec C / F-C3, M1 P0 安全修复）
+	// 仅认证用户可读；下游通过 X-User-ID header 透传识别本人，禁止接受 query user_id。
 	authGroup.GET("/orders/history", productProxy.Forward)
 
 	// ========== 直播间路由 ==========
@@ -127,10 +131,13 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 
 	// ========== 通知服务路由 ==========
 	authGroup.GET("/notifications", auctionProxy.Forward)
+	authGroup.GET("/notifications/summary", touchpointHandler.GetNotificationSummary)
 	authGroup.GET("/notifications/unread-count", auctionProxy.Forward)
 	authGroup.PUT("/notifications/:id/read", auctionProxy.Forward)
 	authGroup.PUT("/notifications/read-all", auctionProxy.Forward)
+	authGroup.POST("/notifications/read-category", auctionProxy.Forward)
 	authGroup.POST("/notifications/hot-pull", auctionProxy.Forward)
+	authGroup.GET("/live/pending-reminder", liveStartHandler.GetPendingReminder)
 
 	// ========== 点天灯订阅路由 ==========
 	authGroup.POST("/sky-lamp/subscriptions", auctionProxy.Forward)
@@ -145,15 +152,15 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.GET("/statistics/users", middleware.RequireAdmin(), productProxy.Forward)
 
 	// ========== 类别服务路由 ==========
-	v1.GET("/categories", productProxy.Forward)                                                // T018: 类别列表（公开）
-	authGroup.POST("/categories", middleware.RequireAdmin(), productProxy.Forward)            // T019: 类别创建（管理员）
-	authGroup.PUT("/categories/:id", middleware.RequireAdmin(), productProxy.Forward)         // T020: 类别更新（管理员）
-	authGroup.DELETE("/categories/:id", middleware.RequireAdmin(), productProxy.Forward)      // T021: 类别删除（管理员）
+	v1.GET("/categories", productProxy.Forward)                                          // T018: 类别列表（公开）
+	authGroup.POST("/categories", middleware.RequireAdmin(), productProxy.Forward)       // T019: 类别创建（管理员）
+	authGroup.PUT("/categories/:id", middleware.RequireAdmin(), productProxy.Forward)    // T020: 类别更新（管理员）
+	authGroup.DELETE("/categories/:id", middleware.RequireAdmin(), productProxy.Forward) // T021: 类别删除（管理员）
 
 	// ========== A/B 测试实验路由 ==========
-	authGroup.GET("/experiments/features", experimentHandler.GetFeatures)       // 获取用户特性开关
-	authGroup.POST("/experiments/viewed", experimentHandler.TrackViewed)        // 记录实验查看
-	authGroup.POST("/experiments/completed", experimentHandler.TrackCompleted)  // 记录实验完成
+	authGroup.GET("/experiments/features", experimentHandler.GetFeatures)      // 获取用户特性开关
+	authGroup.POST("/experiments/viewed", experimentHandler.TrackViewed)       // 记录实验查看
+	authGroup.POST("/experiments/completed", experimentHandler.TrackCompleted) // 记录实验完成
 
 	// ========== 测试平台路由（test-service） ==========
 	// HTTP 透传 /api/test/* → test-service:18090

@@ -2,22 +2,30 @@ package handler
 
 import (
 	"context"
+	"log"
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
 
+	"product-service/model"
 	"product-service/service"
 )
 
+type orderSummaryGetter interface {
+	GetSummary(ctx context.Context, userID int64) (*model.OrderSummaryResponse, error)
+}
+
 // OrderHandler 订单 Handler
 type OrderHandler struct {
-	orderService *service.OrderService
+	orderService   *service.OrderService
+	summaryService orderSummaryGetter
 }
 
 // NewOrderHandler 创建订单 Handler
 func NewOrderHandler(orderService *service.OrderService) *OrderHandler {
 	return &OrderHandler{
-		orderService: orderService,
+		orderService:   orderService,
+		summaryService: orderService,
 	}
 }
 
@@ -99,6 +107,25 @@ func (h *OrderHandler) Get(ctx context.Context, c *app.RequestContext) {
 	}
 
 	c.JSON(200, order)
+}
+
+// Summary 获取当前登录用户订单触点汇总。
+func (h *OrderHandler) Summary(ctx context.Context, c *app.RequestContext) {
+	userIDStr := string(c.Request.Header.Peek("X-User-ID"))
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil || userID <= 0 {
+		c.JSON(401, map[string]interface{}{"code": 401, "message": "未认证，请先登录"})
+		return
+	}
+
+	summary, err := h.summaryService.GetSummary(ctx, userID)
+	if err != nil {
+		log.Printf("Summary failed: userID=%d err=%v", userID, err)
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "获取订单汇总失败"})
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{"code": 0, "message": "success", "data": summary})
 }
 
 // Pay 支付订单

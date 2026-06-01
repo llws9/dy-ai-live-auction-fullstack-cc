@@ -13,6 +13,42 @@ import (
 
 const HotnessThreshold = 200 // 热门直播间阈值
 
+var startLiveScript = redis.NewScript(`
+local stats_json = redis.call("GET", KEYS[1])
+if not stats_json then
+	local stats = {
+		live_stream_id = tonumber(ARGV[1]),
+		follower_count = 0,
+		is_hot = false,
+		status = "live",
+		started_at = ARGV[2]
+	}
+	redis.call("SET", KEYS[1], cjson.encode(stats), "EX", ARGV[3])
+	return "started"
+end
+
+local stats = cjson.decode(stats_json)
+redis.call("ZREM", KEYS[2], ARGV[1])
+redis.call("ZREM", KEYS[3], ARGV[1])
+
+if stats["status"] == "live" and stats["started_at"] ~= nil and stats["started_at"] ~= cjson.null then
+	if stats["is_hot"] == true then
+		redis.call("SADD", KEYS[4], ARGV[1])
+	end
+	return "already"
+end
+
+stats["status"] = "live"
+stats["started_at"] = ARGV[2]
+stats["scheduled_start"] = nil
+
+redis.call("SET", KEYS[1], cjson.encode(stats), "EX", ARGV[3])
+if stats["is_hot"] == true then
+	redis.call("SADD", KEYS[4], ARGV[1])
+end
+return "started"
+`)
+
 // Note: Redis key constants are defined in dao/redis_live_stream.go
 // We reuse those keys: ColdLiveStreamZSET, HotLiveStreamZSET, HotLiveNowSet, LiveStreamStatsKey
 
@@ -22,6 +58,7 @@ type LiveStreamStats struct {
 	FollowerCount  int        `json:"follower_count"`
 	IsHot          bool       `json:"is_hot"`
 	ScheduledStart *time.Time `json:"scheduled_start,omitempty"`
+	StartedAt      *time.Time `json:"started_at,omitempty"`
 	Status         string     `json:"status"` // "pending", "live", "ended"
 }
 
@@ -159,37 +196,15 @@ func (s *LiveStreamStatsService) SetScheduledStartTime(ctx context.Context, live
 // StartLive 开始直播
 // 从ZSET移除，如果是热门直播间则加入live_now集合
 func (s *LiveStreamStatsService) StartLive(ctx context.Context, liveStreamID int64) error {
-	// 获取当前状态
-	stats, err := s.GetStats(ctx, liveStreamID)
+	_, err := startLiveScript.Run(ctx, s.redis, []string{
+		s.getStatsKey(liveStreamID),
+		dao.ColdLiveStreamZSET,
+		dao.HotLiveStreamZSET,
+		dao.HotLiveNowSet,
+	}, liveStreamID, time.Now().Format(time.RFC3339Nano), int((24 * time.Hour).Seconds())).Text()
 	if err != nil {
-		return fmt.Errorf("获取状态失败: %w", err)
+		return fmt.Errorf("开始直播失败: %w", err)
 	}
-
-	if stats == nil {
-		return fmt.Errorf("直播间状态不存在")
-	}
-
-	// 从冷门和热门ZSET中都尝试移除（确保清理干净）
-	s.redis.ZRem(ctx, dao.ColdLiveStreamZSET, liveStreamID)
-	s.redis.ZRem(ctx, dao.HotLiveStreamZSET, liveStreamID)
-
-	// 如果是热门直播间，加入live_now集合
-	if stats.IsHot {
-		if err := s.redis.SAdd(ctx, dao.HotLiveNowSet, liveStreamID).Err(); err != nil {
-			return fmt.Errorf("加入live_now集合失败: %w", err)
-		}
-	}
-
-	// 更新状态为live
-	stats.Status = "live"
-	stats.ScheduledStart = nil // 清空计划开播时间
-
-	if err := s.saveStats(ctx, stats); err != nil {
-		// 回滚：从live_now移除
-		s.redis.SRem(ctx, dao.HotLiveNowSet, liveStreamID)
-		return fmt.Errorf("保存状态失败: %w", err)
-	}
-
 	return nil
 }
 
@@ -202,6 +217,12 @@ func (s *LiveStreamStatsService) EndLive(ctx context.Context, liveStreamID int64
 	// 从ZSET中移除（如果还存在）
 	s.redis.ZRem(ctx, dao.ColdLiveStreamZSET, liveStreamID)
 	s.redis.ZRem(ctx, dao.HotLiveStreamZSET, liveStreamID)
+
+	if stats, err := s.GetStats(ctx, liveStreamID); err == nil && stats != nil {
+		stats.Status = "ended"
+		stats.StartedAt = nil
+		_ = s.saveStats(ctx, stats)
+	}
 
 	// 删除缓存
 	key := s.getStatsKey(liveStreamID)

@@ -82,6 +82,17 @@ func (d *NotificationDAO) GetUnreadCount(ctx context.Context, userID int64) (int
 	return count, err
 }
 
+func (d *NotificationDAO) CountUnreadByTypes(ctx context.Context, userID int64, types []model.NotificationType) (int64, error) {
+	var count int64
+	query := d.db.WithContext(ctx).Model(&model.Notification{}).
+		Where("user_id = ? AND read_at IS NULL", userID)
+	if len(types) > 0 {
+		query = query.Where("type IN ?", types)
+	}
+	err := query.Count(&count).Error
+	return count, err
+}
+
 // MarkAsRead 标记为已读
 func (d *NotificationDAO) MarkAsRead(ctx context.Context, id int64, userID int64) error {
 	now := time.Now()
@@ -96,6 +107,16 @@ func (d *NotificationDAO) MarkAllAsRead(ctx context.Context, userID int64) error
 	return d.db.WithContext(ctx).Model(&model.Notification{}).
 		Where("user_id = ? AND read_at IS NULL", userID).
 		Update("read_at", now).Error
+}
+
+func (d *NotificationDAO) MarkUnreadByTypesAsRead(ctx context.Context, userID int64, types []model.NotificationType) error {
+	now := time.Now()
+	query := d.db.WithContext(ctx).Model(&model.Notification{}).
+		Where("user_id = ? AND read_at IS NULL", userID)
+	if len(types) > 0 {
+		query = query.Where("type IN ?", types)
+	}
+	return query.Update("read_at", now).Error
 }
 
 // GetUnreadByUserID 获取用户未读通知列表（用于WebSocket推送）
