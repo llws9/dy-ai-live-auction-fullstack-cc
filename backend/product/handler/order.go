@@ -41,20 +41,8 @@ func NewOrderHandler(orderService *service.OrderService) *OrderHandler {
 // @Failure 500 {object} map[string]interface{}
 // @Router /orders [get]
 func (h *OrderHandler) List(ctx context.Context, c *app.RequestContext) {
-	userIDStr := string(c.GetHeader("X-User-ID"))
-	if userIDStr == "" {
-		c.JSON(401, map[string]interface{}{
-			"code":    401,
-			"message": "未认证",
-		})
-		return
-	}
-	userID, err := strconv.ParseInt(userIDStr, 10, 64)
-	if err != nil || userID <= 0 {
-		c.JSON(401, map[string]interface{}{
-			"code":    401,
-			"message": "无效的用户身份",
-		})
+	userID, ok := readHeaderUserID(c)
+	if !ok {
 		return
 	}
 
@@ -87,6 +75,11 @@ func (h *OrderHandler) List(ctx context.Context, c *app.RequestContext) {
 // @Failure 404 {object} map[string]interface{}
 // @Router /orders/{id} [get]
 func (h *OrderHandler) Get(ctx context.Context, c *app.RequestContext) {
+	userID, ok := readHeaderUserID(c)
+	if !ok {
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -97,7 +90,7 @@ func (h *OrderHandler) Get(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	order, err := h.orderService.GetOrder(ctx, id)
+	order, err := h.orderService.GetOrderForUser(ctx, id, userID)
 	if err != nil {
 		c.JSON(404, map[string]interface{}{
 			"code":    404,
@@ -139,6 +132,11 @@ func (h *OrderHandler) Summary(ctx context.Context, c *app.RequestContext) {
 // @Failure 400 {object} map[string]interface{}
 // @Router /orders/{id}/pay [post]
 func (h *OrderHandler) Pay(ctx context.Context, c *app.RequestContext) {
+	userID, ok := readHeaderUserID(c)
+	if !ok {
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -149,7 +147,7 @@ func (h *OrderHandler) Pay(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	order, err := h.orderService.PayOrder(ctx, id)
+	order, err := h.orderService.PayOrderForUser(ctx, id, userID)
 	if err != nil {
 		c.JSON(400, map[string]interface{}{
 			"code":    400,
@@ -172,6 +170,15 @@ func (h *OrderHandler) Pay(ctx context.Context, c *app.RequestContext) {
 // @Failure 400 {object} map[string]interface{}
 // @Router /orders/{id}/ship [post]
 func (h *OrderHandler) Ship(ctx context.Context, c *app.RequestContext) {
+	role := string(c.GetHeader("X-User-Role"))
+	if role != "merchant" && role != "admin" {
+		c.JSON(403, map[string]interface{}{
+			"code":    403,
+			"message": "无权限发货",
+		})
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -258,20 +265,8 @@ func (h *OrderHandler) Update(ctx context.Context, c *app.RequestContext) {
 //     这样调用方无法通过篡改请求参数读取他人订单。
 //   - 缺失 X-User-ID（即未经 Gateway JWT 中间件）时返回 401。
 func (h *OrderHandler) GetUserHistory(ctx context.Context, c *app.RequestContext) {
-	userIDStr := string(c.GetHeader("X-User-ID"))
-	if userIDStr == "" {
-		c.JSON(401, map[string]interface{}{
-			"code":    401,
-			"message": "未认证",
-		})
-		return
-	}
-	userID, err := strconv.ParseInt(userIDStr, 10, 64)
-	if err != nil || userID <= 0 {
-		c.JSON(401, map[string]interface{}{
-			"code":    401,
-			"message": "无效的用户身份",
-		})
+	userID, ok := readHeaderUserID(c)
+	if !ok {
 		return
 	}
 
@@ -293,4 +288,24 @@ func (h *OrderHandler) GetUserHistory(ctx context.Context, c *app.RequestContext
 		"page":      page,
 		"page_size": pageSize,
 	})
+}
+
+func readHeaderUserID(c *app.RequestContext) (int64, bool) {
+	userIDStr := string(c.GetHeader("X-User-ID"))
+	if userIDStr == "" {
+		c.JSON(401, map[string]interface{}{
+			"code":    401,
+			"message": "未认证",
+		})
+		return 0, false
+	}
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil || userID <= 0 {
+		c.JSON(401, map[string]interface{}{
+			"code":    401,
+			"message": "无效的用户身份",
+		})
+		return 0, false
+	}
+	return userID, true
 }

@@ -9,6 +9,8 @@ import (
 	"product-service/dao"
 	"product-service/model"
 	"product-service/pkg/logger"
+
+	"github.com/shopspring/decimal"
 )
 
 // NotificationCallback 通知回调接口（用于Mock触发通知）
@@ -44,7 +46,7 @@ func (s *OrderService) SetNotificationCallback(callback NotificationCallback) {
 }
 
 // CreateOrder 创建订单
-func (s *OrderService) CreateOrder(ctx context.Context, auctionID, productID, winnerID int64, finalPrice float64) (*model.Order, error) {
+func (s *OrderService) CreateOrder(ctx context.Context, auctionID, productID, winnerID int64, finalPrice decimal.Decimal) (*model.Order, error) {
 	order := &model.Order{
 		AuctionID:  auctionID,
 		ProductID:  productID,
@@ -63,6 +65,10 @@ func (s *OrderService) CreateOrder(ctx context.Context, auctionID, productID, wi
 // GetOrder 获取订单详情
 func (s *OrderService) GetOrder(ctx context.Context, id int64) (*model.Order, error) {
 	return s.orderDAO.GetByID(ctx, id)
+}
+
+func (s *OrderService) GetOrderForUser(ctx context.Context, id, userID int64) (*model.Order, error) {
+	return s.orderDAO.GetByIDAndWinnerID(ctx, id, userID)
 }
 
 // ListOrders 获取订单列表
@@ -127,6 +133,25 @@ func (s *OrderService) PayOrder(ctx context.Context, id int64) (*model.Order, er
 		}, nil)
 
 	return s.orderDAO.GetByID(ctx, id)
+}
+
+func (s *OrderService) PayOrderForUser(ctx context.Context, id, userID int64) (*model.Order, error) {
+	order, err := s.GetOrderForUser(ctx, id, userID)
+	if err != nil {
+		return nil, err
+	}
+	if order.Status != model.OrderStatusPending {
+		return nil, errors.New("订单状态不允许支付")
+	}
+	if err := s.orderDAO.UpdateStatus(ctx, id, model.OrderStatusPaid); err != nil {
+		return nil, err
+	}
+	if s.notificationCallback != nil {
+		go func() {
+			_ = s.notificationCallback.OnOrderPaid(ctx, order.WinnerID, id)
+		}()
+	}
+	return s.GetOrderForUser(ctx, id, userID)
 }
 
 // ShipOrder 发货（模拟）

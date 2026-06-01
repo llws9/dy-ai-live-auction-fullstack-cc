@@ -8,6 +8,8 @@ import (
 
 	"auction-service/dao"
 	"auction-service/model"
+
+	"github.com/shopspring/decimal"
 )
 
 // AuctionService 竞拍服务
@@ -56,7 +58,7 @@ func (s *AuctionService) CreateAuction(ctx context.Context, req *CreateAuctionRe
 	auction := &model.Auction{
 		ProductID:    req.ProductID,
 		Status:       model.AuctionStatusPending,
-		CurrentPrice: 0,
+		CurrentPrice: decimal.Zero,
 		StartTime:    req.StartTime,
 		EndTime:      req.EndTime,
 		DelayUsed:    0,
@@ -165,10 +167,10 @@ func (s *AuctionService) sendAuctionResultNotifications(ctx context.Context, auc
 			UserID:  winnerID,
 			Type:    model.NotificationTypeAuctionWon,
 			Title:   "竞拍中标",
-			Content: fmt.Sprintf("恭喜！您以 %.2f 元中标了竞拍", finalPrice),
+			Content: fmt.Sprintf("恭喜！您以 %s 元中标了竞拍", finalPrice.StringFixed(2)),
 			Data: map[string]interface{}{
 				"auction_id":  auction.ID,
-				"final_price": finalPrice,
+				"final_price": finalPrice.StringFixed(2),
 			},
 		})
 	}()
@@ -183,10 +185,10 @@ func (s *AuctionService) sendAuctionResultNotifications(ctx context.Context, auc
 			UserID:  bid.UserID,
 			Type:    model.NotificationTypeAuctionLost,
 			Title:   "竞拍未中标",
-			Content: fmt.Sprintf("很遗憾，您未能中标。最终成交价为 %.2f 元", finalPrice),
+			Content: fmt.Sprintf("很遗憾，您未能中标。最终成交价为 %s 元", finalPrice.StringFixed(2)),
 			Data: map[string]interface{}{
 				"auction_id":   auction.ID,
-				"winner_price": finalPrice,
+				"winner_price": finalPrice.StringFixed(2),
 			},
 		})
 	}

@@ -12,6 +12,8 @@ import (
 	"auction-service/dao"
 	"auction-service/model"
 	"auction-service/pkg/metrics"
+
+	"github.com/shopspring/decimal"
 )
 
 // SkyLampService 点天灯服务
@@ -85,16 +87,16 @@ func (s *SkyLampService) StartSubscription(ctx context.Context, userID, auctionI
 	}
 
 	initialPrice := auction.CurrentPrice
-	initialBidAmount := initialPrice + rule.Increment
-	if rule.CapPrice != nil && *rule.CapPrice > 0 && initialBidAmount > *rule.CapPrice {
+	initialBidAmount := initialPrice.Add(rule.Increment)
+	if rule.CapPrice != nil && rule.CapPrice.GreaterThan(decimal.Zero) && initialBidAmount.GreaterThan(*rule.CapPrice) {
 		return nil, errors.New("当前竞拍已达到封顶价，无法开启点天灯")
 	}
 
-	maxPriceLimit := initialPrice + float64(s.cfg.MaxPriceOffset)
-	if maxPriceLimit < initialBidAmount {
+	maxPriceLimit := initialPrice.Add(decimal.NewFromInt(int64(s.cfg.MaxPriceOffset)))
+	if maxPriceLimit.LessThan(initialBidAmount) {
 		maxPriceLimit = initialBidAmount
 	}
-	if rule.CapPrice != nil && *rule.CapPrice > 0 && maxPriceLimit > *rule.CapPrice {
+	if rule.CapPrice != nil && rule.CapPrice.GreaterThan(decimal.Zero) && maxPriceLimit.GreaterThan(*rule.CapPrice) {
 		maxPriceLimit = *rule.CapPrice
 	}
 
@@ -103,9 +105,9 @@ func (s *SkyLampService) StartSubscription(ctx context.Context, userID, auctionI
 		AuctionID:           auctionID,
 		UserID:              userID,
 		Status:              model.SkyLampStatusActive,
-		InitialPrice:        initialPrice,
-		InitialBidAmount:    initialBidAmount,
-		MaxPriceLimit:       maxPriceLimit,
+		InitialPrice:        decimalToFloat(initialPrice),
+		InitialBidAmount:    decimalToFloat(initialBidAmount),
+		MaxPriceLimit:       decimalToFloat(maxPriceLimit),
 		CurrentAutoBidCount: 0,
 		TotalBidAmount:      0,
 	}
@@ -146,17 +148,17 @@ func (s *SkyLampService) StartSubscription(ctx context.Context, userID, auctionI
 	}
 
 	// Step 3: 短事务更新订阅统计（失败仅记录日志，订阅本体已可用）
-	subscription.TotalBidAmount = initialBidAmount
+	subscription.TotalBidAmount = decimalToFloat(initialBidAmount)
 	if err := s.skyLampDAO.Update(ctx, subscription); err != nil {
 		log.Printf("SkyLamp订阅统计更新失败（非致命）: id=%d, err=%v", subscription.ID, err)
 	}
 
 	// 记录订阅创建成功指标
 	if s.metrics != nil {
-		s.metrics.RecordSubscriptionCreated(auctionID, userID, maxPriceLimit)
+		s.metrics.RecordSubscriptionCreated(auctionID, userID, decimalToFloat(maxPriceLimit))
 	}
 
-	log.Printf("SkyLamp订阅创建成功: user=%d, auction=%d, max=%f, latency=%v", userID, auctionID, maxPriceLimit, time.Since(startTime))
+	log.Printf("SkyLamp订阅创建成功: user=%d, auction=%d, max=%s, latency=%v", userID, auctionID, maxPriceLimit.StringFixed(2), time.Since(startTime))
 	return subscription, nil
 }
 
@@ -239,7 +241,7 @@ func (s *SkyLampService) TriggerAutoBid(ctx context.Context, auctionID int64, cu
 				return
 			}
 
-			s.processOneSubscription(ctx, auctionID, sub, rule.Increment)
+			s.processOneSubscription(ctx, auctionID, sub, decimalToFloat(rule.Increment))
 		}(sub)
 	}
 
@@ -293,7 +295,8 @@ func (s *SkyLampService) processOneSubscription(ctx context.Context, auctionID i
 	}
 
 	// 达到价格上限：停止订阅
-	if !latestSub.CanAutoBid(auction.CurrentPrice) {
+	currentPrice := decimalToFloat(auction.CurrentPrice)
+	if !latestSub.CanAutoBid(currentPrice) {
 		durationSeconds := time.Since(latestSub.CreatedAt).Seconds()
 		if err := s.skyLampDAO.UpdateStatusWithStoppedAt(ctx, latestSub.ID, model.SkyLampStatusStopped); err != nil {
 			log.Printf("停止订阅失败: id=%d, err=%v", latestSub.ID, err)
@@ -304,11 +307,11 @@ func (s *SkyLampService) processOneSubscription(ctx context.Context, auctionID i
 	}
 
 	// 计算下次出价金额
-	nextBid := latestSub.GetNextBidAmount(auction.CurrentPrice, increment)
+	nextBid := latestSub.GetNextBidAmount(currentPrice, increment)
 	if nextBid > latestSub.MaxPriceLimit {
 		nextBid = latestSub.MaxPriceLimit
 	}
-	if nextBid <= auction.CurrentPrice {
+	if nextBid <= currentPrice {
 		return
 	}
 
@@ -316,7 +319,7 @@ func (s *SkyLampService) processOneSubscription(ctx context.Context, auctionID i
 	result, err := s.bidService.PlaceBid(ctx, &PlaceBidRequest{
 		AuctionID:          auctionID,
 		UserID:             latestSub.UserID,
-		Amount:             nextBid,
+		Amount:             decimal.NewFromFloat(nextBid),
 		SkipSkyLampTrigger: true,
 	})
 	if err != nil || result == nil || !result.Success {

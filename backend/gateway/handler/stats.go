@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -13,13 +14,10 @@ import (
 )
 
 // UserStats 是 GET /api/v1/users/me/stats 的响应数据。
-//
-// 三个字段都用 *int64：单一下游失败时该字段返回 null（前端显示 -），
-// 其余字段仍可正常展示。spec A §2.1 / tasks T2.7。
 type UserStats struct {
-	FollowingCount      *int64 `json:"following_count"`
-	AuctionHistoryCount *int64 `json:"auction_history_count"`
-	WonCount            *int64 `json:"won_count"`
+	FollowingCount      int64 `json:"following_count"`
+	AuctionHistoryCount int64 `json:"auction_history_count"`
+	WonCount            int64 `json:"won_count"`
 }
 
 // UserStatsFetcher 并行调下游聚合用户统计。
@@ -39,41 +37,57 @@ func NewUserStatsFetcher(auctionURL, productURL string, timeout time.Duration) *
 }
 
 // Fetch 同时拉 auction follow count + product orders history，并聚合 won_count。
-//
-// 任意子调用失败时对应字段保持 nil，不返回 error —— 这是软降级语义，
-// 调用方（HTTP handler）总是 200 OK 即可。
-func (f *UserStatsFetcher) Fetch(ctx context.Context, userID int64) UserStats {
+func (f *UserStatsFetcher) Fetch(ctx context.Context, userID int64) (UserStats, error) {
 	var (
-		out UserStats
-		wg  sync.WaitGroup
+		out      UserStats
+		wg       sync.WaitGroup
+		errMu    sync.Mutex
+		firstErr error
 	)
+	recordErr := func(err error) {
+		if err == nil {
+			return
+		}
+		errMu.Lock()
+		defer errMu.Unlock()
+		if firstErr == nil {
+			firstErr = err
+		}
+	}
 
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		total, ok := f.fetchFollowingTotal(ctx, userID)
-		if ok {
-			out.FollowingCount = &total
+		total, err := f.fetchFollowingTotal(ctx, userID)
+		if err != nil {
+			recordErr(err)
+			return
 		}
+		out.FollowingCount = total
 	}()
 	go func() {
 		defer wg.Done()
-		total, won, ok := f.fetchOrderHistory(ctx, userID)
-		if ok {
-			out.AuctionHistoryCount = &total
-			out.WonCount = &won
+		total, won, err := f.fetchOrderHistory(ctx, userID)
+		if err != nil {
+			recordErr(err)
+			return
 		}
+		out.AuctionHistoryCount = total
+		out.WonCount = won
 	}()
 	wg.Wait()
-	return out
+	if firstErr != nil {
+		return UserStats{}, firstErr
+	}
+	return out, nil
 }
 
 // fetchFollowingTotal 调 auction-service `/api/v1/user/followed-live-streams?page_size=1` 拿 total。
-func (f *UserStatsFetcher) fetchFollowingTotal(ctx context.Context, userID int64) (int64, bool) {
+func (f *UserStatsFetcher) fetchFollowingTotal(ctx context.Context, userID int64) (int64, error) {
 	url := f.auctionURL + "/api/v1/user/followed-live-streams?page=1&page_size=1"
-	body, ok := f.doGET(ctx, url, userID)
-	if !ok {
-		return 0, false
+	body, err := f.doGET(ctx, url, userID)
+	if err != nil {
+		return 0, fmt.Errorf("fetch following total: %w", err)
 	}
 	// auction-service follow handler 响应：{ "code":200, "data":{ "items":[], "total":N, "page":..., "page_size":... } }
 	var wrap struct {
@@ -83,12 +97,12 @@ func (f *UserStatsFetcher) fetchFollowingTotal(ctx context.Context, userID int64
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(body, &wrap); err != nil {
-		return 0, false
+		return 0, fmt.Errorf("decode following total: %w", err)
 	}
 	if wrap.Code != 0 && wrap.Code != 200 {
-		return 0, false
+		return 0, fmt.Errorf("following total business code: %d", wrap.Code)
 	}
-	return wrap.Data.Total, true
+	return wrap.Data.Total, nil
 }
 
 // fetchOrderHistory 调 product-service `/api/v1/orders/history`，
@@ -96,12 +110,12 @@ func (f *UserStatsFetcher) fetchFollowingTotal(ctx context.Context, userID int64
 //
 // 注：product 的 OrderHandler.GetUserHistory 当前是扁平 {items, total, ...} 不带 code 包裹，
 // 与 auction follow 不同。这里两种 shape 都处理，以容错下游契约演进。
-func (f *UserStatsFetcher) fetchOrderHistory(ctx context.Context, userID int64) (total int64, won int64, ok bool) {
+func (f *UserStatsFetcher) fetchOrderHistory(ctx context.Context, userID int64) (total int64, won int64, err error) {
 	// page_size=200 单次拿一页足以覆盖大多数普通用户；超出本期不精确（已在决策中接受）
 	url := f.productURL + "/api/v1/orders/history?page=1&page_size=200"
-	body, hit := f.doGET(ctx, url, userID)
-	if !hit {
-		return 0, 0, false
+	body, hitErr := f.doGET(ctx, url, userID)
+	if hitErr != nil {
+		return 0, 0, fmt.Errorf("fetch order history: %w", hitErr)
 	}
 
 	// 兼容两种 shape：扁平 / data 包裹
@@ -117,12 +131,12 @@ func (f *UserStatsFetcher) fetchOrderHistory(ctx context.Context, userID int64) 
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(body, &flat); err == nil && flat.Items != nil {
-		return flat.Total, countWinners(flat.Items), true
+		return flat.Total, countWinners(flat.Items), nil
 	}
 	if err := json.Unmarshal(body, &wrapped); err == nil {
-		return wrapped.Data.Total, countWinners(wrapped.Data.Items), true
+		return wrapped.Data.Total, countWinners(wrapped.Data.Items), nil
 	}
-	return 0, 0, false
+	return 0, 0, fmt.Errorf("decode order history")
 }
 
 func countWinners(items []map[string]interface{}) int64 {
@@ -135,31 +149,30 @@ func countWinners(items []map[string]interface{}) int64 {
 	return n
 }
 
-func (f *UserStatsFetcher) doGET(ctx context.Context, url string, userID int64) ([]byte, bool) {
+func (f *UserStatsFetcher) doGET(ctx context.Context, url string, userID int64) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, false
+		return nil, err
 	}
 	req.Header.Set("X-User-ID", strconv.FormatInt(userID, 10))
 	resp, err := f.client.Do(req)
 	if err != nil {
-		return nil, false
+		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, false
+		return nil, fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, false
+		return nil, err
 	}
-	return body, true
+	return body, nil
 }
 
 // UserStatsHandler 是 GET /api/v1/users/me/stats 的 HTTP 入口。
 //
 // 鉴权：authGroup → JWTAuth 已注入 user_id 到 c.Set("user_id", ...)。
-// 软降级：任意下游失败对应字段返回 null，整体仍 200。
 type UserStatsHandler struct {
 	fetcher *UserStatsFetcher
 }
@@ -184,7 +197,14 @@ func (h *UserStatsHandler) Handle(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	stats := h.fetcher.Fetch(ctx, uid)
+	stats, err := h.fetcher.Fetch(ctx, uid)
+	if err != nil {
+		c.JSON(502, map[string]interface{}{
+			"code":    502,
+			"message": "获取用户统计失败: " + err.Error(),
+		})
+		return
+	}
 	c.JSON(200, map[string]interface{}{
 		"code": 200,
 		"data": stats,

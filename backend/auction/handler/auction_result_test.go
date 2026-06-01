@@ -11,6 +11,8 @@ import (
 
 	"auction-service/client"
 	"auction-service/model"
+
+	"github.com/shopspring/decimal"
 )
 
 // fakeAuctionFetcher 模拟 service.GetAuction。
@@ -34,7 +36,7 @@ func TestBuildAuctionResultResponse(t *testing.T) {
 				ID:           1001,
 				ProductID:    5001,
 				Status:       model.AuctionStatusEnded,
-				CurrentPrice: 9200,
+				CurrentPrice: decimal.NewFromInt(9200),
 				WinnerID:     &winnerID,
 				StartTime:    now,
 				EndTime:      now.Add(30 * time.Minute),
@@ -98,7 +100,7 @@ func TestBuildAuctionResultResponse(t *testing.T) {
 				ID:           1001,
 				ProductID:    5001,
 				Status:       model.AuctionStatusEnded,
-				CurrentPrice: 9200,
+				CurrentPrice: decimal.NewFromInt(9200),
 			},
 		}
 		fp := &fakeProductClient{batchErr: errors.New("product-service down")}
@@ -117,7 +119,7 @@ func TestBuildAuctionResultResponse(t *testing.T) {
 				ID:           1001,
 				ProductID:    5001,
 				Status:       model.AuctionStatusEnded,
-				CurrentPrice: 9200,
+				CurrentPrice: decimal.NewFromInt(9200),
 			},
 		}
 		fp := &fakeProductClient{batchOut: map[int64]client.ProductSummary{}}
@@ -130,7 +132,7 @@ func TestBuildAuctionResultResponse(t *testing.T) {
 	t.Run("nil product client: still works, product=nil", func(t *testing.T) {
 		// productClient 未注入时，不应崩溃；product=null 软降级。
 		af := &fakeAuctionFetcher{
-			out: &model.Auction{ID: 1, ProductID: 2, CurrentPrice: 100},
+			out: &model.Auction{ID: 1, ProductID: 2, CurrentPrice: decimal.NewFromInt(100)},
 		}
 
 		got, err := BuildAuctionResultResponse(ctx, nil, af.Get, 1)

@@ -12,6 +12,7 @@ import (
 	"auction-service/pkg/metrics"
 	"auction-service/websocket"
 
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -28,9 +29,9 @@ type BidService struct {
 	userDAO            *dao.UserDAO
 	hub                *websocket.Hub
 	rankThrottle       *RankingThrottle
-	notificationSender NotificationSender       // 通知发送接口
-	metrics            *metrics.AuctionMetrics  // 新增：指标收集器
-	skyLampTrigger     SkyLampTrigger           // 点天灯触发接口
+	notificationSender NotificationSender      // 通知发送接口
+	metrics            *metrics.AuctionMetrics // 新增：指标收集器
+	skyLampTrigger     SkyLampTrigger          // 点天灯触发接口
 }
 
 // SkyLampTrigger 点天灯触发接口
@@ -73,17 +74,17 @@ func (s *BidService) SetSkyLampTrigger(trigger SkyLampTrigger) {
 type PlaceBidRequest struct {
 	AuctionID          int64
 	UserID             int64
-	Amount             float64
+	Amount             decimal.Decimal
 	SkipSkyLampTrigger bool // 点天灯自动跟价调用时设为true，避免递归
 }
 
 // PlaceBidResult 出价结果
 type PlaceBidResult struct {
-	Success      bool    `json:"success"`
-	Message      string  `json:"message"`
-	CurrentPrice float64 `json:"current_price"`
-	Rank         int     `json:"rank"`
-	WinnerID     int64   `json:"winner_id"`
+	Success      bool            `json:"success"`
+	Message      string          `json:"message"`
+	CurrentPrice decimal.Decimal `json:"current_price"`
+	Rank         int             `json:"rank"`
+	WinnerID     int64           `json:"winner_id"`
 }
 
 // PlaceBid 出价
@@ -132,16 +133,16 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 	}
 
 	// 5. 校验出价金额
-	minBidAmount := auction.CurrentPrice + rule.Increment
-	if req.Amount < minBidAmount {
+	minBidAmount := auction.CurrentPrice.Add(rule.Increment)
+	if req.Amount.LessThan(minBidAmount) {
 		return &PlaceBidResult{
 			Success: false,
-			Message: fmt.Sprintf("出价金额不足，最低出价为 %.2f 元", minBidAmount),
+			Message: fmt.Sprintf("出价金额不足，最低出价为 %s 元", minBidAmount.StringFixed(2)),
 		}, nil
 	}
 
 	// 6. 检查封顶价
-	if rule.CapPrice != nil && *rule.CapPrice > 0 && req.Amount >= *rule.CapPrice {
+	if rule.CapPrice != nil && rule.CapPrice.GreaterThan(decimal.Zero) && req.Amount.GreaterThanOrEqual(*rule.CapPrice) {
 		// 达到封顶价，需要获取分布式锁保护
 		bidLock := lock.NewAuctionBidLock(dao.GetRedis(), req.AuctionID)
 		if err := bidLock.Acquire(ctx); err != nil {
@@ -196,11 +197,11 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 	}
 
 	// 9. 再次校验（双重检查）
-	minBidAmount = auction.CurrentPrice + rule.Increment
-	if req.Amount < minBidAmount {
+	minBidAmount = auction.CurrentPrice.Add(rule.Increment)
+	if req.Amount.LessThan(minBidAmount) {
 		return &PlaceBidResult{
 			Success: false,
-			Message: fmt.Sprintf("已被超越，当前最低出价为 %.2f 元", minBidAmount),
+			Message: fmt.Sprintf("已被超越，当前最低出价为 %s 元", minBidAmount.StringFixed(2)),
 		}, nil
 	}
 
@@ -221,11 +222,11 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 				continue
 			}
 			// 重试时再次校验最低出价
-			minBidAmount = auction.CurrentPrice + rule.Increment
-			if req.Amount < minBidAmount {
+			minBidAmount = auction.CurrentPrice.Add(rule.Increment)
+			if req.Amount.LessThan(minBidAmount) {
 				return &PlaceBidResult{
 					Success: false,
-					Message: fmt.Sprintf("已被超越，当前最低出价为 %.2f 元", minBidAmount),
+					Message: fmt.Sprintf("已被超越，当前最低出价为 %s 元", minBidAmount.StringFixed(2)),
 				}, nil
 			}
 		}
@@ -276,12 +277,12 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 				UserID:      notifyUserID,
 				Type:        model.NotificationTypeBidOutbid,
 				Title:       "出价被超越",
-				Content:     fmt.Sprintf("您在竞拍中的出价 %.2f 元已被超越，当前最高价为 %.2f 元", previousPrice, req.Amount),
+				Content:     fmt.Sprintf("您在竞拍中的出价 %s 元已被超越，当前最高价为 %s 元", previousPrice.StringFixed(2), req.Amount.StringFixed(2)),
 				Immediately: true,
 				Data: map[string]interface{}{
 					"auction_id": req.AuctionID,
-					"old_bid":    previousPrice,
-					"new_bid":    req.Amount,
+					"old_bid":    previousPrice.StringFixed(2),
+					"new_bid":    req.Amount.StringFixed(2),
 				},
 			})
 		}()
@@ -291,7 +292,7 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 	if s.skyLampTrigger != nil && !req.SkipSkyLampTrigger {
 		go func() {
 			// 异步触发，不阻塞主流程
-			_ = s.skyLampTrigger.TriggerAutoBid(context.Background(), req.AuctionID, req.Amount, rule.Increment)
+			_ = s.skyLampTrigger.TriggerAutoBid(context.Background(), req.AuctionID, decimalToFloat(req.Amount), decimalToFloat(rule.Increment))
 		}()
 	}
 
@@ -320,7 +321,7 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 	// 记录出价成功指标（新增）
 	if s.metrics != nil {
 		s.metrics.RecordBidLatency(req.AuctionID, start, true)
-		s.metrics.RecordBid(req.AuctionID, req.Amount, true)
+		s.metrics.RecordBid(req.AuctionID, decimalToFloat(req.Amount), true)
 		s.metrics.RecordBidUser(req.AuctionID)
 	}
 
@@ -392,7 +393,7 @@ func (s *BidService) tryExtendAuction(auctionID, productID int64, triggerDelayBe
 }
 
 // handleCapPriceBid 处理封顶价出价（使用事务保证原子性）
-func (s *BidService) handleCapPriceBid(ctx context.Context, auction *model.Auction, req *PlaceBidRequest, capPrice float64) (*PlaceBidResult, error) {
+func (s *BidService) handleCapPriceBid(ctx context.Context, auction *model.Auction, req *PlaceBidRequest, capPrice decimal.Decimal) (*PlaceBidResult, error) {
 	// 使用事务确保价格更新和状态更新的原子性
 	var result *PlaceBidResult
 	var txErr error
@@ -437,6 +438,11 @@ func (s *BidService) handleCapPriceBid(ctx context.Context, auction *model.Aucti
 	}
 
 	return result, nil
+}
+
+func decimalToFloat(v decimal.Decimal) float64 {
+	f, _ := v.Float64()
+	return f
 }
 
 // getUserRank 获取用户排名
@@ -497,7 +503,7 @@ func (s *BidService) broadcastRanking(ctx context.Context, auctionID int64) {
 		rankItems[i] = websocket.RankItem{
 			Rank:   i + 1,
 			UserID: bid.UserID,
-			Amount: bid.Amount,
+			Amount: decimalToFloat(bid.Amount),
 		}
 		if user, ok := userMap[bid.UserID]; ok && user != nil {
 			rankItems[i].UserName = user.Name

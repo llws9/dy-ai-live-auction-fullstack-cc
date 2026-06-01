@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/shopspring/decimal"
+)
 
 // AuctionStatus 竞拍状态
 type AuctionStatus int
@@ -15,18 +19,18 @@ const (
 
 // Auction 竞拍场次模型
 type Auction struct {
-	ID           int64          `json:"id" gorm:"primaryKey;autoIncrement"`
-	ProductID    int64          `json:"product_id" gorm:"index;not null"`
-	LiveStreamID *int64         `json:"live_stream_id" gorm:"index"`           // 直播间ID（新增字段）
-	CreatorID    *int64         `json:"creator_id" gorm:"index"`               // 竞拍创建者ID（主播）
-	Status       AuctionStatus  `json:"status" gorm:"type:tinyint;default:0"`
-	CurrentPrice float64        `json:"current_price" gorm:"type:decimal(10,2);default:0"`
-	WinnerID     *int64         `json:"winner_id"`
-	StartTime    time.Time      `json:"start_time" gorm:"index;not null"`
-	EndTime      time.Time      `json:"end_time" gorm:"not null"`
-	DelayUsed    int            `json:"delay_used" gorm:"default:0"` // 已延时秒数
-	Version      int            `json:"version" gorm:"default:0"`    // 乐观锁版本号
-	CreatedAt    time.Time      `json:"created_at" gorm:"autoCreateTime"`
+	ID           int64           `json:"id" gorm:"primaryKey;autoIncrement"`
+	ProductID    int64           `json:"product_id" gorm:"index;not null"`
+	LiveStreamID *int64          `json:"live_stream_id" gorm:"index"` // 直播间ID（新增字段）
+	CreatorID    *int64          `json:"creator_id" gorm:"index"`     // 竞拍创建者ID（主播）
+	Status       AuctionStatus   `json:"status" gorm:"type:tinyint;default:0"`
+	CurrentPrice decimal.Decimal `json:"current_price" gorm:"type:decimal(10,2);default:0"`
+	WinnerID     *int64          `json:"winner_id"`
+	StartTime    time.Time       `json:"start_time" gorm:"index;not null"`
+	EndTime      time.Time       `json:"end_time" gorm:"not null"`
+	DelayUsed    int             `json:"delay_used" gorm:"default:0"` // 已延时秒数
+	Version      int             `json:"version" gorm:"default:0"`    // 乐观锁版本号
+	CreatedAt    time.Time       `json:"created_at" gorm:"autoCreateTime"`
 }
 
 // TableName 指定表名

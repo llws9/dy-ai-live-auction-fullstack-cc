@@ -12,6 +12,8 @@ import (
 	"auction-service/client"
 	"auction-service/dao"
 	"auction-service/model"
+
+	"github.com/shopspring/decimal"
 )
 
 // fakeProductClient 是 client.ProductClient 的可控替身，用于 BuildAuctionListResponse 编排测试。
@@ -69,8 +71,8 @@ func TestBuildAuctionListResponse(t *testing.T) {
 		now := time.Now()
 		fl := &fakeLister{
 			out: []model.Auction{
-				{ID: 100, ProductID: 11, Status: model.AuctionStatusOngoing, CurrentPrice: 200, StartTime: now, EndTime: now.Add(time.Hour)},
-				{ID: 101, ProductID: 22, Status: model.AuctionStatusEnded, CurrentPrice: 300, StartTime: now, EndTime: now.Add(time.Hour)},
+				{ID: 100, ProductID: 11, Status: model.AuctionStatusOngoing, CurrentPrice: decimal.NewFromInt(200), StartTime: now, EndTime: now.Add(time.Hour)},
+				{ID: 101, ProductID: 22, Status: model.AuctionStatusEnded, CurrentPrice: decimal.NewFromInt(300), StartTime: now, EndTime: now.Add(time.Hour)},
 			},
 			outTotal: 2,
 		}

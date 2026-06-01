@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 
 	"auction-service/model"
+	"github.com/shopspring/decimal"
 )
 
 // ErrVersionConflict 乐观锁版本冲突
@@ -74,7 +75,7 @@ func (d *AuctionDAO) UpdateStatus(ctx context.Context, id int64, status model.Au
 }
 
 // UpdatePrice 更新当前价格和中标者（使用乐观锁）
-func (d *AuctionDAO) UpdatePrice(ctx context.Context, id int64, price float64, winnerID int64, expectedVersion int) error {
+func (d *AuctionDAO) UpdatePrice(ctx context.Context, id int64, price decimal.Decimal, winnerID int64, expectedVersion int) error {
 	result := d.db.WithContext(ctx).
 		Model(&model.Auction{}).
 		Where("id = ? AND version = ?", id, expectedVersion).

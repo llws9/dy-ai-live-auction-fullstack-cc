@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -126,11 +127,11 @@ func TestOrderHandler_Summary_XUserIDContract(t *testing.T) {
 		assert.NoError(t, db.Exec("DELETE FROM orders").Error)
 		ctx := context.Background()
 		svc := service.NewOrderService(dao.NewOrderDAO(db), nil)
-		_, err := svc.CreateOrder(ctx, 1, 1, 123, 100.0)
+		_, err := svc.CreateOrder(ctx, 1, 1, 123, decimal.NewFromInt(100))
 		assert.NoError(t, err)
-		_, err = svc.CreateOrder(ctx, 2, 1, 999, 200.0)
+		_, err = svc.CreateOrder(ctx, 2, 1, 999, decimal.NewFromInt(200))
 		assert.NoError(t, err)
-		_, err = svc.CreateOrder(ctx, 3, 1, 999, 300.0)
+		_, err = svc.CreateOrder(ctx, 3, 1, 999, decimal.NewFromInt(300))
 		assert.NoError(t, err)
 
 		c := app.NewContext(0)
@@ -246,4 +247,54 @@ func (w *testLogWriter) Write(p []byte) (n int, err error) {
 
 func (w *testLogWriter) String() string {
 	return string(w.data)
+}
+
+func TestOrderHandler_Get_AuthContract(t *testing.T) {
+	h := NewOrderHandler(service.NewOrderService(nil, nil))
+
+	t.Run("missing X-User-ID returns 401 before reading order", func(t *testing.T) {
+		c := app.NewContext(0)
+		c.Request.SetMethod("GET")
+		c.Request.SetRequestURI("/api/v1/orders/123")
+
+		h.Get(context.Background(), c)
+
+		assert.Equal(t, 401, c.Response.StatusCode())
+	})
+
+	t.Run("non-numeric X-User-ID returns 401", func(t *testing.T) {
+		c := app.NewContext(0)
+		c.Request.SetMethod("GET")
+		c.Request.SetRequestURI("/api/v1/orders/123")
+		c.Request.Header.Set("X-User-ID", "abc")
+
+		h.Get(context.Background(), c)
+
+		assert.Equal(t, 401, c.Response.StatusCode())
+	})
+}
+
+func TestOrderHandler_Pay_AuthContract(t *testing.T) {
+	h := NewOrderHandler(service.NewOrderService(nil, nil))
+
+	t.Run("missing X-User-ID returns 401 before paying order", func(t *testing.T) {
+		c := app.NewContext(0)
+		c.Request.SetMethod("POST")
+		c.Request.SetRequestURI("/api/v1/orders/123/pay")
+
+		h.Pay(context.Background(), c)
+
+		assert.Equal(t, 401, c.Response.StatusCode())
+	})
+
+	t.Run("non-positive X-User-ID returns 401", func(t *testing.T) {
+		c := app.NewContext(0)
+		c.Request.SetMethod("POST")
+		c.Request.SetRequestURI("/api/v1/orders/123/pay")
+		c.Request.Header.Set("X-User-ID", "0")
+
+		h.Pay(context.Background(), c)
+
+		assert.Equal(t, 401, c.Response.StatusCode())
+	})
 }

@@ -5,6 +5,8 @@ import (
 
 	"auction-service/model"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,7 +22,7 @@ func TestBidService_PlaceBidRequest_Validation(t *testing.T) {
 			req: PlaceBidRequest{
 				AuctionID: 1,
 				UserID:    1,
-				Amount:    100.0,
+				Amount:    decimal.NewFromInt(100),
 			},
 			expectErr: false,
 		},
@@ -29,7 +31,7 @@ func TestBidService_PlaceBidRequest_Validation(t *testing.T) {
 			req: PlaceBidRequest{
 				AuctionID: 1,
 				UserID:    1,
-				Amount:    0,
+				Amount:    decimal.Zero,
 			},
 			expectErr: true,
 		},
@@ -38,7 +40,7 @@ func TestBidService_PlaceBidRequest_Validation(t *testing.T) {
 			req: PlaceBidRequest{
 				AuctionID: 1,
 				UserID:    1,
-				Amount:    -10.0,
+				Amount:    decimal.NewFromInt(-10),
 			},
 			expectErr: true,
 		},
@@ -48,9 +50,9 @@ func TestBidService_PlaceBidRequest_Validation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// 验证出价金额
 			if tt.expectErr {
-				assert.True(t, tt.req.Amount <= 0)
+				assert.False(t, tt.req.Amount.GreaterThan(decimal.Zero))
 			} else {
-				assert.True(t, tt.req.Amount > 0)
+				assert.True(t, tt.req.Amount.GreaterThan(decimal.Zero))
 			}
 		})
 	}
@@ -61,13 +63,13 @@ func TestPlaceBidResult_Structure(t *testing.T) {
 	result := &PlaceBidResult{
 		Success:      true,
 		Message:      "出价成功",
-		CurrentPrice: 100.0,
+		CurrentPrice: decimal.NewFromInt(100),
 		Rank:         1,
 		WinnerID:     1,
 	}
 
 	assert.True(t, result.Success)
-	assert.Equal(t, 100.0, result.CurrentPrice)
+	assert.True(t, result.CurrentPrice.Equal(decimal.NewFromInt(100)))
 	assert.Equal(t, 1, result.Rank)
 	assert.Equal(t, int64(1), result.WinnerID)
 }
@@ -104,12 +106,12 @@ func TestBidModel_Creation(t *testing.T) {
 	bid := &model.Bid{
 		AuctionID: 1,
 		UserID:    1,
-		Amount:    100.0,
+		Amount:    decimal.NewFromInt(100),
 	}
 
 	assert.Equal(t, int64(1), bid.AuctionID)
 	assert.Equal(t, int64(1), bid.UserID)
-	assert.Equal(t, 100.0, bid.Amount)
+	assert.True(t, bid.Amount.Equal(decimal.NewFromInt(100)))
 }
 
 // TestBidService_OutbidNotification 测试出价超越通知逻辑
