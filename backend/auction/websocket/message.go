@@ -26,6 +26,18 @@ const (
 	MessageTypeSkyLampActivated MessageType = "sky_lamp_activated" // 天灯开启
 	MessageTypeSkyLampAutoBid   MessageType = "sky_lamp_auto_bid"   // 自动跟价
 	MessageTypeSkyLampStopped   MessageType = "sky_lamp_stopped"    // 天灯停止
+
+	// 弹幕相关消息类型（M2）
+	MessageTypeChatSend    MessageType = "chat_send"    // 客户端 -> 服务端
+	MessageTypeChatMessage MessageType = "chat_message" // 服务端 -> 客户端
+)
+
+// 弹幕错误码
+const (
+	ChatErrCodeLengthExceeded   = 40001
+	ChatErrCodeBlockedWord      = 40002
+	ChatErrCodeRateLimited      = 40003
+	ChatErrCodeNotAuthenticated = 40101
 )
 
 // Message WebSocket 消息基础结构
@@ -270,4 +282,27 @@ func NewSkyLampStoppedMessage(auctionID, userID int64, reason string, totalBidCo
 			TotalBidCount: totalBidCount,
 		},
 	}
+}
+
+// ChatSendData 客户端发送的弹幕请求
+type ChatSendData struct {
+	LiveStreamID int64  `json:"live_stream_id"`
+	Text         string `json:"text"`
+	ClientMsgID  string `json:"client_msg_id"`
+}
+
+// ChatMessageData 服务端广播的弹幕消息
+type ChatMessageData struct {
+	LiveStreamID int64  `json:"live_stream_id"`
+	UserID       int64  `json:"user_id"`
+	UserName     string `json:"user_name"`
+	AvatarURL    string `json:"avatar_url,omitempty"`
+	Text         string `json:"text"`
+	SentAt       int64  `json:"sent_at"`
+	ClientMsgID  string `json:"client_msg_id,omitempty"`
+}
+
+// NewChatMessage 创建弹幕广播消息
+func NewChatMessage(data *ChatMessageData) *Message {
+	return NewMessage(MessageTypeChatMessage, data)
 }
