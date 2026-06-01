@@ -68,6 +68,10 @@ describe('Notifications migration', () => {
     mockedNotificationApi.markAllAsRead.mockResolvedValue(undefined);
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('loads notifications from notificationApi and renders unread state', async () => {
     render(
       <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
@@ -128,6 +132,29 @@ describe('Notifications migration', () => {
       entry: 'mark_all_read',
       type: 'all',
       result: 'success',
+    });
+  });
+
+  it('tracks mark all read failure', async () => {
+    mockedNotificationApi.markAllAsRead.mockRejectedValue(new Error('network'));
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <NotificationsPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('1 条未读');
+    const button = await screen.findByRole('button', { name: '全部已读' });
+    fireEvent.click(button);
+
+    await waitFor(() => expect(mockedNotificationApi.markAllAsRead).toHaveBeenCalled());
+    expect(mockTrackEvent).toHaveBeenCalledWith('mark_read', {
+      source: 'notification_center',
+      entry: 'mark_all_read',
+      type: 'all',
+      result: 'failed',
     });
   });
 

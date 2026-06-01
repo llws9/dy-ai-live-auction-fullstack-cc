@@ -119,6 +119,16 @@
 - `frontend/h5/src/hooks/__tests__/useNotification.test.ts`
 - `docs/superpowers/sdd/runs/2026-06-02-touchpoint-metrics-task1-state.md`
 
+## T004 Review Fix Evidence
+
+- Review scope: add coverage for `markAllAsRead` failure tracking with `mark_read` and `result: failed`.
+- RED method: added the failure test, then temporarily removed the existing failure `trackEvent` call to verify the test catches the regression.
+- RED command: `cd frontend/h5 && npm test -- src/pages/Notifications/__tests__/Notifications.test.tsx --runInBand`
+- RED result: `FAIL`, `tracks mark all read failure` did not receive `mark_read` with `result: failed`.
+- GREEN command: `cd frontend/h5 && npm test -- src/pages/Notifications/__tests__/Notifications.test.tsx --runInBand`
+- GREEN result: `PASS`, `5 passed, 5 total`.
+- Modified files: `frontend/h5/src/pages/Notifications/__tests__/Notifications.test.tsx`, `docs/superpowers/sdd/runs/2026-06-02-touchpoint-metrics-task1-state.md`.
+
 ## Risks
 
 - `go.mod` gained an indirect `github.com/kylelemons/godebug` dependency required by `prometheus/testutil`.
@@ -137,3 +147,5 @@ Task 3 is complete with TDD evidence, focused H5 tests passing, and H5 productio
 Task 3 spec fix is complete with TDD evidence, focused H5 tests passing, and H5 production build passing.
 
 Task 4 is complete with TDD evidence, focused H5 tests passing, and H5 production build passing.
+
+Task 4 review fix is complete with RED/GREEN evidence for `markAllAsRead` failure tracking.
