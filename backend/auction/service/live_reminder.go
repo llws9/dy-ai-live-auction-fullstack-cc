@@ -3,10 +3,14 @@ package service
 import (
 	"context"
 
+	"auction-service/client"
 	"auction-service/model"
 )
 
-const liveReminderCandidateLimit = 50
+const (
+	liveReminderCandidateLimit       = 50
+	liveReminderMaxScannedCandidates = 500
+)
 
 type LiveSessionResolver interface {
 	GetActiveSession(ctx context.Context, liveStreamID int64) (*model.StreamInfo, error)
@@ -17,11 +21,24 @@ type LiveReminderReceiptClaimer interface {
 }
 
 type LiveStatsSessionResolver struct {
-	statsService *LiveStreamStatsService
+	statsService LiveStreamStatsProvider
+	metadata     LiveStreamMetadataProvider
 }
 
-func NewLiveStatsSessionResolver(statsService *LiveStreamStatsService) *LiveStatsSessionResolver {
+type LiveStreamStatsProvider interface {
+	GetStats(ctx context.Context, liveStreamID int64) (*LiveStreamStats, error)
+}
+
+type LiveStreamMetadataProvider interface {
+	BatchGetLiveStreams(ctx context.Context, ids []int64) (map[int64]client.LiveStreamSummary, error)
+}
+
+func NewLiveStatsSessionResolver(statsService LiveStreamStatsProvider) *LiveStatsSessionResolver {
 	return &LiveStatsSessionResolver{statsService: statsService}
+}
+
+func NewLiveStatsSessionResolverWithMetadata(statsService LiveStreamStatsProvider, metadata LiveStreamMetadataProvider) *LiveStatsSessionResolver {
+	return &LiveStatsSessionResolver{statsService: statsService, metadata: metadata}
 }
 
 func (r *LiveStatsSessionResolver) GetActiveSession(ctx context.Context, liveStreamID int64) (*model.StreamInfo, error) {
@@ -32,10 +49,22 @@ func (r *LiveStatsSessionResolver) GetActiveSession(ctx context.Context, liveStr
 	if stats == nil || stats.Status != "live" || stats.StartedAt == nil {
 		return nil, nil
 	}
+	name := ""
+	avatarURL := ""
+	if r.metadata != nil {
+		items, err := r.metadata.BatchGetLiveStreams(ctx, []int64{liveStreamID})
+		if err != nil {
+			return nil, err
+		}
+		if item, ok := items[liveStreamID]; ok {
+			name = item.Name
+			avatarURL = item.CoverImage
+		}
+	}
 	return &model.StreamInfo{
 		ID:         liveStreamID,
-		Name:       "关注直播间",
-		AvatarURL:  "",
+		Name:       name,
+		AvatarURL:  avatarURL,
 		StatusText: "正在直播",
 		LiveRoomID: liveStreamID,
 		StartedAt:  stats.StartedAt.UnixMilli(),
@@ -53,8 +82,13 @@ func NewLiveReminderService(followDAO FollowDAO, liveSessionResolver LiveSession
 }
 
 func (s *LiveReminderService) GetPendingReminder(ctx context.Context, userID int64) (*model.PendingLiveReminderResponse, error) {
-	for offset := 0; ; offset += liveReminderCandidateLimit {
-		follows, err := s.followDAO.GetUserFollows(ctx, userID, offset, liveReminderCandidateLimit)
+	for offset := 0; offset < liveReminderMaxScannedCandidates; offset += liveReminderCandidateLimit {
+		remaining := liveReminderMaxScannedCandidates - offset
+		limit := liveReminderCandidateLimit
+		if remaining < limit {
+			limit = remaining
+		}
+		follows, err := s.followDAO.GetUserFollows(ctx, userID, offset, limit)
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +120,7 @@ func (s *LiveReminderService) GetPendingReminder(ctx context.Context, userID int
 			}, nil
 		}
 
-		if len(follows) < liveReminderCandidateLimit {
+		if len(follows) < limit {
 			break
 		}
 	}

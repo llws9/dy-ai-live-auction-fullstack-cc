@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/stretchr/testify/assert"
@@ -48,6 +49,35 @@ func TestTouchpointHandlerSummary(t *testing.T) {
 	assert.Contains(t, body, `"pendingPayment":1`)
 	assert.Contains(t, body, `"wonNotPaid":1`)
 	assert.Contains(t, body, `"outbid":1`)
+}
+
+func TestTouchpointHandlerSummaryFetchesUpstreamsConcurrently(t *testing.T) {
+	const upstreamDelay = 200 * time.Millisecond
+	auctionServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(upstreamDelay)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":0,"message":"success","data":{"unreadTotal":2,"outbid":1,"endingSoon":0}}`))
+	}))
+	defer auctionServer.Close()
+
+	productServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(upstreamDelay)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":0,"message":"success","data":{"pendingPayment":1,"wonNotPaid":1}}`))
+	}))
+	defer productServer.Close()
+
+	h := NewTouchpointHandler(auctionServer.URL, productServer.URL)
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/notifications/summary")
+	c.Set("user_id", int64(123))
+
+	start := time.Now()
+	h.GetNotificationSummary(context.Background(), c)
+
+	assert.Equal(t, http.StatusOK, c.Response.StatusCode())
+	assert.Less(t, time.Since(start), upstreamDelay+100*time.Millisecond)
 }
 
 func TestTouchpointHandlerSummaryFallsBackForUpstreamFailure(t *testing.T) {
@@ -93,7 +123,9 @@ func TestTouchpointHandlerSummaryPropagatesAuthFailure(t *testing.T) {
 	defer auctionServer.Close()
 
 	productServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		t.Fatal("product upstream must not be called after auth failure")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"code":0,"message":"success","data":{"pendingPayment":1,"wonNotPaid":1}}`))
 	}))
 	defer productServer.Close()
 

@@ -207,7 +207,7 @@ func main() {
 
 	// 启动热度自动更新定时任务
 	liveStreamStatsService := service.NewLiveStreamStatsService()
-	liveSessionResolver := service.NewLiveStatsSessionResolver(liveStreamStatsService)
+	liveSessionResolver := service.NewLiveStatsSessionResolverWithMetadata(liveStreamStatsService, liveStreamClient)
 	liveReminderService := service.NewLiveReminderService(userLiveStreamFollowDAO, liveSessionResolver, liveStreamReminderReceiptDAO)
 	liveReminderHandler := handler.NewLiveReminderHandler(liveReminderService)
 	liveStreamStatsHandler := handler.NewLiveStreamStatsHandler(liveStreamStatsService)

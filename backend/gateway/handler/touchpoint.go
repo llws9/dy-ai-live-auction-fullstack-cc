@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -58,22 +59,35 @@ func (h *TouchpointHandler) GetNotificationSummary(ctx context.Context, c *app.R
 
 	auctionData := auctionSummary{}
 	auctionSummaryURL := h.auctionURL + "/api/v1/notifications/summary"
-	if err := h.fetch(ctx, auctionSummaryURL, token, userID, &auctionData); err != nil {
-		if isAuthUpstreamError(err) {
-			writeUpstreamAuthError(c, err)
-			return
-		}
-		log.Printf("touchpoint summary upstream failed: url=%s err=%v", auctionSummaryURL, err)
-	}
-
 	orderData := orderSummary{}
 	orderSummaryURL := h.productURL + "/api/v1/orders/summary"
-	if err := h.fetch(ctx, orderSummaryURL, token, userID, &orderData); err != nil {
-		if isAuthUpstreamError(err) {
-			writeUpstreamAuthError(c, err)
-			return
-		}
-		log.Printf("touchpoint summary upstream failed: url=%s err=%v", orderSummaryURL, err)
+
+	var wg sync.WaitGroup
+	var auctionErr, orderErr error
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		auctionErr = h.fetch(ctx, auctionSummaryURL, token, userID, &auctionData)
+	}()
+	go func() {
+		defer wg.Done()
+		orderErr = h.fetch(ctx, orderSummaryURL, token, userID, &orderData)
+	}()
+	wg.Wait()
+
+	if isAuthUpstreamError(auctionErr) {
+		writeUpstreamAuthError(c, auctionErr)
+		return
+	}
+	if isAuthUpstreamError(orderErr) {
+		writeUpstreamAuthError(c, orderErr)
+		return
+	}
+	if auctionErr != nil {
+		log.Printf("touchpoint summary upstream failed: url=%s err=%v", auctionSummaryURL, auctionErr)
+	}
+	if orderErr != nil {
+		log.Printf("touchpoint summary upstream failed: url=%s err=%v", orderSummaryURL, orderErr)
 	}
 
 	c.JSON(http.StatusOK, map[string]interface{}{

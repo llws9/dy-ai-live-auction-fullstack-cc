@@ -3,6 +3,9 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"log"
+	"os"
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -152,4 +155,56 @@ func TestOrderHandler_Summary_XUserIDContract(t *testing.T) {
 		assert.Equal(t, int64(1), body.Data.PendingPayment)
 		assert.Equal(t, int64(1), body.Data.WonNotPaid)
 	})
+}
+
+type stubSummaryGetter struct {
+	err error
+}
+
+func (s *stubSummaryGetter) GetSummary(_ context.Context, _ int64) (*model.OrderSummaryResponse, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	return &model.OrderSummaryResponse{PendingPayment: 0, WonNotPaid: 0}, nil
+}
+
+func TestOrderHandler_Summary_ErrorNoLeak(t *testing.T) {
+	internalErr := errors.New("db connection refused: password=secret")
+	h := &OrderHandler{
+		orderService:   service.NewOrderService(nil, nil),
+		summaryService: &stubSummaryGetter{err: internalErr},
+	}
+
+	writer := &testLogWriter{}
+	log.SetOutput(writer)
+	defer log.SetOutput(os.Stderr)
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/orders/summary")
+	c.Request.Header.Set("X-User-ID", "1")
+
+	h.Summary(context.Background(), c)
+
+	assert.Equal(t, 500, c.Response.StatusCode())
+	var body map[string]interface{}
+	assert.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.EqualValues(t, 500, body["code"])
+	assert.Equal(t, "获取订单汇总失败", body["message"])
+	assert.NotContains(t, body["message"], "secret")
+	assert.NotContains(t, body["message"], "db connection")
+	assert.Contains(t, writer.String(), "db connection refused")
+}
+
+type testLogWriter struct {
+	data []byte
+}
+
+func (w *testLogWriter) Write(p []byte) (n int, err error) {
+	w.data = append(w.data, p...)
+	return len(p), nil
+}
+
+func (w *testLogWriter) String() string {
+	return string(w.data)
 }
