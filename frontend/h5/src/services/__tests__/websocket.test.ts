@@ -1,12 +1,17 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import WebSocketService from '../websocket';
 
+jest.mock('../api', () => ({
+  buildLoginRedirectPath: jest.fn(() => '/login'),
+}));
+
 // Mock WebSocket
 class MockWebSocket {
   static CONNECTING = 0;
   static OPEN = 1;
   static CLOSING = 2;
   static CLOSED = 3;
+  static instances: MockWebSocket[] = [];
 
   readyState = MockWebSocket.OPEN;
   onopen: (() => void) | null = null;
@@ -18,6 +23,7 @@ class MockWebSocket {
   close = jest.fn();
 
   constructor(_url: string) {
+    MockWebSocket.instances.push(this);
     setTimeout(() => {
       if (this.onopen) this.onopen();
     }, 10);
@@ -32,6 +38,7 @@ describe('WebSocketService', () => {
 
   beforeEach(() => {
     jest.useFakeTimers();
+    MockWebSocket.instances = [];
     service = new WebSocketService(1);
   });
 
@@ -112,6 +119,38 @@ describe('WebSocketService', () => {
 
     // Should disconnect without error
     expect(true).toBe(true);
+  });
+
+  it('dispatches notification websocket messages to both notification APIs', async () => {
+    const notificationHandler = jest.fn();
+    const genericNotificationHandler = jest.fn();
+    service.onNotification(notificationHandler);
+    service.on('notification', genericNotificationHandler);
+
+    const connectPromise = service.connect();
+    jest.advanceTimersByTime(20);
+    await connectPromise;
+
+    const notification = {
+      id: 10,
+      type: 'auction_won',
+      title: '恭喜中标',
+      content: '请尽快完成支付',
+      data: { auction_id: 5 },
+      created_at: '2026-06-01T00:00:00Z',
+    };
+    MockWebSocket.instances[0].onmessage?.({
+      data: JSON.stringify({
+        type: 'notification',
+        timestamp: Date.now(),
+        data: notification,
+      }),
+    });
+
+    expect(notificationHandler).toHaveBeenCalledTimes(1);
+    expect(notificationHandler).toHaveBeenCalledWith(notification);
+    expect(genericNotificationHandler).toHaveBeenCalledTimes(1);
+    expect(genericNotificationHandler).toHaveBeenCalledWith(notification);
   });
 });
 

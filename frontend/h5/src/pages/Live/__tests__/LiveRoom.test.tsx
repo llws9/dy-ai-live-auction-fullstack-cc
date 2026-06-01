@@ -229,4 +229,73 @@ describe('LiveRoom migration', () => {
       actionText: '重新出价',
     }));
   });
+
+  it('navigates auction won toast action to result with notification auction id', async () => {
+    let notificationHandler: ((notification: any) => void) | undefined;
+    mockWebSocketInstance.onNotification.mockImplementation((handler) => {
+      notificationHandler = handler;
+      return jest.fn();
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={['/live?id=3&auction_id=5']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <LiveRoom />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(mockWebSocketInstance.onNotification).toHaveBeenCalledTimes(1));
+
+    notificationHandler?.({
+      id: 201,
+      type: 'auction_won',
+      title: '恭喜中标',
+      content: '请尽快完成支付',
+      data: { auction_id: 99 },
+    });
+
+    const toastConfig = mockShowGlobalToast.mock.calls[0][0];
+    expect(toastConfig).toEqual(expect.objectContaining({
+      type: 'success',
+      title: '恭喜中标',
+      message: '请尽快完成支付',
+      actionText: '去支付',
+    }));
+
+    toastConfig.onAction();
+    expect(mockNavigate).toHaveBeenCalledWith('/result?id=99');
+  });
+
+  it('falls back to current auction id for auction won toast action', async () => {
+    let notificationHandler: ((notification: any) => void) | undefined;
+    mockWebSocketInstance.onNotification.mockImplementation((handler) => {
+      notificationHandler = handler;
+      return jest.fn();
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={['/live?id=3&auction_id=5']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <LiveRoom />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(mockWebSocketInstance.onNotification).toHaveBeenCalledTimes(1));
+
+    notificationHandler?.({
+      id: 202,
+      type: 'auction_won',
+      title: '恭喜中标',
+      content: '请尽快完成支付',
+      data: {},
+    });
+
+    const toastConfig = mockShowGlobalToast.mock.calls[0][0];
+    toastConfig.onAction();
+    expect(mockNavigate).toHaveBeenCalledWith('/result?id=5');
+  });
 });

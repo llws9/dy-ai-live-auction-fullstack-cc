@@ -194,9 +194,14 @@ class WebSocketService {
 
     // 特殊处理通知消息
     if (message.type === 'notification') {
-      this.notificationCallbacks.forEach((callback) => {
-        callback(message.data as NotificationMessage);
-      });
+      const notification = message.data as NotificationMessage;
+      this.notificationCallbacks.forEach((callback) => callback(notification));
+
+      const handlers = this.handlers.get('notification');
+      if (handlers) {
+        handlers.forEach((handler) => handler(notification));
+      }
+      return;
     }
 
     // 使用节流器处理特定消息类型

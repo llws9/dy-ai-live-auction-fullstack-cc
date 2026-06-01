@@ -120,6 +120,11 @@ function toastPayloadFromNotification(notification: any) {
   }
 }
 
+function auctionResultPathFromNotification(notification: any, fallbackAuctionId: number) {
+  const auctionID = notification?.data?.auction_id ?? fallbackAuctionId;
+  return auctionID ? `/result?id=${auctionID}` : '/result';
+}
+
 const LiveRoomPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -313,8 +318,8 @@ const LiveRoomPage: React.FC = () => {
 
       showGlobalToast({
         ...payload,
-        onAction: payload.actionText === '去支付'
-          ? () => navigate('/result')
+        onAction: notification.type === 'auction_won'
+          ? () => navigate(auctionResultPathFromNotification(notification, auctionId))
           : () => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }),
       });
     });
