@@ -1,0 +1,59 @@
+{
+  "skill_name": "sdd-run",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "/sdd-run 这是本次开发的plan：docs/superpowers/plans/example.md 和 task：.trae/specs/example/tasks.md，开始执行",
+      "expected_output": "Reads AGENTS.md and RUNBOOK.md, automatically creates a new SDD state file because no state parameter was provided, parses plan/tasks, enforces TDD for implementation tasks, and starts execution with final response first line showing current branch/worktree.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "按这个 plan/tasks 开始 SDD 执行，scope 只做 T001-T003，state 用 docs/superpowers/sdd/runs/2026-06-02-example-state.md",
+      "expected_output": "Uses the provided state file, limits execution to T001-T003, updates state before reporting task completion, and enforces subagent first-line branch/worktree responses.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "继续执行 state: docs/superpowers/sdd/runs/2026-06-02-example-state.md",
+      "expected_output": "Loads the existing state file, resumes pending or changes_requested tasks, does not restart completed tasks, and preserves branch/worktree reporting.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "/sdd-run plan: docs/superpowers/plans/admin-api.md tasks: .trae/specs/align-admin-api-contract/tasks.md scope: 第一波",
+      "expected_output": "Creates a default state file automatically, limits execution to the requested wave, dispatches subagents with bounded scope, requires failing tests before implementation, records verification evidence, and updates state before reporting completion.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "/sdd-run 这是本次开发的plan：docs/superpowers/plans/example-plan.md 和 task：.trae/specs/example/tasks.md，开始执行",
+      "expected_output": "Correctly parses the Chinese connector between plan and task labels, verifies path-like inputs exist before dispatch, creates or reuses the state file, and stops with stderr if either path is invalid.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "/sdd-run",
+      "expected_output": "Runs the bootstrap script with empty input. If exactly one active state has pending work, resumes it. Otherwise, if exactly one plan/tasks pair exists, creates a state file. If multiple candidates exist, stops with needs_selection and shows candidate states/plans/tasks instead of guessing.",
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "/sdd-run plan: docs/superpowers/plans/does-not-exist.md tasks: .trae/specs/example/tasks.md",
+      "expected_output": "Bootstrap script exits with non-zero code and stderr `plan file does not exist`; no state file is created and no subagent is dispatched.",
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "/sdd-run (in a repo with multiple plans and multiple tasks files)",
+      "expected_output": "Bootstrap script exits with code 3 and stdout JSON `needs_selection: true` listing state_candidates / plan_candidates / task_candidates. Agent must show the candidates and ask user to pick instead of guessing.",
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "/sdd-run (resuming a tasks file where T1 is already `- [x]` done)",
+      "expected_output": "Generated state file marks T1 as `done` (not `pending`); Done counter is at least 1; only remaining `- [ ]` tasks are `pending`. Resume run does not revive completed tasks.",
+      "files": []
+    }
+  ]
+}
