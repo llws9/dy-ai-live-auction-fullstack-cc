@@ -328,6 +328,43 @@ describe('MobileShell', () => {
     });
   });
 
+  it('tracks live reminder overlay dismiss action', async () => {
+    mockGetPendingLiveReminder.mockResolvedValue({
+      hasReminder: true,
+      stream: {
+        id: 1,
+        name: '云端珍藏直播间',
+        avatarUrl: '',
+        statusText: '正在直播',
+        liveRoomId: 1,
+        startedAt: 1717000000000,
+      },
+    });
+
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>页面内容</main>
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    const overlay = dialog.parentElement;
+    expect(overlay).not.toBeNull();
+
+    fireEvent.click(overlay as HTMLElement);
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('live_reminder_dismissed', {
+      source: 'mobile_shell',
+      entry: 'live_reminder_modal',
+      type: 'live_start',
+      result: 'dismissed',
+    });
+  });
+
   it('refetches pending reminder for account changes and ignores stale responses', async () => {
     const firstRequest = createDeferred<{
       hasReminder: boolean;

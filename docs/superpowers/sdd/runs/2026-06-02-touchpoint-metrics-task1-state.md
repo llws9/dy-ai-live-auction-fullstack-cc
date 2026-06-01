@@ -151,6 +151,19 @@
 - `frontend/h5/src/__tests__/components/MobileShell.test.tsx`
 - `docs/superpowers/sdd/runs/2026-06-02-touchpoint-metrics-task1-state.md`
 
+## T005 Review Fix Evidence
+
+- Review scope: add explicit coverage for overlay dismiss tracking.
+- RED method: added the overlay dismiss test, then temporarily changed the overlay handler from `trackDismiss` to `onClose` to verify the test catches the regression.
+- RED command: `cd frontend/h5 && npm test -- src/__tests__/components/MobileShell.test.tsx --runInBand --testNamePattern="overlay dismiss"`
+- RED result: `FAIL`, `tracks live reminder overlay dismiss action` did not receive `live_reminder_dismissed` with `result: dismissed`.
+- GREEN command: `cd frontend/h5 && npm test -- src/__tests__/components/MobileShell.test.tsx --runInBand`
+- GREEN result: `PASS`, `19 passed, 19 total`.
+- Build command: `cd frontend/h5 && npm run build`
+- Build result: `PASS`, `tsc && vite build` completed successfully.
+- Diagnostics: editor diagnostics for isolated worktree file path returned `Access denied`; TypeScript validation is covered by `npm run build`.
+- Modified files: `frontend/h5/src/__tests__/components/MobileShell.test.tsx`, `docs/superpowers/sdd/runs/2026-06-02-touchpoint-metrics-task1-state.md`.
+
 ## Risks
 
 - `go.mod` gained an indirect `github.com/kylelemons/godebug` dependency required by `prometheus/testutil`.
@@ -173,3 +186,5 @@ Task 4 is complete with TDD evidence, focused H5 tests passing, and H5 productio
 Task 4 review fix is complete with RED/GREEN evidence for `markAllAsRead` failure tracking.
 
 Task 5 is complete with TDD evidence, focused backend/H5 tests passing, and H5 production build passing.
+
+Task 5 review fix is complete with RED/GREEN evidence for overlay dismiss tracking.
