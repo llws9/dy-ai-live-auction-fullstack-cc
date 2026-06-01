@@ -2,6 +2,15 @@ import { getCountBucket, trackEvent } from '../trackEvent';
 
 const originalFetch = global.fetch;
 
+function readBlobAsText(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(blob);
+  });
+}
+
 describe('trackEvent', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -18,7 +27,7 @@ describe('trackEvent', () => {
     global.fetch = originalFetch;
   });
 
-  it('sends touchpoint payload through sendBeacon first', () => {
+  it('sends touchpoint payload through sendBeacon as a JSON blob first', async () => {
     trackEvent('summary_exposed', {
       source: 'bottom_nav',
       entry: 'profile_tab',
@@ -30,7 +39,9 @@ describe('trackEvent', () => {
     expect(navigator.sendBeacon).toHaveBeenCalledTimes(1);
     const [url, body] = (navigator.sendBeacon as jest.Mock).mock.calls[0];
     expect(url).toBe('/api/track');
-    expect(JSON.parse(String(body))).toEqual({
+    expect(body).toBeInstanceOf(Blob);
+    expect((body as Blob).type).toBe('application/json');
+    expect(JSON.parse(await readBlobAsText(body as Blob))).toEqual({
       event_type: 'touchpoint_event',
       event_name: 'summary_exposed',
       params: {

@@ -94,10 +94,11 @@ function reportFailure(error: unknown) {
 
 export function trackEvent(eventName: TouchpointEventName, params: TouchpointEventParams): void {
   const body = JSON.stringify(buildPayload(eventName, params));
+  const blob = new Blob([body], { type: 'application/json' });
 
   try {
     if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-      const sent = navigator.sendBeacon(TRACK_ENDPOINT, body);
+      const sent = navigator.sendBeacon(TRACK_ENDPOINT, blob);
       if (sent) return;
     }
 
@@ -105,7 +106,7 @@ export function trackEvent(eventName: TouchpointEventName, params: TouchpointEve
       void fetch(TRACK_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body,
+        body: blob,
         keepalive: true,
       }).catch(reportFailure);
     }

@@ -43,6 +43,17 @@
 - Build result: `PASS`, `tsc && vite build` completed successfully.
 - Diagnostics: editor diagnostics for the isolated worktree paths returned `Access denied`; TypeScript validation is covered by `npm run build`.
 
+## T002 Review Fix Evidence
+
+- Review scope: `sendBeacon` must send an `application/json` Blob and tests must assert Blob content and type.
+- RED command: `cd frontend/h5 && npm test -- src/utils/__tests__/trackEvent.test.ts --runInBand`
+- RED result: `FAIL`, because `sendBeacon` received a JSON string instead of a `Blob`.
+- GREEN command: `cd frontend/h5 && npm test -- src/utils/__tests__/trackEvent.test.ts --runInBand`
+- GREEN result: `PASS`, `10 passed, 10 total`.
+- Build command: `cd frontend/h5 && npm run build`
+- Build result: `PASS`, `tsc && vite build` completed successfully.
+- Diagnostics: editor diagnostics for the isolated worktree paths returned `Access denied`; TypeScript validation is covered by `npm run build`.
+
 ## T002 Modified Files
 
 - `frontend/h5/src/utils/trackEvent.ts`
