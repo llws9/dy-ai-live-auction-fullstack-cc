@@ -98,6 +98,13 @@ func main() {
 	}
 	liveStreamService := service.NewLiveStreamServiceWithMetrics(liveStreamDAO, viewerCounter)
 	categoryService := service.NewCategoryService(categoryDAO)
+	log.Printf("LLM provider configured provider=%q base_url=%q model=%q timeout_ms=%d api_key_set=%t",
+		cfg.LLM.Provider,
+		cfg.LLM.Doubao.BaseURL,
+		cfg.LLM.Doubao.Model,
+		cfg.LLM.TimeoutMs,
+		cfg.LLM.Doubao.APIKey != "",
+	)
 	llmProvider := sharedllm.NewDoubaoProvider(sharedllm.DoubaoOptions{
 		BaseURL: cfg.LLM.Doubao.BaseURL,
 		APIKey:  cfg.LLM.Doubao.APIKey,
