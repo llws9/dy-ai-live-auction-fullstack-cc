@@ -43,7 +43,7 @@
 
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Allowed Files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `T001` | `M2 Task 1 - WebSocket Message Contract` | `done` | `main-agent` | `W1` | `-` | `Task 1: WebSocket Message Contract` | `backend/auction/websocket/message.go`, `backend/auction/websocket/fixed_price_message_test.go` |
+| `T001` | `M2 Task 1 - WebSocket Message Contract` | `done` | `subagent` | `W1` | `-` | `Task 1: WebSocket Message Contract` | `backend/auction/websocket/message.go`, `backend/auction/websocket/fixed_price_message_test.go` |
 
 ## Wave Plan
 
@@ -58,7 +58,7 @@
 | Key | Value |
 | --- | --- |
 | Status | `done` |
-| Owner | `main-agent` |
+| Owner | `subagent` |
 | Started At | `2026-06-03 02:46` |
 | Completed At | `2026-06-03 03:08` |
 | Branch | `feat/fixed-price-m1` |
@@ -101,7 +101,7 @@
 
 - [x] State file was created before task execution.
 - [x] Every implementation task records TDD Red -> Green -> Verify evidence.
-- [x] Main-agent handoff starts with `当前分支/worktree：`; no subagent was dispatched in this execution.
+- [x] Subagent handoff starts with `当前分支/worktree：`.
 - [x] Verification commands and results are recorded.
 
 ## Final Handoff
@@ -112,4 +112,5 @@
 
 - `T001 done`
 - Scope completed: WebSocket fixed-price message contract.
-- Commit planned: `feat(fixed-price): add WebSocket message contracts (M2.T1)`
+- Commit: `e589f97f feat(fixed-price): add WebSocket message contracts (M2.T1)`
+- Main-agent review: `go test ./websocket/ -run TestFixedPrice -v && go test ./websocket/` passed.
