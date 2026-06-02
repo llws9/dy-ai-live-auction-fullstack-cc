@@ -3,6 +3,7 @@ module product-service
 go 1.24.5
 
 require (
+	github.com/alicebob/miniredis/v2 v2.38.0
 	github.com/cloudwego/hertz v0.10.4
 	github.com/google/uuid v1.6.0
 	github.com/nacos-group/nacos-sdk-go/v2 v2.3.5
@@ -14,6 +15,8 @@ require (
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.1
 )
+
+require github.com/yuin/gopher-lua v1.1.1 // indirect
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
@@ -104,6 +107,7 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	shared/llm v0.0.0
 )
 
 replace shared/llm => ../shared/llm
