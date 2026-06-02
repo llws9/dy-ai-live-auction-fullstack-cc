@@ -91,13 +91,13 @@ func main() {
 	log.Printf("Summary:")
 	log.Printf("  - Categories: %d", len(categories))
 	log.Printf("  - Users: %d (Admin: %d, Streamer: %d, User: rest)",
-		countUsers(users, int(model.RoleAdmin)), countUsers(users, int(model.RoleStreamer)))
+		len(users), countUsers(users, int(model.RoleAdmin)), countUsers(users, int(model.RoleStreamer)))
 	log.Printf("  - Products: %d (Draft: %d, Published: %d, Unpublished: %d)",
-		countProducts(products, model.ProductStatusDraft), countProducts(products, model.ProductStatusPublished), countProducts(products, model.ProductStatusUnpublished))
+		len(products), countProducts(products, model.ProductStatusDraft), countProducts(products, model.ProductStatusPublished), countProducts(products, model.ProductStatusUnpublished))
 	log.Printf("  - Live Streams: %d", len(liveStreams))
 	log.Printf("  - Auction Rules: %d", len(auctionRules))
 	log.Printf("  - Orders: %d (Pending: %d, Paid: %d, Shipped: %d, Completed: %d)",
-		countOrders(orders, model.OrderStatusPending), countOrders(orders, model.OrderStatusPaid),
+		len(orders), countOrders(orders, model.OrderStatusPending), countOrders(orders, model.OrderStatusPaid),
 		countOrders(orders, model.OrderStatusShipped), countOrders(orders, model.OrderStatusCompleted))
 }
 
