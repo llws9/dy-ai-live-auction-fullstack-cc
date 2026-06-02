@@ -180,6 +180,7 @@ func main() {
 	userBalanceHandler := handler.NewUserBalanceHandler(userBalanceDAO)
 	userAddressHandler := handler.NewUserAddressHandler(userAddressDAO)
 	internalUserHandler := handler.NewInternalUserHandler(userDAO)
+	currentAuctionHandler := handler.NewInternalCurrentAuctionHandler(handler.NewCurrentAuctionDAOFetcher(auctionDAO))
 
 	// 初始化认证 Handler
 	jwtExpire := 24 // 24小时
@@ -248,6 +249,7 @@ func main() {
 		internalUserHandler,
 		liveReminderHandler,
 		liveStreamStatsHandler,
+		currentAuctionHandler,
 	)
 
 	// 注册 Prometheus metrics 端点
@@ -413,11 +415,14 @@ func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bid
 	v1.POST("/users/me/addresses/:id/default", userAddressHandler.SetDefault)
 }
 
-func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, internalUserHandler *handler.InternalUserHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler) {
+func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, internalUserHandler *handler.InternalUserHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler, currentAuctionHandler *handler.InternalCurrentAuctionHandler) {
 	internal := h.Group("/internal", internalAuth)
 	if internalUserHandler != nil {
 		internal.POST("/users/batch", internalUserHandler.BatchByIDs)
 	}
 	internal.GET("/live/pending-reminder", liveReminderHandler.GetPendingReminder)
 	internal.POST("/live-streams/:id/start", liveStreamStatsHandler.StartLive)
+	if currentAuctionHandler != nil {
+		internal.POST("/auctions/current-by-live-streams", currentAuctionHandler.Handle)
+	}
 }
