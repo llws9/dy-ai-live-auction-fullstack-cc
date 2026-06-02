@@ -1,0 +1,78 @@
+.panel {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 88px;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+  max-height: 50vh;
+  overflow: hidden;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  padding-bottom: 8px;
+  pointer-events: auto;
+}
+
+.bubble {
+  align-self: flex-start;
+  max-width: 80%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.bubbleSelf {
+  border: 1px solid #4b8bf5;
+}
+
+.userName {
+  color: #ffd479;
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.inputBar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
+  pointer-events: auto;
+}
+
+.input {
+  flex: 1;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 22px;
+  border: none;
+  background: rgba(255, 255, 255, 0.95);
+  font-size: 14px;
+}
+
+.sendBtn {
+  height: 44px;
+  min-width: 64px;
+  border-radius: 22px;
+  border: none;
+  background: #4b8bf5;
+  color: #fff;
+  font-size: 14px;
+}
+
+.sendBtn:disabled {
+  opacity: 0.45;
+}
