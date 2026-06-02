@@ -182,8 +182,11 @@ describe('LiveRoomSlide', () => {
 
     expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
 
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
     fireEvent.click(screen.getByRole('button', { name: /立即出价/ }));
     await waitFor(() => expect(mockedBidApi.placeBid).toHaveBeenCalledWith(5, 1300));
+    // 出价成功后 sheet 自动收起，重新展开以校验排行已刷新
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
     expect(await screen.findByText('测试用户')).toBeInTheDocument();
   });
 });

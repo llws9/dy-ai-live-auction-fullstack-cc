@@ -4,6 +4,7 @@ import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '@/serv
 import WebSocketService from '@/services/websocket';
 import { useAuth } from '@/store/authContext';
 import { useToast } from '../../components/Toast';
+import BidDock from './BidDock';
 import styles from './Live.module.css';
 
 interface Auction {
@@ -58,6 +59,7 @@ export interface LiveRoomSlideProps {
   currentAuctionId?: number | null;
   urlAuctionId?: number;
   active: boolean;
+  onBidPendingChange?: (pending: boolean) => void;
 }
 
 const extractList = (response: any): any[] => {
@@ -132,7 +134,7 @@ function auctionResultPathFromNotification(notification: any, fallbackAuctionId:
   return auctionID ? `/result?id=${auctionID}` : '/result';
 }
 
-const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuctionId, urlAuctionId, active }) => {
+const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuctionId, urlAuctionId, active, onBidPendingChange }) => {
   const navigate = useNavigate();
   const { isAuthenticated, token } = useAuth();
 
@@ -142,7 +144,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const [liveStream, setLiveStream] = useState<LiveStream | null>(null);
   const [ranking, setRanking] = useState<RankingItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState(false);
+  const [sheet, setSheet] = useState<'bid' | 'info' | null>(null);
   const [bidAmount, setBidAmount] = useState('');
   const [bidding, setBidding] = useState(false);
   const [following, setFollowing] = useState(false);
@@ -384,6 +386,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     }
 
     setBidding(true);
+    onBidPendingChange?.(true);
     try {
       const result = await bidApi.placeBid(auctionId, amount);
       const nextPrice = Number(result?.current_price ?? amount);
@@ -395,10 +398,12 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       }
       setBidAmount(String(nextPrice + increment));
       showToast('出价成功');
+      setSheet(null);
     } catch (error: any) {
       showToast(error?.message || '出价失败，请稍后重试');
     } finally {
       setBidding(false);
+      onBidPendingChange?.(false);
     }
   };
 
@@ -469,7 +474,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
 
   return (
     <section className={styles.page}>
-      <div className={`${styles.videoArea} ${expanded ? styles.videoAreaCompact : ''}`}>
+      <div className={`${styles.videoArea} ${sheet !== null ? styles.videoAreaCompact : ''}`}>
         {liveStream?.video_url ? (
           <video className={styles.video} src={liveStream.video_url} poster={liveCoverImage} autoPlay muted loop playsInline />
         ) : liveCoverImage ? (
@@ -500,23 +505,17 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         </header>
       </div>
 
-      <button className={`${styles.previewCard} ${expanded ? styles.previewHidden : ''}`} onClick={() => setExpanded(true)} type="button">
-        <div className={styles.previewProduct}>
-          {productImage ? <img src={productImage} alt={product?.name || '竞拍商品'} /> : <div className={styles.previewFallback}>品</div>}
-          <div>
-            <p>{product?.name || '竞拍商品'}</p>
-            <span>{roomName}</span>
-          </div>
-        </div>
-        <div className={styles.previewPrice}>
-          <span>当前最高价</span>
-          <strong>¥{formatMoney(currentPrice || startPrice)}</strong>
-        </div>
-      </button>
-
-      <div className={`${styles.panel} ${expanded ? styles.panelExpanded : ''}`}>
-        <button className={styles.handle} aria-label={expanded ? '收起竞拍面板' : '展开竞拍面板'} onClick={() => setExpanded(!expanded)} type="button" />
-
+      <BidDock
+        product={product || auction?.product}
+        productImage={productImage}
+        roomName={roomName}
+        currentPrice={currentPrice || startPrice}
+        sheet={sheet}
+        isAuthenticated={isAuthenticated}
+        onOpen={setSheet}
+        onClose={() => setSheet(null)}
+        onRequireLogin={() => showToast('请先登录后出价')}
+      >
         <div className={styles.priceBlock}>
           <span className={styles.priceLabel}>当前最高价</span>
           <strong>¥{formatMoney(currentPrice || startPrice)}</strong>
@@ -600,7 +599,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           <h2>直播互动</h2>
           <p>聊天协议尚未开放，当前仅保留直播间互动入口。</p>
         </section>
-      </div>
+      </BidDock>
 
       {toast && <div className={styles.toast} role="status">{toast}</div>}
     </section>

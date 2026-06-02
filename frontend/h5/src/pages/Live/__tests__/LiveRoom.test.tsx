@@ -142,6 +142,9 @@ describe('LiveRoom migration', () => {
 
     expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
     expect(screen.getByText('拍卖师王老师')).toBeInTheDocument();
+
+    // 排行与出价/收藏按钮均在 sheet 内，先展开 sheet
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
     expect(screen.getByText('张三')).toBeInTheDocument();
 
     expect(mockedLiveStreamApi.get).toHaveBeenCalledWith(3);
@@ -154,6 +157,8 @@ describe('LiveRoom migration', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /立即出价/ }));
     await waitFor(() => expect(mockedBidApi.placeBid).toHaveBeenCalledWith(5, 1300));
+    // 出价成功后 sheet 自动收起，重新展开以校验排行已刷新
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
     expect(await screen.findByText('测试用户')).toBeInTheDocument();
   });
 
@@ -181,6 +186,7 @@ describe('LiveRoom migration', () => {
 
     await waitFor(() => expect(mockedFollowApi.getFollowStatus).toHaveBeenCalledWith(3));
 
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
     // 按钮文案应为「已收藏」，点击触发取消收藏
     const followBtn = await screen.findByRole('button', { name: /已收藏/ });
     fireEvent.click(followBtn);
