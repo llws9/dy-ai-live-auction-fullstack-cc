@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { liveStreamApi } from '@/services/api';
+import LiveRoomSlide from './LiveRoomSlide';
 import { FEED_PAGE_SIZE, LIVE_STREAM_STATUS } from './constants';
 
 interface LiveStreamFeedItem {
@@ -68,10 +69,20 @@ const LiveFeedPage: React.FC = () => {
   }
 
   const currentRoom = rooms[currentIndex];
+  const urlAuctionIdRaw = Number(searchParams.get('auction_id'));
+  const urlAuctionId = Number.isFinite(urlAuctionIdRaw) && urlAuctionIdRaw > 0 ? urlAuctionIdRaw : undefined;
 
   return (
     <div>
-      <div>{currentRoom?.name}</div>
+      {currentRoom && (
+        <LiveRoomSlide
+          key={currentRoom.id}
+          liveStreamId={currentRoom.id}
+          currentAuctionId={currentRoom.current_auction_id}
+          urlAuctionId={urlAuctionId}
+          active
+        />
+      )}
     </div>
   );
 };

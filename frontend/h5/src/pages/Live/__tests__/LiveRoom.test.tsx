@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import LiveRoom from '../index';
+import LiveRoomSlide from '../LiveRoomSlide';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '../../../services/api';
 import WebSocketService from '../../../services/websocket';
 
@@ -136,7 +136,7 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoom />
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
       </MemoryRouter>
     );
 
@@ -175,7 +175,7 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoom />
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
       </MemoryRouter>
     );
 
@@ -200,7 +200,7 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoom />
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
       </MemoryRouter>
     );
 
@@ -242,7 +242,7 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoom />
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
       </MemoryRouter>
     );
 
@@ -280,7 +280,7 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoom />
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
       </MemoryRouter>
     );
 
