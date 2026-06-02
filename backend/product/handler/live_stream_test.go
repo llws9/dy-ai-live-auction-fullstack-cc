@@ -120,9 +120,8 @@ func TestGetDetail_VideoURL_FromDB(t *testing.T) {
 
 func TestListAdmin_T4FieldsAndStatusFilter(t *testing.T) {
 	auctionMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/auctions", r.URL.Path)
-		assert.Equal(t, "101", r.URL.Query().Get("live_stream_id"))
-		_, _ = w.Write([]byte(`{"code":200,"data":{"list":[],"total":3}}`))
+		assert.Equal(t, "/internal/auctions/count-by-live-streams", r.URL.Path)
+		_, _ = w.Write([]byte(`{"code":200,"data":{"counts":{"101":3}}}`))
 	}))
 	t.Cleanup(auctionMock.Close)
 

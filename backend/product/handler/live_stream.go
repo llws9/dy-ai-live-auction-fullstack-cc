@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"gorm.io/gorm"
@@ -89,14 +90,19 @@ func (h *LiveStreamHandler) ListAdmin(ctx context.Context, c *app.RequestContext
 
 func (h *LiveStreamHandler) buildAdminList(ctx context.Context, liveStreams []model.LiveStream) []map[string]interface{} {
 	items := make([]map[string]interface{}, 0, len(liveStreams))
-	for _, liveStream := range liveStreams {
-		auctionCount := int64(0)
-		if h.auctionClient != nil {
-			if count, err := h.auctionClient.CountAuctionsByLiveStreamID(ctx, liveStream.ID); err == nil {
-				auctionCount = count
-			}
+	// 批量获取竞拍数量，消除 N+1 跨服务调用。
+	auctionCounts := map[int64]int64{}
+	if h.auctionClient != nil && len(liveStreams) > 0 {
+		ids := make([]int64, 0, len(liveStreams))
+		for _, liveStream := range liveStreams {
+			ids = append(ids, liveStream.ID)
 		}
-		items = append(items, h.buildAdminItem(ctx, liveStream, auctionCount))
+		if counts, err := h.auctionClient.BatchCountAuctionsByLiveStreamIDs(ctx, ids); err == nil {
+			auctionCounts = counts
+		}
+	}
+	for _, liveStream := range liveStreams {
+		items = append(items, h.buildAdminItem(ctx, liveStream, auctionCounts[liveStream.ID]))
 	}
 	return items
 }
@@ -115,7 +121,7 @@ func (h *LiveStreamHandler) buildAdminItem(ctx context.Context, liveStream model
 		"streamer_id":     liveStream.CreatorID,
 		"streamer_name":   streamerName,
 		"streamer_avatar": liveStream.StreamerAvatar,
-		"viewer_count":    h.liveStreamService.ViewerCount(ctx, liveStream.ID),
+		"viewer_count":    h.liveStreamService.ViewerCount(ctx, &liveStream),
 		"auction_count":   auctionCount,
 		"ban_reason":      liveStream.BanReason,
 		"created_at":      liveStream.CreatedAt,
@@ -166,6 +172,10 @@ func (h *LiveStreamHandler) BanAdmin(ctx context.Context, c *app.RequestContext)
 		Reason string `json:"reason"`
 	}
 	_ = c.BindJSON(&req)
+	if strings.TrimSpace(req.Reason) == "" {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "封禁原因不能为空"})
+		return
+	}
 	liveStream, err := h.liveStreamService.Ban(ctx, id, req.Reason)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -234,6 +244,7 @@ func (h *LiveStreamHandler) GetDetail(ctx context.Context, c *app.RequestContext
 
 	isFollowing := false
 	followersCount := int64(0)
+	auctionCount := int64(0)
 	if h.auctionClient != nil {
 		if uidStr := string(c.GetHeader("X-User-ID")); uidStr != "" {
 			if uid, err := strconv.ParseInt(uidStr, 10, 64); err == nil && uid > 0 {
@@ -244,6 +255,9 @@ func (h *LiveStreamHandler) GetDetail(ctx context.Context, c *app.RequestContext
 		}
 		if fc, err := h.auctionClient.GetFollowersCount(ctx, id); err == nil {
 			followersCount = fc
+		}
+		if ac, err := h.auctionClient.CountAuctionsByLiveStreamID(ctx, id); err == nil {
+			auctionCount = ac
 		}
 	}
 
@@ -260,8 +274,8 @@ func (h *LiveStreamHandler) GetDetail(ctx context.Context, c *app.RequestContext
 		"created_at":      detail.CreatedAt,
 		"host_name":       "",
 		"host_avatar":     "",
-		"viewer_count":    h.liveStreamService.ViewerCount(ctx, detail.ID),
-		"auction_count":   0,
+		"viewer_count":    h.liveStreamService.ViewerCount(ctx, detail),
+		"auction_count":   auctionCount,
 		"ban_reason":      detail.BanReason,
 		"video_url":       videoURL,
 		"is_following":    isFollowing,

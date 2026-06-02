@@ -86,7 +86,9 @@ func main() {
 	if auctionSvcURL == "" {
 		auctionSvcURL = "http://localhost:8082"
 	}
-	liveStreamHandler.SetAuctionClient(client.NewAuctionClient(auctionSvcURL, 2*time.Second))
+	auctionClient := client.NewAuctionClient(auctionSvcURL, 2*time.Second)
+	auctionClient.SetInternalToken(os.Getenv("INTERNAL_API_TOKEN"))
+	liveStreamHandler.SetAuctionClient(auctionClient)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 	internalHandler := handler.NewInternalHandler(productService, liveStreamDAO)
 

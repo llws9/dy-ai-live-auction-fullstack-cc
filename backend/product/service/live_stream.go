@@ -80,12 +80,20 @@ func (s *LiveStreamService) Ban(ctx context.Context, id int64, reason string) (*
 	return s.liveStreamDAO.GetByID(ctx, id)
 }
 
-func (s *LiveStreamService) ViewerCount(ctx context.Context, id int64) int64 {
-	count, err := s.viewerCounter.Count(ctx, id)
-	if err != nil || count < 0 {
+// ViewerCount 返回直播间在线人数：优先取实时值（Redis），
+// 实时值不可用或为 0 时回退到 DB 兜底列 liveStream.ViewerCount。
+func (s *LiveStreamService) ViewerCount(ctx context.Context, liveStream *model.LiveStream) int64 {
+	if liveStream == nil {
 		return 0
 	}
-	return count
+	count, err := s.viewerCounter.Count(ctx, liveStream.ID)
+	if err == nil && count > 0 {
+		return count
+	}
+	if liveStream.ViewerCount > 0 {
+		return int64(liveStream.ViewerCount)
+	}
+	return 0
 }
 
 // List 获取直播间列表（管理员用）

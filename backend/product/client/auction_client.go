@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -22,8 +23,9 @@ type auctionListData struct {
 }
 
 type AuctionClient struct {
-	baseURL string
-	hc      *http.Client
+	baseURL       string
+	hc            *http.Client
+	internalToken string
 }
 
 func NewAuctionClient(baseURL string, timeout time.Duration) *AuctionClient {
@@ -34,6 +36,11 @@ func NewAuctionClient(baseURL string, timeout time.Duration) *AuctionClient {
 		baseURL: baseURL,
 		hc:      &http.Client{Timeout: timeout},
 	}
+}
+
+// SetInternalToken 注入服务间鉴权 token，用于 X-Internal-Token 鉴权。
+func (c *AuctionClient) SetInternalToken(token string) {
+	c.internalToken = token
 }
 
 func (c *AuctionClient) GetFollowStatus(ctx context.Context, userID, liveStreamID int64) (*FollowStatusResponse, error) {
@@ -113,4 +120,46 @@ func (c *AuctionClient) CountAuctionsByLiveStreamID(ctx context.Context, liveStr
 		return 0, fmt.Errorf("decode response: %w", err)
 	}
 	return body.Data.Total, nil
+}
+
+// BatchCountAuctionsByLiveStreamIDs 一次性批量统计多个直播间的竞拍数量，消除 N+1 跨服务调用。
+// 调用内部端点 POST /internal/auctions/count-by-live-streams，返回 {liveStreamID: count}。
+func (c *AuctionClient) BatchCountAuctionsByLiveStreamIDs(ctx context.Context, liveStreamIDs []int64) (map[int64]int64, error) {
+	if len(liveStreamIDs) == 0 {
+		return map[int64]int64{}, nil
+	}
+	payload, err := json.Marshal(map[string]interface{}{"live_stream_ids": liveStreamIDs})
+	if err != nil {
+		return nil, fmt.Errorf("marshal request: %w", err)
+	}
+	reqURL := fmt.Sprintf("%s/internal/auctions/count-by-live-streams", c.baseURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, bytes.NewReader(payload))
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.internalToken != "" {
+		req.Header.Set("X-Internal-Token", c.internalToken)
+	}
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("call auction-service: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("auction-service returned status %d", resp.StatusCode)
+	}
+	var body struct {
+		Code int `json:"code"`
+		Data struct {
+			Counts map[int64]int64 `json:"counts"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	if body.Data.Counts == nil {
+		return map[int64]int64{}, nil
+	}
+	return body.Data.Counts, nil
 }

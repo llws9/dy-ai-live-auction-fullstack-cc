@@ -260,6 +260,34 @@ func (d *AuctionDAO) CountActiveByLiveStreamIDs(ctx context.Context, liveStreamI
 	return result, nil
 }
 
+// CountByLiveStreamIDs 按 live_stream_id 批量统计全部竞拍数量（不限状态），
+// 用于管理端直播间列表/详情的 auction_count 字段，避免逐个直播间发起跨服务请求（N+1）。
+// 返回 map[live_stream_id]count；无记录的 id 不会出现在 map 中（调用方按 0 处理）。
+func (d *AuctionDAO) CountByLiveStreamIDs(ctx context.Context, liveStreamIDs []int64) (map[int64]int64, error) {
+	if len(liveStreamIDs) == 0 {
+		return map[int64]int64{}, nil
+	}
+	type row struct {
+		LiveStreamID int64
+		Cnt          int64
+	}
+	var rows []row
+	err := d.db.WithContext(ctx).
+		Model(&model.Auction{}).
+		Select("live_stream_id, COUNT(*) AS cnt").
+		Where("live_stream_id IN ?", liveStreamIDs).
+		Group("live_stream_id").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[int64]int64, len(rows))
+	for _, r := range rows {
+		result[r.LiveStreamID] = r.Cnt
+	}
+	return result, nil
+}
+
 // AuctionFilters 竞拍筛选条件
 type AuctionFilters struct {
 	Status         *model.AuctionStatus
