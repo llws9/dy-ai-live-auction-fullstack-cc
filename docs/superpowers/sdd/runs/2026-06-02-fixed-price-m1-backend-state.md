@@ -31,10 +31,10 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `13` |
-| Done | `8` |
+| Done | `10` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `5` |
+| Pending | `3` |
 | Last Updated | `2026-06-03` |
 
 > **W4 架构决策（RESOLVED）：** 经调查（`orders` 表无任何真实建单链路、CreateOrder 仅单测调用、拍卖成交不落单、全仓无 Outbox 设施、`user_balance` 与 `fixed_price_*` 同在 auction 库），用户拍板采用**方案③ purchase 自成闭环**：`fixed_price_purchases` 即购买凭证，auction 单库单事务完成 `扣余额+扣库存+写purchase+幂等`，**不写 product 的 orders 表**。已撤销 T1 的 `orders.source` 列 DDL 及 `FixedPricePurchase.OrderID`/`order_id` 列（commit f6855288）。T7 阻塞解除，不再依赖 product service。
@@ -42,6 +42,12 @@
 > **W4 余额扣减（RESOLVED）：** 调查发现 `UserBalanceDAO` 原仅只读、无写接口、全仓无余额扣减链路。用户拍板「扩大范围、实现最小余额扣减」：新增 `UserBalanceDAO.DeductWithTx`，条件更新 `available_amount >= amount` 才扣、靠 `RowsAffected` 防超扣，纯 auction 单库事务（commit fb0947e3）。
 >
 > **W4 契约适配：** `FixedPriceService` 删除 plan 中不存在的 `orders OrderCreator`/`outbox OutboxAppender` 依赖；改注入 `BalanceDeducter`/`StreamOwnerChecker`/`ProductChecker`/`Clock`（窄接口，测试注入 fake）。`PurchaseResult.OrderID` → `PurchaseID`（purchase.ID 即凭证）。T8 引入 `Clock` 抽象支持 fake clock 测异步清理。
+>
+> **W5 契约/实现偏差（RESOLVED）：**
+> - **`order_id` ↔ `PurchaseID` 映射**：spec §4.2 对外响应字段为 `order_id`，方案③下无 orders 表，handler 将 `PurchaseResult.PurchaseID` 映射为响应 `order_id`，保持前端契约稳定不 churn（抢购成功响应、my-purchase `order_id` 均为 purchase.ID）。
+> - **路由文件位置偏差**：plan T10 设想独立 `fixed_price_http.go`/`router.go`，实际 `RegisterFixedPriceRoutes` 写在 `handler/fixed_price.go` 内、由 `auction/main.go` 调用挂载（对齐仓库现有 user_balance/user_address handler 模式，不新建独立 router 文件）。
+> - **生产装配**：`main.go` 新增 StockGuard/IdemStore + 两个 client 适配器（`liveStreamOwnerChecker` 经 `BatchGetLiveStreams.CreatorID`、`productExistsChecker` 经 `BatchGetSummaries`），挂载 `/api/v1/fixed-price/*` 路由。
+> - **⚠️ 待补风险**：`main.go` AutoMigrate 列表尚未加入 `FixedPriceItem`/`FixedPricePurchase`，生产建表缺失，E2E/验收前必须补（见 T13 收尾）。
 
 ## Status Legend
 
@@ -59,8 +65,8 @@
 | `T6` | service 上架接口 | `done` | `main-agent` | W4 | T2,T4 | `backend/auction/service/fixed_price.go(+_test)` |
 | `T7` | service 抢购（Lua+Tx+Saga+幂等） | `done` | `main-agent` | W4 | T2,T3,T4,T5 | `backend/auction/service/fixed_price.go(+_test)` |
 | `T8` | service 下架（软标记+5s清Redis） | `done` | `main-agent` | W4 | T2,T4 | `backend/auction/service/fixed_price.go(+_test)` |
-| `T9` | handler 抢购 + 错误码映射 | `pending` | - | W5 | T7 | `backend/auction/handler/fixed_price.go(+_test)` |
-| `T10` | handler 上架/下架/详情/my-purchase + 路由 | `pending` | - | W5 | T6,T8 | `backend/auction/handler/fixed_price.go`, `fixed_price_http.go`, `router.go` |
+| `T9` | handler 抢购 + 错误码映射 | `done` | `main-agent` | W5 | T7 | `backend/auction/handler/fixed_price.go(+_test)` |
+| `T10` | handler 上架/下架/详情/my-purchase + 路由 | `done` | `main-agent` | W5 | T6,T8 | `backend/auction/handler/fixed_price.go(+_test)`, `backend/auction/main.go`（路由挂载与装配，偏差见 W5 说明） |
 | `T11` | gateway 转发路由 | `pending` | - | W6 | T9,T10 | `backend/gateway/router.go` |
 | `T12` | Toxiproxy 集成测试（网络异常补偿） | `pending` | - | W7 | T7 | `backend/auction/service/fixed_price_toxi_test.go` |
 | `T13` | E2E 冒烟 + 拍卖回归 | `pending` | - | W7 | T11 | `backend/auction/...`（只读回归 + 冒烟脚本） |
@@ -185,11 +191,33 @@ auction-service 原本无 dao/redis 单测 fixture（现有 redis 测试均 `t.S
 - 验证：`go test ./service/ -run TestOffline` PASS(3)。
 - **Commit** `44a9f5df`（同 T7）。
 
+### T9 - handler 抢购 + 错误码映射
+| Status | `done` |
+| --- | --- |
+- TDD（Hertz `ut.PerformRequest` + `fakeFixedPriceUsecase`/`fakeFPBalanceProvider`）：8 用例（MissingIdemKey_400 / MissingUser_401 / InvalidIdemFormat_400 / SoldOut_409 / AlreadyBought_409 / NotOnSale_409 / InsufficientBalance_402_WithDetails(required99/available50/shortage49) / Success_PriceAsString(order_id=88001,price="99.00",remaining=4)）Red→Green。
+- 链路：`parseFPItemID` → `requireFPUser`(c.GetInt64("user_id")<=0→401) → 校验 `X-Idempotency-Key` header 非空(400) → `uc.Purchase` → switch 错误码映射（spec §4.3 全覆盖）。成功响应 `{order_id:PurchaseID, item_id, price:StringFixed(2), remaining_stock, status:"success"}`。
+- `writeInsufficient`：`uc.GetItem` 取 required + `balance.GetByUserID` 取 available + shortage(负归零)，402 带 required/available/shortage（均 StringFixed(2)）。
+- 验证：`go test ./handler/ -run TestFixedPricePurchaseHandler` PASS(8)。
+- **Commit** `62a17dee` — `feat(fixed-price): add HTTP handlers, routes and wiring (M1.T9/T10)`
+
+### T10 - handler 上架/下架/详情/my-purchase + 路由 + 装配
+| Status | `done` |
+| --- | --- |
+- TDD：9 用例（ListItem_Success 校验 CreatorID=登录用户不信任请求体 / NonOwner_403 / MissingUser_401 / Offline_Success / Offline_NonOwner_403 / Detail_Success(remaining=87 Redis 权威优先) / Detail_NotFound_404 / MyPurchase_Bought(order_id=88001) / MyPurchase_NotBought(i_bought:false)）Red→Green。
+- service 暴露 3 只读方法供 handler：`GetItem`/`RemainingStock`/`GetMyPurchase`。编译期校验 `var _ FixedPriceUsecase = (*service.FixedPriceService)(nil)`。
+- `RegisterFixedPriceRoutes(g, h)`：POST `/fixed-price/items`、POST `/items/:id/offline`、GET `/items/:id`、POST `/items/:id/purchase`、GET `/items/:id/my-purchase`。
+- `main.go` 生产装配：StockGuard/IdemStore + `liveStreamOwnerChecker`/`productExistsChecker` 适配器，挂载 `h.Group("/api/v1")`。
+- 验证：`go test ./handler/` PASS(全部)、`go build ./...` 退出码 0、`cd backend/auction && go test . -run TestPendingReminder` 主包路由测试 `ok auction-service`。
+- **Commit** `62a17dee`（同 T9，4 files / 703 insertions）。
+
 ## Test Commands
 
 | Area | Command | Last Result |
 | --- | --- | --- |
 | Backend Auction (dao+service) | `cd backend/auction && go test ./dao/ ./service/` | `pass (ok dao / ok service)` |
+| Backend Auction (handler) | `cd backend/auction && go test ./handler/` | `pass (ok handler, T9 8 + T10 9 cases)` |
+| Backend Auction (main pkg route) | `cd backend/auction && go test . -run TestPendingReminder` | `pass (ok auction-service)` |
+| Backend Auction (build) | `cd backend/auction && go build ./...` | `pass (exit 0)` |
 | Backend Auction (T1) | `cd backend/auction && go build ./... && go vet ./model/` | `pass (BUILD_OK / VET_OK)` |
 | Backend Gateway | `cd backend/gateway && go test ./...` | `not_run` |
 
@@ -206,4 +234,5 @@ auction-service 原本无 dao/redis 单测 fixture（现有 redis 测试均 `t.S
 当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1
 
 **状态**
-- `initialized` - W1 待派发
+- `active` - W1–W5 done（T1–T10 全绿，commit 62a17dee）；进入 W6 T11 gateway 转发。
+- **待补**：main.go AutoMigrate 加入 `FixedPriceItem`/`FixedPricePurchase`（E2E/验收前）。
