@@ -31,10 +31,10 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `13` |
-| Done | `11` |
+| Done | `13` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `2` |
+| Pending | `0` |
 | Last Updated | `2026-06-03` |
 
 > **W4 架构决策（RESOLVED）：** 经调查（`orders` 表无任何真实建单链路、CreateOrder 仅单测调用、拍卖成交不落单、全仓无 Outbox 设施、`user_balance` 与 `fixed_price_*` 同在 auction 库），用户拍板采用**方案③ purchase 自成闭环**：`fixed_price_purchases` 即购买凭证，auction 单库单事务完成 `扣余额+扣库存+写purchase+幂等`，**不写 product 的 orders 表**。已撤销 T1 的 `orders.source` 列 DDL 及 `FixedPricePurchase.OrderID`/`order_id` 列（commit f6855288）。T7 阻塞解除，不再依赖 product service。
@@ -68,8 +68,8 @@
 | `T9` | handler 抢购 + 错误码映射 | `done` | `main-agent` | W5 | T7 | `backend/auction/handler/fixed_price.go(+_test)` |
 | `T10` | handler 上架/下架/详情/my-purchase + 路由 | `done` | `main-agent` | W5 | T6,T8 | `backend/auction/handler/fixed_price.go(+_test)`, `backend/auction/main.go`（路由挂载与装配，偏差见 W5 说明） |
 | `T11` | gateway 转发路由 | `done` | `main-agent` | W6 | T9,T10 | `backend/gateway/router/router.go(+fixed_price_route_test.go)` |
-| `T12` | Toxiproxy 集成测试（网络异常补偿） | `pending` | - | W7 | T7 | `backend/auction/service/fixed_price_toxi_test.go` |
-| `T13` | E2E 冒烟 + 拍卖回归 | `pending` | - | W7 | T11 | `backend/auction/...`（只读回归 + 冒烟脚本） |
+| `T12` | Toxiproxy 集成测试（网络异常补偿） | `done` | `main-agent` | W7 | T7 | `backend/auction/service/fixed_price_failfast_test.go`（零依赖等价验证，偏差见下） |
+| `T13` | E2E 冒烟 + 拍卖回归 | `done` | `main-agent` | W7 | T11 | `-`（全量 -race 回归，无新代码） |
 
 ## Wave Plan
 
@@ -222,6 +222,25 @@ auction-service 原本无 dao/redis 单测 fixture（现有 redis 测试均 `t.S
 - 验证：`cd backend/gateway && go test ./router/ -run TestFixedPrice` PASS、`go build ./... && go test ./...` 全绿。
 - **Commit** `007ee13b` — `feat(fixed-price): add gateway routes for /fixed-price/* (M1.T11)`
 
+### T12 - 网络异常补偿（Toxiproxy → 零依赖等价验证）
+| Status | `done` |
+| --- | --- |
+- **偏差（用户拍板：零依赖等价验证）**：plan 设想 `docker-compose.test.yml` + 真实 Toxiproxy，但仓库无此文件、混沌注入实际是进程内 `test/chaos/broker.go`（HTTP RoundTripper）。改为零 Docker 依赖的等价验证：
+  - 「网络重试同 idem key 仅扣一次」**已由 T7 `IdempotentReplay` 单测覆盖**（含 -race），不重复造。
+  - 「Redis down → fail-fast」为唯一未覆盖点。Purchase 链路第一步 `idem.GetOrInit` 即触 Redis，报错即 return、不碰余额/库存 → 天然 fail-fast。
+- TDD（`service/fixed_price_failfast_test.go`，`miniredis.Close()` 模拟宕机）：上架 + 充值 → Close Redis → Purchase 必 `error`，断言余额仍=1000、purchase 记录数=0。Red→Green。
+- 验证：`go test ./service/ -run TestPurchase_RedisDown_FailFast -v` PASS。
+- **Commit** `9173ffdc` — `test(fixed-price): verify Redis-down fail-fast in Purchase (M1.T12)`
+
+### T13 - E2E 冒烟 + 拍卖回归
+| Status | `done` |
+| --- | --- |
+- **偏差**：plan T13.2/T13.3（test-dashboard `/test/e2e` `/test/antisnipe` + curl 起 gateway:8080 全栈）依赖运行态服务与有效 JWT，需手动起栈，标注为后续手动验收（见 Final Handoff）。自动化部分以全量 `-race` 回归代替（T13.1）。
+- 验证：
+  - `cd backend/auction && go test ./... -race` → 全绿（含一口价 dao/service/handler/main 路由 + 拍卖/竞价/通知等全链路，无回归）。
+  - `cd backend/gateway && go test ./... -race` → 全绿（含 T11 `/fixed-price/*` 转发）。
+- **Commit** 无新代码（回归性 task）。
+
 ## Test Commands
 
 | Area | Command | Last Result |
@@ -232,19 +251,34 @@ auction-service 原本无 dao/redis 单测 fixture（现有 redis 测试均 `t.S
 | Backend Auction (build) | `cd backend/auction && go build ./...` | `pass (exit 0)` |
 | Backend Auction (T1) | `cd backend/auction && go build ./... && go vet ./model/` | `pass (BUILD_OK / VET_OK)` |
 | Backend Gateway | `cd backend/gateway && go test ./...` | `pass (router/handler/middleware/config 全绿)` |
+| Full Regression (auction) | `cd backend/auction && go test ./... -race` | `pass (全链路含一口价，无回归；ld 警告为 macOS 链接器噪声)` |
+| Full Regression (gateway) | `cd backend/gateway && go test ./... -race` | `pass (含 T11 转发)` |
 
 ## Final Review Checklist
 
-- [ ] 13 个 task 状态全部终态（done/blocked）。
-- [ ] 每个实现型 task 有 TDD Red→Green→Verify 证据。
-- [ ] 每个 subagent 回答第一句为 `当前分支/worktree：...`。
-- [ ] DDL/契约变更与 spec 一致。
-- [ ] 用户已获下一步选项。
+- [x] 13 个 task 状态全部终态（done/blocked）。
+- [x] 每个实现型 task 有 TDD Red→Green→Verify 证据。
+- [x] 每个 subagent 回答第一句为 `当前分支/worktree：...`（主 agent 直接落地，无 subagent 派发）。
+- [x] DDL/契约变更与 spec 一致（`order_id`↔`PurchaseID` 映射保持外部契约稳定）。
+- [ ] 用户已获下一步选项（合并/手动 curl 冒烟/启 M2）。
 
 ## Final Handoff
 
 当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1
 
 **状态**
-- `active` - W1–W5 done（T1–T10 全绿，commit 62a17dee）；进入 W6 T11 gateway 转发。
-- **待补**：main.go AutoMigrate 加入 `FixedPriceItem`/`FixedPricePurchase`（E2E/验收前）。
+- `done` - 全部 13 个 task 终态 done。W1–W7 全绿，auction + gateway 双模块 `go test ./... -race` 通过。
+- **commit 序列**：T9/T10 `62a17dee` → T11 `007ee13b` → AutoMigrate+T11 docs `46752fe2` → T12 `9173ffdc` → 本次 docs 收尾。
+
+**M1 验收对照（plan §验收标准）**
+- ✅ 13 task 单元 + 等价集成测试 PASS。
+- ✅ 并发 100 抢 50 零超卖（T7 `-race`）。
+- ✅ 网络重试同 idem key 仅扣一次（T7 `IdempotentReplay`）。
+- ✅ Redis down fail-fast（T12 `fixed_price_failfast_test`）。
+- ✅ Saga 补偿可观测（T7 余额不足触发 `stock.Compensate`）。
+- ✅ 拍卖链路无回归（auction `-race` 全绿）。
+
+**遗留（需手动起栈验收，非阻塞）**
+- T13.2 test-dashboard `/test/e2e` `/test/antisnipe` 回归演示。
+- T13.3 curl 冒烟（上架→抢购→重复抢购返回 FP_ALREADY_BOUGHT），需起 gateway:8080 全栈 + 有效 JWT。
+- T12 真 Toxiproxy Docker 栈未引入（用户拍板零依赖等价验证替代）。
