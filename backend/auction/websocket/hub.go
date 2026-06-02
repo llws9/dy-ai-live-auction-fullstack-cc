@@ -10,6 +10,10 @@ type Hub struct {
 	rooms     map[int64]*Room
 	roomsLock sync.RWMutex
 
+	// 直播间房间管理 - 按 live_stream_id 隔离的弹幕房间
+	liveStreamRooms     map[int64]*LiveStreamRoom
+	liveStreamRoomsLock sync.RWMutex
+
 	// 用户房间管理 - 支持按用户ID推送通知
 	UserRooms   map[int64]map[*Client]bool // userID -> clients
 	userRoomsMu sync.RWMutex
@@ -32,12 +36,13 @@ type BroadcastMessage struct {
 // NewHub 创建 Hub
 func NewHub() *Hub {
 	return &Hub{
-		rooms:      make(map[int64]*Room),
-		UserRooms:  make(map[int64]map[*Client]bool),
-		Register:   make(chan *Client, 256),
-		Unregister: make(chan *Client, 256),
-		broadcast:  make(chan *BroadcastMessage, 1024),
-		done:       make(chan struct{}),
+		rooms:           make(map[int64]*Room),
+		liveStreamRooms: make(map[int64]*LiveStreamRoom),
+		UserRooms:       make(map[int64]map[*Client]bool),
+		Register:        make(chan *Client, 256),
+		Unregister:      make(chan *Client, 256),
+		broadcast:       make(chan *BroadcastMessage, 1024),
+		done:            make(chan struct{}),
 	}
 }
 
@@ -79,6 +84,12 @@ func (h *Hub) Stop() {
 		room.Close()
 	}
 	h.roomsLock.Unlock()
+
+	h.liveStreamRoomsLock.Lock()
+	for _, r := range h.liveStreamRooms {
+		r.Close()
+	}
+	h.liveStreamRoomsLock.Unlock()
 }
 
 // registerClient 注册客户端
@@ -100,6 +111,11 @@ func (h *Hub) registerClient(client *Client) {
 	if client.UserID > 0 {
 		h.JoinUserRoom(client.UserID, client)
 	}
+
+	// 订阅了直播间弹幕时，自动加入直播间房间
+	if client.LiveStreamID > 0 {
+		go h.RegisterToLiveStream(client)
+	}
 }
 
 // unregisterClient 注销客户端
@@ -116,6 +132,11 @@ func (h *Hub) unregisterClient(client *Client) {
 	// 用户断开时，从用户房间移除
 	if client.UserID > 0 {
 		h.LeaveUserRoom(client.UserID, client)
+	}
+
+	// 订阅了直播间弹幕时，从直播间房间移除
+	if client.LiveStreamID > 0 {
+		go h.UnregisterFromLiveStream(client)
 	}
 }
 
@@ -231,4 +252,55 @@ func (h *Hub) GetUserRoomClientCount(userID int64) int {
 		return 0
 	}
 	return len(h.UserRooms[userID])
+}
+
+// RegisterToLiveStream 将客户端加入直播间弹幕房间（房间不存在则创建）
+func (h *Hub) RegisterToLiveStream(client *Client) {
+	if client.LiveStreamID <= 0 {
+		return
+	}
+	h.liveStreamRoomsLock.Lock()
+	room, ok := h.liveStreamRooms[client.LiveStreamID]
+	if !ok {
+		room = NewLiveStreamRoom(client.LiveStreamID)
+		h.liveStreamRooms[client.LiveStreamID] = room
+		go room.Run()
+	}
+	h.liveStreamRoomsLock.Unlock()
+	room.Register <- client
+}
+
+// UnregisterFromLiveStream 将客户端移出直播间弹幕房间
+func (h *Hub) UnregisterFromLiveStream(client *Client) {
+	if client.LiveStreamID <= 0 {
+		return
+	}
+	h.liveStreamRoomsLock.RLock()
+	room, ok := h.liveStreamRooms[client.LiveStreamID]
+	h.liveStreamRoomsLock.RUnlock()
+	if ok {
+		room.Unregister <- client
+	}
+}
+
+// BroadcastToLiveStream 向指定直播间弹幕房间广播消息
+func (h *Hub) BroadcastToLiveStream(liveStreamID int64, msg *Message) {
+	h.liveStreamRoomsLock.RLock()
+	room, ok := h.liveStreamRooms[liveStreamID]
+	h.liveStreamRoomsLock.RUnlock()
+	if !ok {
+		return
+	}
+	select {
+	case room.Broadcast <- msg:
+	default:
+		log.Printf("[hub] livestream room %d broadcast buffer full", liveStreamID)
+	}
+}
+
+// GetLiveStreamRoom 获取直播间弹幕房间（不存在返回 nil）
+func (h *Hub) GetLiveStreamRoom(liveStreamID int64) *LiveStreamRoom {
+	h.liveStreamRoomsLock.RLock()
+	defer h.liveStreamRoomsLock.RUnlock()
+	return h.liveStreamRooms[liveStreamID]
 }

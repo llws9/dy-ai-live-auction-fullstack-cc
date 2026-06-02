@@ -27,10 +27,12 @@ const (
 
 // Client WebSocket 客户端
 type Client struct {
-	ID          string
-	AuctionID   int64
-	UserID      int64
-	ConnectedAt time.Time
+	ID           string
+	AuctionID    int64
+	LiveStreamID int64 // 直播间 ID（0 表示未订阅弹幕）
+	UserID       int64
+	UserName     string // 发弹幕时回填到广播
+	ConnectedAt  time.Time
 
 	conn *websocket.Conn
 	Send chan *Message
@@ -43,16 +45,18 @@ type Client struct {
 }
 
 // NewClient 创建客户端
-func NewClient(id string, auctionID, userID int64, conn *websocket.Conn, hub *Hub) *Client {
+func NewClient(id string, auctionID, userID, liveStreamID int64, userName string, conn *websocket.Conn, hub *Hub) *Client {
 	now := time.Now()
 	client := &Client{
-		ID:          id,
-		AuctionID:   auctionID,
-		UserID:      userID,
-		ConnectedAt: now,
-		conn:        conn,
-		Send:        make(chan *Message, sendBufferSize),
-		hub:         hub,
+		ID:           id,
+		AuctionID:    auctionID,
+		LiveStreamID: liveStreamID,
+		UserID:       userID,
+		UserName:     userName,
+		ConnectedAt:  now,
+		conn:         conn,
+		Send:         make(chan *Message, sendBufferSize),
+		hub:          hub,
 	}
 
 	// 保存连接状态到 Redis
@@ -88,14 +92,16 @@ func (c *Client) SetStateManager(sm *StateManager) {
 }
 
 // NewClientSimple 创建客户端（简化版，自动生成ID）
-func NewClientSimple(conn *websocket.Conn, auctionID, userID int64) *Client {
+func NewClientSimple(conn *websocket.Conn, auctionID, userID, liveStreamID int64, userName string) *Client {
 	id := fmt.Sprintf("%d-%d-%d", auctionID, userID, time.Now().UnixNano())
 	return &Client{
-		ID:        id,
-		AuctionID: auctionID,
-		UserID:    userID,
-		conn:      conn,
-		Send:      make(chan *Message, sendBufferSize),
+		ID:           id,
+		AuctionID:    auctionID,
+		LiveStreamID: liveStreamID,
+		UserID:       userID,
+		UserName:     userName,
+		conn:         conn,
+		Send:         make(chan *Message, sendBufferSize),
 	}
 }
 

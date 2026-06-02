@@ -81,7 +81,7 @@ func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.Respons
 	}
 
 	// 创建客户端
-	client := ws.NewClientSimple(conn, auctionID, userID)
+	client := ws.NewClientSimple(conn, auctionID, userID, 0, "")
 
 	// 注册到 Hub
 	if hub != nil {
