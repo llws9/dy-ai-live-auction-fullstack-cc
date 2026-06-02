@@ -31,13 +31,17 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `13` |
-| Done | `5` |
+| Done | `8` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `8` |
+| Pending | `5` |
 | Last Updated | `2026-06-03` |
 
 > **W4 架构决策（RESOLVED）：** 经调查（`orders` 表无任何真实建单链路、CreateOrder 仅单测调用、拍卖成交不落单、全仓无 Outbox 设施、`user_balance` 与 `fixed_price_*` 同在 auction 库），用户拍板采用**方案③ purchase 自成闭环**：`fixed_price_purchases` 即购买凭证，auction 单库单事务完成 `扣余额+扣库存+写purchase+幂等`，**不写 product 的 orders 表**。已撤销 T1 的 `orders.source` 列 DDL 及 `FixedPricePurchase.OrderID`/`order_id` 列（commit f6855288）。T7 阻塞解除，不再依赖 product service。
+>
+> **W4 余额扣减（RESOLVED）：** 调查发现 `UserBalanceDAO` 原仅只读、无写接口、全仓无余额扣减链路。用户拍板「扩大范围、实现最小余额扣减」：新增 `UserBalanceDAO.DeductWithTx`，条件更新 `available_amount >= amount` 才扣、靠 `RowsAffected` 防超扣，纯 auction 单库事务（commit fb0947e3）。
+>
+> **W4 契约适配：** `FixedPriceService` 删除 plan 中不存在的 `orders OrderCreator`/`outbox OutboxAppender` 依赖；改注入 `BalanceDeducter`/`StreamOwnerChecker`/`ProductChecker`/`Clock`（窄接口，测试注入 fake）。`PurchaseResult.OrderID` → `PurchaseID`（purchase.ID 即凭证）。T8 引入 `Clock` 抽象支持 fake clock 测异步清理。
 
 ## Status Legend
 
@@ -52,9 +56,9 @@
 | `T3` | dao FixedPricePurchase 唯一键 | `done` | `subagent` | W2 | T1 | `backend/auction/dao/fixed_price_purchase.go(+_test)` |
 | `T4` | Lua 原子库存抢占 | `done` | `subagent` | W3 | T1 | `backend/auction/service/fixed_price_lua.go(+_test)` |
 | `T5` | 幂等存储 | `done` | `subagent` | W3 | T1 | `backend/auction/service/fixed_price_idem.go(+_test)` |
-| `T6` | service 上架接口 | `pending` | - | W4 | T2,T4 | `backend/auction/service/fixed_price.go(+_test)` |
-| `T7` | service 抢购（Lua+Tx+Saga+幂等） | `pending` | - | W4 | T2,T3,T4,T5 | `backend/auction/service/fixed_price.go(+_test)` |
-| `T8` | service 下架（软标记+5s清Redis） | `pending` | - | W4 | T2,T4 | `backend/auction/service/fixed_price.go(+_test)` |
+| `T6` | service 上架接口 | `done` | `main-agent` | W4 | T2,T4 | `backend/auction/service/fixed_price.go(+_test)` |
+| `T7` | service 抢购（Lua+Tx+Saga+幂等） | `done` | `main-agent` | W4 | T2,T3,T4,T5 | `backend/auction/service/fixed_price.go(+_test)` |
+| `T8` | service 下架（软标记+5s清Redis） | `done` | `main-agent` | W4 | T2,T4 | `backend/auction/service/fixed_price.go(+_test)` |
 | `T9` | handler 抢购 + 错误码映射 | `pending` | - | W5 | T7 | `backend/auction/handler/fixed_price.go(+_test)` |
 | `T10` | handler 上架/下架/详情/my-purchase + 路由 | `pending` | - | W5 | T6,T8 | `backend/auction/handler/fixed_price.go`, `fixed_price_http.go`, `router.go` |
 | `T11` | gateway 转发路由 | `pending` | - | W6 | T9,T10 | `backend/gateway/router.go` |
@@ -145,6 +149,41 @@ auction-service 原本无 dao/redis 单测 fixture（现有 redis 测试均 `t.S
 - key `fp:idem:%d:%d:%s`，TTL 10min；存的整数为 purchase ID 语义（方案③，无 order 概念）。
 - 验证：`go test ./service/ -run TestIdemStore -v` PASS(4)、`go vet` clean。
 - **Commit** `d3f35562` — `feat(fixed-price): add idempotency store with UUID validation (M1.T5)`
+
+### 余额扣减能力（W4 前置，main-agent，用户批准扩大范围）
+| Status | `done` |
+| --- | --- |
+- 根因：`UserBalanceDAO` 原仅只读，全仓无余额扣减链路。用户拍板实现最小扣减。
+- 新增 `UserBalanceDAO.DeductWithTx(ctx, tx, userID, amount) (affected, err)`：`Where("user_id=? AND available_amount>=?")` 条件更新，靠 `RowsAffected` 判定（==0 即余额不足/无记录），调用方须在已开事务内调用。
+- TDD：4 用例（Success / Insufficient / ExactBalance / NoRecord）Red→Green。`dao/testutil_test.go` 迁移加入 `UserBalance`。
+- 验证：`go test ./dao/ -run TestUserBalanceDAO_DeductWithTx` PASS(4)。
+- **Commit** `fb0947e3` — `feat(fixed-price): add UserBalanceDAO.DeductWithTx conditional deduction`
+
+### T6 - service 上架接口
+| Status | `done` |
+| --- | --- |
+- TDD：5 用例（ValidatesAndCreates / RejectsInvalidPrice / RejectsExcessiveStock>10000 / RejectsNonOwner / RejectsMissingProduct）Red→Green。
+- `FixedPriceService` 装配：注入 `BalanceDeducter`/`StreamOwnerChecker`/`ProductChecker`/`Clock`（窄接口），删 plan 的 orders/outbox 依赖。`NewFixedPriceService` clk 传 nil 用 `realClock`。
+- 测试 fixture：`fakeStreamOwner`/`fakeProductChecker`/`fakeClock`（手动推进）+ `setupFixedPriceService*` 系列 + sqlite/miniredis。
+- 验证：`go test ./service/ -run TestFixedPriceService_List` PASS(5)。
+- **Commit** `44a9f5df`（与 T7/T8 合并提交，含 service 主文件）；T6 骨架先于 `44a9f5df` 前一提交落地。
+
+### T7 - service 抢购（Lua+Tx+Saga+幂等）
+| Status | `done` |
+| --- | --- |
+- TDD：8 用例（HappyPath / SoldOut / AlreadyBought / InsufficientBalance 触发补偿 / IdempotentReplay 仅扣一次 / NotOnSale / LastUnitMarksSoldOut / Concurrent 100抢50 零超卖）Red→Green。
+- 链路（方案③）：IsValidKey → 幂等命中复用(返回 PurchaseID,Replayed) → 状态预检(SoldOut/NotOnSale 区分) → Lua TryAcquire → auction 单库单事务(DeductWithTx 扣余额 + InsertWithTx 写 purchase) → 事务失败 Saga `stock.Compensate` 回补 → 成功 Persist 幂等(存 purchase.ID) → 末件 UpdateStatus SoldOut。
+- `PurchaseResult.PurchaseID`（替代 plan 的 OrderID）。
+- 验证：`go test ./service/ -run TestPurchase -race` PASS(8)，并发零超卖通过 -race。
+- **Commit** `44a9f5df` — `feat(fixed-price): implement Purchase + Offline service (M1.T7/T8)`
+
+### T8 - service 下架（软标记 + 延时清 Redis）
+| Status | `done` |
+| --- | --- |
+- TDD：3 用例（OwnerMarksOnly 立即查库存仍在 / NonOwner→ErrNotStreamOwner / AsyncCleanupAfterDelay fake clock 推进 6s 后 Redis 被清）Red→Green。
+- `Offline`：仅 `CreatorID==userID` 可下架 → `UpdateStatus(Offline)` → `scheduleCleanup` 经 `Clock.AfterFunc(cleanupDelay=5s)` 异步 `stock.Cleanup`。
+- 验证：`go test ./service/ -run TestOffline` PASS(3)。
+- **Commit** `44a9f5df`（同 T7）。
 
 ## Test Commands
 
