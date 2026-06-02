@@ -26,18 +26,18 @@
 | State Template | `docs/superpowers/sdd/state-template.md` | yes | yes |
 | Plan | `docs/superpowers/plans/2026-06-03-h5-theme-phase2-polish.md` | yes | yes |
 | Tasks | `docs/superpowers/plans/2026-06-03-h5-theme-phase2-polish.md` | yes | yes |
-| Scope | `T001-T005` | no | yes |
+| Scope | `T001-T006` | no | yes |
 
 ## Execution Summary
 
 | Metric | Value |
 | --- | --- |
-| Total Tasks | `5` |
+| Total Tasks | `6` |
 | Done | `5` |
-| Blocked | `0` |
+| Blocked | `1` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 02:46` |
+| Last Updated | `2026-06-03 02:55` |
 
 ## Task Matrix
 
@@ -48,6 +48,7 @@
 | `T003` | `Polish Missed Addresses And Order Detail Pages` | `done` | `main-agent` | `W3` | `T001,T002` | `Task 3` | `frontend/h5/src/pages/Addresses/Addresses.module.css`, `frontend/h5/src/pages/Order/Detail.module.css`, `frontend/h5/src/pages/__tests__/Phase2PageThemeTokens.test.ts` |
 | `T004` | `Polish Scoped Standard Pages` | `done` | `main-agent` | `W4` | `T001,T003` | `Task 4` | `frontend/h5/src/pages/Notifications/Notifications.module.css`, `frontend/h5/src/pages/Follow/Following.module.css`, `frontend/h5/src/pages/History/AuctionHistory.module.css`, `frontend/h5/src/pages/__tests__/Phase2PageThemeTokens.test.ts` |
 | `T005` | `Polish Shared Components` | `done` | `main-agent` | `W5` | `T001,T004` | `Task 5` | `frontend/h5/src/components/shared/Button.module.css`, `frontend/h5/src/components/shared/Input.module.css`, `frontend/h5/src/components/shared/Loading.module.css`, `frontend/h5/src/components/shared/Skeleton.module.css`, `frontend/h5/src/components/BadgeDot/BadgeDot.module.css`, `frontend/h5/src/components/LiveReminderModal/LiveReminderModal.module.css`, `frontend/h5/src/components/__tests__/Phase2SharedThemeTokens.test.ts` |
+| `T006` | `Theme Regression Verification` | `blocked` | `main-agent` | `W6` | `T001,T002,T003,T004,T005` | `Task 6` | `docs/superpowers/sdd/runs/2026-06-03-2026-06-03-h5-theme-phase2-polish-state.md` |
 
 ## Wave Plan
 
@@ -58,6 +59,7 @@
 | `W3` | `Polish missed Addresses and Order Detail pages` | `T003` | `T001,T002 done` | `Scoped page CSS contract plus Addresses/Order behavior tests pass` |
 | `W4` | `Polish scoped standard pages` | `T004` | `T001,T003 done` | `Scoped page contract plus Notifications/Follow/History behavior tests pass` |
 | `W5` | `Polish shared components` | `T005` | `T001,T004 done` | `Shared component contract plus BadgeDot behavior tests pass` |
+| `W6` | `Theme regression verification` | `T006` | `T001-T005 done` | `Phase 2 contracts, theme behavior tests, typecheck, production build, and route probes pass` |
 
 ## Task Records
 
@@ -65,7 +67,7 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `done` |
+| Status | `blocked` |
 | Owner | `main-agent` |
 | Started At | `2026-06-03 01:10` |
 | Completed At | `2026-06-03 01:18` |
@@ -295,6 +297,54 @@
 - Remaining work: Task 6 theme regression verification.
 - First response line used: `当前分支/worktree：feat/h5-theme-phase2-polish @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-theme-phase2-polish`
 
+### T006 - `Theme Regression Verification`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-03 02:35` |
+| Completed At | `-` |
+| Branch | `feat/h5-theme-phase2-polish` |
+| Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-theme-phase2-polish` |
+| Depends On | `T001,T002,T003,T004,T005` |
+| Parallel Group | `W6` |
+
+**TDD Plan**
+
+- Verify-only task: no production code changes expected.
+- Run all Phase 2 CSS contract tests, theme-related behavior tests, TypeScript check, production build, local dev server availability, route probes, and whitespace check.
+- Update state with automated verification evidence and the current manual visual-validation blocker.
+
+**Modified Files**
+
+- `docs/superpowers/sdd/runs/2026-06-03-2026-06-03-h5-theme-phase2-polish-state.md`
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `cd frontend/h5 && npx jest src/styles/tokens/__tests__/themeTokens.test.ts src/pages/User/__tests__/ProfileThemeTokens.test.ts src/pages/__tests__/Phase2PageThemeTokens.test.ts src/components/__tests__/Phase2SharedThemeTokens.test.ts` | `PASS` | `PASS: 4 suites, 17 tests` | `pass` |
+| `cd frontend/h5 && npx jest src/store/__tests__/themeContext.test.tsx src/components/ThemeToggle/__tests__/ThemeToggle.test.tsx src/components/shared/__tests__/PageHeader.test.tsx src/pages/User/__tests__/Profile.test.tsx src/pages/Addresses/__tests__/Addresses.test.tsx src/pages/Order/__tests__/Detail.test.tsx src/pages/Notifications/__tests__/Notifications.test.tsx src/pages/Follow/__tests__/Following.test.tsx src/pages/History/__tests__/AuctionHistory.test.tsx` | `PASS` | `PASS: 9 suites, 39 tests` | `pass` |
+| `cd frontend/h5 && npx tsc --noEmit` | `No TypeScript errors` | `exit 0` | `pass` |
+| `cd frontend/h5 && npm run build` | `Build completes successfully` | `PASS: vite build completed, 96 modules transformed` | `pass` |
+| `npm run dev -- --host 127.0.0.1` | `Vite dev server available` | `Running at http://127.0.0.1:5173/` | `pass` |
+| `python3 route probe for /profile /addresses /order/56 /notifications /following /history / /live` | `HTTP 200 SPA entry` | `All routes returned 200 with spa=True` | `pass` |
+| `git diff --check && git status --short` | `No whitespace errors before state update` | `exit 0; no output` | `pass` |
+
+**Risks / Blockers**
+
+- Automated verification passed, but Task 6 is blocked on manual visual acceptance. The user selected `有问题` during the dark/light visual checklist and will provide the concrete page/problem details in the next conversation.
+- A mock visual review environment was started for manual inspection at `http://127.0.0.1:5174/login?redirect=%2Fprofile`, backed by mock API `http://127.0.0.1:18080`.
+- True pixel-level dark/light visual inspection cannot be completed by the agent alone because this session has no browser/screenshot inspection tooling; route availability was verified via the running Vite server instead.
+- Test output includes existing non-fatal warnings: `ts-jest` `esModuleInterop`, React Router v7 future flags, `OrderDetail` async `act(...)`, and Vite CJS Node API deprecation.
+
+**Handoff**
+
+- Completion summary: Task 6 automated regression verification passed with no production code changes, but manual visual checklist is blocked pending user-provided issue details.
+- Commit decision: persist this state-only blocker record so the next conversation can resume from the correct status.
+- First response line used: `当前分支/worktree：feat/h5-theme-phase2-polish @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-theme-phase2-polish`
+
 
 ## Final Review Checklist
 
@@ -302,6 +352,8 @@
 - [x] Every implementation task records TDD Red -> Green -> Verify evidence.
 - [x] Every completed subagent response starts with `当前分支/worktree：`.
 - [x] Verification commands and results are recorded.
+- [x] Task 6 full automated regression verification is recorded.
+- [ ] Task 6 manual dark/light visual checklist is accepted by the user.
 
 ## Final Handoff
 
@@ -314,3 +366,4 @@
 - `Task 3 done; committed by main agent`
 - `Task 4 done; committed by main agent`
 - `Task 5 done; committed by main agent`
+- `Task 6 blocked; automated verification passed; manual visual checklist has a user-reported issue pending details`
