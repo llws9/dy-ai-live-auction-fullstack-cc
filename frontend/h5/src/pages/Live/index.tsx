@@ -1,9 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '@/services/api';
 import WebSocketService from '@/services/websocket';
 import { useAuth } from '@/store/authContext';
 import { useToast } from '../../components/Toast';
+import { ChatPanel } from '../../components/LiveChat/ChatPanel';
+import { useLiveChatStore } from '../../store/liveChatStore';
 import styles from './Live.module.css';
 
 interface Auction {
@@ -128,7 +130,7 @@ function auctionResultPathFromNotification(notification: any, fallbackAuctionId:
 const LiveRoomPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
   const auctionId = Number(searchParams.get('auction_id') || searchParams.get('id') || 0);
   const queryLiveStreamId = Number(searchParams.get('id') || 0);
 
@@ -147,6 +149,7 @@ const LiveRoomPage: React.FC = () => {
   const [toast, setToast] = useState('');
   const [now, setNow] = useState(() => Date.now());
   const { showToast: showGlobalToast } = useToast();
+  const wsRef = useRef<WebSocketService | null>(null);
 
   const currentPrice = auction?.current_price ?? 0;
   const increment = product?.rules?.increment ?? 100;
@@ -272,8 +275,11 @@ const LiveRoomPage: React.FC = () => {
   useEffect(() => {
     if (!auctionId) return;
 
-    const ws = new WebSocketService(auctionId, token ?? undefined);
+    const ws = new WebSocketService(auctionId, token ?? undefined, queryLiveStreamId || undefined);
+    wsRef.current = ws;
     const shownNotificationIds = new Set<number | string>();
+    const onChatMessage = (data: any) => useLiveChatStore.getState().receive(data);
+    ws.on('chat_message', onChatMessage);
     ws.on('rank_update', (data) => {
       setRanking(normalizeRanking(extractList(data)));
     });
@@ -336,10 +342,13 @@ const LiveRoomPage: React.FC = () => {
 
     return () => {
       unsubscribeNotification();
+      ws.off('chat_message', onChatMessage);
       ws.disconnect();
+      wsRef.current = null;
+      useLiveChatStore.getState().reset();
       setConnected(false);
     };
-  }, [auctionId, normalizeRanking, token, showGlobalToast, navigate]);
+  }, [auctionId, normalizeRanking, token, showGlobalToast, navigate, queryLiveStreamId]);
 
   const handleBid = async () => {
     if (!isAuthenticated) {
@@ -568,7 +577,10 @@ const LiveRoomPage: React.FC = () => {
 
         <section className={styles.chatBlock}>
           <h2>直播互动</h2>
-          <p>聊天协议尚未开放，当前仅保留直播间互动入口。</p>
+          <ChatPanel
+            currentUserId={user?.id ?? 0}
+            onSend={(text, clientMsgId) => wsRef.current?.sendChat(text, clientMsgId)}
+          />
         </section>
       </div>
 
