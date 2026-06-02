@@ -164,6 +164,19 @@
 - Diagnostics: editor diagnostics for isolated worktree file path returned `Access denied`; TypeScript validation is covered by `npm run build`.
 - Modified files: `frontend/h5/src/__tests__/components/MobileShell.test.tsx`, `docs/superpowers/sdd/runs/2026-06-02-touchpoint-metrics-task1-state.md`.
 
+## T005 P2 Duplicate Modal Tracking Fix Evidence
+
+- Review scope: prevent duplicate modal action tracking when users rapidly click the live reminder confirm button or overlay.
+- RED method: added rapid double-click tests for confirm and overlay dismiss paths, then temporarily removed the once guard to verify both tests catch duplicate events.
+- RED command: `cd frontend/h5 && npm test -- src/__tests__/components/MobileShell.test.tsx --runInBand --testNamePattern="duplicate live reminder"`
+- RED result: `FAIL`, `live_reminder_clicked` and `live_reminder_dismissed` were each emitted twice without the once guard.
+- GREEN command: `cd frontend/h5 && npm test -- src/__tests__/components/MobileShell.test.tsx --runInBand`
+- GREEN result: `PASS`, `21 passed, 21 total`.
+- Build command: `cd frontend/h5 && npm run build`
+- Build result: `PASS`, `tsc && vite build` completed successfully.
+- Diagnostics: editor diagnostics for isolated worktree file path returned `Access denied`; TypeScript validation is covered by `npm run build`.
+- Modified files: `frontend/h5/src/components/LiveReminderModal/index.tsx`, `frontend/h5/src/__tests__/components/MobileShell.test.tsx`, `docs/superpowers/sdd/runs/2026-06-02-touchpoint-metrics-task1-state.md`.
+
 ## Risks
 
 - `go.mod` gained an indirect `github.com/kylelemons/godebug` dependency required by `prometheus/testutil`.
@@ -188,3 +201,5 @@ Task 4 review fix is complete with RED/GREEN evidence for `markAllAsRead` failur
 Task 5 is complete with TDD evidence, focused backend/H5 tests passing, and H5 production build passing.
 
 Task 5 review fix is complete with RED/GREEN evidence for overlay dismiss tracking.
+
+Task 5 P2 duplicate modal tracking fix is complete with RED/GREEN evidence for rapid double-click paths.

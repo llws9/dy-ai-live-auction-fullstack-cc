@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { trackEvent } from '../../utils/trackEvent';
 import styles from './LiveReminderModal.module.css';
@@ -19,10 +19,12 @@ interface LiveReminderModalProps {
 const LiveReminderModal: React.FC<LiveReminderModalProps> = ({ isOpen, onClose, stream }) => {
   const navigate = useNavigate();
   const [shouldRender, setShouldRender] = useState(false);
+  const actionTrackedRef = useRef(false);
 
   // 控制动画挂载/卸载
   useEffect(() => {
     if (isOpen) {
+      actionTrackedRef.current = false;
       setShouldRender(true);
       return;
     }
@@ -39,23 +41,31 @@ const LiveReminderModal: React.FC<LiveReminderModalProps> = ({ isOpen, onClose, 
 
   if (!shouldRender || !stream) return null;
 
-  const trackDismiss = () => {
-    trackEvent('live_reminder_dismissed', {
+  const trackActionOnce = (eventName: 'live_reminder_clicked' | 'live_reminder_dismissed', result: 'clicked' | 'dismissed') => {
+    if (actionTrackedRef.current) {
+      return false;
+    }
+    actionTrackedRef.current = true;
+    trackEvent(eventName, {
       source: 'mobile_shell',
       entry: 'live_reminder_modal',
       type: 'live_start',
-      result: 'dismissed',
+      result,
     });
+    return true;
+  };
+
+  const trackDismiss = () => {
+    if (!trackActionOnce('live_reminder_dismissed', 'dismissed')) {
+      return;
+    }
     onClose();
   };
 
   const handleJump = () => {
-    trackEvent('live_reminder_clicked', {
-      source: 'mobile_shell',
-      entry: 'live_reminder_modal',
-      type: 'live_start',
-      result: 'clicked',
-    });
+    if (!trackActionOnce('live_reminder_clicked', 'clicked')) {
+      return;
+    }
     onClose();
     navigate(`/live`);
   };

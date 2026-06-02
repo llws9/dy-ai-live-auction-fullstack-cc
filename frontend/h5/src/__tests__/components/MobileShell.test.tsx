@@ -365,6 +365,89 @@ describe('MobileShell', () => {
     });
   });
 
+  it('does not duplicate live reminder click tracking on rapid double click', async () => {
+    mockGetPendingLiveReminder.mockResolvedValue({
+      hasReminder: true,
+      stream: {
+        id: 1,
+        name: '云端珍藏直播间',
+        avatarUrl: '',
+        statusText: '正在直播',
+        liveRoomId: 1,
+        startedAt: 1717000000000,
+      },
+    });
+
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>页面内容</main>
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const confirmButton = await screen.findByRole('button', { name: '立即前往' });
+    fireEvent.click(confirmButton);
+    fireEvent.click(confirmButton);
+
+    const clickEvents = mockTrackEvent.mock.calls.filter(([eventName]) => eventName === 'live_reminder_clicked');
+    expect(clickEvents).toHaveLength(1);
+    expect(clickEvents[0]).toEqual([
+      'live_reminder_clicked',
+      {
+        source: 'mobile_shell',
+        entry: 'live_reminder_modal',
+        type: 'live_start',
+        result: 'clicked',
+      },
+    ]);
+  });
+
+  it('does not duplicate live reminder dismiss tracking on rapid overlay double click', async () => {
+    mockGetPendingLiveReminder.mockResolvedValue({
+      hasReminder: true,
+      stream: {
+        id: 1,
+        name: '云端珍藏直播间',
+        avatarUrl: '',
+        statusText: '正在直播',
+        liveRoomId: 1,
+        startedAt: 1717000000000,
+      },
+    });
+
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>页面内容</main>
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    const overlay = dialog.parentElement;
+    expect(overlay).not.toBeNull();
+
+    fireEvent.click(overlay as HTMLElement);
+    fireEvent.click(overlay as HTMLElement);
+
+    const dismissEvents = mockTrackEvent.mock.calls.filter(([eventName]) => eventName === 'live_reminder_dismissed');
+    expect(dismissEvents).toHaveLength(1);
+    expect(dismissEvents[0]).toEqual([
+      'live_reminder_dismissed',
+      {
+        source: 'mobile_shell',
+        entry: 'live_reminder_modal',
+        type: 'live_start',
+        result: 'dismissed',
+      },
+    ]);
+  });
+
   it('refetches pending reminder for account changes and ignores stale responses', async () => {
     const firstRequest = createDeferred<{
       hasReminder: boolean;
