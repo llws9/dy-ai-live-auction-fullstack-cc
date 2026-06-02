@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
+	ws "auction-service/websocket"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
-	ws "auction-service/websocket"
 )
 
 // WebSocket 连接管理
@@ -91,6 +91,7 @@ func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.Respons
 	}
 
 	log.Printf("WebSocket connected: auction=%d, user=%d", auctionID, userID)
+	go client.WritePump()
 
 	// 发送欢迎消息
 	welcomeMsg := &ws.Message{
@@ -102,8 +103,7 @@ func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.Respons
 			"auction_id": auctionID,
 		},
 	}
-	data, _ := json.Marshal(welcomeMsg)
-	conn.WriteMessage(websocket.TextMessage, data)
+	client.Send <- welcomeMsg
 
 	// 读取消息循环
 	go func() {
