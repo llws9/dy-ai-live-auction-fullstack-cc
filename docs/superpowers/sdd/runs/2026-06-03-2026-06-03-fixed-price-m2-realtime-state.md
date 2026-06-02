@@ -32,12 +32,12 @@
 
 | Metric | Value |
 | --- | --- |
-| Total Tasks | `3` |
+| Total Tasks | `4` |
 | Done | `3` |
 | Blocked | `0` |
-| In Progress | `0` |
+| In Progress | `1` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 03:24` |
+| Last Updated | `2026-06-03 03:35` |
 
 ## Task Matrix
 
@@ -46,6 +46,7 @@
 | `T001` | `M2 Task 1 - WebSocket Message Contract` | `done` | `subagent` | `W1` | `-` | `Task 1: WebSocket Message Contract` | `backend/auction/websocket/message.go`, `backend/auction/websocket/fixed_price_message_test.go` |
 | `T002` | `M2 Task 2 - FixedPrice Broadcaster Adapter + Stock Throttle` | `done` | `subagent` | `W2` | `T001` | `Task 2: FixedPrice Broadcaster Adapter + Stock Throttle` | `backend/auction/service/fixed_price_broadcaster.go`, `backend/auction/service/fixed_price_broadcaster_test.go` |
 | `T003` | `M2 Task 3 - FixedPriceService Realtime Hooks` | `done` | `subagent` | `W3` | `T002` | `Task 3: FixedPriceService Realtime Hooks` | `backend/auction/service/fixed_price.go`, `backend/auction/service/fixed_price_testutil_test.go`, `backend/auction/service/fixed_price_test.go`, `backend/auction/service/fixed_price_failfast_test.go`, `backend/auction/service/fixed_price_realtime_test.go` |
+| `T004` | `M2 Task 4 - Production Wiring and Full Regression` | `assigned` | `subagent` | `W4` | `T003` | `Task 4: Production Wiring, SDD State, and Full Regression` | `backend/auction/main.go`, `docs/superpowers/sdd/runs/2026-06-03-2026-06-03-fixed-price-m2-realtime-state.md` |
 
 ## Wave Plan
 
@@ -54,6 +55,7 @@
 | `W1` | `Execute imported tasks with TDD evidence` | `T001` | `state file initialized` | `all tasks done or blocked with reason` |
 | `W2` | `Implement fixed-price broadcaster adapter and stock throttle` | `T002` | `T001 done` | `broadcaster tests pass and state evidence recorded` |
 | `W3` | `Wire FixedPriceService realtime hooks` | `T003` | `T002 done` | `service realtime tests and fixed-price regression pass` |
+| `W4` | `Wire production broadcaster and complete M2 regression` | `T004` | `T003 done` | `go build ./... and go test ./... -race pass` |
 
 ## Task Records
 
@@ -193,6 +195,48 @@
 - Completion summary: `FixedPriceService` now injects `FixedPriceBroadcaster`, uses no-op default, and emits listed/stock/flair/sold_out/offline only on successful business state changes.
 - Remaining work: `M2 Task 4` production wiring in `backend/auction/main.go` and broader regression.
 - First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
+
+
+### T004 - `M2 Task 4 - Production Wiring and Full Regression`
+
+| Key | Value |
+| --- | --- |
+| Status | `assigned` |
+| Owner | `subagent` |
+| Started At | `2026-06-03 03:35` |
+| Completed At | `-` |
+| Branch | `feat/fixed-price-m1` |
+| Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
+| Depends On | `T003` |
+| Parallel Group | `W4` |
+
+**TDD / Verification Plan**
+
+- Red/Build guard: run `cd backend/auction && go build ./...` before wiring; expected failure is `not enough arguments in call to service.NewFixedPriceService` from `main.go`.
+- Green: update `backend/auction/main.go` to create `fixedPriceBroadcaster := service.NewFixedPriceWSBroadcaster(hub, nil)` and pass it as the final `NewFixedPriceService` argument.
+- Verify: run `go build ./...`, `go test ./websocket/ ./service/ -run 'TestFixedPrice' -race`, and `go test ./... -race`.
+- State: mark all four M2 tasks done, record final evidence, and note this run intentionally uses the existing state file instead of creating a duplicate file with a cleaner name.
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `not_run` | `RED build fail before wiring` | `not_run` | `pending` |
+| `not_run` | `go build ./... passes after wiring` | `not_run` | `pending` |
+| `not_run` | `targeted fixed-price tests pass` | `not_run` | `pending` |
+| `not_run` | `full race regression passes` | `not_run` | `pending` |
+
+**Modified Files**
+
+- Pending.
+
+**Risks / Blockers**
+
+- Pending.
+
+**Handoff**
+
+- First response line used: `pending`
 
 
 ## Final Review Checklist
