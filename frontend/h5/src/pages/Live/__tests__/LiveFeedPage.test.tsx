@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import LiveFeedPage from '../LiveFeedPage';
 import { liveStreamApi } from '@/services/api';
@@ -8,6 +8,11 @@ jest.mock('@/services/api', () => ({
   liveStreamApi: {
     list: jest.fn(),
   },
+}));
+
+const mockShowToast = jest.fn();
+jest.mock('../../../components/Toast', () => ({
+  useToast: () => ({ showToast: mockShowToast }),
 }));
 
 jest.mock('../LiveRoomSlide', () => ({
@@ -58,5 +63,52 @@ describe('LiveFeedPage feed 骨架', () => {
     mockedLiveStreamApi.list.mockResolvedValue({ list: [], total: 0, page: 1, page_size: 20 });
     renderFeed('/live');
     await waitFor(() => expect(screen.getByText('暂无直播中房间')).toBeInTheDocument());
+  });
+
+  it('手指上滑超过阈值切到下一个房间并 replace URL', async () => {
+    renderFeed('/live?id=3');
+    const slide = await screen.findByTestId('live-room-slide');
+    expect(slide).toHaveTextContent('slide:3:11:undefined:true');
+
+    const container = slide.parentElement as HTMLElement;
+    fireEvent.touchStart(container, { touches: [{ clientX: 100, clientY: 300 }] });
+    fireEvent.touchEnd(container, { changedTouches: [{ clientX: 100, clientY: 220 }] });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('live-room-slide')).toHaveTextContent('slide:4:12:12:true')
+    );
+  });
+
+  it('到末尾继续上滑提示没有更多', async () => {
+    mockedLiveStreamApi.list.mockResolvedValue({
+      list: [{ id: 3, name: '房间A', current_auction_id: 11 }],
+      total: 1,
+      page: 1,
+      page_size: 20,
+    });
+    renderFeed('/live?id=3');
+    const slide = await screen.findByTestId('live-room-slide');
+    expect(slide).toHaveTextContent('slide:3:11:undefined:true');
+
+    const container = slide.parentElement as HTMLElement;
+    fireEvent.touchStart(container, { touches: [{ clientX: 100, clientY: 300 }] });
+    fireEvent.touchEnd(container, { changedTouches: [{ clientX: 100, clientY: 220 }] });
+
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalled());
+    expect(mockShowToast.mock.calls[0][0]).toContain('没有更多');
+    expect(screen.getByTestId('live-room-slide')).toHaveTextContent('slide:3:11:undefined:true');
+  });
+
+  it('横向滑动不切房', async () => {
+    renderFeed('/live?id=3');
+    const slide = await screen.findByTestId('live-room-slide');
+    expect(slide).toHaveTextContent('slide:3:11:undefined:true');
+
+    const container = slide.parentElement as HTMLElement;
+    // 横向位移占主导，纵向位移很小
+    fireEvent.touchStart(container, { touches: [{ clientX: 300, clientY: 300 }] });
+    fireEvent.touchEnd(container, { changedTouches: [{ clientX: 100, clientY: 290 }] });
+
+    expect(screen.getByTestId('live-room-slide')).toHaveTextContent('slide:3:11:undefined:true');
   });
 });
