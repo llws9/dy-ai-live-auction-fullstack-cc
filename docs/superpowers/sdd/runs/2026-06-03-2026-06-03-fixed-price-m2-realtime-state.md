@@ -33,11 +33,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `4` |
-| Done | `3` |
+| Done | `4` |
 | Blocked | `0` |
-| In Progress | `1` |
+| In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 03:35` |
+| Last Updated | `2026-06-03 03:36` |
 
 ## Task Matrix
 
@@ -46,7 +46,7 @@
 | `T001` | `M2 Task 1 - WebSocket Message Contract` | `done` | `subagent` | `W1` | `-` | `Task 1: WebSocket Message Contract` | `backend/auction/websocket/message.go`, `backend/auction/websocket/fixed_price_message_test.go` |
 | `T002` | `M2 Task 2 - FixedPrice Broadcaster Adapter + Stock Throttle` | `done` | `subagent` | `W2` | `T001` | `Task 2: FixedPrice Broadcaster Adapter + Stock Throttle` | `backend/auction/service/fixed_price_broadcaster.go`, `backend/auction/service/fixed_price_broadcaster_test.go` |
 | `T003` | `M2 Task 3 - FixedPriceService Realtime Hooks` | `done` | `subagent` | `W3` | `T002` | `Task 3: FixedPriceService Realtime Hooks` | `backend/auction/service/fixed_price.go`, `backend/auction/service/fixed_price_testutil_test.go`, `backend/auction/service/fixed_price_test.go`, `backend/auction/service/fixed_price_failfast_test.go`, `backend/auction/service/fixed_price_realtime_test.go` |
-| `T004` | `M2 Task 4 - Production Wiring and Full Regression` | `assigned` | `subagent` | `W4` | `T003` | `Task 4: Production Wiring, SDD State, and Full Regression` | `backend/auction/main.go`, `docs/superpowers/sdd/runs/2026-06-03-2026-06-03-fixed-price-m2-realtime-state.md` |
+| `T004` | `M2 Task 4 - Production Wiring and Full Regression` | `done` | `main-agent` | `W4` | `T003` | `Task 4: Production Wiring, SDD State, and Full Regression` | `backend/auction/main.go`, `docs/superpowers/sdd/runs/2026-06-03-2026-06-03-fixed-price-m2-realtime-state.md` |
 
 ## Wave Plan
 
@@ -201,10 +201,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `assigned` |
-| Owner | `subagent` |
+| Status | `done` |
+| Owner | `main-agent` |
 | Started At | `2026-06-03 03:35` |
-| Completed At | `-` |
+| Completed At | `2026-06-03 03:36` |
 | Branch | `feat/fixed-price-m1` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
 | Depends On | `T003` |
@@ -221,22 +221,27 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `RED build fail before wiring` | `not_run` | `pending` |
-| `not_run` | `go build ./... passes after wiring` | `not_run` | `pending` |
-| `not_run` | `targeted fixed-price tests pass` | `not_run` | `pending` |
-| `not_run` | `full race regression passes` | `not_run` | `pending` |
+| `cd backend/auction && go build ./...` | `RED fail before wiring: not enough arguments in call to service.NewFixedPriceService from main.go` | `FAIL: ./main.go:200:3 not enough arguments in call to service.NewFixedPriceService; missing FixedPriceBroadcaster` | `pass` |
+| `cd backend/auction && gofmt -w main.go && go build ./...` | `GREEN build passes after production broadcaster wiring` | `PASS; exit code 0` | `pass` |
+| `cd backend/auction && go test ./websocket/ ./service/ -run 'TestFixedPrice' -race` | `targeted fixed-price websocket/service tests pass under race detector` | `PASS; ok auction-service/websocket 1.578s; ok auction-service/service 2.074s; macOS linker emitted LC_DYSYMTAB warning with exit code 0` | `pass` |
+| `cd backend/auction && go test ./... -race` | `full auction backend race regression passes` | `PASS for auction-service, client, config, dao, handler, lock, middleware, model, service, service/cron, websocket; no-test packages skipped; macOS linker emitted LC_DYSYMTAB warnings with exit code 0` | `pass` |
+| `GetDiagnostics` | `no new diagnostics in edited main.go` | `per-file worktree URI denied by environment; build and race tests passed` | `info` |
 
 **Modified Files**
 
-- Pending.
+- `backend/auction/main.go`
+- `docs/superpowers/sdd/runs/2026-06-03-2026-06-03-fixed-price-m2-realtime-state.md`
 
 **Risks / Blockers**
 
-- Pending.
+- No known task-level blockers.
+- M2 scope intentionally remains backend realtime only; H5 consumption, fixed-price list aggregation, Redis Pub/Sub, MQ/Outbox are out of scope.
 
 **Handoff**
 
-- First response line used: `pending`
+- Completion summary: production `main.go` now creates `FixedPriceWSBroadcaster` from the existing WebSocket `hub` and injects it into `FixedPriceService`.
+- Commit: `pending before commit`
+- First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
 
 
 ## Final Review Checklist
@@ -255,14 +260,19 @@
 - `T001 done`
 - `T002 done`
 - `T003 done`
+- `T004 done`
 - Scope completed: WebSocket fixed-price message contract.
 - Scope completed: FixedPrice WebSocket broadcaster adapter and stock throttle.
 - Scope completed: FixedPriceService realtime hooks.
+- Scope completed: Production broadcaster wiring and full backend auction race regression.
 - Commit: `e589f97f feat(fixed-price): add WebSocket message contracts (M2.T1)`
 - Commit: `9979129d feat(fixed-price): add WebSocket broadcaster with stock throttle (M2.T2)`
 - Commit: `114e5783 feat(fixed-price): broadcast realtime events from service (M2.T3)`
+- Commit: `pending before commit feat(fixed-price): wire realtime broadcaster and mark M2 complete`
 - Main-agent review: `go test ./websocket/ -run TestFixedPrice -v && go test ./websocket/` passed.
 - Main-agent review: `go test ./service/ -run TestFixedPriceWSBroadcaster -v && go test ./service/` passed.
 - Main-agent review: `go test ./service/ -run TestFixedPriceServiceRealtime -v -count=1 && go test ./service/ -run 'TestFixedPriceService|TestPurchase|TestOffline|TestFixedPriceWSBroadcaster' -race -count=1` passed.
 - Subagent regression evidence: `go test ./...` passed.
-- Note: `backend/auction/main.go` production wiring is intentionally out of T003 scope and remains for T004 before full build/regression.
+- Main-agent review: `go build ./...` passed after confirming RED build failure before wiring.
+- Main-agent review: `go test ./websocket/ ./service/ -run 'TestFixedPrice' -race` passed.
+- Main-agent review: `go test ./... -race` passed.

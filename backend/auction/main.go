@@ -188,6 +188,7 @@ func main() {
 	fixedPricePurchaseDAO := dao.NewFixedPricePurchaseDAO(db)
 	fixedPriceStock := service.NewStockGuard(dao.GetRedis())
 	fixedPriceIdem := service.NewIdemStore(dao.GetRedis())
+	fixedPriceBroadcaster := service.NewFixedPriceWSBroadcaster(hub, nil)
 	fixedPriceService := service.NewFixedPriceService(
 		db,
 		fixedPriceItemDAO,
@@ -198,6 +199,7 @@ func main() {
 		&liveStreamOwnerChecker{client: liveStreamClient},
 		&productExistsChecker{client: productClient},
 		nil, // 生产用 realClock
+		fixedPriceBroadcaster,
 	)
 	fixedPriceHandler := handler.NewFixedPriceHandler(fixedPriceService, userBalanceDAO)
 
