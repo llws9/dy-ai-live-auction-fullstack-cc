@@ -15,7 +15,7 @@
 | Base Branch | `main` |
 | Started At | `2026-06-03 02:46` |
 | Owner | `main-agent` |
-| Status | `active` |
+| Status | `completed` |
 
 ## Input Documents
 
@@ -33,18 +33,18 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `2` |
-| Done | `1` |
+| Done | `2` |
 | Blocked | `0` |
-| In Progress | `1` |
+| In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 03:20` |
+| Last Updated | `2026-06-03 02:59` |
 
 ## Task Matrix
 
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Allowed Files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `M2 Task 1 - WebSocket Message Contract` | `done` | `subagent` | `W1` | `-` | `Task 1: WebSocket Message Contract` | `backend/auction/websocket/message.go`, `backend/auction/websocket/fixed_price_message_test.go` |
-| `T002` | `M2 Task 2 - FixedPrice Broadcaster Adapter + Stock Throttle` | `assigned` | `subagent` | `W2` | `T001` | `Task 2: FixedPrice Broadcaster Adapter + Stock Throttle` | `backend/auction/service/fixed_price_broadcaster.go`, `backend/auction/service/fixed_price_broadcaster_test.go` |
+| `T002` | `M2 Task 2 - FixedPrice Broadcaster Adapter + Stock Throttle` | `done` | `main-agent` | `W2` | `T001` | `Task 2: FixedPrice Broadcaster Adapter + Stock Throttle` | `backend/auction/service/fixed_price_broadcaster.go`, `backend/auction/service/fixed_price_broadcaster_test.go` |
 
 ## Wave Plan
 
@@ -103,10 +103,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `assigned` |
-| Owner | `subagent` |
-| Started At | `2026-06-03 03:20` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-03 02:54` |
+| Completed At | `2026-06-03 02:59` |
 | Branch | `feat/fixed-price-m1` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
 | Depends On | `T001` |
@@ -122,20 +122,26 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `RED fail: undefined NewFixedPriceWSBroadcaster` | `not_run` | `pending` |
-| `not_run` | `GREEN pass broadcaster tests` | `not_run` | `pending` |
+| `cd backend/auction && go test ./service/ -run TestFixedPriceWSBroadcaster -v` | `RED fail: undefined NewFixedPriceWSBroadcaster` | `FAIL: undefined NewFixedPriceWSBroadcaster in fixed_price_broadcaster_test.go` | `pass` |
+| `cd backend/auction && go test ./service/ -run TestFixedPriceWSBroadcaster -v` | `GREEN pass broadcaster tests` | `PASS; ok auction-service/service 0.683s` | `pass` |
+| `cd backend/auction && go test ./service/` | `affected service regression passes` | `PASS; ok auction-service/service 2.248s` | `pass` |
+| `cd backend/auction && go test ./...` | `auction backend regression passes` | `PASS for auction-service, client, config, dao, handler, lock, middleware, model, service, service/cron, websocket; no-test packages skipped` | `pass` |
+| `GetDiagnostics` | `no new diagnostics in edited files` | `per-file worktree URI denied; global diagnostics only showed pre-existing diagnostics in main worktree/go.mod/main.go/router.go, not edited files` | `info` |
 
 **Modified Files**
 
-- Pending.
+- `backend/auction/service/fixed_price_broadcaster.go`
+- `backend/auction/service/fixed_price_broadcaster_test.go`
+- `docs/superpowers/sdd/runs/2026-06-03-2026-06-03-fixed-price-m2-realtime-state.md`
 
 **Risks / Blockers**
 
-- Pending.
+- No known task-level blockers.
+- Test helper intentionally avoids `hub.Stop()`/`Unregister` because websocket test clients have nil `conn`; closing them would exercise `Client.Close()` instead of broadcaster behavior.
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
 
 
 ## Final Review Checklist
@@ -152,6 +158,10 @@
 **状态**
 
 - `T001 done`
+- `T002 done`
 - Scope completed: WebSocket fixed-price message contract.
+- Scope completed: FixedPrice WebSocket broadcaster adapter and stock throttle.
 - Commit: `e589f97f feat(fixed-price): add WebSocket message contracts (M2.T1)`
+- Commit: `feat(fixed-price): add WebSocket broadcaster with stock throttle (M2.T2)`
 - Main-agent review: `go test ./websocket/ -run TestFixedPrice -v && go test ./websocket/` passed.
+- Main-agent review: `go test ./service/ -run TestFixedPriceWSBroadcaster -v`, `go test ./service/`, and `go test ./...` passed.
