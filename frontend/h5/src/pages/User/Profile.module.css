@@ -2,9 +2,7 @@
   min-height: 100%;
   padding: calc(var(--spacing-6) + env(safe-area-inset-top, 0px)) var(--spacing-5)
     calc(104px + env(safe-area-inset-bottom, 0px));
-  background:
-    radial-gradient(circle at 16% 0, rgba(212, 175, 55, 0.18), transparent 30%),
-    linear-gradient(180deg, #242424 0%, #171717 42%, #101010 100%);
+  background: var(--page-gradient-profile);
   color: var(--text-primary);
 }
 
@@ -22,10 +20,10 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border: 2px solid rgba(201, 169, 110, 0.75);
+  border: 2px solid var(--avatar-border);
   border-radius: var(--radius-full);
-  background: rgba(58, 58, 58, 0.82);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34), 0 0 24px rgba(201, 169, 110, 0.08);
+  background: var(--avatar-bg);
+  box-shadow: var(--avatar-shadow);
 }
 
 .avatar {
@@ -72,9 +70,9 @@
 
 .badges span {
   padding: 4px var(--spacing-2);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--chip-border);
   border-radius: var(--radius-full);
-  background: rgba(44, 44, 44, 0.82);
+  background: var(--chip-bg);
   color: var(--text-secondary);
   font-size: 10px;
 }
@@ -90,7 +88,7 @@
 .walletCard,
 .orderCard,
 .menu {
-  border: 1px solid rgba(201, 169, 110, 0.08);
+  border: 1px solid var(--card-border-accent);
   background: var(--bg-surface);
   box-shadow: var(--shadow-key);
 }
@@ -142,9 +140,9 @@
 
 .disabledAction,
 .retryButton {
-  border: 1px solid rgba(201, 169, 110, 0.2);
+  border: 1px solid var(--card-border-accent);
   border-radius: var(--radius-lg);
-  background: var(--bg-elevated);
+  background: var(--surface-glass);
   color: var(--text-brand);
   font-weight: var(--font-weight-bold);
 }
@@ -197,7 +195,7 @@
   gap: var(--spacing-3);
   padding: var(--spacing-3);
   border-radius: 18px;
-  background: rgba(26, 26, 26, 0.64);
+  background: var(--item-subtle-bg);
   color: var(--text-primary);
 }
 
@@ -268,7 +266,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 14px;
-  background: var(--bg-elevated);
+  background: var(--icon-tile-bg);
   color: var(--text-brand);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
@@ -282,10 +280,10 @@
   width: 100%;
   margin-top: var(--spacing-6);
   padding: var(--spacing-4);
-  border: 1px solid rgba(239, 68, 68, 0.22);
+  border: 1px solid var(--danger-border);
   border-radius: 22px;
-  background: rgba(239, 68, 68, 0.08);
-  color: #f87171;
+  background: var(--danger-bg);
+  color: var(--danger-text);
   font-weight: var(--font-weight-bold);
 }
 
@@ -307,14 +305,14 @@
 .spinner {
   width: 32px;
   height: 32px;
-  border: 2px solid rgba(201, 169, 110, 0.18);
+  border: 2px solid var(--card-border-accent);
   border-top-color: var(--text-brand);
   border-radius: var(--radius-full);
   animation: spin 0.8s linear infinite;
 }
 
 .errorText {
-  color: #f87171;
+  color: var(--danger-text);
 }
 
 .retryButton {

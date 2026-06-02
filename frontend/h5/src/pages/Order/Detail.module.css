@@ -23,9 +23,9 @@
   height: 44px;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(201, 169, 110, 0.28);
+  border: 1px solid var(--card-border-accent);
   border-radius: var(--radius-full);
-  background: var(--bg-elevated);
+  background: var(--surface-glass);
   color: var(--text-brand);
   font-size: 28px;
   line-height: 1;
@@ -83,7 +83,7 @@
   border-radius: var(--radius-full);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
-  background: rgba(201, 169, 110, 0.12);
+  background: var(--icon-tile-bg);
   color: var(--text-brand);
 }
 
@@ -109,9 +109,9 @@
   flex-direction: column;
   gap: var(--spacing-3);
   padding: var(--spacing-5);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--card-border-accent);
   border-radius: var(--radius-lg);
-  background: var(--bg-elevated);
+  background: var(--bg-surface);
 }
 
 .cardTitle {
@@ -168,8 +168,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-left: var(--spacing-4);
-  border-left: 2px solid rgba(201, 169, 110, 0.28);
+  padding: var(--spacing-2) 0 var(--spacing-2) var(--spacing-4);
+  border-left: 2px solid var(--card-border-accent);
+  border-radius: var(--radius-sm);
+  background: var(--item-subtle-bg);
 }
 
 .timelineLabel {
@@ -200,14 +202,14 @@
 
 .secondaryButton {
   border: 1px solid var(--border-subtle);
-  background: var(--bg-elevated);
+  background: var(--surface-glass);
   color: var(--text-primary);
 }
 
 .primaryButton {
   border: none;
   background: var(--text-brand);
-  color: #fff;
+  color: var(--bg-surface);
 }
 
 .toast {
@@ -216,9 +218,10 @@
   bottom: calc(var(--spacing-8) + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
   padding: var(--spacing-3) var(--spacing-5);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
-  background: rgba(0, 0, 0, 0.78);
-  color: #fff;
+  background: var(--surface-glass);
+  color: var(--text-primary);
   font-size: var(--font-size-sm);
   z-index: 50;
 }

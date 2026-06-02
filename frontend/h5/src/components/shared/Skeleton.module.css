@@ -2,7 +2,7 @@
 
 .skeleton {
   display: block;
-  background: var(--bg-secondary);
+  background: var(--skeleton-bg);
 }
 
 /* ===== Variants ===== */
@@ -40,7 +40,7 @@
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.4),
+    var(--skeleton-wave),
     transparent
   );
   animation: wave 2s linear infinite;

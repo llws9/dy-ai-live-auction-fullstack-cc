@@ -1,9 +1,7 @@
 .page {
   min-height: 100vh;
   padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
-  background:
-    radial-gradient(circle at 16% 0, rgba(212, 175, 55, 0.15), transparent 32%),
-    linear-gradient(180deg, #1a1a1a 0%, #111 100%);
+  background: var(--bg-page);
   color: var(--text-primary);
 }
 
@@ -37,9 +35,9 @@
 
 .backButton,
 .countBadge {
-  border: 1px solid rgba(201, 169, 110, 0.22);
+  border: 1px solid var(--card-border-accent);
   border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--surface-glass);
   color: var(--text-primary);
 }
 
@@ -66,9 +64,9 @@
 
 .summaryCard {
   padding: var(--spacing-4) var(--spacing-2);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--card-border-accent);
   border-radius: 18px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+  background: var(--bg-surface);
   text-align: center;
 }
 
@@ -101,7 +99,7 @@
 
 .errorBanner {
   padding: var(--spacing-3) var(--spacing-4);
-  color: #ffb3b3;
+  color: var(--danger-text);
   font-size: var(--font-size-sm);
 }
 
@@ -159,7 +157,7 @@
   position: relative;
   height: 144px;
   overflow: hidden;
-  background: linear-gradient(135deg, #3a3a3a, #252525);
+  background: var(--surface-muted);
 }
 
 .coverFrame img {
@@ -211,15 +209,15 @@
   flex-shrink: 0;
   overflow: hidden;
   place-items: center;
-  border: 2px solid rgba(120, 120, 120, 0.8);
+  border: 2px solid var(--border-subtle);
   border-radius: var(--radius-full);
-  background: #3a3a3a;
+  background: var(--avatar-bg);
   color: var(--text-brand);
   font-weight: var(--font-weight-bold);
 }
 
 .avatarFrameActive {
-  border-color: rgba(201, 169, 110, 0.9);
+  border-color: var(--avatar-border);
 }
 
 .avatarFrame img,
@@ -307,8 +305,8 @@
 }
 
 .secondaryButton {
-  border: 1px solid rgba(201, 169, 110, 0.22);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--card-border-accent);
+  background: var(--surface-glass);
   color: var(--text-brand);
 }
 

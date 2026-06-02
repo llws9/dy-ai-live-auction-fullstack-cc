@@ -46,6 +46,12 @@
   text-decoration: none;
 }
 
+.iconButton svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
 .notificationBadge {
   position: absolute;
   top: -4px;

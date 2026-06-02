@@ -35,8 +35,8 @@
 
 .backButton,
 .homeLink {
-  border: 1px solid rgba(201, 169, 110, 0.24);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--card-border-accent);
+  background: var(--surface-glass);
   color: var(--text-primary);
   border-radius: 999px;
 }
@@ -65,8 +65,8 @@
 
 .summaryCard {
   padding: 14px 8px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: var(--bg-surface);
+  border: 1px solid var(--card-border-accent);
   border-radius: 18px;
   text-align: center;
 }
@@ -103,8 +103,8 @@
 .statePage button {
   flex: 0 0 auto;
   padding: 10px 14px;
-  border: 1px solid rgba(212, 175, 55, 0.42);
-  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid var(--card-border-accent);
+  background: var(--surface-glass);
   color: var(--text-brand);
   border-radius: 14px;
   font-size: 12px;
@@ -118,10 +118,10 @@
 .errorBanner {
   margin: 0 16px 14px;
   padding: 12px 14px;
-  background: rgba(255, 92, 92, 0.1);
-  border: 1px solid rgba(255, 92, 92, 0.24);
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
   border-radius: 16px;
-  color: #ffb4b4;
+  color: var(--danger-text);
   font-size: 13px;
 }
 
@@ -153,8 +153,8 @@
 }
 
 .unreadCard {
-  border-color: rgba(212, 175, 55, 0.34);
-  background: linear-gradient(145deg, rgba(58, 47, 23, 0.96), rgba(44, 44, 44, 0.96));
+  border-color: var(--card-border-accent);
+  background: var(--surface-muted);
 }
 
 button.card,
@@ -194,7 +194,7 @@ button.unreadCard {
 }
 
 .iconFrame[data-tone='muted'] {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--surface-muted);
   color: var(--text-secondary);
 }
 
@@ -286,8 +286,8 @@ button.unreadCard {
   width: 76px;
   height: 76px;
   place-items: center;
-  background: rgba(212, 175, 55, 0.11);
-  border: 1px solid rgba(212, 175, 55, 0.2);
+  background: var(--icon-tile-bg);
+  border: 1px solid var(--card-border-accent);
   border-radius: 24px;
   color: var(--text-brand);
   font-size: 16px;
@@ -297,7 +297,7 @@ button.unreadCard {
 .spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid rgba(212, 175, 55, 0.18);
+  border: 3px solid var(--card-border-accent);
   border-top-color: var(--text-brand);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;

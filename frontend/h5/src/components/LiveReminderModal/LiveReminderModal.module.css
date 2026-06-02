@@ -19,12 +19,12 @@
 }
 
 .modal {
-  background: var(--bg-primary, #ffffff);
+  background: var(--bg-surface);
   border-radius: var(--radius-card, 16px);
   width: 85%;
   max-width: 320px;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-key);
   animation: slideUp var(--transition-fast, 0.2s) ease-out forwards;
 }
 
@@ -41,8 +41,8 @@
   width: 56px;
   height: 56px;
   margin: 0 auto var(--spacing-3, 12px);
-  background: var(--color-primary-50, #fff7ed);
-  color: var(--color-primary-500, #f97316);
+  background: var(--icon-tile-bg);
+  color: var(--text-brand);
   border-radius: var(--radius-full, 9999px);
   display: flex;
   align-items: center;
@@ -74,7 +74,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-3, 12px);
-  background: var(--bg-secondary, #f5f5f5);
+  background: var(--surface-muted);
   padding: var(--spacing-3, 12px);
   border-radius: var(--radius-md, 8px);
   text-align: left;
@@ -85,7 +85,7 @@
   height: 44px;
   border-radius: var(--radius-full, 9999px);
   object-fit: cover;
-  background: var(--bg-tertiary, #e5e5e5);
+  background: var(--item-subtle-bg);
 }
 
 .streamDetails {
@@ -122,7 +122,7 @@
 
 .footer {
   display: flex;
-  border-top: 1px solid var(--border-light, #e5e5e5);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .button {
@@ -138,19 +138,19 @@
 
 .buttonCancel {
   color: var(--text-secondary, #525252);
-  border-right: 1px solid var(--border-light, #e5e5e5);
+  border-right: 1px solid var(--border-subtle);
 }
 
 .buttonCancel:active {
-  background: var(--bg-secondary, #f5f5f5);
+  background: var(--surface-muted);
 }
 
 .buttonConfirm {
-  color: var(--color-primary-500, #f97316);
+  color: var(--text-brand);
 }
 
 .buttonConfirm:active {
-  background: var(--color-primary-50, #fff7ed);
+  background: var(--icon-tile-bg);
 }
 
 /* Animations */
