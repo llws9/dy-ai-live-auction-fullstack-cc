@@ -86,7 +86,9 @@ func main() {
 	if auctionSvcURL == "" {
 		auctionSvcURL = "http://localhost:8082"
 	}
-	liveStreamHandler.SetAuctionClient(client.NewAuctionClient(auctionSvcURL, 2*time.Second))
+	auctionClient := client.NewAuctionClient(auctionSvcURL, 2*time.Second)
+	auctionClient.SetInternalToken(os.Getenv("INTERNAL_API_TOKEN"))
+	liveStreamHandler.SetAuctionClient(auctionClient)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 	internalHandler := handler.NewInternalHandler(productService, liveStreamDAO)
 
@@ -154,6 +156,7 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	v1.GET("/admin/live-streams", internalAuth, liveStreamHandler.ListAdmin)
 	v1.PUT("/admin/live-streams/:id/end", internalAuth, liveStreamHandler.EndAdmin)
 	v1.PUT("/admin/live-streams/:id/ban", internalAuth, liveStreamHandler.BanAdmin)
+	v1.GET("/live-streams", liveStreamHandler.ListPublic)
 	v1.GET("/live-streams/:id", liveStreamHandler.GetDetail)
 
 	// 统计相关路由

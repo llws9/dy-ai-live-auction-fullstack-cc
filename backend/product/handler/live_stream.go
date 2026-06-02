@@ -15,6 +15,8 @@ import (
 
 const maxAdminLiveStreamPageSize = 100
 
+const maxPublicLiveStreamPageSize = 50
+
 type LiveStreamHandler struct {
 	liveStreamService *service.LiveStreamService
 	auctionClient     *client.AuctionClient
@@ -182,6 +184,87 @@ func (h *LiveStreamHandler) BanAdmin(ctx context.Context, c *app.RequestContext)
 			"id":         liveStream.ID,
 			"status":     liveStream.Status,
 			"ban_reason": liveStream.BanReason,
+		},
+	})
+}
+
+// ListPublic 公开直播间列表 (H5 feed)：仅返回直播中（status=1）的直播间，
+// 并为每个直播间补当前竞拍信息 current_auction_id/current_product_id/current_price。
+func (h *LiveStreamHandler) ListPublic(ctx context.Context, c *app.RequestContext) {
+	page, err := parseAdminLiveStreamIntQuery(c, "page", 1)
+	if err != nil {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "无效的页码"})
+		return
+	}
+	pageSize, err := parseAdminLiveStreamIntQuery(c, "page_size", 20)
+	if err != nil {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "无效的分页大小"})
+		return
+	}
+	if page < 1 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+	if pageSize > maxPublicLiveStreamPageSize {
+		pageSize = maxPublicLiveStreamPageSize
+	}
+
+	live := int(model.LiveStreamStatusLive)
+	statusFilter := &live
+
+	liveStreams, total, err := h.liveStreamService.ListAdmin(ctx, page, pageSize, statusFilter)
+	if err != nil {
+		log.Printf("LiveStream ListPublic failed: page=%d pageSize=%d err=%v", page, pageSize, err)
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "获取直播间列表失败"})
+		return
+	}
+
+	current := map[int64]client.CurrentAuctionItem{}
+	if h.auctionClient != nil && len(liveStreams) > 0 {
+		ids := make([]int64, 0, len(liveStreams))
+		for _, ls := range liveStreams {
+			ids = append(ids, ls.ID)
+		}
+		if got, err := h.auctionClient.CurrentByLiveStreamIDs(ctx, ids); err != nil {
+			log.Printf("LiveStream ListPublic current-by-live-streams failed (degraded): err=%v", err)
+		} else {
+			current = got
+		}
+	}
+
+	list := make([]map[string]interface{}, 0, len(liveStreams))
+	for _, ls := range liveStreams {
+		var currentAuctionID interface{} = nil
+		var currentProductID interface{} = nil
+		var currentPrice interface{} = nil
+		if item, ok := current[ls.ID]; ok {
+			currentAuctionID = item.AuctionID
+			currentProductID = item.ProductID
+			currentPrice = item.CurrentPrice
+		}
+		list = append(list, map[string]interface{}{
+			"id":                 ls.ID,
+			"name":               ls.Name,
+			"cover_image":        ls.CoverImage,
+			"status":             ls.Status,
+			"host_name":          ls.StreamerName,
+			"host_avatar":        ls.StreamerAvatar,
+			"viewer_count":       h.liveStreamService.ViewerCount(ctx, ls.ID),
+			"current_auction_id": currentAuctionID,
+			"current_product_id": currentProductID,
+			"current_price":      currentPrice,
+		})
+	}
+
+	c.JSON(200, map[string]interface{}{
+		"code": 200,
+		"data": map[string]interface{}{
+			"list":      list,
+			"total":     total,
+			"page":      page,
+			"page_size": pageSize,
 		},
 	})
 }
