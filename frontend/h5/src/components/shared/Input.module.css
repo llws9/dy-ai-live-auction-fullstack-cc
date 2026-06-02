@@ -21,19 +21,19 @@
 .inputWrapper {
   display: flex;
   align-items: center;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-input);
   transition: all var(--transition-fast);
 }
 
 .inputWrapper:hover:not(.disabled) {
-  border-color: var(--color-neutral-500);
+  border-color: var(--card-border-accent);
 }
 
 .inputWrapper.focused {
-  border-color: var(--color-primary-500);
-  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+  border-color: var(--text-brand);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .inputWrapper.error {
@@ -53,7 +53,7 @@
 }
 
 .inputWrapper.disabled {
-  background: var(--bg-secondary);
+  background: var(--surface-muted);
   cursor: not-allowed;
 }
 
@@ -68,12 +68,12 @@
 }
 
 .input::placeholder {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .input:disabled {
   cursor: not-allowed;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 /* ===== Sizes ===== */
@@ -100,18 +100,18 @@
   width: 20px;
   height: 20px;
   margin-right: var(--spacing-2);
-  background: var(--color-neutral-200);
+  background: var(--surface-muted);
   border: none;
   border-radius: var(--radius-full);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: 10px;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .clearButton:hover {
-  background: var(--color-neutral-300);
-  color: var(--text-secondary);
+  background: var(--icon-tile-bg);
+  color: var(--text-brand);
 }
 
 /* ===== Error Text ===== */

@@ -26,18 +26,18 @@
 | State Template | `docs/superpowers/sdd/state-template.md` | yes | yes |
 | Plan | `docs/superpowers/plans/2026-06-03-h5-theme-phase2-polish.md` | yes | yes |
 | Tasks | `docs/superpowers/plans/2026-06-03-h5-theme-phase2-polish.md` | yes | yes |
-| Scope | `T001-T004` | no | yes |
+| Scope | `T001-T005` | no | yes |
 
 ## Execution Summary
 
 | Metric | Value |
 | --- | --- |
-| Total Tasks | `4` |
-| Done | `4` |
+| Total Tasks | `5` |
+| Done | `5` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 02:19` |
+| Last Updated | `2026-06-03 02:46` |
 
 ## Task Matrix
 
@@ -47,6 +47,7 @@
 | `T002` | `Polish Profile Theme Benchmark` | `done` | `main-agent` | `W2` | `T001` | `Task 2` | `frontend/h5/src/pages/User/Profile.module.css`, `frontend/h5/src/pages/User/__tests__/ProfileThemeTokens.test.ts`, `frontend/h5/src/pages/User/__tests__/Profile.test.tsx` |
 | `T003` | `Polish Missed Addresses And Order Detail Pages` | `done` | `main-agent` | `W3` | `T001,T002` | `Task 3` | `frontend/h5/src/pages/Addresses/Addresses.module.css`, `frontend/h5/src/pages/Order/Detail.module.css`, `frontend/h5/src/pages/__tests__/Phase2PageThemeTokens.test.ts` |
 | `T004` | `Polish Scoped Standard Pages` | `done` | `main-agent` | `W4` | `T001,T003` | `Task 4` | `frontend/h5/src/pages/Notifications/Notifications.module.css`, `frontend/h5/src/pages/Follow/Following.module.css`, `frontend/h5/src/pages/History/AuctionHistory.module.css`, `frontend/h5/src/pages/__tests__/Phase2PageThemeTokens.test.ts` |
+| `T005` | `Polish Shared Components` | `done` | `main-agent` | `W5` | `T001,T004` | `Task 5` | `frontend/h5/src/components/shared/Button.module.css`, `frontend/h5/src/components/shared/Input.module.css`, `frontend/h5/src/components/shared/Loading.module.css`, `frontend/h5/src/components/shared/Skeleton.module.css`, `frontend/h5/src/components/BadgeDot/BadgeDot.module.css`, `frontend/h5/src/components/LiveReminderModal/LiveReminderModal.module.css`, `frontend/h5/src/components/__tests__/Phase2SharedThemeTokens.test.ts` |
 
 ## Wave Plan
 
@@ -56,6 +57,7 @@
 | `W2` | `Polish Profile benchmark with Phase 2 tokens` | `T002` | `T001 done` | `Profile CSS contract and existing Profile tests pass` |
 | `W3` | `Polish missed Addresses and Order Detail pages` | `T003` | `T001,T002 done` | `Scoped page CSS contract plus Addresses/Order behavior tests pass` |
 | `W4` | `Polish scoped standard pages` | `T004` | `T001,T003 done` | `Scoped page contract plus Notifications/Follow/History behavior tests pass` |
+| `W5` | `Polish shared components` | `T005` | `T001,T004 done` | `Shared component contract plus BadgeDot behavior tests pass` |
 
 ## Task Records
 
@@ -242,6 +244,57 @@
 - Remaining work: Task 5 shared component polish and Task 6 visual/regression verification.
 - First response line used: `当前分支/worktree：feat/h5-theme-phase2-polish @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-theme-phase2-polish`
 
+### T005 - `Polish Shared Components`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-03 02:32` |
+| Completed At | `2026-06-03 02:46` |
+| Branch | `feat/h5-theme-phase2-polish` |
+| Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-theme-phase2-polish` |
+| Depends On | `T001,T004` |
+| Parallel Group | `W5` |
+
+**TDD Plan**
+
+- Red: create `Phase2SharedThemeTokens.test.ts` to reject old light-only component tokens and assert Button, Loading, Skeleton, and BadgeDot consume Phase 2 semantic tokens.
+- Green: migrate shared Button/Input/Loading/Skeleton/BadgeDot/LiveReminderModal CSS to Phase 2 semantic tokens without changing component behavior.
+- Verify: run shared component contract test plus BadgeDot behavior test, then diagnostics, old-token scan, and whitespace check.
+
+**Modified Files**
+
+- `frontend/h5/src/components/__tests__/Phase2SharedThemeTokens.test.ts`
+- `frontend/h5/src/components/shared/Button.module.css`
+- `frontend/h5/src/components/shared/Input.module.css`
+- `frontend/h5/src/components/shared/Loading.module.css`
+- `frontend/h5/src/components/shared/Skeleton.module.css`
+- `frontend/h5/src/components/BadgeDot/BadgeDot.module.css`
+- `frontend/h5/src/components/LiveReminderModal/LiveReminderModal.module.css`
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `cd frontend/h5 && npx jest src/components/__tests__/Phase2SharedThemeTokens.test.ts` | `FAIL before shared component token migration` | `FAIL: Input/Skeleton/LiveReminderModal retained old tokens; Loading/Skeleton/BadgeDot/Button lacked Phase 2 tokens` | `red-pass` |
+| `cd frontend/h5 && npx jest src/components/__tests__/Phase2SharedThemeTokens.test.ts src/components/BadgeDot/__tests__/BadgeDot.test.tsx` | `PASS after shared component token migration` | `PASS: 2 suites, 11 tests` | `pass` |
+| `Old token scan` | `No --bg-primary/--bg-secondary/--bg-tertiary/--border-light/--border-default in Task 5 scoped CSS files` | `No old light-only token usages found in Task 5 scoped CSS files` | `pass` |
+| `GetDiagnostics` | `No IDE diagnostics for edited files` | `[]` | `pass` |
+| `git diff --check` | `No whitespace errors` | `exit 0` | `pass` |
+
+**Risks / Blockers**
+
+- Jest emitted the existing `ts-jest` `esModuleInterop` warning and `MSW setup skipped` log; tests passed and Task 5 does not change test/runtime config.
+- Visual validation remains deferred to Task 6, which owns manual dark/light route checks and wider regression verification.
+
+**Handoff**
+
+- Completion summary: Shared Button/Input/Loading/Skeleton/BadgeDot/LiveReminderModal now consume Phase 2 semantic tokens for hover, focus, surfaces, skeleton/loading states, badge fallback colors, and modal surfaces.
+- Contract hardening: shared component token test now detects `var(--token, fallback)` old-token usages instead of only exact `var(--token)` calls.
+- Remaining work: Task 6 theme regression verification.
+- First response line used: `当前分支/worktree：feat/h5-theme-phase2-polish @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-theme-phase2-polish`
+
 
 ## Final Review Checklist
 
@@ -260,3 +313,4 @@
 - `Task 2 done; committed by main agent`
 - `Task 3 done; committed by main agent`
 - `Task 4 done; committed by main agent`
+- `Task 5 done; committed by main agent`

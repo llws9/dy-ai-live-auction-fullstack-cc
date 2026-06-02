@@ -16,7 +16,7 @@
 }
 
 .button:focus-visible {
-  outline: 2px solid var(--color-primary-500);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -57,21 +57,21 @@
 
 .outline {
   background: transparent;
-  border: 2px solid var(--color-primary-500);
-  color: var(--color-primary-500);
+  border: 2px solid var(--text-brand);
+  color: var(--text-brand);
 }
 
 .outline:hover:not(:disabled) {
-  background: var(--color-primary-50);
+  background: var(--surface-muted);
 }
 
 .ghost {
   background: transparent;
-  color: var(--color-primary-500);
+  color: var(--text-brand);
 }
 
 .ghost:hover:not(:disabled) {
-  background: var(--color-primary-50);
+  background: var(--surface-muted);
 }
 
 /* ===== Sizes ===== */
