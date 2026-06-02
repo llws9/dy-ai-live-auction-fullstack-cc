@@ -109,6 +109,19 @@ describe('HomePage 分类联动 (T2.10)', () => {
     await waitFor(() => expect(mockedAuctionApi.list).toHaveBeenCalled());
     expect(screen.getByRole('button', { name: '全部' })).toBeInTheDocument();
   });
+
+  it('过滤与固定 tab 重名的后端分类，避免「收藏」右侧重复渲染「全部」', async () => {
+    mockedProductApi.listCategories.mockResolvedValueOnce([
+      { id: 0, name: '全部' },
+      { id: 1, name: '珠宝腕表' },
+    ]);
+
+    renderHome();
+
+    await waitFor(() => expect(mockedProductApi.listCategories).toHaveBeenCalled());
+    expect(screen.getAllByRole('button', { name: '全部' })).toHaveLength(1);
+    expect(await screen.findByRole('button', { name: '珠宝腕表' })).toBeInTheDocument();
+  });
 });
 
 describe('HomePage 未读消息红点 (T3.6 / F-D2)', () => {

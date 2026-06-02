@@ -70,6 +70,7 @@ const extractCategories = (response: any): CategoryTab[] => {
     if (Array.isArray(c)) {
       return c
         .filter((item: any) => item && typeof item.id === 'number' && typeof item.name === 'string')
+        .filter((item: any) => !SPECIAL_TABS.includes(item.name as SpecialTab))
         .map((item: any) => ({ id: item.id, name: item.name }));
     }
   }

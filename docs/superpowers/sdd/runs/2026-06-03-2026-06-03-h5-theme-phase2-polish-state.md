@@ -335,13 +335,14 @@
 **Risks / Blockers**
 
 - Automated verification passed, but Task 6 is blocked on manual visual acceptance. The user selected `有问题` during the dark/light visual checklist and will provide the concrete page/problem details in the next conversation.
+- User reported the first visual issue on Home tabs: two `全部` buttons appeared because backend categories could include a dynamic `全部` category after the fixed `全部` / `收藏` tabs. Fixed by filtering backend categories that duplicate fixed tabs and adding a Home regression test.
 - A mock visual review environment was started for manual inspection at `http://127.0.0.1:5174/login?redirect=%2Fprofile`, backed by mock API `http://127.0.0.1:18080`.
 - True pixel-level dark/light visual inspection cannot be completed by the agent alone because this session has no browser/screenshot inspection tooling; route availability was verified via the running Vite server instead.
 - Test output includes existing non-fatal warnings: `ts-jest` `esModuleInterop`, React Router v7 future flags, `OrderDetail` async `act(...)`, and Vite CJS Node API deprecation.
 
 **Handoff**
 
-- Completion summary: Task 6 automated regression verification passed with no production code changes, but manual visual checklist is blocked pending user-provided issue details.
+- Completion summary: Task 6 automated regression verification passed. The duplicated Home `全部` tab visual issue has been fixed, but manual visual checklist remains blocked until the user confirms there are no further page-level issues.
 - Commit decision: persist this state-only blocker record so the next conversation can resume from the correct status.
 - First response line used: `当前分支/worktree：feat/h5-theme-phase2-polish @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-theme-phase2-polish`
 
