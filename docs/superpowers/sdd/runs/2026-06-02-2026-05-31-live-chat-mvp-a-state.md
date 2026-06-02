@@ -34,11 +34,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `13` |
-| Done | `11` |
+| Done | `12` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `2` |
-| Last Updated | `2026-06-02 (T10/T11 done, W7 前端组件)` |
+| Pending | `1` |
+| Last Updated | `2026-06-02 (T12 done, 前端 checkpoint，待 T13 用户手动冒烟)` |
 
 ## Task Matrix
 
@@ -55,7 +55,7 @@
 | `T9` | 前端 liveChatStore（Zustand） | `done` | `main-agent` | `W6` | `-` | h5 store | `frontend/h5/src/store/liveChatStore.ts`, `__tests__/liveChatStore.test.ts` |
 | `T10` | ChatBubble 组件 | `done` | `main-agent` | `W7` | `T9` | h5 component | `frontend/h5/src/components/LiveChat/ChatBubble.tsx`, `ChatPanel.module.css`, `__tests__/ChatBubble.test.tsx` |
 | `T11` | ChatPanel 组件（输入 + 滚动列表） | `done` | `main-agent` | `W7` | `T9,T10` | h5 component | `frontend/h5/src/components/LiveChat/ChatPanel.tsx`, `__tests__/ChatPanel.test.tsx` |
-| `T12` | 在 Live 页面集成 ChatPanel（关键检查点） | `pending` | `unassigned` | `W8` | `T8,T11` | h5 page | `frontend/h5/src/pages/Live/index.tsx` |
+| `T12` | 在 Live 页面集成 ChatPanel（关键检查点） | `done` | `main-agent` | `W8` | `T8,T11` | h5 page | `frontend/h5/src/pages/Live/index.tsx` |
 | `T13` | 端到端冒烟（手动） | `pending` | `user` | `W9` | `T1-T12` | manual | `-` |
 
 ## Wave Plan
@@ -321,18 +321,29 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
+| Status | `done` |
+| Owner | `main-agent` |
 | Depends On | `T8,T11` |
 | Parallel Group | `W8` |
 
 **TDD Plan**: 先读现有 Live 页确认 liveStreamId/user/wsService 来源，再挂载 ChatPanel + chat_message handler；不破坏既有 LiveRoom 测试。
 
+**实现说明（第一性原理）**:
+- WS 构造改为三参 `new WebSocketService(auctionId, token, queryLiveStreamId || undefined)`。选 `queryLiveStreamId`（route `?id=`）而非 `effectiveLiveStreamId`：握手发生在 effect 内，需同步可得的 live_stream_id，避免等待 auction 详情异步返回再重连。
+- 用 `wsRef` 持有实例供 `ChatPanel.onSend` 调 `sendChat`，避免把 ws 提升为 state 触发重渲染。
+- `chat_message` handler 在组件树外用 `useLiveChatStore.getState().receive(data)` dispatch（验证了 zustand 选型的必要性）。
+- cleanup 中 `off('chat_message')` + `store.reset()`，防止换房残留历史。
+- 现有 LiveRoom 测试断言旧 WS 契约（2 参、无 off/sendChat），按 TDD 先更新测试（Red）再实现（Green）：mock 补 `off`/`sendChat`，构造断言加第三参 `3`，新增 chat 集成用例。
+
 **Verification Evidence**
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `npm test -- LiveRoom` | PASS | `not_run` | `pending` |
+| `npm test -- --testPathPatterns=LiveRoom` | Red 后 Green | `Red: 2 failed(构造参数+chat handler undefined); Green: 6/6 PASS` | `done` |
+| `npm test`（全量前端 checkpoint） | 全量 PASS | `37 suites / 204 tests PASS, 0 FAIL` | `done` |
+| `npx tsc --noEmit` | 0 类型错误 | `EXIT=0` | `done` |
+
+**Commit**: `feat(h5): mount ChatPanel in Live page and dispatch chat_message` (42c4079d)
 
 ---
 
@@ -356,9 +367,9 @@
 ## Final Review Checklist
 
 - [x] State file was created before subagent dispatch.
-- [ ] Every implementation task records TDD Red -> Green -> Verify evidence.
-- [ ] Every completed subagent response starts with `当前分支/worktree：`.
-- [ ] Verification commands and results are recorded.
+- [x] Every implementation task records TDD Red -> Green -> Verify evidence.
+- [x] Every completed subagent response starts with `当前分支/worktree：`.
+- [x] Verification commands and results are recorded.
 
 ## Final Handoff
 
@@ -366,4 +377,6 @@
 
 **状态**
 
-- `initialized`
+- `automated-tasks-complete`：T1-T12 全部 done（后端 7 + 前端 5），仅剩 T13 用户手动冒烟（owner=user）。
+- 后端全量 `go test ./...` PASS；前端全量 `npm test` 37 suites / 204 tests PASS；`tsc --noEmit` 0 错误。
+- 12 个 commit 在 `feat/live-chat-mvp`，尚未合并 main。
