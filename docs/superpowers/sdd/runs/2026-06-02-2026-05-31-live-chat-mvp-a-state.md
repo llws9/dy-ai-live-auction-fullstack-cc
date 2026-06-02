@@ -34,11 +34,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `13` |
-| Done | `9` |
+| Done | `11` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `4` |
-| Last Updated | `2026-06-02 (T8/T9 done, W6 前端通道与状态)` |
+| Pending | `2` |
+| Last Updated | `2026-06-02 (T10/T11 done, W7 前端组件)` |
 
 ## Task Matrix
 
@@ -53,8 +53,8 @@
 | `T7` | WS 握手解析 live_stream_id 并装配 ChatHandler（关键检查点） | `done` | `main-agent` | `W5` | `T6` | backend handler | `backend/auction/handler/ws.go`, `backend/auction/main.go`, `client.go` |
 | `T8` | 前端 WebSocketService 扩展（订阅 + 发送） | `done` | `main-agent` | `W6` | `T1` | h5 service | `frontend/h5/src/services/websocket.ts` |
 | `T9` | 前端 liveChatStore（Zustand） | `done` | `main-agent` | `W6` | `-` | h5 store | `frontend/h5/src/store/liveChatStore.ts`, `__tests__/liveChatStore.test.ts` |
-| `T10` | ChatBubble 组件 | `pending` | `unassigned` | `W7` | `T9` | h5 component | `frontend/h5/src/components/LiveChat/ChatBubble.tsx`, `ChatPanel.module.css`, `__tests__/ChatBubble.test.tsx` |
-| `T11` | ChatPanel 组件（输入 + 滚动列表） | `pending` | `unassigned` | `W7` | `T9,T10` | h5 component | `frontend/h5/src/components/LiveChat/ChatPanel.tsx`, `__tests__/ChatPanel.test.tsx` |
+| `T10` | ChatBubble 组件 | `done` | `main-agent` | `W7` | `T9` | h5 component | `frontend/h5/src/components/LiveChat/ChatBubble.tsx`, `ChatPanel.module.css`, `__tests__/ChatBubble.test.tsx` |
+| `T11` | ChatPanel 组件（输入 + 滚动列表） | `done` | `main-agent` | `W7` | `T9,T10` | h5 component | `frontend/h5/src/components/LiveChat/ChatPanel.tsx`, `__tests__/ChatPanel.test.tsx` |
 | `T12` | 在 Live 页面集成 ChatPanel（关键检查点） | `pending` | `unassigned` | `W8` | `T8,T11` | h5 page | `frontend/h5/src/pages/Live/index.tsx` |
 | `T13` | 端到端冒烟（手动） | `pending` | `user` | `W9` | `T1-T12` | manual | `-` |
 
@@ -279,8 +279,8 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
+| Status | `done` |
+| Owner | `main-agent` |
 | Depends On | `T9` |
 | Parallel Group | `W7` |
 
@@ -290,7 +290,9 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `npm test -- ChatBubble` | PASS | `not_run` | `pending` |
+| `npm test -- --testPathPatterns=ChatBubble` | Red 后 Green | `Red: Cannot find module '../ChatBubble'; Green: 3/3 PASS（renders/XSS not interpreted/bubbleSelf class）` | `done` |
+
+**Commit**: `feat(h5): add ChatBubble component with XSS-safe text rendering`
 
 ---
 
@@ -298,8 +300,8 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
+| Status | `done` |
+| Owner | `main-agent` |
 | Depends On | `T9,T10` |
 | Parallel Group | `W7` |
 
@@ -309,7 +311,9 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `npm test -- ChatPanel` | PASS | `not_run` | `pending` |
+| `npm test -- --testPathPatterns=ChatPanel` | Red 后 Green | `Red: Cannot find module '../ChatPanel'; Green: 4/4 PASS（disable empty/reject >50/send+cooldown via fakeTimers/render from store）` | `done` |
+
+**Commit**: `feat(h5): add ChatPanel with input validation, cooldown and scrolling list`
 
 ---
 
