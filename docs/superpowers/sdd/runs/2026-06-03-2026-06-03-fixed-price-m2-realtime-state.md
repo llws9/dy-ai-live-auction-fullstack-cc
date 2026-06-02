@@ -37,7 +37,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 03:16` |
+| Last Updated | `2026-06-03 03:24` |
 
 ## Task Matrix
 
@@ -45,7 +45,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `M2 Task 1 - WebSocket Message Contract` | `done` | `subagent` | `W1` | `-` | `Task 1: WebSocket Message Contract` | `backend/auction/websocket/message.go`, `backend/auction/websocket/fixed_price_message_test.go` |
 | `T002` | `M2 Task 2 - FixedPrice Broadcaster Adapter + Stock Throttle` | `done` | `subagent` | `W2` | `T001` | `Task 2: FixedPrice Broadcaster Adapter + Stock Throttle` | `backend/auction/service/fixed_price_broadcaster.go`, `backend/auction/service/fixed_price_broadcaster_test.go` |
-| `T003` | `M2 Task 3 - FixedPriceService Realtime Hooks` | `done` | `main-agent` | `W3` | `T002` | `Task 3: FixedPriceService Realtime Hooks` | `backend/auction/service/fixed_price.go`, `backend/auction/service/fixed_price_testutil_test.go`, `backend/auction/service/fixed_price_test.go`, `backend/auction/service/fixed_price_failfast_test.go`, `backend/auction/service/fixed_price_realtime_test.go` |
+| `T003` | `M2 Task 3 - FixedPriceService Realtime Hooks` | `done` | `subagent` | `W3` | `T002` | `Task 3: FixedPriceService Realtime Hooks` | `backend/auction/service/fixed_price.go`, `backend/auction/service/fixed_price_testutil_test.go`, `backend/auction/service/fixed_price_test.go`, `backend/auction/service/fixed_price_failfast_test.go`, `backend/auction/service/fixed_price_realtime_test.go` |
 
 ## Wave Plan
 
@@ -151,7 +151,7 @@
 | Key | Value |
 | --- | --- |
 | Status | `done` |
-| Owner | `main-agent` |
+| Owner | `subagent` |
 | Started At | `2026-06-03 03:15` |
 | Completed At | `2026-06-03 03:16` |
 | Branch | `feat/fixed-price-m1` |
@@ -216,7 +216,9 @@
 - Scope completed: FixedPriceService realtime hooks.
 - Commit: `e589f97f feat(fixed-price): add WebSocket message contracts (M2.T1)`
 - Commit: `9979129d feat(fixed-price): add WebSocket broadcaster with stock throttle (M2.T2)`
+- Commit: `114e5783 feat(fixed-price): broadcast realtime events from service (M2.T3)`
 - Main-agent review: `go test ./websocket/ -run TestFixedPrice -v && go test ./websocket/` passed.
 - Main-agent review: `go test ./service/ -run TestFixedPriceWSBroadcaster -v && go test ./service/` passed.
-- Main-agent review: `go test ./service/ -run TestFixedPriceServiceRealtime -v && go test ./service/ -run 'TestFixedPriceService|TestPurchase|TestOffline|TestFixedPriceWSBroadcaster' -race` passed.
+- Main-agent review: `go test ./service/ -run TestFixedPriceServiceRealtime -v -count=1 && go test ./service/ -run 'TestFixedPriceService|TestPurchase|TestOffline|TestFixedPriceWSBroadcaster' -race -count=1` passed.
 - Subagent regression evidence: `go test ./...` passed.
+- Note: `backend/auction/main.go` production wiring is intentionally out of T003 scope and remains for T004 before full build/regression.
