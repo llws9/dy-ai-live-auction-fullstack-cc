@@ -126,3 +126,22 @@ func TestFixedPriceWSBroadcaster_StockZeroFlushesBeforeSoldOut(t *testing.T) {
 	assert.Equal(t, websocket.MessageTypeFixedPriceStock, first.Type)
 	assert.Equal(t, websocket.MessageTypeFixedPriceSoldOut, second.Type)
 }
+
+func TestFixedPriceWSBroadcaster_DoesNotBlockWhenHubQueueIsFull(t *testing.T) {
+	hub := websocket.NewHub()
+	b := NewFixedPriceWSBroadcaster(hub, newFakeClock())
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := 0; i < 1100; i++ {
+			b.Flair(context.Background(), 1001, int64(i+1), 42, decimal.NewFromInt(99))
+		}
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("fixed-price broadcaster blocked when hub queue was full")
+	}
+}

@@ -59,7 +59,7 @@ func (b *FixedPriceWSBroadcaster) Listed(_ context.Context, item *model.FixedPri
 	if b == nil || b.hub == nil || item == nil {
 		return
 	}
-	b.hub.BroadcastToRoom(item.LiveStreamID, websocket.NewFixedPriceListedMessage(&websocket.FixedPriceListedData{
+	b.tryBroadcast(item.LiveStreamID, websocket.NewFixedPriceListedMessage(&websocket.FixedPriceListedData{
 		ItemID:         item.ID,
 		LiveStreamID:   item.LiveStreamID,
 		ProductID:      item.ProductID,
@@ -93,21 +93,21 @@ func (b *FixedPriceWSBroadcaster) SoldOut(_ context.Context, liveStreamID, itemI
 	if b == nil || b.hub == nil {
 		return
 	}
-	b.hub.BroadcastToRoom(liveStreamID, websocket.NewFixedPriceSoldOutMessage(itemID))
+	b.tryBroadcast(liveStreamID, websocket.NewFixedPriceSoldOutMessage(itemID))
 }
 
 func (b *FixedPriceWSBroadcaster) Offline(_ context.Context, liveStreamID, itemID int64) {
 	if b == nil || b.hub == nil {
 		return
 	}
-	b.hub.BroadcastToRoom(liveStreamID, websocket.NewFixedPriceOfflineMessage(itemID))
+	b.tryBroadcast(liveStreamID, websocket.NewFixedPriceOfflineMessage(itemID))
 }
 
 func (b *FixedPriceWSBroadcaster) Flair(_ context.Context, liveStreamID, itemID, buyerID int64, price decimal.Decimal) {
 	if b == nil || b.hub == nil {
 		return
 	}
-	b.hub.BroadcastToRoom(liveStreamID, websocket.NewFixedPriceFlairMessage(&websocket.FixedPriceFlairData{
+	b.tryBroadcast(liveStreamID, websocket.NewFixedPriceFlairMessage(&websocket.FixedPriceFlairData{
 		ItemID:  itemID,
 		BuyerID: buyerID,
 		Price:   price.StringFixed(2),
@@ -134,7 +134,11 @@ func (b *FixedPriceWSBroadcaster) flushStock(liveStreamID, itemID int64, remaini
 	delete(b.pending, itemID)
 	b.mu.Unlock()
 
-	b.hub.BroadcastToRoom(liveStreamID, websocket.NewFixedPriceStockMessage(itemID, remaining))
+	b.tryBroadcast(liveStreamID, websocket.NewFixedPriceStockMessage(itemID, remaining))
+}
+
+func (b *FixedPriceWSBroadcaster) tryBroadcast(liveStreamID int64, msg *websocket.Message) {
+	_ = b.hub.TryBroadcastToRoom(liveStreamID, msg)
 }
 
 func fpRealtimeStatusString(s model.FixedPriceStatus) string {

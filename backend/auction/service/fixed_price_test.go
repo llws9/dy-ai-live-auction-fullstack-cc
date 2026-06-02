@@ -162,6 +162,43 @@ func TestPurchase_IdempotentReplay(t *testing.T) {
 	assert.Equal(t, "901.00", avail.StringFixed(2))
 }
 
+func TestPurchase_ReplaysFromPurchaseWhenIdemCacheMissing(t *testing.T) {
+	svc := setupFixedPriceService(t)
+	ctx := context.Background()
+	item := setupItem(t, svc, 5, decimal.NewFromInt(99))
+	setBalance(t, svc, 100, decimal.NewFromInt(1000))
+	key := "550e8400-e29b-41d4-a716-446655440101"
+
+	res1, err := svc.Purchase(ctx, PurchaseReq{ItemID: item.ID, UserID: 100, IdemKey: key})
+	require.NoError(t, err)
+	require.NoError(t, svc.idem.rdb.Del(ctx, idemKey(100, item.ID, key)).Err())
+
+	res2, err := svc.Purchase(ctx, PurchaseReq{ItemID: item.ID, UserID: 100, IdemKey: key})
+	require.NoError(t, err)
+	assert.Equal(t, res1.PurchaseID, res2.PurchaseID)
+	assert.True(t, res2.Replayed)
+
+	remain, err := svc.stock.Remaining(ctx, item.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 4, remain)
+	avail, _, _, _, _ := newBalanceDAO(svc.db).GetByUserID(ctx, 100)
+	assert.Equal(t, "901.00", avail.StringFixed(2))
+}
+
+func TestPurchase_UpdatesDBRemainingStockForFallback(t *testing.T) {
+	svc := setupFixedPriceService(t)
+	ctx := context.Background()
+	item := setupItem(t, svc, 5, decimal.NewFromInt(99))
+	setBalance(t, svc, 100, decimal.NewFromInt(1000))
+
+	_, err := svc.Purchase(ctx, PurchaseReq{ItemID: item.ID, UserID: 100, IdemKey: newKey()})
+	require.NoError(t, err)
+
+	got, err := svc.items.GetByID(ctx, item.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 4, got.RemainingStock)
+}
+
 func TestPurchase_NotOnSale(t *testing.T) {
 	svc := setupFixedPriceService(t)
 	ctx := context.Background()

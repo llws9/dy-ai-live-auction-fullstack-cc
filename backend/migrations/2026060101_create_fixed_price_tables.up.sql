@@ -20,8 +20,10 @@ CREATE TABLE fixed_price_purchases (
   id         BIGINT AUTO_INCREMENT PRIMARY KEY,
   item_id    BIGINT NOT NULL,
   user_id    BIGINT NOT NULL,
+  idempotency_key VARCHAR(64) NOT NULL DEFAULT '',
   price      DECIMAL(10,2) NOT NULL,
   created_at DATETIME NOT NULL,
   UNIQUE KEY uniq_item_user (item_id, user_id),
+  INDEX idx_idempotency_key (idempotency_key),
   INDEX idx_user (user_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

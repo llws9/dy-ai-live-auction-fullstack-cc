@@ -138,6 +138,16 @@ func (h *Hub) BroadcastToRoom(auctionID int64, message *Message) {
 	}
 }
 
+// TryBroadcastToRoom 非阻塞广播；队列满时返回 false，由调用方决定是否丢弃。
+func (h *Hub) TryBroadcastToRoom(auctionID int64, message *Message) bool {
+	select {
+	case h.broadcast <- &BroadcastMessage{AuctionID: auctionID, Message: message}:
+		return true
+	default:
+		return false
+	}
+}
+
 // GetRoomCount 获取房间数量
 func (h *Hub) GetRoomCount() int {
 	h.roomsLock.RLock()

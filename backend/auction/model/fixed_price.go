@@ -36,11 +36,12 @@ func (FixedPriceItem) TableName() string { return "fixed_price_items" }
 
 // FixedPricePurchase 一口价购买记录模型
 type FixedPricePurchase struct {
-	ID        int64           `json:"id" gorm:"primaryKey;autoIncrement"`
-	ItemID    int64           `json:"item_id" gorm:"uniqueIndex:uniq_item_user;not null"`
-	UserID    int64           `json:"user_id" gorm:"uniqueIndex:uniq_item_user;not null"`
-	Price     decimal.Decimal `json:"price" gorm:"type:decimal(10,2);not null"`
-	CreatedAt time.Time       `json:"created_at" gorm:"autoCreateTime"`
+	ID             int64           `json:"id" gorm:"primaryKey;autoIncrement"`
+	ItemID         int64           `json:"item_id" gorm:"uniqueIndex:uniq_item_user;not null"`
+	UserID         int64           `json:"user_id" gorm:"uniqueIndex:uniq_item_user;not null"`
+	IdempotencyKey string          `json:"idempotency_key" gorm:"size:64;index"`
+	Price          decimal.Decimal `json:"price" gorm:"type:decimal(10,2);not null"`
+	CreatedAt      time.Time       `json:"created_at" gorm:"autoCreateTime"`
 }
 
 // TableName 指定表名

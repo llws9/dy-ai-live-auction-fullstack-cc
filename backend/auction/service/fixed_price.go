@@ -220,12 +220,17 @@ func (s *FixedPriceService) Purchase(ctx context.Context, r PurchaseReq) (*Purch
 	case StockResultSoldOut:
 		return nil, ErrSoldOut
 	case StockResultAlreadyBought:
-		return nil, ErrAlreadyBought
+		return s.replayExistingPurchase(ctx, item, r.UserID, r.IdemKey)
+	}
+	rem, err := s.stock.Remaining(ctx, r.ItemID)
+	if err != nil {
+		_ = s.stock.Compensate(ctx, r.ItemID, r.UserID)
+		return nil, err
 	}
 
 	// 4. 单库单事务：扣余额 + 写购买记录。
 	purchase := &model.FixedPricePurchase{
-		ItemID: item.ID, UserID: r.UserID, Price: item.Price,
+		ItemID: item.ID, UserID: r.UserID, IdempotencyKey: r.IdemKey, Price: item.Price,
 	}
 	txErr := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		affected, e := s.balance.DeductWithTx(ctx, tx, r.UserID, item.Price)
@@ -235,20 +240,26 @@ func (s *FixedPriceService) Purchase(ctx context.Context, r PurchaseReq) (*Purch
 		if affected == 0 {
 			return ErrInsufficient
 		}
-		return s.purchases.InsertWithTx(ctx, tx, purchase)
+		if e := s.purchases.InsertWithTx(ctx, tx, purchase); e != nil {
+			return e
+		}
+		return nil
 	})
 
 	// 5. 事务失败 → Saga 补偿，回补 Redis 库存与 bought 集合。
 	if txErr != nil {
 		_ = s.stock.Compensate(ctx, r.ItemID, r.UserID)
+		if errors.Is(txErr, dao.ErrAlreadyBought) {
+			return s.replayExistingPurchase(ctx, item, r.UserID, r.IdemKey)
+		}
 		return nil, txErr
 	}
 
 	// 6. 持久化幂等键（存 purchase ID）。
 	_ = s.idem.Persist(ctx, r.UserID, r.ItemID, r.IdemKey, purchase.ID)
+	_ = s.items.DecrementRemainingStock(ctx, r.ItemID, rem)
 
-	// 7. 末件标记售罄（best-effort）。
-	rem, _ := s.stock.Remaining(ctx, r.ItemID)
+	// 7. 实时广播。库存 DB 兜底写与广播均为 best-effort，不影响核心购买结果。
 	s.broadcaster.StockChanged(ctx, item.LiveStreamID, item.ID, rem)
 	s.broadcaster.Flair(ctx, item.LiveStreamID, item.ID, r.UserID, item.Price)
 	if rem == 0 {
@@ -260,6 +271,33 @@ func (s *FixedPriceService) Purchase(ctx context.Context, r PurchaseReq) (*Purch
 	return &PurchaseResult{
 		PurchaseID: purchase.ID, ItemID: r.ItemID, Price: item.Price,
 		RemainingStock: rem, Replayed: false,
+	}, nil
+}
+
+func (s *FixedPriceService) replayExistingPurchase(ctx context.Context, item *model.FixedPriceItem, userID int64, idemKey string) (*PurchaseResult, error) {
+	var purchase *model.FixedPricePurchase
+	var err error
+	for i := 0; i < 20; i++ {
+		purchase, err = s.purchases.GetByItemAndUser(ctx, item.ID, userID)
+		if err == nil {
+			break
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if err != nil {
+		return nil, ErrAlreadyBought
+	}
+	if purchase.IdempotencyKey != idemKey {
+		return nil, ErrAlreadyBought
+	}
+	_ = s.idem.Persist(ctx, userID, item.ID, idemKey, purchase.ID)
+	rem, _ := s.stock.Remaining(ctx, item.ID)
+	return &PurchaseResult{
+		PurchaseID: purchase.ID, ItemID: item.ID, Price: purchase.Price,
+		RemainingStock: rem, Replayed: true,
 	}, nil
 }
 
