@@ -1,5 +1,4 @@
-import React from "react"
-import { User, Mail, Phone, Shield, ShieldCheck, Key, Bell, CreditCard, Loader2 } from "lucide-react"
+import { User, Mail, Phone, Shield, ShieldCheck, Key, Bell } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,14 +7,13 @@ import { useAuth } from "@/shared/auth"
 
 export default function Profile() {
   const { user } = useAuth()
-  const [loading, setLoading] = React.useState(false)
-
   // 用户信息（从AuthContext获取）
   const userInfo = user || {
     name: '管理员',
     email: '',
     phone: '',
     avatar: '',
+    role: 2,
   }
 
   return (

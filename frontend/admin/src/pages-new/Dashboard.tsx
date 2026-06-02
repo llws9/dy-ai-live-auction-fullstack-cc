@@ -14,7 +14,6 @@ import {
   Loader2
 } from "lucide-react"
 import {
-  LineChart,
   Line,
   XAxis,
   YAxis,
@@ -30,7 +29,6 @@ import {
 } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { statisticsApi } from "@/shared/api"
@@ -255,7 +253,7 @@ export default function Dashboard() {
                     paddingAngle={5}
                     dataKey="value"
                   >
-                    {revenueComposition.map((entry, index) => (
+                    {revenueComposition.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>

@@ -1,6 +1,6 @@
 // API统一封装入口
 
-import { request, get, post, put, del, buildQuery, ApiError, setToastFunction } from './request';
+import { get, post, put, del, buildQuery, ApiError, setToastFunction } from './request';
 
 // 重新导出类型
 export * from './types';

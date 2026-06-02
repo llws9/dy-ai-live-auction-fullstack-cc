@@ -15,7 +15,6 @@ import {
   Search
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "./ui/button"
 import { Avatar } from "./ui/avatar"
 
 interface NavItem {

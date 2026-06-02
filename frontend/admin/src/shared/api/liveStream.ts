@@ -1,6 +1,6 @@
 // 直播间API
 
-import { get, post, del, buildQuery } from './request';
+import { get, post, put, del, buildQuery } from './request';
 import { LiveStream, PaginatedResponse } from './types';
 
 export interface LiveStreamListParams {
