@@ -56,15 +56,16 @@ func (realClock) AfterFunc(d time.Duration, f func()) { time.AfterFunc(d, f) }
 // FixedPriceService 一口价业务编排（方案③ purchase 自成闭环：
 // 抢购在 auction 单库单事务内完成 扣余额 + 写购买记录，不跨服务建单、不依赖 outbox）。
 type FixedPriceService struct {
-	db        *gorm.DB
-	items     *dao.FixedPriceItemDAO
-	purchases *dao.FixedPricePurchaseDAO
-	balance   BalanceDeducter
-	stock     *StockGuard
-	idem      *IdemStore
-	streams   StreamOwnerChecker
-	products  ProductChecker
-	clk       Clock
+	db          *gorm.DB
+	items       *dao.FixedPriceItemDAO
+	purchases   *dao.FixedPricePurchaseDAO
+	balance     BalanceDeducter
+	stock       *StockGuard
+	idem        *IdemStore
+	streams     StreamOwnerChecker
+	products    ProductChecker
+	clk         Clock
+	broadcaster FixedPriceBroadcaster
 }
 
 // NewFixedPriceService 装配一口价 service。clk 传 nil 时使用 realClock。
@@ -78,20 +79,25 @@ func NewFixedPriceService(
 	streams StreamOwnerChecker,
 	products ProductChecker,
 	clk Clock,
+	broadcaster FixedPriceBroadcaster,
 ) *FixedPriceService {
 	if clk == nil {
 		clk = realClock{}
 	}
+	if broadcaster == nil {
+		broadcaster = noopFixedPriceBroadcaster{}
+	}
 	return &FixedPriceService{
-		db:        db,
-		items:     items,
-		purchases: purchases,
-		balance:   balance,
-		stock:     stock,
-		idem:      idem,
-		streams:   streams,
-		products:  products,
-		clk:       clk,
+		db:          db,
+		items:       items,
+		purchases:   purchases,
+		balance:     balance,
+		stock:       stock,
+		idem:        idem,
+		streams:     streams,
+		products:    products,
+		clk:         clk,
+		broadcaster: broadcaster,
 	}
 }
 
@@ -144,6 +150,7 @@ func (s *FixedPriceService) ListItem(ctx context.Context, r ListItemReq) (*model
 	if err := s.stock.Init(ctx, item.ID, r.TotalStock); err != nil {
 		return nil, err
 	}
+	s.broadcaster.Listed(ctx, item)
 	return item, nil
 }
 
@@ -242,8 +249,12 @@ func (s *FixedPriceService) Purchase(ctx context.Context, r PurchaseReq) (*Purch
 
 	// 7. 末件标记售罄（best-effort）。
 	rem, _ := s.stock.Remaining(ctx, r.ItemID)
+	s.broadcaster.StockChanged(ctx, item.LiveStreamID, item.ID, rem)
+	s.broadcaster.Flair(ctx, item.LiveStreamID, item.ID, r.UserID, item.Price)
 	if rem == 0 {
-		_ = s.items.UpdateStatus(ctx, r.ItemID, model.FixedPriceStatusSoldOut)
+		if err := s.items.UpdateStatus(ctx, r.ItemID, model.FixedPriceStatusSoldOut); err == nil {
+			s.broadcaster.SoldOut(ctx, item.LiveStreamID, item.ID)
+		}
 	}
 
 	return &PurchaseResult{
@@ -264,6 +275,7 @@ func (s *FixedPriceService) Offline(ctx context.Context, itemID, userID int64) e
 	if err := s.items.UpdateStatus(ctx, itemID, model.FixedPriceStatusOffline); err != nil {
 		return err
 	}
+	s.broadcaster.Offline(ctx, item.LiveStreamID, item.ID)
 	s.scheduleCleanup(itemID)
 	return nil
 }

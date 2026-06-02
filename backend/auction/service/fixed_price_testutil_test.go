@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shopspring/decimal"
 	"github.com/glebarez/sqlite"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -157,6 +157,7 @@ func setupFixedPriceServiceWithClock(t *testing.T, clk Clock) *FixedPriceService
 		&fakeStreamOwner{owners: nil},
 		&fakeProductChecker{},
 		clk,
+		nil,
 	)
 }
 
@@ -174,6 +175,7 @@ func setupFixedPriceServiceWithStream(t *testing.T, liveStreamID, ownerUserID in
 		NewIdemStore(rdb),
 		&fakeStreamOwner{owners: map[int64]int64{liveStreamID: ownerUserID}},
 		&fakeProductChecker{},
+		nil,
 		nil,
 	)
 }

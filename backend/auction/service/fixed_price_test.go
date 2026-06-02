@@ -67,6 +67,7 @@ func TestFixedPriceService_List_RejectsMissingProduct(t *testing.T) {
 		&fakeStreamOwner{owners: nil},
 		&fakeProductChecker{missing: map[int64]bool{5001: true}},
 		nil,
+		nil,
 	)
 	_, err := svc.ListItem(context.Background(), ListItemReq{
 		LiveStreamID: 1001, ProductID: 5001, CreatorID: 100,
@@ -268,5 +269,3 @@ func TestOffline_AsyncCleanupAfterDelay(t *testing.T) {
 		return err == redis.Nil
 	})
 }
-
-

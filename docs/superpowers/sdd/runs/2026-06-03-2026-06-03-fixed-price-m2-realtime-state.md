@@ -33,11 +33,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `3` |
-| Done | `2` |
+| Done | `3` |
 | Blocked | `0` |
-| In Progress | `1` |
+| In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 03:15` |
+| Last Updated | `2026-06-03 03:16` |
 
 ## Task Matrix
 
@@ -45,7 +45,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `M2 Task 1 - WebSocket Message Contract` | `done` | `subagent` | `W1` | `-` | `Task 1: WebSocket Message Contract` | `backend/auction/websocket/message.go`, `backend/auction/websocket/fixed_price_message_test.go` |
 | `T002` | `M2 Task 2 - FixedPrice Broadcaster Adapter + Stock Throttle` | `done` | `subagent` | `W2` | `T001` | `Task 2: FixedPrice Broadcaster Adapter + Stock Throttle` | `backend/auction/service/fixed_price_broadcaster.go`, `backend/auction/service/fixed_price_broadcaster_test.go` |
-| `T003` | `M2 Task 3 - FixedPriceService Realtime Hooks` | `assigned` | `subagent` | `W3` | `T002` | `Task 3: FixedPriceService Realtime Hooks` | `backend/auction/service/fixed_price.go`, `backend/auction/service/fixed_price_testutil_test.go`, `backend/auction/service/fixed_price_test.go`, `backend/auction/service/fixed_price_failfast_test.go`, `backend/auction/service/fixed_price_realtime_test.go` |
+| `T003` | `M2 Task 3 - FixedPriceService Realtime Hooks` | `done` | `main-agent` | `W3` | `T002` | `Task 3: FixedPriceService Realtime Hooks` | `backend/auction/service/fixed_price.go`, `backend/auction/service/fixed_price_testutil_test.go`, `backend/auction/service/fixed_price_test.go`, `backend/auction/service/fixed_price_failfast_test.go`, `backend/auction/service/fixed_price_realtime_test.go` |
 
 ## Wave Plan
 
@@ -150,10 +150,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `assigned` |
-| Owner | `subagent` |
+| Status | `done` |
+| Owner | `main-agent` |
 | Started At | `2026-06-03 03:15` |
-| Completed At | `-` |
+| Completed At | `2026-06-03 03:16` |
 | Branch | `feat/fixed-price-m1` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
 | Depends On | `T002` |
@@ -169,21 +169,30 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `RED fail: missing service realtime hooks` | `not_run` | `pending` |
-| `not_run` | `GREEN pass service realtime tests` | `not_run` | `pending` |
-| `not_run` | `fixed-price service regression passes` | `not_run` | `pending` |
+| `cd backend/auction && go test ./service/ -run TestFixedPriceServiceRealtime -v` | `RED fail: missing service realtime hooks` | `FAIL: too many arguments in call to NewFixedPriceService; want constructor without FixedPriceBroadcaster` | `pass` |
+| `cd backend/auction && go test ./service/ -run TestFixedPriceServiceRealtime -v` | `GREEN pass service realtime tests` | `PASS; ok auction-service/service 0.524s` | `pass` |
+| `cd backend/auction && go test ./service/ -run 'TestFixedPriceService|TestPurchase|TestOffline|TestFixedPriceWSBroadcaster' -race` | `fixed-price service regression passes` | `PASS; ok auction-service/service 4.718s; macOS linker emitted LC_DYSYMTAB warning with exit code 0` | `pass` |
+| `GetDiagnostics` | `no new diagnostics in edited files` | `only pre-existing diagnostics in main worktree main.go/go.mod/router.go; no edited service-file diagnostics reported` | `info` |
 
 **Modified Files**
 
-- Pending.
+- `backend/auction/service/fixed_price.go`
+- `backend/auction/service/fixed_price_testutil_test.go`
+- `backend/auction/service/fixed_price_test.go`
+- `backend/auction/service/fixed_price_failfast_test.go`
+- `backend/auction/service/fixed_price_realtime_test.go`
+- `docs/superpowers/sdd/runs/2026-06-03-2026-06-03-fixed-price-m2-realtime-state.md`
 
 **Risks / Blockers**
 
-- Pending.
+- No known task-level blockers.
+- Production `main.go` wiring remains out of T003 scope and is expected in M2 Task 4.
 
 **Handoff**
 
-- First response line used: `pending`
+- Completion summary: `FixedPriceService` now injects `FixedPriceBroadcaster`, uses no-op default, and emits listed/stock/flair/sold_out/offline only on successful business state changes.
+- Remaining work: `M2 Task 4` production wiring in `backend/auction/main.go` and broader regression.
+- First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
 
 
 ## Final Review Checklist
@@ -201,10 +210,13 @@
 
 - `T001 done`
 - `T002 done`
+- `T003 done`
 - Scope completed: WebSocket fixed-price message contract.
 - Scope completed: FixedPrice WebSocket broadcaster adapter and stock throttle.
+- Scope completed: FixedPriceService realtime hooks.
 - Commit: `e589f97f feat(fixed-price): add WebSocket message contracts (M2.T1)`
 - Commit: `9979129d feat(fixed-price): add WebSocket broadcaster with stock throttle (M2.T2)`
 - Main-agent review: `go test ./websocket/ -run TestFixedPrice -v && go test ./websocket/` passed.
 - Main-agent review: `go test ./service/ -run TestFixedPriceWSBroadcaster -v && go test ./service/` passed.
+- Main-agent review: `go test ./service/ -run TestFixedPriceServiceRealtime -v && go test ./service/ -run 'TestFixedPriceService|TestPurchase|TestOffline|TestFixedPriceWSBroadcaster' -race` passed.
 - Subagent regression evidence: `go test ./...` passed.

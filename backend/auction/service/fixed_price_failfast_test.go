@@ -47,6 +47,7 @@ func setupFailFastService(t *testing.T) (*FixedPriceService, *miniredis.Miniredi
 		&fakeStreamOwner{owners: nil},
 		&fakeProductChecker{},
 		nil,
+		nil,
 	)
 	return svc, mr, db
 }
