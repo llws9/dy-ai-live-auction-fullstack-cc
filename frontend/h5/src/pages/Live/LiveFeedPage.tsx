@@ -118,6 +118,7 @@ const LiveFeedPage: React.FC = () => {
       });
     return () => {
       cancelled = true;
+      loadingMoreRef.current = false;
     };
   }, [currentIndex, rooms.length, hasMore, page]);
 
