@@ -32,24 +32,26 @@
 
 | Metric | Value |
 | --- | --- |
-| Total Tasks | `1` |
-| Done | `1` |
+| Total Tasks | `2` |
+| Done | `2` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 01:18` |
+| Last Updated | `2026-06-03 01:27` |
 
 ## Task Matrix
 
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Allowed Files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `Add Phase 2 Theme Tokens` | `done` | `main-agent` | `W1` | `-` | `Task 1` | `frontend/h5/src/styles/tokens/colors.css`, `frontend/h5/src/styles/tokens/__tests__/themeTokens.test.ts` |
+| `T002` | `Polish Profile Theme Benchmark` | `done` | `main-agent` | `W2` | `T001` | `Task 2` | `frontend/h5/src/pages/User/Profile.module.css`, `frontend/h5/src/pages/User/__tests__/ProfileThemeTokens.test.ts`, `frontend/h5/src/pages/User/__tests__/Profile.test.tsx` |
 
 ## Wave Plan
 
 | Wave | Goal | Tasks | Start Condition | Completion Condition |
 | --- | --- | --- | --- | --- |
 | `W1` | `Execute imported tasks with TDD evidence` | `T001` | `state file initialized` | `all tasks done or blocked with reason` |
+| `W2` | `Polish Profile benchmark with Phase 2 tokens` | `T002` | `T001 done` | `Profile CSS contract and existing Profile tests pass` |
 
 ## Task Records
 
@@ -88,6 +90,47 @@
 **Risks / Blockers**
 
 - `GetDiagnostics` could not inspect the external worktree because the IDE diagnostic provider is restricted to the original working directory; targeted Jest verification passed.
+
+**Handoff**
+
+- First response line used: `当前分支/worktree：feat/h5-theme-phase2-polish @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-theme-phase2-polish`
+
+### T002 - `Polish Profile Theme Benchmark`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-03 01:20` |
+| Completed At | `2026-06-03 01:27` |
+| Branch | `feat/h5-theme-phase2-polish` |
+| Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-theme-phase2-polish` |
+| Depends On | `T001` |
+| Parallel Group | `W2` |
+
+**TDD Plan**
+
+- Red: create `ProfileThemeTokens.test.ts` to assert Profile consumes Phase 2 semantic tokens and rejects dark-only values.
+- Green: replace Profile page, avatar, badge, card, action, order item, menu icon, spinner, and danger styles with existing Phase 2 tokens.
+- Verify: run targeted Profile contract and behavior tests, then whitespace check.
+
+**Modified Files**
+
+- `frontend/h5/src/pages/User/Profile.module.css`
+- `frontend/h5/src/pages/User/__tests__/ProfileThemeTokens.test.ts`
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `cd frontend/h5 && npx jest src/pages/User/__tests__/ProfileThemeTokens.test.ts` | `FAIL before Profile.module.css token migration` | `FAIL: missing --page-gradient-profile and retained dark-only gradient/color values` | `red-pass` |
+| `cd frontend/h5 && npx jest src/pages/User/__tests__/ProfileThemeTokens.test.ts src/pages/User/__tests__/Profile.test.tsx` | `PASS after Profile token migration` | `PASS: 2 suites, 4 tests` | `pass` |
+| `git diff --check` | `No whitespace errors` | `exit 0` | `pass` |
+
+**Risks / Blockers**
+
+- `GetDiagnostics` could not inspect the external worktree because the IDE diagnostic provider is restricted to the original working directory; targeted Jest verification passed.
+- Visual validation is deferred to Task 6 because Task 2 scope is CSS token migration plus contract/behavior tests.
 
 **Handoff**
 
