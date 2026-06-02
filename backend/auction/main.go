@@ -189,6 +189,17 @@ func main() {
 	wsHandler.SetHub(hub)
 	wsHandler.SetJWTSecret(cfg.JWT.Secret)
 
+	// 装配弹幕处理链：黑词过滤 + Redis 双层频控（M2）
+	chatFilter := websocket.NewChatFilter(50, []string{
+		"微信", "weixin", "vx", "qq", "电话",
+	})
+	chatThrottle := websocket.NewChatThrottle(dao.GetRedis(), websocket.ThrottleConfig{
+		UserMax: 1, UserInterval: time.Second,
+		RoomMax: 20, RoomInterval: time.Second,
+	})
+	chatHandler := websocket.NewChatHandler(hub, chatFilter, chatThrottle)
+	wsHandler.SetChatHandler(chatHandler)
+
 	// 设置 WebSocket Hub 到 NotificationService（用于实时推送）
 	notificationService.SetHub(hub)
 	notificationService.SetFollowDAO(userLiveStreamFollowDAO) // 用于热拉Redis失败时DB兜底

@@ -26,8 +26,9 @@ var (
 
 // WSHandler WebSocket Handler
 type WSHandler struct {
-	hub       *ws.Hub
-	jwtSecret string
+	hub         *ws.Hub
+	jwtSecret   string
+	chatHandler *ws.ChatHandler
 }
 
 // NewWSHandler 创建 WebSocket Handler
@@ -45,10 +46,16 @@ func (h *WSHandler) SetJWTSecret(secret string) {
 	h.jwtSecret = secret
 }
 
+// SetChatHandler 注入弹幕 handler
+func (h *WSHandler) SetChatHandler(ch *ws.ChatHandler) {
+	h.chatHandler = ch
+}
+
 // HandleWebSocket 处理 WebSocket 连接
 func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.ResponseWriter, r *http.Request) {
 	// 获取用户ID（优先从token验证）
 	var userID int64
+	var userName string
 
 	// 尝试从token参数验证
 	tokenStr := r.URL.Query().Get("token")
@@ -56,6 +63,7 @@ func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.Respons
 		claims, err := h.validateToken(tokenStr)
 		if err == nil && claims != nil {
 			userID = claims.UserID
+			userName = claims.Username
 		} else {
 			log.Printf("WebSocket auth failed: %v", err)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -73,6 +81,9 @@ func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.Respons
 		}
 	}
 
+	// 直播间订阅（可选）：握手 URL 携带 live_stream_id 才订阅弹幕
+	liveStreamID, _ := strconv.ParseInt(r.URL.Query().Get("live_stream_id"), 10, 64)
+
 	// 升级 HTTP 连接为 WebSocket
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -80,19 +91,27 @@ func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.Respons
 		return
 	}
 
-	// 创建客户端
-	client := ws.NewClientSimple(conn, auctionID, userID, 0, "")
-
-	// 注册到 Hub
-	if hub != nil {
-		hub.Register <- client
-	} else if h.hub != nil {
-		h.hub.Register <- client
+	// 选择有效的 Hub（优先入参，其次实例字段）
+	activeHub := hub
+	if activeHub == nil {
+		activeHub = h.hub
 	}
 
-	log.Printf("WebSocket connected: auction=%d, user=%d", auctionID, userID)
+	// 创建客户端并装配 Hub / ChatHandler
+	client := ws.NewClientSimple(conn, auctionID, userID, liveStreamID, userName)
+	client.SetHub(activeHub)
+	if h.chatHandler != nil {
+		client.SetChatHandler(h.chatHandler)
+	}
 
-	// 发送欢迎消息
+	// 注册到 Hub（registerClient 内部会按 live_stream_id 双注册弹幕房间）
+	if activeHub != nil {
+		activeHub.Register <- client
+	}
+
+	log.Printf("WebSocket connected: auction=%d, user=%d, live_stream=%d", auctionID, userID, liveStreamID)
+
+	// 发送欢迎消息（必须在 WritePump 启动前直接写，避免与 WritePump 并发写同一连接）
 	welcomeMsg := &ws.Message{
 		Type:      "system",
 		Timestamp: time.Now().UnixMilli(),
@@ -105,50 +124,9 @@ func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.Respons
 	data, _ := json.Marshal(welcomeMsg)
 	conn.WriteMessage(websocket.TextMessage, data)
 
-	// 读取消息循环
-	go func() {
-		defer func() {
-			if hub != nil {
-				hub.Unregister <- client
-			} else if h.hub != nil {
-				h.hub.Unregister <- client
-			}
-			conn.Close()
-			log.Printf("WebSocket disconnected: auction=%d, user=%d", auctionID, userID)
-		}()
-
-		for {
-			_, message, err := conn.ReadMessage()
-			if err != nil {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-					log.Printf("WebSocket error: %v", err)
-				}
-				break
-			}
-
-			// 处理客户端消息
-			var clientMsg map[string]interface{}
-			if err := json.Unmarshal(message, &clientMsg); err != nil {
-				continue
-			}
-
-			msgType, ok := clientMsg["type"].(string)
-			if !ok {
-				continue
-			}
-
-			switch msgType {
-			case "ping":
-				pingMsg := &ws.Message{
-					Type:      "pong",
-					Timestamp: time.Now().UnixMilli(),
-					Data:      "pong",
-				}
-				data, _ := json.Marshal(pingMsg)
-				conn.WriteMessage(websocket.TextMessage, data)
-			}
-		}
-	}()
+	// 启动标准读写泵：ReadPump 处理 ping/sync_request/chat_send，WritePump 统一写出
+	go client.ReadPump()
+	go client.WritePump()
 }
 
 // BroadcastPriceUpdate 广播价格更新

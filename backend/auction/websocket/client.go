@@ -97,6 +97,11 @@ func (c *Client) SetChatHandler(h *ChatHandler) {
 	c.chatHandler = h
 }
 
+// SetHub 设置所属 Hub（ReadPump 注销时需要）
+func (c *Client) SetHub(hub *Hub) {
+	c.hub = hub
+}
+
 // NewClientSimple 创建客户端（简化版，自动生成ID）
 func NewClientSimple(conn *websocket.Conn, auctionID, userID, liveStreamID int64, userName string) *Client {
 	id := fmt.Sprintf("%d-%d-%d", auctionID, userID, time.Now().UnixNano())
