@@ -39,7 +39,6 @@ type FixedPricePurchase struct {
 	ID        int64           `json:"id" gorm:"primaryKey;autoIncrement"`
 	ItemID    int64           `json:"item_id" gorm:"uniqueIndex:uniq_item_user;not null"`
 	UserID    int64           `json:"user_id" gorm:"uniqueIndex:uniq_item_user;not null"`
-	OrderID   int64           `json:"order_id" gorm:"not null"`
 	Price     decimal.Decimal `json:"price" gorm:"type:decimal(10,2);not null"`
 	CreatedAt time.Time       `json:"created_at" gorm:"autoCreateTime"`
 }

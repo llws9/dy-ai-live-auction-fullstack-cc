@@ -20,11 +20,8 @@ CREATE TABLE fixed_price_purchases (
   id         BIGINT AUTO_INCREMENT PRIMARY KEY,
   item_id    BIGINT NOT NULL,
   user_id    BIGINT NOT NULL,
-  order_id   BIGINT NOT NULL,
   price      DECIMAL(10,2) NOT NULL,
   created_at DATETIME NOT NULL,
   UNIQUE KEY uniq_item_user (item_id, user_id),
   INDEX idx_user (user_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-ALTER TABLE orders ADD COLUMN source TINYINT NOT NULL DEFAULT 0;
