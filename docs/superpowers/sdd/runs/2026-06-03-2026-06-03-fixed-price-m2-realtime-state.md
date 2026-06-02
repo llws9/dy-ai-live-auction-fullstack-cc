@@ -37,7 +37,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 03:36` |
+| Last Updated | `2026-06-03 03:43` |
 
 ## Task Matrix
 
@@ -46,7 +46,7 @@
 | `T001` | `M2 Task 1 - WebSocket Message Contract` | `done` | `subagent` | `W1` | `-` | `Task 1: WebSocket Message Contract` | `backend/auction/websocket/message.go`, `backend/auction/websocket/fixed_price_message_test.go` |
 | `T002` | `M2 Task 2 - FixedPrice Broadcaster Adapter + Stock Throttle` | `done` | `subagent` | `W2` | `T001` | `Task 2: FixedPrice Broadcaster Adapter + Stock Throttle` | `backend/auction/service/fixed_price_broadcaster.go`, `backend/auction/service/fixed_price_broadcaster_test.go` |
 | `T003` | `M2 Task 3 - FixedPriceService Realtime Hooks` | `done` | `subagent` | `W3` | `T002` | `Task 3: FixedPriceService Realtime Hooks` | `backend/auction/service/fixed_price.go`, `backend/auction/service/fixed_price_testutil_test.go`, `backend/auction/service/fixed_price_test.go`, `backend/auction/service/fixed_price_failfast_test.go`, `backend/auction/service/fixed_price_realtime_test.go` |
-| `T004` | `M2 Task 4 - Production Wiring and Full Regression` | `done` | `main-agent` | `W4` | `T003` | `Task 4: Production Wiring, SDD State, and Full Regression` | `backend/auction/main.go`, `docs/superpowers/sdd/runs/2026-06-03-2026-06-03-fixed-price-m2-realtime-state.md` |
+| `T004` | `M2 Task 4 - Production Wiring and Full Regression` | `done` | `subagent` | `W4` | `T003` | `Task 4: Production Wiring, SDD State, and Full Regression` | `backend/auction/main.go`, `docs/superpowers/sdd/runs/2026-06-03-2026-06-03-fixed-price-m2-realtime-state.md` |
 
 ## Wave Plan
 
@@ -202,7 +202,7 @@
 | Key | Value |
 | --- | --- |
 | Status | `done` |
-| Owner | `main-agent` |
+| Owner | `subagent` |
 | Started At | `2026-06-03 03:35` |
 | Completed At | `2026-06-03 03:36` |
 | Branch | `feat/fixed-price-m1` |
@@ -240,7 +240,8 @@
 **Handoff**
 
 - Completion summary: production `main.go` now creates `FixedPriceWSBroadcaster` from the existing WebSocket `hub` and injects it into `FixedPriceService`.
-- Commit: `pending before commit`
+- Commit: `f3178135 feat(fixed-price): wire realtime broadcaster and mark M2 complete`
+- Main-agent review: `go build ./... && go test ./websocket/ ./service/ -run 'TestFixedPrice' -race && go test ./... -race` passed with exit code 0; macOS linker emitted known `LC_DYSYMTAB` warnings.
 - First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
 
 
@@ -268,7 +269,7 @@
 - Commit: `e589f97f feat(fixed-price): add WebSocket message contracts (M2.T1)`
 - Commit: `9979129d feat(fixed-price): add WebSocket broadcaster with stock throttle (M2.T2)`
 - Commit: `114e5783 feat(fixed-price): broadcast realtime events from service (M2.T3)`
-- Commit: `pending before commit feat(fixed-price): wire realtime broadcaster and mark M2 complete`
+- Commit: `f3178135 feat(fixed-price): wire realtime broadcaster and mark M2 complete`
 - Main-agent review: `go test ./websocket/ -run TestFixedPrice -v && go test ./websocket/` passed.
 - Main-agent review: `go test ./service/ -run TestFixedPriceWSBroadcaster -v && go test ./service/` passed.
 - Main-agent review: `go test ./service/ -run TestFixedPriceServiceRealtime -v -count=1 && go test ./service/ -run 'TestFixedPriceService|TestPurchase|TestOffline|TestFixedPriceWSBroadcaster' -race -count=1` passed.
@@ -276,3 +277,4 @@
 - Main-agent review: `go build ./...` passed after confirming RED build failure before wiring.
 - Main-agent review: `go test ./websocket/ ./service/ -run 'TestFixedPrice' -race` passed.
 - Main-agent review: `go test ./... -race` passed.
+- Main-agent final review: `go build ./... && go test ./websocket/ ./service/ -run 'TestFixedPrice' -race && go test ./... -race` passed with exit code 0.
