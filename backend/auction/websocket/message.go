@@ -24,8 +24,15 @@ const (
 
 	// 天灯相关消息类型
 	MessageTypeSkyLampActivated MessageType = "sky_lamp_activated" // 天灯开启
-	MessageTypeSkyLampAutoBid   MessageType = "sky_lamp_auto_bid"   // 自动跟价
-	MessageTypeSkyLampStopped   MessageType = "sky_lamp_stopped"    // 天灯停止
+	MessageTypeSkyLampAutoBid   MessageType = "sky_lamp_auto_bid"  // 自动跟价
+	MessageTypeSkyLampStopped   MessageType = "sky_lamp_stopped"   // 天灯停止
+
+	// 一口价秒杀相关消息类型
+	MessageTypeFixedPriceListed  MessageType = "fixed_price_listed"
+	MessageTypeFixedPriceStock   MessageType = "fixed_price_stock"
+	MessageTypeFixedPriceSoldOut MessageType = "fixed_price_sold_out"
+	MessageTypeFixedPriceOffline MessageType = "fixed_price_offline"
+	MessageTypeFixedPriceFlair   MessageType = "fixed_price_flair"
 )
 
 // Message WebSocket 消息基础结构
@@ -37,18 +44,18 @@ type Message struct {
 
 // BidPlacedData 出价通知数据
 type BidPlacedData struct {
-	AuctionID   int64   `json:"auction_id"`
-	UserID      int64   `json:"user_id"`
-	UserName    string  `json:"user_name,omitempty"`
-	Amount      float64 `json:"amount"`
+	AuctionID    int64   `json:"auction_id"`
+	UserID       int64   `json:"user_id"`
+	UserName     string  `json:"user_name,omitempty"`
+	Amount       float64 `json:"amount"`
 	CurrentPrice float64 `json:"current_price"`
-	BidTime     int64   `json:"bid_time"`
+	BidTime      int64   `json:"bid_time"`
 }
 
 // RankUpdateData 排名更新数据
 type RankUpdateData struct {
-	AuctionID int64        `json:"auction_id"`
-	Ranking   []RankItem   `json:"ranking"`
+	AuctionID int64      `json:"auction_id"`
+	Ranking   []RankItem `json:"ranking"`
 }
 
 // RankItem 排名项
@@ -61,10 +68,10 @@ type RankItem struct {
 
 // OvertakenData 被超越通知数据
 type OvertakenData struct {
-	AuctionID      int64   `json:"auction_id"`
-	OvertakenBy    int64   `json:"overtaken_by"`
-	OvertakenName  string  `json:"overtaken_name,omitempty"`
-	NewPrice       float64 `json:"new_price"`
+	AuctionID     int64   `json:"auction_id"`
+	OvertakenBy   int64   `json:"overtaken_by"`
+	OvertakenName string  `json:"overtaken_name,omitempty"`
+	NewPrice      float64 `json:"new_price"`
 }
 
 // DelayTriggeredData 延时触发数据
@@ -98,12 +105,12 @@ type SyncRequestData struct {
 
 // SyncResponseData 状态同步响应数据
 type SyncResponseData struct {
-	AuctionID    int64       `json:"auction_id"`
-	CurrentPrice float64     `json:"current_price"`
-	WinnerID     int64       `json:"winner_id"`
-	EndTime      int64       `json:"end_time"`
-	Status       int         `json:"status"`
-	Ranking      []RankItem  `json:"ranking,omitempty"`
+	AuctionID    int64      `json:"auction_id"`
+	CurrentPrice float64    `json:"current_price"`
+	WinnerID     int64      `json:"winner_id"`
+	EndTime      int64      `json:"end_time"`
+	Status       int        `json:"status"`
+	Ranking      []RankItem `json:"ranking,omitempty"`
 }
 
 // ErrorData 错误数据
@@ -146,6 +153,40 @@ type SkyLampStoppedData struct {
 	UserID        int64  `json:"user_id"`
 	Reason        string `json:"reason"` // "limit_reached" | "cancelled" | "auction_ended" | "max_count_reached"
 	TotalBidCount int    `json:"total_bid_count"`
+}
+
+// FixedPriceListedData 一口价上架通知。
+type FixedPriceListedData struct {
+	ItemID         int64  `json:"item_id"`
+	LiveStreamID   int64  `json:"live_stream_id"`
+	ProductID      int64  `json:"product_id"`
+	Price          string `json:"price"`
+	TotalStock     int    `json:"total_stock"`
+	RemainingStock int    `json:"remaining_stock"`
+	Status         string `json:"status"`
+}
+
+// FixedPriceStockData 一口价库存变更通知。
+type FixedPriceStockData struct {
+	ItemID         int64 `json:"item_id"`
+	RemainingStock int   `json:"remaining_stock"`
+}
+
+// FixedPriceSoldOutData 一口价售罄通知。
+type FixedPriceSoldOutData struct {
+	ItemID int64 `json:"item_id"`
+}
+
+// FixedPriceOfflineData 一口价下架通知。
+type FixedPriceOfflineData struct {
+	ItemID int64 `json:"item_id"`
+}
+
+// FixedPriceFlairData 一口价购买飘屏通知。
+type FixedPriceFlairData struct {
+	ItemID  int64  `json:"item_id"`
+	BuyerID int64  `json:"buyer_id"`
+	Price   string `json:"price"`
 }
 
 // NewMessage 创建消息
@@ -270,4 +311,29 @@ func NewSkyLampStoppedMessage(auctionID, userID int64, reason string, totalBidCo
 			TotalBidCount: totalBidCount,
 		},
 	}
+}
+
+// NewFixedPriceListedMessage 创建一口价上架消息。
+func NewFixedPriceListedMessage(data *FixedPriceListedData) *Message {
+	return NewMessage(MessageTypeFixedPriceListed, data)
+}
+
+// NewFixedPriceStockMessage 创建一口价库存变更消息。
+func NewFixedPriceStockMessage(itemID int64, remainingStock int) *Message {
+	return NewMessage(MessageTypeFixedPriceStock, &FixedPriceStockData{ItemID: itemID, RemainingStock: remainingStock})
+}
+
+// NewFixedPriceSoldOutMessage 创建一口价售罄消息。
+func NewFixedPriceSoldOutMessage(itemID int64) *Message {
+	return NewMessage(MessageTypeFixedPriceSoldOut, &FixedPriceSoldOutData{ItemID: itemID})
+}
+
+// NewFixedPriceOfflineMessage 创建一口价下架消息。
+func NewFixedPriceOfflineMessage(itemID int64) *Message {
+	return NewMessage(MessageTypeFixedPriceOffline, &FixedPriceOfflineData{ItemID: itemID})
+}
+
+// NewFixedPriceFlairMessage 创建一口价购买飘屏消息。
+func NewFixedPriceFlairMessage(data *FixedPriceFlairData) *Message {
+	return NewMessage(MessageTypeFixedPriceFlair, data)
 }
