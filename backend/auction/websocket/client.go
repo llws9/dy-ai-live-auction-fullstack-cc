@@ -39,6 +39,7 @@ type Client struct {
 
 	hub          *Hub
 	stateManager *StateManager
+	chatHandler  *ChatHandler
 
 	closeOnce sync.Once
 	closed    bool
@@ -89,6 +90,11 @@ func NewClient(id string, auctionID, userID, liveStreamID int64, userName string
 // SetStateManager 设置状态管理器
 func (c *Client) SetStateManager(sm *StateManager) {
 	c.stateManager = sm
+}
+
+// SetChatHandler 注入弹幕处理器
+func (c *Client) SetChatHandler(h *ChatHandler) {
+	c.chatHandler = h
 }
 
 // NewClientSimple 创建客户端（简化版，自动生成ID）
@@ -197,9 +203,31 @@ func (c *Client) handleMessage(msg *Message) {
 		// 处理状态同步请求（重连后）
 		c.handleSyncRequest(msg)
 
+	case MessageTypeChatSend:
+		c.handleChatSend(msg)
+
 	default:
 		log.Printf("Unknown message type: %s", msg.Type)
 	}
+}
+
+// handleChatSend 解析 ChatSendData 并交给 ChatHandler
+func (c *Client) handleChatSend(msg *Message) {
+	if c.chatHandler == nil {
+		return
+	}
+
+	raw, err := json.Marshal(msg.Data)
+	if err != nil {
+		c.Send <- NewErrorMessage(ChatErrCodeLengthExceeded, "invalid chat payload")
+		return
+	}
+	var data ChatSendData
+	if err := json.Unmarshal(raw, &data); err != nil {
+		c.Send <- NewErrorMessage(ChatErrCodeLengthExceeded, "invalid chat payload")
+		return
+	}
+	c.chatHandler.Handle(context.Background(), c, &data)
 }
 
 // handleSyncRequest 处理状态同步请求
