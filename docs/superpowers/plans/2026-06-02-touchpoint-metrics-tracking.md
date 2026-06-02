@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add user-touchpoint exposure and interaction tracking through the existing H5 `/api/track` -> gateway Prometheus -> Grafana metrics pipeline.
+**Goal:** Add user-touchpoint exposure and interaction tracking through the existing H5 `/api/v1/track` -> gateway Prometheus -> Grafana metrics pipeline.
 
-**Architecture:** The frontend adds a single `trackEvent()` utility that posts low-cardinality touchpoint events to the existing gateway `POST /api/track` endpoint. Gateway extends its Prometheus metrics collector with `touchpoint_event_total{event,source,entry,type,result}` and records only normalized, low-cardinality labels. Touchpoint UI code calls the utility at exposure and interaction boundaries without blocking user flows.
+**Architecture:** The frontend adds a single `trackEvent()` utility that posts low-cardinality touchpoint events to the existing gateway `POST /api/v1/track` endpoint. Gateway extends its Prometheus metrics collector with `touchpoint_event_total{event,source,entry,type,result}` and records only normalized, low-cardinality labels. Touchpoint UI code calls the utility at exposure and interaction boundaries without blocking user flows.
 
 **Tech Stack:** React 18, TypeScript, Jest, CloudWeGo Hertz, Go, Prometheus client_golang, Grafana/PromQL.
 
@@ -71,7 +71,7 @@ func TestTrackEventRecordsTouchpointMetric(t *testing.T) {
 	m := newTestMetrics(t)
 	c := app.NewContext(0)
 	c.Request.Header.SetMethod("POST")
-	c.Request.SetRequestURI("/api/track")
+	c.Request.SetRequestURI("/api/v1/track")
 	c.Request.Header.SetContentTypeBytes([]byte("application/json"))
 	c.Request.SetBody([]byte(`{
 		"event_type":"touchpoint_event",
@@ -103,7 +103,7 @@ func TestTrackEventNormalizesUnknownTouchpointLabels(t *testing.T) {
 	m := newTestMetrics(t)
 	c := app.NewContext(0)
 	c.Request.Header.SetMethod("POST")
-	c.Request.SetRequestURI("/api/track")
+	c.Request.SetRequestURI("/api/v1/track")
 	c.Request.Header.SetContentTypeBytes([]byte("application/json"))
 	c.Request.SetBody([]byte(`{
 		"event_type":"touchpoint_event",
@@ -132,7 +132,7 @@ func TestTrackEventRejectsInvalidJSON(t *testing.T) {
 	m := newTestMetrics(t)
 	c := app.NewContext(0)
 	c.Request.Header.SetMethod("POST")
-	c.Request.SetRequestURI("/api/track")
+	c.Request.SetRequestURI("/api/v1/track")
 	c.Request.Header.SetContentTypeBytes([]byte("application/json"))
 	c.Request.SetBody([]byte(`{"event_type":`))
 
@@ -347,7 +347,7 @@ describe('trackEvent', () => {
 
     expect(navigator.sendBeacon).toHaveBeenCalledTimes(1);
     const [url, body] = (navigator.sendBeacon as jest.Mock).mock.calls[0];
-    expect(url).toBe('/api/track');
+    expect(url).toBe('/api/v1/track');
     expect(JSON.parse(String(body))).toEqual({
       event_type: 'touchpoint_event',
       event_name: 'summary_exposed',
@@ -373,7 +373,7 @@ describe('trackEvent', () => {
       result: 'clicked',
     });
 
-    expect(global.fetch).toHaveBeenCalledWith('/api/track', expect.objectContaining({
+    expect(global.fetch).toHaveBeenCalledWith('/api/v1/track', expect.objectContaining({
       method: 'POST',
       keepalive: true,
       headers: { 'Content-Type': 'application/json' },
@@ -487,7 +487,7 @@ interface TrackEventPayload {
   timestamp: number;
 }
 
-const TRACK_ENDPOINT = '/api/track';
+const TRACK_ENDPOINT = '/api/v1/track';
 
 export function getCountBucket(count: number): CountBucket {
   if (count <= 0) return '0';
@@ -1273,7 +1273,7 @@ Expected: PASS or document existing unrelated failures with exact failing suite 
 If local services are running, POST one synthetic event:
 
 ```bash
-curl -X POST http://localhost:8080/api/track \
+curl -X POST http://localhost:8080/api/v1/track \
   -H 'Content-Type: application/json' \
   -d '{"event_type":"touchpoint_event","event_name":"summary_exposed","params":{"source":"bottom_nav","entry":"profile_tab","type":"all","result":"success"},"timestamp":1780300800000}'
 ```

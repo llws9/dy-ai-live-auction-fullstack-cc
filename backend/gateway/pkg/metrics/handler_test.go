@@ -24,7 +24,7 @@ func TestTrackEventRecordsTouchpointMetric(t *testing.T) {
 	m := newTestMetrics(t)
 	c := app.NewContext(0)
 	c.Request.Header.SetMethod("POST")
-	c.Request.SetRequestURI("/api/track")
+	c.Request.SetRequestURI("/api/v1/track")
 	c.Request.Header.SetContentTypeBytes([]byte("application/json"))
 	c.Request.SetBody([]byte(`{
 		"event_type":"touchpoint_event",
@@ -56,7 +56,7 @@ func TestTrackEventNormalizesUnknownTouchpointLabels(t *testing.T) {
 	m := newTestMetrics(t)
 	c := app.NewContext(0)
 	c.Request.Header.SetMethod("POST")
-	c.Request.SetRequestURI("/api/track")
+	c.Request.SetRequestURI("/api/v1/track")
 	c.Request.Header.SetContentTypeBytes([]byte("application/json"))
 	c.Request.SetBody([]byte(`{
 		"event_type":"touchpoint_event",
@@ -85,7 +85,7 @@ func TestTrackEventRejectsInvalidJSON(t *testing.T) {
 	m := newTestMetrics(t)
 	c := app.NewContext(0)
 	c.Request.Header.SetMethod("POST")
-	c.Request.SetRequestURI("/api/track")
+	c.Request.SetRequestURI("/api/v1/track")
 	c.Request.Header.SetContentTypeBytes([]byte("application/json"))
 	c.Request.SetBody([]byte(`{"event_type":`))
 

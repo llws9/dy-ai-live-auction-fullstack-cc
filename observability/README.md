@@ -114,7 +114,7 @@ import { initTracking } from '@/shared/tracking';
 
 // 在应用入口初始化
 initTracking({
-  endpoint: '/api/track',  // 埋点 API 地址
+  endpoint: '/api/v1/track',  // 埋点 API 地址
   debug: true,             // 开发环境开启调试
   batchSize: 10,           // 批量发送大小
   flushInterval: 5000,     // 发送间隔（毫秒）

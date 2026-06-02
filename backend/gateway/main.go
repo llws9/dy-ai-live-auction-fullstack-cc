@@ -6,15 +6,15 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cloudwego/hertz/pkg/app/server"
-	"github.com/hertz-contrib/cors"
-	_ "gateway-service/docs" // Swagger docs
 	"gateway-service/config"
 	"gateway-service/dao"
+	_ "gateway-service/docs" // Swagger docs
 	"gateway-service/middleware"
-	"gateway-service/router"
-	"gateway-service/pkg/metrics"
 	"gateway-service/pkg/growthbook"
+	"gateway-service/pkg/metrics"
+	"gateway-service/router"
+	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/hertz-contrib/cors"
 )
 
 func main() {
@@ -92,7 +92,7 @@ func main() {
 	router.RegisterRoutes(h, cfg, gbClient)
 
 	// 前端埋点 API
-	h.POST("/api/track", metrics.TrackEvent(m))
+	h.POST("/api/v1/track", metrics.TrackEvent(m))
 
 	// 启动 Prometheus 指标服务（独立端口 9090）
 	go func() {

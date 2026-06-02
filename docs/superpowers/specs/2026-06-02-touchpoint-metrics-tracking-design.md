@@ -12,7 +12,7 @@
 
 本次目标是补齐有业务价值的触达打点，并复用项目已有 metric 链路：
 - 前端统一通过 `trackEvent()` 上报触达事件。
-- Gateway 复用已有 `POST /api/track` 接口接收前端埋点。
+- Gateway 复用已有 `POST /api/v1/track` 接口接收前端埋点。
 - Gateway 将触达事件写入 Prometheus Counter。
 - Grafana 通过 PromQL 查询触达曝光、点击和转化趋势。
 
@@ -24,14 +24,14 @@
 
 现有链路已经包含基础 metrics 能力：
 - `gateway-service` 在 `main.go` 初始化 `metrics.Init("gateway")`。
-- `gateway-service` 已注册 `POST /api/track`，处理函数为 `metrics.TrackEvent(m)`。
+- `gateway-service` 已注册 `POST /api/v1/track`，处理函数为 `metrics.TrackEvent(m)`。
 - `gateway-service` 已启动 Prometheus metrics server，监听 `:9090`。
 - `gateway/pkg/metrics/handler.go` 已支持 `live_room_enter`、`bid_click`、`payment_start` 等老事件。
 - `gateway/pkg/metrics/handler.go` 的 `default` 分支目前不记录未知事件，因此触达事件即使上报也不会进入 Prometheus。
 - `frontend/h5/src` 下没有统一 tracking 模块，触达页面和 hook 也没有任何 `track/report/beacon` 调用。
 
 关键约束：
-- 前端业务 API 默认走 `/api/v1`，但现有埋点入口是 `/api/track`，不能直接复用 `services/api.ts` 的普通业务请求封装。
+- 前端业务 API 默认走 `/api/v1`，但现有埋点入口是 `/api/v1/track`，不能直接复用 `services/api.ts` 的普通业务请求封装。
 - 触达打点不能阻塞 UI、不能影响通知展示、不能因为上报失败导致业务失败。
 - Prometheus label 必须低基数，避免把用户、通知、直播间 ID 作为 label。
 
@@ -47,7 +47,7 @@
 
 ### 方案 B：前端统一 `trackEvent()`，Gateway 写 Prometheus Counter（推荐）
 
-优点是复用现有 `/api/track`、Prometheus 和 Grafana 链路，改动范围可控；指标足够支撑触达曝光、点击和转化漏斗分析。
+优点是复用现有 `/api/v1/track`、Prometheus 和 Grafana 链路，改动范围可控；指标足够支撑触达曝光、点击和转化漏斗分析。
 
 ### 方案 C：新增事件明细表或日志分析链路
 
@@ -63,7 +63,7 @@
 
 职责：
 - 统一生成事件 payload：`event_type`、`event_name`、`params`、`timestamp`。
-- 统一上报到 `/api/track`。
+- 统一上报到 `/api/v1/track`。
 - 优先使用 `navigator.sendBeacon`，失败或不可用时 fallback 到 `fetch` + `keepalive`。
 - 上报失败只在开发环境输出调试信息，不抛错、不影响 UI。
 
@@ -182,14 +182,14 @@ sum(rate(touchpoint_event_total{event="notification_list_exposed"}[5m]))
 后端：
 - 请求体非法返回 `400`。
 - 合法但未知的触达参数归一化为 `unknown`，避免 panic。
-- metrics 记录失败不影响业务 API，因为 `/api/track` 是独立入口。
+- metrics 记录失败不影响业务 API，因为 `/api/v1/track` 是独立入口。
 
 ---
 
 ## 9. 测试策略
 
 前端测试：
-- `trackEvent()` 能按协议发送 `/api/track`。
+- `trackEvent()` 能按协议发送 `/api/v1/track`。
 - `sendBeacon` 可用时优先使用 beacon。
 - `sendBeacon` 不可用或返回 `false` 时 fallback 到 `fetch`。
 - 触达关键组件在对应时机调用 `trackEvent()`。
@@ -211,7 +211,7 @@ sum(rate(touchpoint_event_total{event="notification_list_exposed"}[5m]))
 主要风险：
 - 事件过多导致前端重复上报。通过 React effect 依赖、去重 ref 和 count bucket 控制。
 - Prometheus label 高基数。通过白名单和字段归一化控制。
-- `/api/track` 不在 `/api/v1` 下，前端封装必须显式走该路径。
+- `/api/v1/track` 不在 `/api/v1` 下，前端封装必须显式走该路径。
 
 边界：
 - 本设计只做聚合指标，不提供用户级行为明细。

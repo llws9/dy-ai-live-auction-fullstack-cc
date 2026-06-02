@@ -38,7 +38,7 @@ describe('trackEvent', () => {
 
     expect(navigator.sendBeacon).toHaveBeenCalledTimes(1);
     const [url, body] = (navigator.sendBeacon as jest.Mock).mock.calls[0];
-    expect(url).toBe('/api/track');
+    expect(url).toBe('/api/v1/track');
     expect(body).toBeInstanceOf(Blob);
     expect((body as Blob).type).toBe('application/json');
     expect(JSON.parse(await readBlobAsText(body as Blob))).toEqual({
@@ -66,7 +66,7 @@ describe('trackEvent', () => {
       result: 'clicked',
     });
 
-    expect(global.fetch).toHaveBeenCalledWith('/api/track', expect.objectContaining({
+    expect(global.fetch).toHaveBeenCalledWith('/api/v1/track', expect.objectContaining({
       method: 'POST',
       keepalive: true,
       headers: { 'Content-Type': 'application/json' },

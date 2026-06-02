@@ -61,7 +61,7 @@ interface TrackEventPayload {
   timestamp: number;
 }
 
-const TRACK_ENDPOINT = '/api/track';
+const TRACK_ENDPOINT = '/api/v1/track';
 
 export function getCountBucket(count: number): CountBucket {
   if (count <= 0) return '0';
