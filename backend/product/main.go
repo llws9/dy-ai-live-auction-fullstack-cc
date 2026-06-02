@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -8,6 +10,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 
 	"product-service/client"
 	"product-service/config"
@@ -16,11 +19,26 @@ import (
 	"product-service/middleware"
 	"product-service/model"
 	"product-service/service"
+	sharedllm "shared/llm"
 )
+
+type categoryNameAdapter struct{ dao *dao.CategoryDAO }
+
+func (a categoryNameAdapter) GetNameByID(ctx context.Context, id int64) (string, bool, error) {
+	cat, err := a.dao.GetByID(ctx, id)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return cat.Name, true, nil
+}
 
 func main() {
 	// 从 Nacos 加载配置（失败时使用环境变量）
 	cfg, nacosLoader := config.LoadFromNacosWithFallback()
+	config.ResolveLLMSecrets(cfg)
 
 	// 初始化数据库连接
 	dbCfg := &dao.Config{
@@ -69,11 +87,31 @@ func main() {
 	orderService.SetAdminOrderDAO(orderAdminDAO)
 	statisticsService := service.NewStatisticsService(statisticsDAO)
 	var viewerCounter service.LiveViewerCounter = service.ZeroLiveViewerCounter{}
+	var redisClient *redis.Client
 	if redisAddr := os.Getenv("REDIS_ADDR"); redisAddr != "" {
-		viewerCounter = service.NewRedisLiveViewerCounter(redis.NewClient(&redis.Options{Addr: redisAddr}))
+		redisClient = redis.NewClient(&redis.Options{
+			Addr:     redisAddr,
+			Password: cfg.Redis.Password,
+			PoolSize: cfg.Redis.PoolSize,
+		})
+		viewerCounter = service.NewRedisLiveViewerCounter(redisClient)
 	}
 	liveStreamService := service.NewLiveStreamServiceWithMetrics(liveStreamDAO, viewerCounter)
 	categoryService := service.NewCategoryService(categoryDAO)
+	log.Printf("LLM provider configured provider=%q base_url=%q model=%q timeout_ms=%d api_key_set=%t",
+		cfg.LLM.Provider,
+		cfg.LLM.Doubao.BaseURL,
+		cfg.LLM.Doubao.Model,
+		cfg.LLM.TimeoutMs,
+		cfg.LLM.Doubao.APIKey != "",
+	)
+	llmProvider := sharedllm.NewDoubaoProvider(sharedllm.DoubaoOptions{
+		BaseURL: cfg.LLM.Doubao.BaseURL,
+		APIKey:  cfg.LLM.Doubao.APIKey,
+		Model:   cfg.LLM.Doubao.Model,
+		Timeout: time.Duration(cfg.LLM.TimeoutMs) * time.Millisecond,
+	})
+	copyService := service.NewCopywritingService(llmProvider, categoryNameAdapter{dao: categoryDAO}, redisClient, cfg.LLM.Doubao.Model)
 
 	// 初始化 Handler 层
 	productHandler := handler.NewProductHandler(productService)
@@ -90,6 +128,7 @@ func main() {
 	auctionClient.SetInternalToken(os.Getenv("INTERNAL_API_TOKEN"))
 	liveStreamHandler.SetAuctionClient(auctionClient)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
+	copywritingHandler := handler.NewCopywritingHandler(copyService)
 	internalHandler := handler.NewInternalHandler(productService, liveStreamDAO)
 
 	// 监听配置变更（如果 Nacos 可用）
@@ -107,7 +146,7 @@ func main() {
 	)
 
 	// 注册路由
-	registerRoutes(h, productHandler, ruleHandler, orderHandler, statisticsHandler, productPublishHandler, liveStreamHandler, categoryHandler, internalHandler)
+	registerRoutes(h, productHandler, ruleHandler, orderHandler, statisticsHandler, productPublishHandler, liveStreamHandler, categoryHandler, copywritingHandler, internalHandler)
 
 	// 启动服务
 	log.Printf("Product service starting on %s", cfg.Server.Port)
@@ -115,7 +154,7 @@ func main() {
 }
 
 // registerRoutes 注册路由
-func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, ruleHandler *handler.RuleHandler, orderHandler *handler.OrderHandler, statisticsHandler *handler.StatisticsHandler, productPublishHandler *handler.ProductHandler, liveStreamHandler *handler.LiveStreamHandler, categoryHandler *handler.CategoryHandler, internalHandler *handler.InternalHandler) {
+func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, ruleHandler *handler.RuleHandler, orderHandler *handler.OrderHandler, statisticsHandler *handler.StatisticsHandler, productPublishHandler *handler.ProductHandler, liveStreamHandler *handler.LiveStreamHandler, categoryHandler *handler.CategoryHandler, copywritingHandler *handler.CopywritingHandler, internalHandler *handler.InternalHandler) {
 	v1 := h.Group("/api/v1")
 
 	// 商品相关路由
@@ -124,6 +163,9 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	v1.POST("/products", productHandler.Create)
 	v1.PUT("/products/:id", productHandler.Update)
 	v1.DELETE("/products/:id", productHandler.Delete)
+
+	// AI 文案生成（商家/管理员）
+	v1.POST("/products/ai/copywriting", copywritingHandler.Generate)
 
 	// 商品发布/下架路由
 	v1.POST("/products/:id/publish", productPublishHandler.PublishHandler)
