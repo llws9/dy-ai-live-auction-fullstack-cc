@@ -28,4 +28,19 @@ describe('phase 2 scoped page theme tokens', () => {
     expect(css).not.toContain('background: rgba(0, 0, 0, 0.78);');
     expect(css).not.toContain('color: #fff;');
   });
+
+  it.each([
+    ['Notifications/Notifications.module.css'],
+    ['Follow/Following.module.css'],
+    ['History/AuctionHistory.module.css'],
+  ])('keeps %s on semantic theme surfaces', (relativePath) => {
+    const css = readPageCss(relativePath);
+
+    expect(css).toContain('var(--bg-page)');
+    expect(css).toContain('var(--bg-surface)');
+    expect(css).toContain('var(--border-subtle)');
+    expect(css).not.toContain('var(--bg-primary)');
+    expect(css).not.toContain('var(--bg-secondary)');
+    expect(css).not.toContain('var(--border-light)');
+  });
 });

@@ -26,18 +26,18 @@
 | State Template | `docs/superpowers/sdd/state-template.md` | yes | yes |
 | Plan | `docs/superpowers/plans/2026-06-03-h5-theme-phase2-polish.md` | yes | yes |
 | Tasks | `docs/superpowers/plans/2026-06-03-h5-theme-phase2-polish.md` | yes | yes |
-| Scope | `T001-T003` | no | yes |
+| Scope | `T001-T004` | no | yes |
 
 ## Execution Summary
 
 | Metric | Value |
 | --- | --- |
-| Total Tasks | `3` |
-| Done | `3` |
+| Total Tasks | `4` |
+| Done | `4` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 01:58` |
+| Last Updated | `2026-06-03 02:11` |
 
 ## Task Matrix
 
@@ -46,6 +46,7 @@
 | `T001` | `Add Phase 2 Theme Tokens` | `done` | `main-agent` | `W1` | `-` | `Task 1` | `frontend/h5/src/styles/tokens/colors.css`, `frontend/h5/src/styles/tokens/__tests__/themeTokens.test.ts` |
 | `T002` | `Polish Profile Theme Benchmark` | `done` | `main-agent` | `W2` | `T001` | `Task 2` | `frontend/h5/src/pages/User/Profile.module.css`, `frontend/h5/src/pages/User/__tests__/ProfileThemeTokens.test.ts`, `frontend/h5/src/pages/User/__tests__/Profile.test.tsx` |
 | `T003` | `Polish Missed Addresses And Order Detail Pages` | `done` | `main-agent` | `W3` | `T001,T002` | `Task 3` | `frontend/h5/src/pages/Addresses/Addresses.module.css`, `frontend/h5/src/pages/Order/Detail.module.css`, `frontend/h5/src/pages/__tests__/Phase2PageThemeTokens.test.ts` |
+| `T004` | `Polish Scoped Standard Pages` | `done` | `main-agent` | `W4` | `T001,T003` | `Task 4` | `frontend/h5/src/pages/Notifications/Notifications.module.css`, `frontend/h5/src/pages/Follow/Following.module.css`, `frontend/h5/src/pages/History/AuctionHistory.module.css`, `frontend/h5/src/pages/__tests__/Phase2PageThemeTokens.test.ts` |
 
 ## Wave Plan
 
@@ -54,6 +55,7 @@
 | `W1` | `Execute imported tasks with TDD evidence` | `T001` | `state file initialized` | `all tasks done or blocked with reason` |
 | `W2` | `Polish Profile benchmark with Phase 2 tokens` | `T002` | `T001 done` | `Profile CSS contract and existing Profile tests pass` |
 | `W3` | `Polish missed Addresses and Order Detail pages` | `T003` | `T001,T002 done` | `Scoped page CSS contract plus Addresses/Order behavior tests pass` |
+| `W4` | `Polish scoped standard pages` | `T004` | `T001,T003 done` | `Scoped page contract plus Notifications/Follow/History behavior tests pass` |
 
 ## Task Records
 
@@ -186,6 +188,57 @@
 - Remaining work: Task 4+ continue scoped standard pages and shared component polish.
 - First response line used: `当前分支/worktree：feat/h5-theme-phase2-polish @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-theme-phase2-polish`
 
+### T004 - `Polish Scoped Standard Pages`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-03 02:05` |
+| Completed At | `2026-06-03 02:11` |
+| Branch | `feat/h5-theme-phase2-polish` |
+| Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-theme-phase2-polish` |
+| Depends On | `T001,T003` |
+| Parallel Group | `W4` |
+
+**TDD Plan**
+
+- Red/current check: extend `Phase2PageThemeTokens.test.ts` to assert Notifications, Following, and AuctionHistory use semantic theme surfaces and reject old light-only tokens.
+- Green: replace remaining `--bg-primary`, `--bg-secondary`, `--bg-tertiary`, `--border-light`, and `--border-default` usages in scoped standard page CSS with Phase 2 semantic tokens.
+- Verify: run scoped page contract test plus existing Notifications, Following, and AuctionHistory tests, then whitespace check.
+
+**Modified Files**
+
+- `frontend/h5/src/pages/__tests__/Phase2PageThemeTokens.test.ts`
+- `frontend/h5/src/pages/Notifications/Notifications.module.css`
+- `frontend/h5/src/pages/Follow/Following.module.css`
+- `frontend/h5/src/pages/History/AuctionHistory.module.css`
+
+**Commits**
+
+- `not_committed`
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `cd frontend/h5 && npx jest src/pages/__tests__/Phase2PageThemeTokens.test.ts` | `PASS if already covered, or FAIL only for old scoped standard page tokens` | `FAIL: Following.module.css and AuctionHistory.module.css lacked var(--bg-page)` | `red-pass` |
+| `cd frontend/h5 && npx jest src/pages/__tests__/Phase2PageThemeTokens.test.ts src/pages/Notifications/__tests__/Notifications.test.tsx src/pages/Follow/__tests__/Following.test.tsx src/pages/History/__tests__/AuctionHistory.test.tsx` | `PASS after token migration` | `PASS: 4 suites, 11 tests` | `pass` |
+| `git diff --check` | `No whitespace errors` | `exit 0` | `pass` |
+| `Grep old scoped page tokens` | `No --bg-primary/--bg-secondary/--bg-tertiary/--border-light/--border-default in Task 4 CSS files` | `No matches found` | `pass` |
+| `GetDiagnostics` | `No IDE diagnostics for edited files` | `[]` | `pass` |
+
+**Risks / Blockers**
+
+- Visual validation is deferred to Task 6; Task 4 is limited to contract and behavior verification for scoped standard pages.
+- Jest emitted existing `ts-jest` esModuleInterop config warning and `MSW setup skipped` log; tests passed and Task 4 does not change test/runtime config.
+
+**Handoff**
+
+- Completion summary: Notifications, Following, and AuctionHistory now use semantic Phase 2 theme surfaces for scoped standard page backgrounds, cards, controls, error/loading/empty states, and nested media surfaces where theme-sensitive.
+- Remaining work: Task 5 shared component polish and Task 6 visual/regression verification.
+- First response line used: `当前分支/worktree：feat/h5-theme-phase2-polish @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-theme-phase2-polish`
+
 
 ## Final Review Checklist
 
@@ -203,3 +256,4 @@
 - `Task 1 done; committed by main agent`
 - `Task 2 done; committed by main agent`
 - `Task 3 done; committed by main agent`
+- `Task 4 done; pending commit by main agent`
