@@ -32,24 +32,26 @@
 
 | Metric | Value |
 | --- | --- |
-| Total Tasks | `1` |
+| Total Tasks | `2` |
 | Done | `1` |
 | Blocked | `0` |
-| In Progress | `0` |
+| In Progress | `1` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 03:08` |
+| Last Updated | `2026-06-03 03:20` |
 
 ## Task Matrix
 
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Allowed Files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `M2 Task 1 - WebSocket Message Contract` | `done` | `subagent` | `W1` | `-` | `Task 1: WebSocket Message Contract` | `backend/auction/websocket/message.go`, `backend/auction/websocket/fixed_price_message_test.go` |
+| `T002` | `M2 Task 2 - FixedPrice Broadcaster Adapter + Stock Throttle` | `assigned` | `subagent` | `W2` | `T001` | `Task 2: FixedPrice Broadcaster Adapter + Stock Throttle` | `backend/auction/service/fixed_price_broadcaster.go`, `backend/auction/service/fixed_price_broadcaster_test.go` |
 
 ## Wave Plan
 
 | Wave | Goal | Tasks | Start Condition | Completion Condition |
 | --- | --- | --- | --- | --- |
 | `W1` | `Execute imported tasks with TDD evidence` | `T001` | `state file initialized` | `all tasks done or blocked with reason` |
+| `W2` | `Implement fixed-price broadcaster adapter and stock throttle` | `T002` | `T001 done` | `broadcaster tests pass and state evidence recorded` |
 
 ## Task Records
 
@@ -95,6 +97,45 @@
 **Handoff**
 
 - First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
+
+
+### T002 - `M2 Task 2 - FixedPrice Broadcaster Adapter + Stock Throttle`
+
+| Key | Value |
+| --- | --- |
+| Status | `assigned` |
+| Owner | `subagent` |
+| Started At | `2026-06-03 03:20` |
+| Completed At | `-` |
+| Branch | `feat/fixed-price-m1` |
+| Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
+| Depends On | `T001` |
+| Parallel Group | `W2` |
+
+**TDD Plan**
+
+- Red: create `backend/auction/service/fixed_price_broadcaster_test.go` from plan Task 2 Step 1 and confirm `go test ./service/ -run TestFixedPriceWSBroadcaster -v` fails with `undefined: NewFixedPriceWSBroadcaster`.
+- Green: create `backend/auction/service/fixed_price_broadcaster.go` with `FixedPriceBroadcaster`, `noopFixedPriceBroadcaster`, `FixedPriceWSBroadcaster`, immediate events, `fixed_price_stock` 1s/item merge throttle, and `stock(0)` immediate flush.
+- Verify: run `go test ./service/ -run TestFixedPriceWSBroadcaster -v`; run focused affected tests if implementation touches shared clock or websocket interaction behavior.
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `not_run` | `RED fail: undefined NewFixedPriceWSBroadcaster` | `not_run` | `pending` |
+| `not_run` | `GREEN pass broadcaster tests` | `not_run` | `pending` |
+
+**Modified Files**
+
+- Pending.
+
+**Risks / Blockers**
+
+- Pending.
+
+**Handoff**
+
+- First response line used: `pending`
 
 
 ## Final Review Checklist
