@@ -181,6 +181,24 @@ func main() {
 	userAddressHandler := handler.NewUserAddressHandler(userAddressDAO)
 	internalUserHandler := handler.NewInternalUserHandler(userDAO)
 
+	// 一口价秒杀（A5 M1）：dao + Redis 库存/幂等 + service + handler。
+	fixedPriceItemDAO := dao.NewFixedPriceItemDAO(db)
+	fixedPricePurchaseDAO := dao.NewFixedPricePurchaseDAO(db)
+	fixedPriceStock := service.NewStockGuard(dao.GetRedis())
+	fixedPriceIdem := service.NewIdemStore(dao.GetRedis())
+	fixedPriceService := service.NewFixedPriceService(
+		db,
+		fixedPriceItemDAO,
+		fixedPricePurchaseDAO,
+		userBalanceDAO,
+		fixedPriceStock,
+		fixedPriceIdem,
+		&liveStreamOwnerChecker{client: liveStreamClient},
+		&productExistsChecker{client: productClient},
+		nil, // 生产用 realClock
+	)
+	fixedPriceHandler := handler.NewFixedPriceHandler(fixedPriceService, userBalanceDAO)
+
 	// 初始化认证 Handler
 	jwtExpire := 24 // 24小时
 	authHandler := handler.NewAuthHandler(userDAO, cfg.JWT.Secret, jwtExpire)
@@ -236,6 +254,9 @@ func main() {
 
 	// 注册路由
 	registerRoutes(h, auctionHandler, bidHandler, wsHandler, userHandler, authHandler, notificationHandler, followHandler, productReminderHandler, skyLampHandler, userBalanceHandler, userAddressHandler, liveReminderHandler, liveStreamStatsHandler)
+
+	// 一口价秒杀路由（A5 M1）：挂在 /api/v1/fixed-price 下。
+	handler.RegisterFixedPriceRoutes(h.Group("/api/v1"), fixedPriceHandler)
 
 	// ========== 内部接口（仅服务间调用，不经过 Gateway） ==========
 	// spec: docs/superpowers/specs/2026-05-30-h5-missing-b-livestream.md §4.1
@@ -350,6 +371,7 @@ func parseGatewayRole(role string) int {
 
 // registerRoutes 注册路由
 func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bidHandler *handler.BidHandler, wsHandler *handler.WSHandler, userHandler *handler.UserHandler, authHandler *handler.AuthHandler, notificationHandler *handler.NotificationHandler, followHandler *handler.FollowHandler, productReminderHandler *handler.ProductReminderHandler, skyLampHandler *handler.SkyLampHandler, userBalanceHandler *handler.UserBalanceHandler, userAddressHandler *handler.UserAddressHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler) {
+
 	v1 := h.Group("/api/v1")
 
 	// ========== 认证相关路由 ==========
@@ -420,4 +442,37 @@ func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, inter
 	}
 	internal.GET("/live/pending-reminder", liveReminderHandler.GetPendingReminder)
 	internal.POST("/live-streams/:id/start", liveStreamStatsHandler.StartLive)
+}
+
+// liveStreamOwnerChecker 适配 client.LiveStreamClient 为 service.StreamOwnerChecker：
+// 通过批量摘要的 CreatorID 判定上架者是否为直播间主播。
+type liveStreamOwnerChecker struct {
+	client client.LiveStreamClient
+}
+
+func (c *liveStreamOwnerChecker) IsOwner(ctx context.Context, liveStreamID, userID int64) (bool, error) {
+	summaries, err := c.client.BatchGetLiveStreams(ctx, []int64{liveStreamID})
+	if err != nil {
+		return false, err
+	}
+	s, ok := summaries[liveStreamID]
+	if !ok {
+		return false, nil
+	}
+	return s.CreatorID == userID, nil
+}
+
+// productExistsChecker 适配 client.ProductClient 为 service.ProductChecker：
+// 通过批量摘要命中判定商品是否存在。
+type productExistsChecker struct {
+	client client.ProductClient
+}
+
+func (c *productExistsChecker) Exists(ctx context.Context, productID int64) (bool, error) {
+	summaries, err := c.client.BatchGetSummaries(ctx, []int64{productID})
+	if err != nil {
+		return false, err
+	}
+	_, ok := summaries[productID]
+	return ok, nil
 }

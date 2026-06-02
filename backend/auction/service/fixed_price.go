@@ -274,3 +274,18 @@ func (s *FixedPriceService) scheduleCleanup(itemID int64) {
 		_ = s.stock.Cleanup(context.Background(), itemID)
 	})
 }
+
+// GetItem 读取一口价商品（详情/错误码拼装用）。
+func (s *FixedPriceService) GetItem(ctx context.Context, itemID int64) (*model.FixedPriceItem, error) {
+	return s.items.GetByID(ctx, itemID)
+}
+
+// RemainingStock 读取 Redis 权威剩余库存。
+func (s *FixedPriceService) RemainingStock(ctx context.Context, itemID int64) (int, error) {
+	return s.stock.Remaining(ctx, itemID)
+}
+
+// GetMyPurchase 查询当前用户对某商品的购买记录（无跨域，spec §5.2 i_bought）。
+func (s *FixedPriceService) GetMyPurchase(ctx context.Context, itemID, userID int64) (*model.FixedPricePurchase, error) {
+	return s.purchases.GetByItemAndUser(ctx, itemID, userID)
+}
