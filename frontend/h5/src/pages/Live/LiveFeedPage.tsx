@@ -42,6 +42,7 @@ const LiveFeedPage: React.FC = () => {
   const [total, setTotal] = useState<number | undefined>(undefined);
   const [lastPageCount, setLastPageCount] = useState(0);
   const [page, setPage] = useState(1);
+  const [bidPending, setBidPending] = useState(false);
   const loadingMoreRef = useRef(false);
 
   useEffect(() => {
@@ -135,6 +136,7 @@ const LiveFeedPage: React.FC = () => {
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
+    if (bidPending) return; // 出价 pending 锁房：禁止 feed 切房
     const start = touchStartRef.current;
     touchStartRef.current = null;
     if (!start) return;
@@ -179,6 +181,7 @@ const LiveFeedPage: React.FC = () => {
           currentAuctionId={currentRoom.current_auction_id}
           urlAuctionId={urlAuctionId}
           active
+          onBidPendingChange={setBidPending}
         />
       )}
     </div>

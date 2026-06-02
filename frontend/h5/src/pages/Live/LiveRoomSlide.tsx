@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '@/services/api';
 import WebSocketService from '@/services/websocket';
 import { useAuth } from '@/store/authContext';
@@ -136,6 +136,7 @@ function auctionResultPathFromNotification(notification: any, fallbackAuctionId:
 
 const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuctionId, urlAuctionId, active, onBidPendingChange }) => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated, token } = useAuth();
 
   const [auctionId, setAuctionId] = useState(0);
@@ -144,7 +145,8 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const [liveStream, setLiveStream] = useState<LiveStream | null>(null);
   const [ranking, setRanking] = useState<RankingItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sheet, setSheet] = useState<'bid' | 'info' | null>(null);
+  const sheetParam = searchParams.get('sheet');
+  const sheet: 'bid' | 'info' | null = sheetParam === 'bid' || sheetParam === 'info' ? sheetParam : null;
   const [bidAmount, setBidAmount] = useState('');
   const [bidding, setBidding] = useState(false);
   const [following, setFollowing] = useState(false);
@@ -172,6 +174,24 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     setToast(message);
     window.setTimeout(() => setToast(''), 2200);
   }, []);
+
+  // sheet 状态由 URL searchParams 单源驱动（spec §14.4）：
+  // 打开 sheet 时 push 一条新 history entry，浏览器返回键即可消费抽屉态（先收起抽屉、不离开直播页）。
+  const openSheet = useCallback((next: 'bid' | 'info') => {
+    if (!active) return; // 非活跃 slide 不读写 URL sheet
+    const params = new URLSearchParams(searchParams);
+    params.set('sheet', next);
+    setSearchParams(params, { replace: false });
+  }, [active, searchParams, setSearchParams]);
+
+  // 程序关闭 sheet（onClose / 出价成功）：去除 sheet 参数并 replace，避免再点返回多退一步。
+  const closeSheet = useCallback(() => {
+    if (!active) return;
+    const params = new URLSearchParams(searchParams);
+    if (!params.has('sheet')) return;
+    params.delete('sheet');
+    setSearchParams(params, { replace: true });
+  }, [active, searchParams, setSearchParams]);
 
   const normalizeRanking = useCallback((items: any[]): RankingItem[] => {
     return items
@@ -306,10 +326,22 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
 
     const ws = new WebSocketService(auctionId, token ?? undefined);
     const shownNotificationIds = new Set<number | string>();
+
+    // WS 消息归属校验（spec §14.3）：携带 auction_id/live_stream_id 且与当前房间不一致的消息直接丢弃，
+    // 不更新价格/排行，避免跨房污染。
+    const belongsToThisRoom = (data: any): boolean => {
+      if (!data) return true;
+      if (data.auction_id != null && Number(data.auction_id) !== auctionId) return false;
+      if (data.live_stream_id != null && Number(data.live_stream_id) !== liveStreamId) return false;
+      return true;
+    };
+
     ws.on('rank_update', (data) => {
+      if (!belongsToThisRoom(data)) return;
       setRanking(normalizeRanking(extractList(data)));
     });
     ws.on('bid_placed', (data) => {
+      if (!belongsToThisRoom(data)) return;
       const nextPrice = Number(data?.current_price ?? data?.amount ?? 0);
       if (nextPrice > 0) {
         setAuction((previous) => previous ? { ...previous, current_price: nextPrice } : previous);
@@ -319,6 +351,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       }
     });
     ws.on('sync_response', (data) => {
+      if (!belongsToThisRoom(data)) return;
       if (data?.current_price || data?.status || data?.end_time) {
         setAuction((previous) => previous ? {
           ...previous,
@@ -332,6 +365,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       }
     });
     ws.on('auction_ended', (data) => {
+      if (!belongsToThisRoom(data)) return;
       setAuction((previous) => previous ? { ...previous, status: 3, current_price: data?.final_price ?? previous.current_price } : previous);
     });
     const unsubscribeNotification = ws.onNotification((notification) => {
@@ -371,7 +405,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       ws.disconnect();
       setConnected(false);
     };
-  }, [auctionId, active, normalizeRanking, token, showGlobalToast, navigate]);
+  }, [auctionId, active, liveStreamId, normalizeRanking, token, showGlobalToast, navigate]);
 
   const handleBid = async () => {
     if (!isAuthenticated) {
@@ -398,7 +432,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       }
       setBidAmount(String(nextPrice + increment));
       showToast('出价成功');
-      setSheet(null);
+      closeSheet();
     } catch (error: any) {
       showToast(error?.message || '出价失败，请稍后重试');
     } finally {
@@ -512,8 +546,8 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         currentPrice={currentPrice || startPrice}
         sheet={sheet}
         isAuthenticated={isAuthenticated}
-        onOpen={setSheet}
-        onClose={() => setSheet(null)}
+        onOpen={openSheet}
+        onClose={closeSheet}
         onRequireLogin={() => showToast('请先登录后出价')}
       >
         <div className={styles.priceBlock}>

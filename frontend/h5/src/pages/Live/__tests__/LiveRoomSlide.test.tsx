@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import LiveRoomSlide from '../LiveRoomSlide';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '../../../services/api';
 import WebSocketService from '../../../services/websocket';
@@ -86,6 +86,11 @@ const mockedLiveStreamApi = liveStreamApi as jest.Mocked<typeof liveStreamApi>;
 const mockedProductApi = productApi as jest.Mocked<typeof productApi>;
 const MockedWebSocketService = WebSocketService as jest.MockedClass<typeof WebSocketService>;
 
+const LocationDisplay: React.FC = () => {
+  const location = useLocation();
+  return <div data-testid="location-search">{location.search}</div>;
+};
+
 const renderSlide = (props: Partial<React.ComponentProps<typeof LiveRoomSlide>> = {}) =>
   render(
     <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
@@ -95,6 +100,7 @@ const renderSlide = (props: Partial<React.ComponentProps<typeof LiveRoomSlide>> 
         active
         {...props}
       />
+      <LocationDisplay />
     </MemoryRouter>
   );
 
@@ -188,5 +194,44 @@ describe('LiveRoomSlide', () => {
     // 出价成功后 sheet 自动收起，重新展开以校验排行已刷新
     fireEvent.click(screen.getByRole('button', { name: '出价' }));
     expect(await screen.findByText('测试用户')).toBeInTheDocument();
+  });
+
+  it('discards websocket messages whose auction_id does not belong to this room', async () => {
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+
+    const bidHandler = mockWebSocketInstance.on.mock.calls.find((c) => c[0] === 'bid_placed')?.[1] as
+      | ((data: any) => void)
+      | undefined;
+    expect(bidHandler).toBeDefined();
+
+    // 不匹配的消息（auction_id=999）应被丢弃，价格不更新
+    act(() => {
+      bidHandler!({ auction_id: 999, current_price: 8888 });
+    });
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
+    expect(screen.queryByText('¥8,888')).not.toBeInTheDocument();
+
+    // 匹配的消息（auction_id=5）应更新价格
+    act(() => {
+      bidHandler!({ auction_id: 5, current_price: 1500 });
+    });
+    expect(await screen.findByText('¥1,500')).toBeInTheDocument();
+  });
+
+  it('opens sheet via URL push and clears it on bid success', async () => {
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+
+    // 打开「出价」面板 → URL 写入 sheet=bid
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
+    await waitFor(() => expect(screen.getByTestId('location-search')).toHaveTextContent('sheet=bid'));
+
+    // 出价成功 → URL 去除 sheet
+    fireEvent.click(screen.getByRole('button', { name: /立即出价/ }));
+    await waitFor(() => expect(mockedBidApi.placeBid).toHaveBeenCalledWith(5, 1300));
+    await waitFor(() => expect(screen.getByTestId('location-search')).not.toHaveTextContent('sheet'));
   });
 });
