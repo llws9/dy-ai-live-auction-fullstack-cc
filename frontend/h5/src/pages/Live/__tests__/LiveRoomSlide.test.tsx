@@ -196,6 +196,32 @@ describe('LiveRoomSlide', () => {
     expect(await screen.findByText('测试用户')).toBeInTheDocument();
   });
 
+  it('uses auction rule as authoritative increment when product detail has no rules', async () => {
+    mockedAuctionApi.get.mockResolvedValue({
+      id: 5,
+      product_id: 7,
+      live_stream_id: 3,
+      status: 1,
+      current_price: 3400,
+      start_price: 3000,
+      rules: { start_price: 3000, increment: 200 },
+      end_time: new Date(Date.now() + 60_000).toISOString(),
+    });
+    mockedProductApi.get.mockResolvedValue({
+      id: 7,
+      name: '明代紫砂壶',
+      images: ['/product.jpg'],
+    });
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
+
+    expect(await screen.findByText('加价幅度 ¥200')).toBeInTheDocument();
+    expect(screen.getByLabelText('输入出价金额')).toHaveValue(3600);
+  });
+
   it('discards websocket messages whose auction_id does not belong to this room', async () => {
     renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
 

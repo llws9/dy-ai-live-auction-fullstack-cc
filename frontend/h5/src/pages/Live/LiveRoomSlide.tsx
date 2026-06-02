@@ -15,6 +15,9 @@ interface Auction {
   current_price?: number;
   start_price?: number;
   end_time?: string;
+  rules?: ProductRules;
+  rule?: ProductRules;
+  auction_rule?: ProductRules;
   product?: Product;
 }
 
@@ -157,9 +160,10 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const [now, setNow] = useState(() => Date.now());
   const { showToast: showGlobalToast } = useToast();
 
+  const auctionRules = auction?.rules ?? auction?.rule ?? auction?.auction_rule;
   const currentPrice = auction?.current_price ?? 0;
-  const increment = product?.rules?.increment ?? 100;
-  const startPrice = product?.rules?.start_price ?? auction?.start_price ?? 0;
+  const increment = auctionRules?.increment ?? product?.rules?.increment ?? 100;
+  const startPrice = auctionRules?.start_price ?? product?.rules?.start_price ?? auction?.start_price ?? 0;
   const minBid = Math.max(currentPrice, startPrice) + increment;
   const isActive = auction?.status === 1 || auction?.status === 2;
   const effectiveLiveStreamId = liveStreamId || auction?.live_stream_id || liveStream?.id || 0;
