@@ -101,7 +101,7 @@
   - 待确认事项：`Source` 字段的 Go model 改动应归属哪个 task / 是否扩大 T1 允许文件范围到 `backend/product/model/order.go`。后续 T7（抢购写订单）若需读写 `source`，依赖此项落地。
 - 迁移如何被应用：本仓库主要依赖各 service `main.go` 的 GORM `AutoMigrate`；新表的真实建表挂载需在后续 task 将 `FixedPriceItem`/`FixedPricePurchase` 加入 `auction/main.go` 的 AutoMigrate 列表（不属 T1 范围）。
 
-**Commit**：见下方 Commit 小节（commit sha 回填）。
+**Commit**：`68e26ae4a07bbebe90dd0d372551eaa3e83a572b` — `feat(fixed-price): add DDL and models for fixed price sale (M1.T1)`（未含 order.go，见 blocker）。
 
 ## Test Commands
 
