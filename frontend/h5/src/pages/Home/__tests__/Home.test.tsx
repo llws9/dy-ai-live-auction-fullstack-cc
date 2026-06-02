@@ -122,6 +122,23 @@ describe('HomePage 分类联动 (T2.10)', () => {
     expect(screen.getAllByRole('button', { name: '全部' })).toHaveLength(1);
     expect(await screen.findByRole('button', { name: '珠宝腕表' })).toBeInTheDocument();
   });
+
+  it('首页头部快捷入口使用 SVG 图形图标而不是文字占位', async () => {
+    renderHome();
+
+    await waitFor(() => expect(mockedAuctionApi.list).toHaveBeenCalled());
+
+    const searchAction = screen.getByLabelText('搜索暂未开放');
+    const followAction = screen.getByLabelText('我的收藏');
+    const notificationAction = screen.getByLabelText('消息通知');
+
+    expect(searchAction.querySelector('svg')).toBeInTheDocument();
+    expect(followAction.querySelector('svg')).toBeInTheDocument();
+    expect(notificationAction.querySelector('svg')).toBeInTheDocument();
+    expect(searchAction).not.toHaveTextContent('搜');
+    expect(followAction).not.toHaveTextContent('收');
+    expect(notificationAction).not.toHaveTextContent('铃');
+  });
 });
 
 describe('HomePage 未读消息红点 (T3.6 / F-D2)', () => {
