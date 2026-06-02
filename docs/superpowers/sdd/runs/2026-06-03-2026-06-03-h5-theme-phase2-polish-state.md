@@ -163,6 +163,10 @@
 - `frontend/h5/src/pages/Order/Detail.module.css`
 - `frontend/h5/src/pages/__tests__/Phase2PageThemeTokens.test.ts`
 
+**Commits**
+
+- `a511a977 feat(h5/theme): polish addresses and order detail themes`
+
 **Verification Evidence**
 
 | Command | Expected | Actual | Result |
@@ -198,4 +202,4 @@
 
 - `Task 1 done; committed by main agent`
 - `Task 2 done; committed by main agent`
-- `Task 3 done; pending commit by main agent`
+- `Task 3 done; committed by main agent`
