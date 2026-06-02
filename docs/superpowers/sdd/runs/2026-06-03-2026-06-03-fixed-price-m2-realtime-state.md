@@ -37,14 +37,14 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 02:59` |
+| Last Updated | `2026-06-03 03:00` |
 
 ## Task Matrix
 
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Allowed Files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `M2 Task 1 - WebSocket Message Contract` | `done` | `subagent` | `W1` | `-` | `Task 1: WebSocket Message Contract` | `backend/auction/websocket/message.go`, `backend/auction/websocket/fixed_price_message_test.go` |
-| `T002` | `M2 Task 2 - FixedPrice Broadcaster Adapter + Stock Throttle` | `done` | `main-agent` | `W2` | `T001` | `Task 2: FixedPrice Broadcaster Adapter + Stock Throttle` | `backend/auction/service/fixed_price_broadcaster.go`, `backend/auction/service/fixed_price_broadcaster_test.go` |
+| `T002` | `M2 Task 2 - FixedPrice Broadcaster Adapter + Stock Throttle` | `done` | `subagent` | `W2` | `T001` | `Task 2: FixedPrice Broadcaster Adapter + Stock Throttle` | `backend/auction/service/fixed_price_broadcaster.go`, `backend/auction/service/fixed_price_broadcaster_test.go` |
 
 ## Wave Plan
 
@@ -104,7 +104,7 @@
 | Key | Value |
 | --- | --- |
 | Status | `done` |
-| Owner | `main-agent` |
+| Owner | `subagent` |
 | Started At | `2026-06-03 02:54` |
 | Completed At | `2026-06-03 02:59` |
 | Branch | `feat/fixed-price-m1` |
@@ -162,6 +162,7 @@
 - Scope completed: WebSocket fixed-price message contract.
 - Scope completed: FixedPrice WebSocket broadcaster adapter and stock throttle.
 - Commit: `e589f97f feat(fixed-price): add WebSocket message contracts (M2.T1)`
-- Commit: `feat(fixed-price): add WebSocket broadcaster with stock throttle (M2.T2)`
+- Commit: `9979129d feat(fixed-price): add WebSocket broadcaster with stock throttle (M2.T2)`
 - Main-agent review: `go test ./websocket/ -run TestFixedPrice -v && go test ./websocket/` passed.
-- Main-agent review: `go test ./service/ -run TestFixedPriceWSBroadcaster -v`, `go test ./service/`, and `go test ./...` passed.
+- Main-agent review: `go test ./service/ -run TestFixedPriceWSBroadcaster -v && go test ./service/` passed.
+- Subagent regression evidence: `go test ./...` passed.
