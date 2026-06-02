@@ -71,6 +71,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	v1.GET("/products/:id/rules", productProxy.Forward)
 
 	// 商品发布/下架需要商家或管理员权限
+	authGroup.POST("/products/ai/copywriting", middleware.RequireMerchant(), productProxy.Forward)
 	authGroup.POST("/products/:id/publish", middleware.RequireMerchant(), productProxy.Forward)
 	authGroup.POST("/products/:id/unpublish", middleware.RequireMerchant(), productProxy.Forward)
 

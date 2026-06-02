@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
 
@@ -26,13 +27,13 @@ func NewCopywritingHandler(svc CopywritingServiceAPI) *CopywritingHandler {
 
 // Generate POST /api/v1/products/ai/copywriting。
 func (h *CopywritingHandler) Generate(ctx context.Context, c *app.RequestContext) {
-	role := c.GetInt("user_role")
-	if role != 1 && role != 2 {
+	role := string(c.GetHeader("X-User-Role"))
+	if role != "streamer" && role != "merchant" && role != "admin" {
 		c.JSON(403, map[string]interface{}{"code": "forbidden_role", "message": "需要商家或管理员权限"})
 		return
 	}
-	userID := c.GetInt64("user_id")
-	if userID == 0 {
+	userID, ok := readGatewayUserID(c)
+	if !ok {
 		c.JSON(401, map[string]interface{}{"code": "unauthorized", "message": "未登录"})
 		return
 	}
@@ -49,6 +50,15 @@ func (h *CopywritingHandler) Generate(ctx context.Context, c *app.RequestContext
 		return
 	}
 	c.JSON(200, resp)
+}
+
+func readGatewayUserID(c *app.RequestContext) (int64, bool) {
+	userIDStr := string(c.GetHeader("X-User-ID"))
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil || userID <= 0 {
+		return 0, false
+	}
+	return userID, true
 }
 
 func mapCopywritingError(c *app.RequestContext, err error) {
