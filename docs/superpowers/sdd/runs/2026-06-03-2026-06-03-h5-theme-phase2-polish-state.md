@@ -26,18 +26,18 @@
 | State Template | `docs/superpowers/sdd/state-template.md` | yes | yes |
 | Plan | `docs/superpowers/plans/2026-06-03-h5-theme-phase2-polish.md` | yes | yes |
 | Tasks | `docs/superpowers/plans/2026-06-03-h5-theme-phase2-polish.md` | yes | yes |
-| Scope | `T001` | no | yes |
+| Scope | `T001-T003` | no | yes |
 
 ## Execution Summary
 
 | Metric | Value |
 | --- | --- |
-| Total Tasks | `2` |
-| Done | `2` |
+| Total Tasks | `3` |
+| Done | `3` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 01:27` |
+| Last Updated | `2026-06-03 01:58` |
 
 ## Task Matrix
 
@@ -45,6 +45,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `Add Phase 2 Theme Tokens` | `done` | `main-agent` | `W1` | `-` | `Task 1` | `frontend/h5/src/styles/tokens/colors.css`, `frontend/h5/src/styles/tokens/__tests__/themeTokens.test.ts` |
 | `T002` | `Polish Profile Theme Benchmark` | `done` | `main-agent` | `W2` | `T001` | `Task 2` | `frontend/h5/src/pages/User/Profile.module.css`, `frontend/h5/src/pages/User/__tests__/ProfileThemeTokens.test.ts`, `frontend/h5/src/pages/User/__tests__/Profile.test.tsx` |
+| `T003` | `Polish Missed Addresses And Order Detail Pages` | `done` | `main-agent` | `W3` | `T001,T002` | `Task 3` | `frontend/h5/src/pages/Addresses/Addresses.module.css`, `frontend/h5/src/pages/Order/Detail.module.css`, `frontend/h5/src/pages/__tests__/Phase2PageThemeTokens.test.ts` |
 
 ## Wave Plan
 
@@ -52,6 +53,7 @@
 | --- | --- | --- | --- | --- |
 | `W1` | `Execute imported tasks with TDD evidence` | `T001` | `state file initialized` | `all tasks done or blocked with reason` |
 | `W2` | `Polish Profile benchmark with Phase 2 tokens` | `T002` | `T001 done` | `Profile CSS contract and existing Profile tests pass` |
+| `W3` | `Polish missed Addresses and Order Detail pages` | `T003` | `T001,T002 done` | `Scoped page CSS contract plus Addresses/Order behavior tests pass` |
 
 ## Task Records
 
@@ -136,6 +138,50 @@
 
 - First response line used: `当前分支/worktree：feat/h5-theme-phase2-polish @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-theme-phase2-polish`
 
+### T003 - `Polish Missed Addresses And Order Detail Pages`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-03 01:50` |
+| Completed At | `2026-06-03 01:58` |
+| Branch | `feat/h5-theme-phase2-polish` |
+| Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-theme-phase2-polish` |
+| Depends On | `T001,T002` |
+| Parallel Group | `W3` |
+
+**TDD Plan**
+
+- Red: create `Phase2PageThemeTokens.test.ts` to assert Addresses and Order Detail consume Phase 2 semantic tokens and reject dark-only values.
+- Green: replace missed page gradients, card/button surfaces, error text, status/timeline surfaces, primary action text, and toast styling with theme tokens.
+- Verify: run scoped page contract test, existing Addresses behavior test, existing Order Detail behavior test, and whitespace check.
+
+**Modified Files**
+
+- `frontend/h5/src/pages/Addresses/Addresses.module.css`
+- `frontend/h5/src/pages/Order/Detail.module.css`
+- `frontend/h5/src/pages/__tests__/Phase2PageThemeTokens.test.ts`
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `cd frontend/h5 && npx jest src/pages/__tests__/Phase2PageThemeTokens.test.ts` | `FAIL before page CSS token migration` | `FAIL: missing --page-gradient-profile / --card-border-accent and retained dark-only values` | `red-pass` |
+| `cd frontend/h5 && npx jest src/pages/__tests__/Phase2PageThemeTokens.test.ts src/pages/Addresses/__tests__/Addresses.test.tsx src/pages/Order/__tests__/Detail.test.tsx` | `PASS after page token migration` | `PASS: 3 suites, 18 tests` | `pass` |
+| `git diff --check` | `No whitespace errors` | `exit 0` | `pass` |
+
+**Risks / Blockers**
+
+- `GetDiagnostics` could not inspect the external worktree because the IDE diagnostic provider is restricted to the original working directory; targeted Jest verification passed.
+- `OrderDetail.test.tsx` still logs an existing React `act(...)` warning during async state update; tests pass and Task 3 did not modify React logic.
+
+**Handoff**
+
+- Completion summary: Addresses and Order Detail now use Phase 2 semantic tokens for missed theme-sensitive surfaces.
+- Remaining work: Task 4+ continue scoped standard pages and shared component polish.
+- First response line used: `当前分支/worktree：feat/h5-theme-phase2-polish @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-theme-phase2-polish`
+
 
 ## Final Review Checklist
 
@@ -151,3 +197,5 @@
 **状态**
 
 - `Task 1 done; committed by main agent`
+- `Task 2 done; committed by main agent`
+- `Task 3 done; pending commit by main agent`
