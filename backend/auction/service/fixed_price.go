@@ -146,3 +146,131 @@ func (s *FixedPriceService) ListItem(ctx context.Context, r ListItemReq) (*model
 	}
 	return item, nil
 }
+
+// PurchaseReq 抢购请求。IdemKey 必须为 UUID v4 形态。
+type PurchaseReq struct {
+	ItemID  int64
+	UserID  int64
+	IdemKey string
+}
+
+// PurchaseResult 抢购结果。方案③：PurchaseID 即购买凭证（fixed_price_purchases.id），不跨服务建单。
+type PurchaseResult struct {
+	PurchaseID     int64
+	ItemID         int64
+	Price          decimal.Decimal
+	RemainingStock int
+	Replayed       bool
+}
+
+// Purchase 抢购一口价商品（方案③ purchase 自成闭环）。
+//
+// 链路：幂等校验 → 幂等命中复用 → 状态预检 → Lua 原子预扣库存 →
+// auction 单库单事务（扣余额 + 写购买记录）→ 失败 Saga 补偿（回补 Redis 库存）→
+// 成功后持久化幂等键 → 末件标记售罄。
+func (s *FixedPriceService) Purchase(ctx context.Context, r PurchaseReq) (*PurchaseResult, error) {
+	if !s.idem.IsValidKey(r.IdemKey) {
+		return nil, ErrInvalidParam
+	}
+
+	// 1. 幂等命中：复用已记录的 purchase ID，不再扣库存/余额。
+	if purchaseID, hit, err := s.idem.GetOrInit(ctx, r.UserID, r.ItemID, r.IdemKey, 0); err != nil {
+		return nil, err
+	} else if hit {
+		item, err := s.items.GetByID(ctx, r.ItemID)
+		if err != nil {
+			return nil, err
+		}
+		rem, _ := s.stock.Remaining(ctx, r.ItemID)
+		return &PurchaseResult{
+			PurchaseID: purchaseID, ItemID: r.ItemID, Price: item.Price,
+			RemainingStock: rem, Replayed: true,
+		}, nil
+	}
+
+	// 2. 状态预检：售罄返回更具体的 ErrSoldOut，其余非在售（已下架）返回 ErrNotOnSale。
+	item, err := s.items.GetByID(ctx, r.ItemID)
+	if err != nil {
+		return nil, err
+	}
+	switch item.Status {
+	case model.FixedPriceStatusOnSale:
+		// 继续
+	case model.FixedPriceStatusSoldOut:
+		return nil, ErrSoldOut
+	default:
+		return nil, ErrNotOnSale
+	}
+
+	// 3. Lua 原子预扣库存。
+	res, err := s.stock.TryAcquire(ctx, r.ItemID, r.UserID)
+	if err != nil {
+		return nil, err
+	}
+	switch res {
+	case StockResultUninitialized:
+		return nil, ErrNotOnSale
+	case StockResultSoldOut:
+		return nil, ErrSoldOut
+	case StockResultAlreadyBought:
+		return nil, ErrAlreadyBought
+	}
+
+	// 4. 单库单事务：扣余额 + 写购买记录。
+	purchase := &model.FixedPricePurchase{
+		ItemID: item.ID, UserID: r.UserID, Price: item.Price,
+	}
+	txErr := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		affected, e := s.balance.DeductWithTx(ctx, tx, r.UserID, item.Price)
+		if e != nil {
+			return e
+		}
+		if affected == 0 {
+			return ErrInsufficient
+		}
+		return s.purchases.InsertWithTx(ctx, tx, purchase)
+	})
+
+	// 5. 事务失败 → Saga 补偿，回补 Redis 库存与 bought 集合。
+	if txErr != nil {
+		_ = s.stock.Compensate(ctx, r.ItemID, r.UserID)
+		return nil, txErr
+	}
+
+	// 6. 持久化幂等键（存 purchase ID）。
+	_ = s.idem.Persist(ctx, r.UserID, r.ItemID, r.IdemKey, purchase.ID)
+
+	// 7. 末件标记售罄（best-effort）。
+	rem, _ := s.stock.Remaining(ctx, r.ItemID)
+	if rem == 0 {
+		_ = s.items.UpdateStatus(ctx, r.ItemID, model.FixedPriceStatusSoldOut)
+	}
+
+	return &PurchaseResult{
+		PurchaseID: purchase.ID, ItemID: r.ItemID, Price: item.Price,
+		RemainingStock: rem, Replayed: false,
+	}, nil
+}
+
+// Offline 下架一口价商品：仅主播可下架，软标记状态后延时清理 Redis 库存。
+func (s *FixedPriceService) Offline(ctx context.Context, itemID, userID int64) error {
+	item, err := s.items.GetByID(ctx, itemID)
+	if err != nil {
+		return err
+	}
+	if item.CreatorID != userID {
+		return ErrNotStreamOwner
+	}
+	if err := s.items.UpdateStatus(ctx, itemID, model.FixedPriceStatusOffline); err != nil {
+		return err
+	}
+	s.scheduleCleanup(itemID)
+	return nil
+}
+
+// scheduleCleanup 在 cleanupDelay 后清理 Redis 库存与购买集合，给在途请求留补偿窗口。
+func (s *FixedPriceService) scheduleCleanup(itemID int64) {
+	s.clk.AfterFunc(cleanupDelay, func() {
+		_ = s.stock.Cleanup(context.Background(), itemID)
+	})
+}
