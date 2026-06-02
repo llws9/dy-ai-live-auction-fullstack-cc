@@ -209,7 +209,7 @@
   flex-shrink: 0;
   overflow: hidden;
   place-items: center;
-  border: 2px solid var(--avatar-border);
+  border: 2px solid var(--border-subtle);
   border-radius: var(--radius-full);
   background: var(--avatar-bg);
   color: var(--text-brand);

@@ -43,4 +43,12 @@ describe('phase 2 scoped page theme tokens', () => {
     expect(css).not.toContain('var(--bg-secondary)');
     expect(css).not.toContain('var(--border-light)');
   });
+
+  it('keeps Following inactive and active avatar borders visually distinct', () => {
+    const css = readPageCss('Follow/Following.module.css');
+
+    expect(css).toContain('border: 2px solid var(--border-subtle);');
+    expect(css).toContain('border-color: var(--avatar-border);');
+    expect(css).not.toContain('border: 2px solid var(--avatar-border);');
+  });
 });

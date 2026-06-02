@@ -37,7 +37,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 02:11` |
+| Last Updated | `2026-06-03 02:19` |
 
 ## Task Matrix
 
@@ -224,6 +224,8 @@
 | --- | --- | --- | --- |
 | `cd frontend/h5 && npx jest src/pages/__tests__/Phase2PageThemeTokens.test.ts` | `PASS if already covered, or FAIL only for old scoped standard page tokens` | `FAIL: Following.module.css and AuctionHistory.module.css lacked var(--bg-page)` | `red-pass` |
 | `cd frontend/h5 && npx jest src/pages/__tests__/Phase2PageThemeTokens.test.ts src/pages/Notifications/__tests__/Notifications.test.tsx src/pages/Follow/__tests__/Following.test.tsx src/pages/History/__tests__/AuctionHistory.test.tsx` | `PASS after token migration` | `PASS: 4 suites, 11 tests` | `pass` |
+| `cd frontend/h5 && npx jest src/pages/__tests__/Phase2PageThemeTokens.test.ts` | `FAIL before P2 avatar-border fix` | `FAIL: Following inactive avatar lacked border: 2px solid var(--border-subtle)` | `red-pass` |
+| `cd frontend/h5 && npx jest src/pages/__tests__/Phase2PageThemeTokens.test.ts src/pages/Notifications/__tests__/Notifications.test.tsx src/pages/Follow/__tests__/Following.test.tsx src/pages/History/__tests__/AuctionHistory.test.tsx` | `PASS after P2 avatar-border fix` | `PASS: 4 suites, 12 tests` | `pass` |
 | `git diff --check` | `No whitespace errors` | `exit 0` | `pass` |
 | `Grep old scoped page tokens` | `No --bg-primary/--bg-secondary/--bg-tertiary/--border-light/--border-default in Task 4 CSS files` | `No matches found` | `pass` |
 | `GetDiagnostics` | `No IDE diagnostics for edited files` | `[]` | `pass` |
@@ -236,6 +238,7 @@
 **Handoff**
 
 - Completion summary: Notifications, Following, and AuctionHistory now use semantic Phase 2 theme surfaces for scoped standard page backgrounds, cards, controls, error/loading/empty states, and nested media surfaces where theme-sensitive.
+- Review P2 fix: Following inactive avatar uses `--border-subtle`; active avatar keeps `--avatar-border` for visible distinction.
 - Remaining work: Task 5 shared component polish and Task 6 visual/regression verification.
 - First response line used: `当前分支/worktree：feat/h5-theme-phase2-polish @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-theme-phase2-polish`
 
