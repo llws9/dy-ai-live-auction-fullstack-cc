@@ -31,10 +31,10 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `13` |
-| Done | `10` |
+| Done | `11` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `3` |
+| Pending | `2` |
 | Last Updated | `2026-06-03` |
 
 > **W4 架构决策（RESOLVED）：** 经调查（`orders` 表无任何真实建单链路、CreateOrder 仅单测调用、拍卖成交不落单、全仓无 Outbox 设施、`user_balance` 与 `fixed_price_*` 同在 auction 库），用户拍板采用**方案③ purchase 自成闭环**：`fixed_price_purchases` 即购买凭证，auction 单库单事务完成 `扣余额+扣库存+写purchase+幂等`，**不写 product 的 orders 表**。已撤销 T1 的 `orders.source` 列 DDL 及 `FixedPricePurchase.OrderID`/`order_id` 列（commit f6855288）。T7 阻塞解除，不再依赖 product service。
@@ -47,7 +47,7 @@
 > - **`order_id` ↔ `PurchaseID` 映射**：spec §4.2 对外响应字段为 `order_id`，方案③下无 orders 表，handler 将 `PurchaseResult.PurchaseID` 映射为响应 `order_id`，保持前端契约稳定不 churn（抢购成功响应、my-purchase `order_id` 均为 purchase.ID）。
 > - **路由文件位置偏差**：plan T10 设想独立 `fixed_price_http.go`/`router.go`，实际 `RegisterFixedPriceRoutes` 写在 `handler/fixed_price.go` 内、由 `auction/main.go` 调用挂载（对齐仓库现有 user_balance/user_address handler 模式，不新建独立 router 文件）。
 > - **生产装配**：`main.go` 新增 StockGuard/IdemStore + 两个 client 适配器（`liveStreamOwnerChecker` 经 `BatchGetLiveStreams.CreatorID`、`productExistsChecker` 经 `BatchGetSummaries`），挂载 `/api/v1/fixed-price/*` 路由。
-> - **⚠️ 待补风险**：`main.go` AutoMigrate 列表尚未加入 `FixedPriceItem`/`FixedPricePurchase`，生产建表缺失，E2E/验收前必须补（见 T13 收尾）。
+> - **✅ AutoMigrate（RESOLVED）**：`main.go` AutoMigrate 列表已加入 `FixedPriceItem`/`FixedPricePurchase`（commit 待提交），生产建表就绪。
 
 ## Status Legend
 
@@ -67,7 +67,7 @@
 | `T8` | service 下架（软标记+5s清Redis） | `done` | `main-agent` | W4 | T2,T4 | `backend/auction/service/fixed_price.go(+_test)` |
 | `T9` | handler 抢购 + 错误码映射 | `done` | `main-agent` | W5 | T7 | `backend/auction/handler/fixed_price.go(+_test)` |
 | `T10` | handler 上架/下架/详情/my-purchase + 路由 | `done` | `main-agent` | W5 | T6,T8 | `backend/auction/handler/fixed_price.go(+_test)`, `backend/auction/main.go`（路由挂载与装配，偏差见 W5 说明） |
-| `T11` | gateway 转发路由 | `pending` | - | W6 | T9,T10 | `backend/gateway/router.go` |
+| `T11` | gateway 转发路由 | `done` | `main-agent` | W6 | T9,T10 | `backend/gateway/router/router.go(+fixed_price_route_test.go)` |
 | `T12` | Toxiproxy 集成测试（网络异常补偿） | `pending` | - | W7 | T7 | `backend/auction/service/fixed_price_toxi_test.go` |
 | `T13` | E2E 冒烟 + 拍卖回归 | `pending` | - | W7 | T11 | `backend/auction/...`（只读回归 + 冒烟脚本） |
 
@@ -210,6 +210,18 @@ auction-service 原本无 dao/redis 单测 fixture（现有 redis 测试均 `t.S
 - 验证：`go test ./handler/` PASS(全部)、`go build ./...` 退出码 0、`cd backend/auction && go test . -run TestPendingReminder` 主包路由测试 `ok auction-service`。
 - **Commit** `62a17dee`（同 T9，4 files / 703 insertions）。
 
+### T11 - gateway 转发路由
+| Status | `done` |
+| --- | --- |
+- TDD（`router/fixed_price_route_test.go`，`ut.PerformRequest` + httptest auction mock 记录 method/path/X-User-ID/X-Idempotency-Key）：
+  - Purchase：无 token→401 不打下游 / 带 token 转发 X-User-ID=42 + X-Idempotency-Key 透传。
+  - MyPurchase：无 token→401 / 带 token 转发 X-User-ID。
+  - Create+Offline：buyer(role0)→403 不打下游 / streamer(role1)→转发。
+  - Detail：公开 GET 直接转发。
+- 路由位置：`router.go` auction 路由块后新增 5 条 `/fixed-price/*`；create/offline 经 `RequireStreamer()`，purchase/my-purchase 经 `JWTAuth` authGroup，detail 走公开 `v1`。X-Idempotency-Key 由现有 `proxy.Forward` VisitAll 透传，无需改 proxy。
+- 验证：`cd backend/gateway && go test ./router/ -run TestFixedPrice` PASS、`go build ./... && go test ./...` 全绿。
+- **Commit** `007ee13b` — `feat(fixed-price): add gateway routes for /fixed-price/* (M1.T11)`
+
 ## Test Commands
 
 | Area | Command | Last Result |
@@ -219,7 +231,7 @@ auction-service 原本无 dao/redis 单测 fixture（现有 redis 测试均 `t.S
 | Backend Auction (main pkg route) | `cd backend/auction && go test . -run TestPendingReminder` | `pass (ok auction-service)` |
 | Backend Auction (build) | `cd backend/auction && go build ./...` | `pass (exit 0)` |
 | Backend Auction (T1) | `cd backend/auction && go build ./... && go vet ./model/` | `pass (BUILD_OK / VET_OK)` |
-| Backend Gateway | `cd backend/gateway && go test ./...` | `not_run` |
+| Backend Gateway | `cd backend/gateway && go test ./...` | `pass (router/handler/middleware/config 全绿)` |
 
 ## Final Review Checklist
 

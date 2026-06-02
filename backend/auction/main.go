@@ -70,6 +70,8 @@ func main() {
 		&model.UserBalance{},
 		&model.UserAddress{},
 		&model.LiveStreamReminderReceipt{},
+		&model.FixedPriceItem{},
+		&model.FixedPricePurchase{},
 	); err != nil {
 		log.Printf("Warning: AutoMigrate failed (tables may already exist): %v", err)
 	}
