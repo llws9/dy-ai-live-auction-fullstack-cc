@@ -1,7 +1,7 @@
 # gateway-service Dockerfile
 # 测试平台前端的 /api 和 /ws 必须通过 gateway 转发到 test-service。
 
-FROM golang:1.25-alpine AS builder
+FROM docker.m.daocloud.io/library/golang:1.25-alpine AS builder
 WORKDIR /src
 ENV GOPROXY=https://goproxy.cn,direct \
     CGO_ENABLED=0 \
@@ -13,7 +13,7 @@ RUN go mod download
 COPY . .
 RUN go build -o /out/gateway-service .
 
-FROM alpine:3.19
+FROM docker.m.daocloud.io/library/alpine:3.19
 WORKDIR /app
 COPY --from=builder /out/gateway-service /app/gateway-service
 
