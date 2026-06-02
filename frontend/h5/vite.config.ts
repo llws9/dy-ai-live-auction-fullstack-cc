@@ -13,6 +13,14 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      // 直播 WebSocket 直连 auction 独立 WS 端口（gateway 仅做 endpoint discovery，不转发 WS 升级）。
+      // 必须排在 '/api' 之前匹配。后端 WS 路由为 '/ws'，需把 '/api/v1/ws' 重写为 '/ws'。
+      '/api/v1/ws': {
+        target: 'ws://localhost:8083',
+        ws: true,
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/api\/v1\/ws/, '/ws'),
+      },
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,

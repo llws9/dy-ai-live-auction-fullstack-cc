@@ -38,7 +38,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `1` |
-| Last Updated | `2026-06-02 (T12 done, 前端 checkpoint，待 T13 用户手动冒烟)` |
+| Last Updated | `2026-06-02 (T13 阶段A后端WS冒烟全绿，修复端口默认值+vite WS代理；阶段B UI待用户浏览器复测)` |
 
 ## Task Matrix
 
@@ -351,18 +351,31 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
+| Status | `phase-A-done`（阶段 A 后端 WS 直连冒烟全绿；阶段 B UI 待用户在场浏览器复测） |
 | Owner | `user` |
 | Depends On | `T1-T12` |
 | Parallel Group | `W9` |
 
-**TDD Plan**: 人工核查，不写自动化。双标签同直播间验证收发 / 频控 / 黑词 / 长度 / 历史回放。
+**TDD Plan**: 人工核查，不写自动化。两段式：阶段 A 用 websocat 双连后端 WS（8083 `/ws`）直连验证 T1-T7 协议；阶段 B `npm run dev` 浏览器双标签经 vite WS 代理复测 UI。
 
-**Verification Evidence**
+**冒烟前发现并修复的偏离（根因修复，已 commit）**
 
-| Command | Expected | Actual | Result |
-| --- | --- | --- | --- |
-| 手动双标签冒烟 | 收发/频控/黑词/长度/回放符合预期 | `not_run` | `pending` |
+1. **端口默认值缺冒号导致 dev fallback 启动崩溃**（`backend/auction/config/config.go`）：DefaultConfig 的 `HTTPPort:"8082"` / `WSPort:"8083"` 缺前缀冒号，Hertz `WithHostPorts` 与 stdlib `http.Server.Addr` 均 panic/fatal（`missing port`）。第一性原理修复：源头改为 `:8082` / `:8083`，HTTP+WS 单点统一。
+2. **vite dev proxy 未代理 WS**（`frontend/h5/vite.config.ts`）：在 `/api` 之前新增 `/api/v1/ws` → `ws://localhost:8083` 且 `ws:true`；因后端 WS 路由实为 `/ws`，加 `rewrite` 将 `/api/v1/ws` 重写为 `/ws`，打通阶段 B H5→auction WS 直连。
+
+**阶段 A 冒烟证据（websocat 1.14.1，auction worktree 最新代码，MySQL/Redis Running）**
+
+WS 路由实测为 `ws://localhost:8083/ws?auction_id=&live_stream_id=&token=`（非 `/api/v1/ws`）。账号 Alice(1002)/Bob(1003)。
+
+| 用例 | 操作 | Expected | Actual | Result |
+| --- | --- | --- | --- | --- |
+| 基础收发+广播回送 | A 发 `chat_send` | 发送者收到自己的 `chat_message` | 收到 user_id=1002 chat_message | `pass` |
+| 跨连接广播 | A 发，B 同 ls=3 在线 | B 收到 A 的消息 | B 收到 user_name=Alice 消息 | `pass` |
+| 历史回放 | A/B 后连接 | 连接后先收到此前历史消息 | 新连接均先收到 hello world/hi from A | `pass` |
+| 黑词过滤 | A 发"加我微信好吗" | code 40002 | `{"code":40002,"message":"blocked word detected"}` | `pass` |
+| 长度超限 | A 发 60 字符 | code 40001 | `{"code":40001,"message":"text length invalid"}` | `pass` |
+| 用户频控 | A 1s 内连发 2 条 | 第 2 条 code 40003 | 第1条广播成功，第2条 `{"code":40003,"message":"rate limited"}` | `pass` |
+| 房间隔离 | B 在 ls=99，A 在 ls=3 发 | B 收不到 | B 仅收到 system，无 ls=3 消息 | `pass` |
 
 ## Final Review Checklist
 
