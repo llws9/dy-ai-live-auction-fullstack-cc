@@ -7,7 +7,7 @@ const MAX_LEN = 50;
 
 interface ChatPanelProps {
   currentUserId: number;
-  onSend: (text: string, clientMsgId: string) => void;
+  onSend: (text: string, clientMsgId: string) => boolean;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({ currentUserId, onSend }) => {
@@ -39,7 +39,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ currentUserId, onSend }) =
   const handleSend = () => {
     if (!canSend) return;
     const clientMsgId = `${currentUserId}-${Date.now()}`;
-    onSend(trimmed, clientMsgId);
+    if (!onSend(trimmed, clientMsgId)) return;
     markSent();
     setText('');
   };

@@ -85,3 +85,19 @@ loop:
 		t.Fatalf("replayed %d messages, want 3", got)
 	}
 }
+
+func TestHub_RegisterToLiveStreamIsImmediatelyVisible(t *testing.T) {
+	h := NewHub()
+	defer h.Stop()
+
+	c := &Client{ID: "instant", LiveStreamID: 321, Send: make(chan *Message, 4)}
+	h.RegisterToLiveStream(c)
+
+	room := h.GetLiveStreamRoom(321)
+	if room == nil {
+		t.Fatal("live stream room was not created")
+	}
+	if got := room.GetClientCount(); got != 1 {
+		t.Fatalf("client count = %d, want 1", got)
+	}
+}

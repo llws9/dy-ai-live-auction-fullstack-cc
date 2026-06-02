@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import LiveRoom from '../index';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '../../../services/api';
@@ -11,7 +11,7 @@ const mockNavigate = jest.fn();
 const mockWebSocketInstance = {
   on: jest.fn(),
   off: jest.fn(),
-  sendChat: jest.fn(),
+  sendChat: jest.fn(() => true),
   onNotification: jest.fn(),
   connect: jest.fn().mockResolvedValue(undefined),
   requestSync: jest.fn(),
@@ -322,12 +322,14 @@ describe('LiveRoom migration', () => {
     await waitFor(() => expect(chatHandlers['chat_message']).toBeDefined());
 
     // 收到一条 chat_message 应进入 store 并渲染气泡
-    chatHandlers['chat_message']({
-      live_stream_id: 3,
-      user_id: 2,
-      user_name: '王五',
-      text: '主播好',
-      sent_at: Date.now(),
+    act(() => {
+      chatHandlers['chat_message']({
+        live_stream_id: 3,
+        user_id: 2,
+        user_name: '王五',
+        text: '主播好',
+        sent_at: Date.now(),
+      });
     });
     expect(await screen.findByText('王五')).toBeInTheDocument();
     expect(screen.getByText('主播好')).toBeInTheDocument();

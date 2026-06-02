@@ -21,7 +21,7 @@ func NewChatHandler(hub *Hub, filter *ChatFilter, throttle *ChatThrottle) *ChatH
 // Handle 处理一次弹幕发送
 func (h *ChatHandler) Handle(ctx context.Context, c *Client, data *ChatSendData) {
 	// 鉴权：必须登录
-	if c.UserID <= 0 {
+	if c.UserID <= 0 || !c.Authenticated {
 		c.Send <- NewErrorMessage(ChatErrCodeNotAuthenticated, "login required")
 		return
 	}

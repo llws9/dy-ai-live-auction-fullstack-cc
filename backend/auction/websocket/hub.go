@@ -114,7 +114,7 @@ func (h *Hub) registerClient(client *Client) {
 
 	// 订阅了直播间弹幕时，自动加入直播间房间
 	if client.LiveStreamID > 0 {
-		go h.RegisterToLiveStream(client)
+		h.RegisterToLiveStream(client)
 	}
 }
 
@@ -136,7 +136,7 @@ func (h *Hub) unregisterClient(client *Client) {
 
 	// 订阅了直播间弹幕时，从直播间房间移除
 	if client.LiveStreamID > 0 {
-		go h.UnregisterFromLiveStream(client)
+		h.UnregisterFromLiveStream(client)
 	}
 }
 
@@ -267,7 +267,7 @@ func (h *Hub) RegisterToLiveStream(client *Client) {
 		go room.Run()
 	}
 	h.liveStreamRoomsLock.Unlock()
-	room.Register <- client
+	room.registerClient(client)
 }
 
 // UnregisterFromLiveStream 将客户端移出直播间弹幕房间
@@ -279,7 +279,7 @@ func (h *Hub) UnregisterFromLiveStream(client *Client) {
 	room, ok := h.liveStreamRooms[client.LiveStreamID]
 	h.liveStreamRoomsLock.RUnlock()
 	if ok {
-		room.Unregister <- client
+		room.unregisterClient(client)
 	}
 }
 

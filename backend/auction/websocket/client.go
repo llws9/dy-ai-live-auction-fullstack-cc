@@ -27,12 +27,13 @@ const (
 
 // Client WebSocket 客户端
 type Client struct {
-	ID           string
-	AuctionID    int64
-	LiveStreamID int64 // 直播间 ID（0 表示未订阅弹幕）
-	UserID       int64
-	UserName     string // 发弹幕时回填到广播
-	ConnectedAt  time.Time
+	ID            string
+	AuctionID     int64
+	LiveStreamID  int64 // 直播间 ID（0 表示未订阅弹幕）
+	UserID        int64
+	UserName      string // 发弹幕时回填到广播
+	Authenticated bool   // true 表示身份来自服务端验证过的 JWT
+	ConnectedAt   time.Time
 
 	conn *websocket.Conn
 	Send chan *Message
@@ -46,18 +47,19 @@ type Client struct {
 }
 
 // NewClient 创建客户端
-func NewClient(id string, auctionID, userID, liveStreamID int64, userName string, conn *websocket.Conn, hub *Hub) *Client {
+func NewClient(id string, auctionID, userID, liveStreamID int64, userName string, authenticated bool, conn *websocket.Conn, hub *Hub) *Client {
 	now := time.Now()
 	client := &Client{
-		ID:           id,
-		AuctionID:    auctionID,
-		LiveStreamID: liveStreamID,
-		UserID:       userID,
-		UserName:     userName,
-		ConnectedAt:  now,
-		conn:         conn,
-		Send:         make(chan *Message, sendBufferSize),
-		hub:          hub,
+		ID:            id,
+		AuctionID:     auctionID,
+		LiveStreamID:  liveStreamID,
+		UserID:        userID,
+		UserName:      userName,
+		Authenticated: authenticated,
+		ConnectedAt:   now,
+		conn:          conn,
+		Send:          make(chan *Message, sendBufferSize),
+		hub:           hub,
 	}
 
 	// 保存连接状态到 Redis
@@ -103,16 +105,17 @@ func (c *Client) SetHub(hub *Hub) {
 }
 
 // NewClientSimple 创建客户端（简化版，自动生成ID）
-func NewClientSimple(conn *websocket.Conn, auctionID, userID, liveStreamID int64, userName string) *Client {
+func NewClientSimple(conn *websocket.Conn, auctionID, userID, liveStreamID int64, userName string, authenticated bool) *Client {
 	id := fmt.Sprintf("%d-%d-%d", auctionID, userID, time.Now().UnixNano())
 	return &Client{
-		ID:           id,
-		AuctionID:    auctionID,
-		LiveStreamID: liveStreamID,
-		UserID:       userID,
-		UserName:     userName,
-		conn:         conn,
-		Send:         make(chan *Message, sendBufferSize),
+		ID:            id,
+		AuctionID:     auctionID,
+		LiveStreamID:  liveStreamID,
+		UserID:        userID,
+		UserName:      userName,
+		Authenticated: authenticated,
+		conn:          conn,
+		Send:          make(chan *Message, sendBufferSize),
 	}
 }
 

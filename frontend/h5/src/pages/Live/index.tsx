@@ -579,7 +579,7 @@ const LiveRoomPage: React.FC = () => {
           <h2>直播互动</h2>
           <ChatPanel
             currentUserId={user?.id ?? 0}
-            onSend={(text, clientMsgId) => wsRef.current?.sendChat(text, clientMsgId)}
+            onSend={(text, clientMsgId) => wsRef.current?.sendChat(text, clientMsgId) ?? false}
           />
         </section>
       </div>

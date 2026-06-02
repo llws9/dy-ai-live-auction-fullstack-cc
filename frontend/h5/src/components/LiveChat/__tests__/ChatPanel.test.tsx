@@ -26,7 +26,7 @@ describe('ChatPanel', () => {
   });
 
   it('sends valid text and triggers cooldown', () => {
-    const onSend = jest.fn();
+    const onSend = jest.fn(() => true);
     render(<ChatPanel currentUserId={1} onSend={onSend} />);
     const input = screen.getByPlaceholderText(/说点什么/);
     fireEvent.change(input, { target: { value: 'hi' } });
@@ -38,6 +38,18 @@ describe('ChatPanel', () => {
       jest.advanceTimersByTime(1100);
     });
     fireEvent.change(input, { target: { value: 'next' } });
+    expect(screen.getByRole('button', { name: /发送/ })).not.toBeDisabled();
+  });
+
+  it('keeps text editable when send fails', () => {
+    const onSend = jest.fn(() => false);
+    render(<ChatPanel currentUserId={1} onSend={onSend} />);
+    const input = screen.getByPlaceholderText(/说点什么/);
+    fireEvent.change(input, { target: { value: 'hi' } });
+    fireEvent.click(screen.getByRole('button', { name: /发送/ }));
+
+    expect(onSend).toHaveBeenCalledWith('hi', expect.any(String));
+    expect(input).toHaveValue('hi');
     expect(screen.getByRole('button', { name: /发送/ })).not.toBeDisabled();
   });
 

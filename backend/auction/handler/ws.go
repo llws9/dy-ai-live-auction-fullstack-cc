@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
+	ws "auction-service/websocket"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
-	ws "auction-service/websocket"
 )
 
 // WebSocket 连接管理
@@ -56,6 +56,7 @@ func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.Respons
 	// 获取用户ID（优先从token验证）
 	var userID int64
 	var userName string
+	authenticated := false
 
 	// 尝试从token参数验证
 	tokenStr := r.URL.Query().Get("token")
@@ -64,6 +65,7 @@ func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.Respons
 		if err == nil && claims != nil {
 			userID = claims.UserID
 			userName = claims.Username
+			authenticated = true
 		} else {
 			log.Printf("WebSocket auth failed: %v", err)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -98,7 +100,7 @@ func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.Respons
 	}
 
 	// 创建客户端并装配 Hub / ChatHandler
-	client := ws.NewClientSimple(conn, auctionID, userID, liveStreamID, userName)
+	client := ws.NewClientSimple(conn, auctionID, userID, liveStreamID, userName, authenticated)
 	client.SetHub(activeHub)
 	if h.chatHandler != nil {
 		client.SetChatHandler(h.chatHandler)

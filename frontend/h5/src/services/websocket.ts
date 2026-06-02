@@ -187,9 +187,9 @@ class WebSocketService {
   }
 
   /** 发送弹幕 */
-  sendChat(text: string, clientMsgId: string): void {
-    if (this.ws?.readyState !== WebSocket.OPEN) return;
-    if (!this.liveStreamId) return;
+  sendChat(text: string, clientMsgId: string): boolean {
+    if (this.ws?.readyState !== WebSocket.OPEN) return false;
+    if (!this.liveStreamId) return false;
     const payload = {
       type: 'chat_send',
       timestamp: Date.now(),
@@ -200,6 +200,7 @@ class WebSocketService {
       },
     };
     this.ws.send(JSON.stringify(payload));
+    return true;
   }
 
   // 请求状态同步（重连后使用）
