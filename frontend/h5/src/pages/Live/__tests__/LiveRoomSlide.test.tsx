@@ -202,9 +202,9 @@ describe('LiveRoomSlide', () => {
       product_id: 7,
       live_stream_id: 3,
       status: 1,
-      current_price: 3400,
-      start_price: 3000,
-      rules: { start_price: 3000, increment: 200 },
+      current_price: '3400',
+      start_price: '3000',
+      rules: { start_price: '3000', increment: '200' },
       end_time: new Date(Date.now() + 60_000).toISOString(),
     });
     mockedProductApi.get.mockResolvedValue({

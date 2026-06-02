@@ -12,8 +12,8 @@ interface Auction {
   product_id?: number;
   live_stream_id?: number;
   status?: number;
-  current_price?: number;
-  start_price?: number;
+  current_price?: number | string;
+  start_price?: number | string;
   end_time?: string;
   rules?: ProductRules;
   rule?: ProductRules;
@@ -22,8 +22,8 @@ interface Auction {
 }
 
 interface ProductRules {
-  start_price?: number;
-  increment?: number;
+  start_price?: number | string;
+  increment?: number | string;
 }
 
 interface Product {
@@ -89,6 +89,11 @@ const formatMoney = (amount: number) => amount.toLocaleString('zh-CN', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 2,
 });
+
+const toAmount = (value: unknown, fallback = 0) => {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : fallback;
+};
 
 const formatTimeLeft = (seconds: number) => {
   const safeSeconds = Math.max(0, seconds);
@@ -161,9 +166,9 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const { showToast: showGlobalToast } = useToast();
 
   const auctionRules = auction?.rules ?? auction?.rule ?? auction?.auction_rule;
-  const currentPrice = auction?.current_price ?? 0;
-  const increment = auctionRules?.increment ?? product?.rules?.increment ?? 100;
-  const startPrice = auctionRules?.start_price ?? product?.rules?.start_price ?? auction?.start_price ?? 0;
+  const currentPrice = toAmount(auction?.current_price);
+  const increment = toAmount(auctionRules?.increment ?? product?.rules?.increment, 100);
+  const startPrice = toAmount(auctionRules?.start_price ?? product?.rules?.start_price ?? auction?.start_price);
   const minBid = Math.max(currentPrice, startPrice) + increment;
   const isActive = auction?.status === 1 || auction?.status === 2;
   const effectiveLiveStreamId = liveStreamId || auction?.live_stream_id || liveStream?.id || 0;
