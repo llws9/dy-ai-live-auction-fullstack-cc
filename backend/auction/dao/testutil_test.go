@@ -27,6 +27,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	require.NoError(t, db.AutoMigrate(
 		&model.FixedPriceItem{},
 		&model.FixedPricePurchase{},
+		&model.UserBalance{},
 	))
 	t.Cleanup(func() {
 		sqlDB, err := db.DB()
