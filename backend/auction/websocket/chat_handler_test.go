@@ -92,6 +92,21 @@ func TestChatHandler_LengthError(t *testing.T) {
 	}
 }
 
+func TestChatHandler_InvalidLiveStreamUsesDedicatedCode(t *testing.T) {
+	h, hub, _ := newChatHandlerFixture(t)
+	defer hub.Stop()
+
+	c := &Client{ID: "u-live", UserID: 1, Authenticated: true, LiveStreamID: 2, Send: make(chan *Message, 4)}
+	h.Handle(context.Background(), c, &ChatSendData{LiveStreamID: 3, Text: "hello"})
+
+	msg := <-c.Send
+	err := dataAs[ErrorData](t, msg)
+	const wantInvalidLiveStreamCode = 40004
+	if err.Code != wantInvalidLiveStreamCode {
+		t.Fatalf("got code %d, want %d", err.Code, wantInvalidLiveStreamCode)
+	}
+}
+
 func TestChatHandler_BlockedWord(t *testing.T) {
 	h, hub, _ := newChatHandlerFixture(t)
 	defer hub.Stop()

@@ -61,3 +61,20 @@ func TestChatThrottle_TTLReset(t *testing.T) {
 		t.Fatalf("after TTL expires, should pass, got %d", code)
 	}
 }
+
+func TestChatThrottle_DoesNotRefreshTTLOnRepeatedHits(t *testing.T) {
+	th, mr := setupThrottle(t)
+	ctx := context.Background()
+
+	if code := th.Allow(ctx, 100, 1); code != 0 {
+		t.Fatal("first should pass")
+	}
+	mr.FastForward(900 * time.Millisecond)
+	if code := th.Allow(ctx, 100, 1); code != ChatErrCodeRateLimited {
+		t.Fatalf("second in window should be rate-limited, got %d", code)
+	}
+	mr.FastForward(200 * time.Millisecond)
+	if code := th.Allow(ctx, 100, 1); code != 0 {
+		t.Fatalf("fixed window should expire from first hit, got %d", code)
+	}
+}

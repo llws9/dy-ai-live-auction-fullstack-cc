@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +16,7 @@ func TestStateManager_SaveSyncState(t *testing.T) {
 		now := time.Now()
 		state := &SyncState{
 			AuctionID:    1,
-			CurrentPrice: 150.00,
+			CurrentPrice: decimal.NewFromInt(150),
 			WinnerID:     10001,
 			EndTime:      now,
 			Status:       1,
@@ -23,7 +24,7 @@ func TestStateManager_SaveSyncState(t *testing.T) {
 		}
 
 		assert.Equal(t, int64(1), state.AuctionID)
-		assert.Equal(t, 150.00, state.CurrentPrice)
+		assert.True(t, decimal.NewFromInt(150).Equal(state.CurrentPrice))
 		assert.Equal(t, int64(10001), state.WinnerID)
 		assert.Equal(t, 1, state.Status)
 	})
@@ -90,13 +91,13 @@ func TestStateManager_ConcurrentAccess(t *testing.T) {
 
 		// Simulate concurrent updates
 		go func() {
-			state := &SyncState{AuctionID: 1, CurrentPrice: 100.0}
+			state := &SyncState{AuctionID: 1, CurrentPrice: decimal.NewFromInt(100)}
 			_ = state
 			done <- true
 		}()
 
 		go func() {
-			state := &SyncState{AuctionID: 1, CurrentPrice: 150.0}
+			state := &SyncState{AuctionID: 1, CurrentPrice: decimal.NewFromInt(150)}
 			_ = state
 			done <- true
 		}()

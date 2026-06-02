@@ -80,6 +80,11 @@ const formatMoney = (amount: number) => amount.toLocaleString('zh-CN', {
   maximumFractionDigits: 2,
 });
 
+const toMoneyNumber = (value: unknown, fallback = 0) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+};
+
 const formatTimeLeft = (seconds: number) => {
   const safeSeconds = Math.max(0, seconds);
   const minutes = Math.floor(safeSeconds / 60);
@@ -296,7 +301,7 @@ const LiveRoomPage: React.FC = () => {
       if (data?.current_price || data?.status || data?.end_time) {
         setAuction((previous) => previous ? {
           ...previous,
-          current_price: data.current_price ?? previous.current_price,
+          current_price: data.current_price !== undefined ? toMoneyNumber(data.current_price, previous.current_price) : previous.current_price,
           status: data.status ?? previous.status,
           end_time: data.end_time ?? previous.end_time,
         } : previous);
@@ -306,7 +311,7 @@ const LiveRoomPage: React.FC = () => {
       }
     });
     ws.on('auction_ended', (data) => {
-      setAuction((previous) => previous ? { ...previous, status: 3, current_price: data?.final_price ?? previous.current_price } : previous);
+      setAuction((previous) => previous ? { ...previous, status: 3, current_price: toMoneyNumber(data?.final_price, previous.current_price) } : previous);
     });
     const unsubscribeNotification = ws.onNotification((notification) => {
       const id = notification.id;

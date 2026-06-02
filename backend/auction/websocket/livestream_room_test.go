@@ -101,3 +101,16 @@ func TestHub_RegisterToLiveStreamIsImmediatelyVisible(t *testing.T) {
 		t.Fatalf("client count = %d, want 1", got)
 	}
 }
+
+func TestHub_UnregisterFromLiveStreamDeletesEmptyRoom(t *testing.T) {
+	h := NewHub()
+	defer h.Stop()
+
+	c := &Client{ID: "last", LiveStreamID: 654, Send: make(chan *Message, 4)}
+	h.RegisterToLiveStream(c)
+	h.UnregisterFromLiveStream(c)
+
+	if room := h.GetLiveStreamRoom(654); room != nil {
+		t.Fatal("empty live stream room should be deleted")
+	}
+}

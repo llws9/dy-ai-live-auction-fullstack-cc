@@ -275,11 +275,15 @@ func (h *Hub) UnregisterFromLiveStream(client *Client) {
 	if client.LiveStreamID <= 0 {
 		return
 	}
-	h.liveStreamRoomsLock.RLock()
+	h.liveStreamRoomsLock.Lock()
+	defer h.liveStreamRoomsLock.Unlock()
 	room, ok := h.liveStreamRooms[client.LiveStreamID]
-	h.liveStreamRoomsLock.RUnlock()
 	if ok {
 		room.unregisterClient(client)
+		if room.GetClientCount() == 0 {
+			room.Close()
+			delete(h.liveStreamRooms, client.LiveStreamID)
+		}
 	}
 }
 

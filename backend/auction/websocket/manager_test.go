@@ -1,9 +1,12 @@
 package websocket
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -62,4 +65,37 @@ func TestWebSocketManager_GetConnectionState(t *testing.T) {
 
 	// 无 Redis，应该返回 nil
 	assert.Nil(t, state)
+}
+
+func TestWebSocketManager_InjectsStateManagerIntoHubAndClient(t *testing.T) {
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	defer rdb.Close()
+
+	hub := NewHub()
+	manager := NewWebSocketManager(hub, rdb)
+	if hub.GetStateManager() == nil {
+		t.Fatal("manager should inject state manager into hub")
+	}
+
+	client := &Client{
+		ID:          "state-client",
+		AuctionID:   1,
+		UserID:      2,
+		ConnectedAt: time.Now(),
+		Send:        make(chan *Message, 4),
+		hub:         hub,
+	}
+	manager.RegisterClient(client)
+	if client.stateManager == nil {
+		t.Fatal("manager should inject state manager into client")
+	}
+
+	if _, err := rdb.Get(context.Background(), "conn:state:state-client").Result(); err != nil {
+		t.Fatalf("connection state should be saved: %v", err)
+	}
+	manager.UnregisterClient(client)
+	if rdb.Exists(context.Background(), "conn:state:state-client").Val() != 0 {
+		t.Fatal("connection state should be deleted on unregister")
+	}
 }

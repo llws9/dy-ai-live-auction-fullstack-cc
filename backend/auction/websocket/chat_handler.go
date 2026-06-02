@@ -28,7 +28,7 @@ func (h *ChatHandler) Handle(ctx context.Context, c *Client, data *ChatSendData)
 
 	// 直播间一致性
 	if data.LiveStreamID <= 0 || (c.LiveStreamID > 0 && data.LiveStreamID != c.LiveStreamID) {
-		c.Send <- NewErrorMessage(ChatErrCodeLengthExceeded, "invalid live_stream_id")
+		c.Send <- NewErrorMessage(ChatErrCodeInvalidLiveStream, "invalid live_stream_id")
 		return
 	}
 
@@ -66,6 +66,8 @@ func codeMessage(code int) string {
 		return "blocked word detected"
 	case ChatErrCodeRateLimited:
 		return "rate limited"
+	case ChatErrCodeInvalidLiveStream:
+		return "invalid live_stream_id"
 	case ChatErrCodeNotAuthenticated:
 		return "login required"
 	default:

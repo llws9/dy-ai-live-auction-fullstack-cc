@@ -65,6 +65,7 @@ func NewClient(id string, auctionID, userID, liveStreamID int64, userName string
 	// 保存连接状态到 Redis
 	if hub != nil && hub.GetStateManager() != nil {
 		sm := hub.GetStateManager()
+		client.SetStateManager(sm)
 		state := &ConnectionState{
 			ClientID:       client.ID,
 			AuctionID:      client.AuctionID,

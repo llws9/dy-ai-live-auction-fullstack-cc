@@ -1,6 +1,10 @@
 package websocket
 
-import "time"
+import (
+	"time"
+
+	"github.com/shopspring/decimal"
+)
 
 // MessageType WebSocket 消息类型
 type MessageType string
@@ -24,8 +28,8 @@ const (
 
 	// 天灯相关消息类型
 	MessageTypeSkyLampActivated MessageType = "sky_lamp_activated" // 天灯开启
-	MessageTypeSkyLampAutoBid   MessageType = "sky_lamp_auto_bid"   // 自动跟价
-	MessageTypeSkyLampStopped   MessageType = "sky_lamp_stopped"    // 天灯停止
+	MessageTypeSkyLampAutoBid   MessageType = "sky_lamp_auto_bid"  // 自动跟价
+	MessageTypeSkyLampStopped   MessageType = "sky_lamp_stopped"   // 天灯停止
 
 	// 弹幕相关消息类型（M2）
 	MessageTypeChatSend    MessageType = "chat_send"    // 客户端 -> 服务端
@@ -34,10 +38,11 @@ const (
 
 // 弹幕错误码
 const (
-	ChatErrCodeLengthExceeded   = 40001
-	ChatErrCodeBlockedWord      = 40002
-	ChatErrCodeRateLimited      = 40003
-	ChatErrCodeNotAuthenticated = 40101
+	ChatErrCodeLengthExceeded    = 40001
+	ChatErrCodeBlockedWord       = 40002
+	ChatErrCodeRateLimited       = 40003
+	ChatErrCodeInvalidLiveStream = 40004
+	ChatErrCodeNotAuthenticated  = 40101
 )
 
 // Message WebSocket 消息基础结构
@@ -49,34 +54,34 @@ type Message struct {
 
 // BidPlacedData 出价通知数据
 type BidPlacedData struct {
-	AuctionID   int64   `json:"auction_id"`
-	UserID      int64   `json:"user_id"`
-	UserName    string  `json:"user_name,omitempty"`
-	Amount      float64 `json:"amount"`
-	CurrentPrice float64 `json:"current_price"`
-	BidTime     int64   `json:"bid_time"`
+	AuctionID    int64           `json:"auction_id"`
+	UserID       int64           `json:"user_id"`
+	UserName     string          `json:"user_name,omitempty"`
+	Amount       decimal.Decimal `json:"amount"`
+	CurrentPrice decimal.Decimal `json:"current_price"`
+	BidTime      int64           `json:"bid_time"`
 }
 
 // RankUpdateData 排名更新数据
 type RankUpdateData struct {
-	AuctionID int64        `json:"auction_id"`
-	Ranking   []RankItem   `json:"ranking"`
+	AuctionID int64      `json:"auction_id"`
+	Ranking   []RankItem `json:"ranking"`
 }
 
 // RankItem 排名项
 type RankItem struct {
-	Rank     int     `json:"rank"`
-	UserID   int64   `json:"user_id"`
-	UserName string  `json:"user_name,omitempty"`
-	Amount   float64 `json:"amount"`
+	Rank     int             `json:"rank"`
+	UserID   int64           `json:"user_id"`
+	UserName string          `json:"user_name,omitempty"`
+	Amount   decimal.Decimal `json:"amount"`
 }
 
 // OvertakenData 被超越通知数据
 type OvertakenData struct {
-	AuctionID      int64   `json:"auction_id"`
-	OvertakenBy    int64   `json:"overtaken_by"`
-	OvertakenName  string  `json:"overtaken_name,omitempty"`
-	NewPrice       float64 `json:"new_price"`
+	AuctionID     int64           `json:"auction_id"`
+	OvertakenBy   int64           `json:"overtaken_by"`
+	OvertakenName string          `json:"overtaken_name,omitempty"`
+	NewPrice      decimal.Decimal `json:"new_price"`
 }
 
 // DelayTriggeredData 延时触发数据
@@ -90,11 +95,11 @@ type DelayTriggeredData struct {
 
 // AuctionEndedData 竞拍结束数据
 type AuctionEndedData struct {
-	AuctionID  int64   `json:"auction_id"`
-	WinnerID   int64   `json:"winner_id"`
-	WinnerName string  `json:"winner_name,omitempty"`
-	FinalPrice float64 `json:"final_price"`
-	EndTime    int64   `json:"end_time"`
+	AuctionID  int64           `json:"auction_id"`
+	WinnerID   int64           `json:"winner_id"`
+	WinnerName string          `json:"winner_name,omitempty"`
+	FinalPrice decimal.Decimal `json:"final_price"`
+	EndTime    int64           `json:"end_time"`
 }
 
 // TimeSyncData 时间同步数据
@@ -110,12 +115,12 @@ type SyncRequestData struct {
 
 // SyncResponseData 状态同步响应数据
 type SyncResponseData struct {
-	AuctionID    int64       `json:"auction_id"`
-	CurrentPrice float64     `json:"current_price"`
-	WinnerID     int64       `json:"winner_id"`
-	EndTime      int64       `json:"end_time"`
-	Status       int         `json:"status"`
-	Ranking      []RankItem  `json:"ranking,omitempty"`
+	AuctionID    int64           `json:"auction_id"`
+	CurrentPrice decimal.Decimal `json:"current_price"`
+	WinnerID     int64           `json:"winner_id"`
+	EndTime      int64           `json:"end_time"`
+	Status       int             `json:"status"`
+	Ranking      []RankItem      `json:"ranking,omitempty"`
 }
 
 // ErrorData 错误数据
@@ -136,20 +141,20 @@ type NotificationData struct {
 
 // SkyLampActivatedData 天灯开启通知
 type SkyLampActivatedData struct {
-	AuctionID        int64   `json:"auction_id"`
-	UserID           int64   `json:"user_id"`
-	SubscriptionID   int64   `json:"subscription_id"`
-	InitialBidAmount float64 `json:"initial_bid_amount"`
-	MaxPriceLimit    float64 `json:"max_price_limit"`
+	AuctionID        int64           `json:"auction_id"`
+	UserID           int64           `json:"user_id"`
+	SubscriptionID   int64           `json:"subscription_id"`
+	InitialBidAmount decimal.Decimal `json:"initial_bid_amount"`
+	MaxPriceLimit    decimal.Decimal `json:"max_price_limit"`
 }
 
 // SkyLampAutoBidData 自动跟价通知
 type SkyLampAutoBidData struct {
-	AuctionID       int64   `json:"auction_id"`
-	UserID          int64   `json:"user_id"`
-	Amount          float64 `json:"amount"`
-	RemainingBudget float64 `json:"remaining_budget"`
-	AutoBidCount    int     `json:"auto_bid_count"`
+	AuctionID       int64           `json:"auction_id"`
+	UserID          int64           `json:"user_id"`
+	Amount          decimal.Decimal `json:"amount"`
+	RemainingBudget decimal.Decimal `json:"remaining_budget"`
+	AutoBidCount    int             `json:"auto_bid_count"`
 }
 
 // SkyLampStoppedData 天灯停止通知
@@ -241,7 +246,7 @@ func NewNotificationMessage(data *NotificationData) *Message {
 }
 
 // NewSkyLampActivatedMessage 创建天灯开启消息
-func NewSkyLampActivatedMessage(auctionID, userID, subscriptionID int64, initialBidAmount, maxPriceLimit float64) *Message {
+func NewSkyLampActivatedMessage(auctionID, userID, subscriptionID int64, initialBidAmount, maxPriceLimit decimal.Decimal) *Message {
 	return &Message{
 		Type:      MessageTypeSkyLampActivated,
 		Timestamp: time.Now().UnixNano() / int64(time.Millisecond),
@@ -256,7 +261,7 @@ func NewSkyLampActivatedMessage(auctionID, userID, subscriptionID int64, initial
 }
 
 // NewSkyLampAutoBidMessage 创建自动跟价消息
-func NewSkyLampAutoBidMessage(auctionID, userID int64, amount, remainingBudget float64, autoBidCount int) *Message {
+func NewSkyLampAutoBidMessage(auctionID, userID int64, amount, remainingBudget decimal.Decimal, autoBidCount int) *Message {
 	return &Message{
 		Type:      MessageTypeSkyLampAutoBid,
 		Timestamp: time.Now().UnixNano() / int64(time.Millisecond),

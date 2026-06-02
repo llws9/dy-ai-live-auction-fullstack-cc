@@ -45,12 +45,17 @@ func (t *ChatThrottle) Allow(ctx context.Context, userID, liveStreamID int64) in
 
 // incrAndCheck 原子递增并比较；首次写入时设置 TTL
 func (t *ChatThrottle) incrAndCheck(ctx context.Context, key string, max int, ttl time.Duration) bool {
-	pipe := t.rdb.TxPipeline()
-	incr := pipe.Incr(ctx, key)
-	pipe.Expire(ctx, key, ttl) // 幂等：每次都会刷新 TTL
-	if _, err := pipe.Exec(ctx); err != nil {
+	const script = `
+local current = redis.call("INCR", KEYS[1])
+if current == 1 then
+  redis.call("PEXPIRE", KEYS[1], ARGV[1])
+end
+return current
+`
+	current, err := t.rdb.Eval(ctx, script, []string{key}, ttl.Milliseconds()).Int64()
+	if err != nil {
 		// Redis 故障时降级放行，避免直播间静音
 		return true
 	}
-	return incr.Val() <= int64(max)
+	return current <= int64(max)
 }

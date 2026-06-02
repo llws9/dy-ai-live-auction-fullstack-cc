@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 	ws "auction-service/websocket"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
+	"github.com/shopspring/decimal"
 )
 
 // WebSocket 连接管理
@@ -100,8 +102,8 @@ func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.Respons
 	}
 
 	// 创建客户端并装配 Hub / ChatHandler
-	client := ws.NewClientSimple(conn, auctionID, userID, liveStreamID, userName, authenticated)
-	client.SetHub(activeHub)
+	clientID := fmt.Sprintf("%d-%d-%d", auctionID, userID, time.Now().UnixNano())
+	client := ws.NewClient(clientID, auctionID, userID, liveStreamID, userName, authenticated, conn, activeHub)
 	if h.chatHandler != nil {
 		client.SetChatHandler(h.chatHandler)
 	}
@@ -132,7 +134,7 @@ func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.Respons
 }
 
 // BroadcastPriceUpdate 广播价格更新
-func BroadcastPriceUpdate(hub *ws.Hub, auctionID int64, userID int64, price float64, rank int) {
+func BroadcastPriceUpdate(hub *ws.Hub, auctionID int64, userID int64, price decimal.Decimal, rank int) {
 	msg := &ws.Message{
 		Type:      "price_update",
 		Timestamp: time.Now().UnixMilli(),
@@ -160,7 +162,7 @@ func BroadcastCountdown(hub *ws.Hub, auctionID int64, remainingMs int64) {
 }
 
 // BroadcastAuctionEnd 广播竞拍结束
-func BroadcastAuctionEnd(hub *ws.Hub, auctionID int64, winnerID int64, finalPrice float64) {
+func BroadcastAuctionEnd(hub *ws.Hub, auctionID int64, winnerID int64, finalPrice decimal.Decimal) {
 	msg := &ws.Message{
 		Type:      "auction_end",
 		Timestamp: time.Now().UnixMilli(),
