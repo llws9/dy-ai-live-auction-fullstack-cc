@@ -216,7 +216,7 @@
 
 **Commits**
 
-- `not_committed`
+- `d202838e feat(h5/theme): align standard pages with phase 2 tokens`
 
 **Verification Evidence**
 
@@ -256,4 +256,4 @@
 - `Task 1 done; committed by main agent`
 - `Task 2 done; committed by main agent`
 - `Task 3 done; committed by main agent`
-- `Task 4 done; pending commit by main agent`
+- `Task 4 done; committed by main agent`
