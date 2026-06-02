@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -15,6 +16,7 @@ type Config struct {
 	Database DatabaseConfig `yaml:"database"`
 	Redis    RedisConfig    `yaml:"redis"`
 	Services ServicesConfig `yaml:"services"`
+	LLM      LLMConfig      `yaml:"llm"`
 }
 
 // ServerConfig 服务器配置
@@ -45,6 +47,20 @@ type ServicesConfig struct {
 	AuctionServiceURL string `yaml:"auction_service_url"`
 }
 
+// LLMConfig LLM 总配置。
+type LLMConfig struct {
+	Provider  string       `yaml:"provider"`
+	TimeoutMs int          `yaml:"timeout_ms"`
+	Doubao    DoubaoConfig `yaml:"doubao"`
+}
+
+// DoubaoConfig 豆包/方舟配置。
+type DoubaoConfig struct {
+	BaseURL string `yaml:"base_url"`
+	APIKey  string `yaml:"api_key"`
+	Model   string `yaml:"model"`
+}
+
 // Load 从环境变量加载配置（本地开发）
 func Load() *Config {
 	return &Config{
@@ -67,6 +83,15 @@ func Load() *Config {
 		},
 		Services: ServicesConfig{
 			AuctionServiceURL: getEnvOrDefault("AUCTION_SERVICE_URL", "http://localhost:8082"),
+		},
+		LLM: LLMConfig{
+			Provider:  getEnvOrDefault("LLM_PROVIDER", "doubao"),
+			TimeoutMs: 8000,
+			Doubao: DoubaoConfig{
+				BaseURL: getEnvOrDefault("ARK_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"),
+				APIKey:  os.Getenv("ARK_API_KEY"),
+				Model:   getEnvOrDefault("ARK_MODEL", "doubao-1.5-vision-pro"),
+			},
 		},
 	}
 }
@@ -110,6 +135,15 @@ func LoadFromYAML(content string) (*Config, error) {
 		return nil, err
 	}
 	return cfg, nil
+}
+
+// ResolveLLMSecrets 把 yaml 中 ${ARK_API_KEY} 占位符或空 key 用环境变量替换。
+// Nacos/yaml 配置不写明文 key，由 K8s secret 通过环境变量注入容器。
+func ResolveLLMSecrets(cfg *Config) {
+	k := strings.TrimSpace(cfg.LLM.Doubao.APIKey)
+	if k == "" || (strings.HasPrefix(k, "${") && strings.HasSuffix(k, "}")) {
+		cfg.LLM.Doubao.APIKey = os.Getenv("ARK_API_KEY")
+	}
 }
 
 func getEnvOrDefault(key, defaultValue string) string {
