@@ -8,7 +8,7 @@
 | --- | --- |
 | Run ID | `2026-06-03-2026-06-01-fixed-price-m3-frontend` |
 | Topic | `2026-06-01-fixed-price-m3-frontend` |
-| Goal | `M3 Task1-7 H5 fixedPrice API/client hook/components + Live 页面挂载 + 管理端上下架页面` |
+| Goal | `M3 Task1-8 H5 fixedPrice API/client hook/components + Live 页面挂载 + 管理端上下架页面 + Prometheus metrics` |
 | Mode | `subagent-driven` |
 | Branch | `feat/fixed-price-m1` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
@@ -26,18 +26,18 @@
 | State Template | `docs/superpowers/sdd/state-template.md` | yes | yes |
 | Plan | `docs/superpowers/plans/2026-06-01-fixed-price-m3-frontend.md` | yes | yes |
 | Tasks | `docs/superpowers/plans/2026-06-01-fixed-price-m3-frontend.md` | yes | yes |
-| Scope | `M3 Task1 + Task2 H5 fixedPrice API client/useFixedPriceItems hook; M3 Task3 FixedPriceCard; M3 Task4 FixedPricePurchaseModal; M3 Task5 FixedPriceFlair; M3 Task6 mount fixed-price components into Live page; M3 Task7 admin fixed-price list/listing/offline page` | no | yes |
+| Scope | `M3 Task1 + Task2 H5 fixedPrice API client/useFixedPriceItems hook; M3 Task3 FixedPriceCard; M3 Task4 FixedPricePurchaseModal; M3 Task5 FixedPriceFlair; M3 Task6 mount fixed-price components into Live page; M3 Task7 admin fixed-price list/listing/offline page; M3 Task8 Prometheus metrics` | no | yes |
 
 ## Execution Summary
 
 | Metric | Value |
 | --- | --- |
-| Total Tasks | `7` |
-| Done | `7` |
+| Total Tasks | `8` |
+| Done | `8` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 18:02` |
+| Last Updated | `2026-06-03 18:11` |
 
 ## Task Matrix
 
@@ -50,6 +50,7 @@
 | `T005` | `M3 Task5 FixedPriceFlair component` | `done` | `main-agent` | `W4` | `M2 fixed_price_flair WS message ready` | `subscribe fixed_price_flair, render 4s right-to-left overlay, max 3 stacked` | `frontend/h5/src/components/FixedPriceFlair/index.tsx; frontend/h5/src/components/FixedPriceFlair/index.module.css; frontend/h5/src/components/FixedPriceFlair/__tests__/FixedPriceFlair.test.tsx` |
 | `T006` | `M3 Task6 mount fixed-price components into Live page` | `done` | `main-agent` | `W5` | `T001-T005` | `Live page mounts hook/card/modal/flair and wires purchase flow` | `frontend/h5/src/pages/Live/index.tsx; frontend/h5/src/pages/Live/Live.module.css; frontend/h5/src/pages/Live/__tests__/LiveRoom.test.tsx` |
 | `T007` | `M3 Task7 admin fixed-price listing/offline page` | `done` | `main-agent` | `W6` | `M1 fixed-price list/offline routes ready` | `Admin live-stream fixed-price list + listing form + offline action` | `frontend/admin/src/pages/LiveStreamFixedPrice/index.tsx; frontend/admin/src/pages/LiveStreamFixedPrice/__tests__/LiveStreamFixedPrice.test.tsx; frontend/admin/src/shared/api/index.ts; frontend/admin/src/App.tsx; frontend/admin/src/components/Layout.tsx; frontend/admin/jest.config.cjs; frontend/admin/jest.setup.ts; frontend/admin/package.json; frontend/admin/src/vite-env.d.ts` |
+| `T008` | `M3 Task8 Prometheus metrics` | `done` | `main-agent` | `W7` | `M1+M2 fixed-price purchase/ws ready` | `fixed-price purchase/ws/compensation/stock metrics` | `backend/auction/pkg/metrics/fixed_price_metrics.go; backend/auction/service/fixed_price.go; backend/auction/service/fixed_price_broadcaster.go; backend/auction/service/*metrics*_test.go; backend/auction/main.go` |
 
 ## Wave Plan
 
@@ -61,6 +62,7 @@
 | `W4` | `Execute FixedPriceFlair component with TDD evidence` | `T005` | `M2 fixed_price_flair WS message ready` | `FixedPriceFlair tests/lint/build pass and state updated` |
 | `W5` | `Mount fixed-price components into Live page with TDD evidence` | `T006` | `T001-T005 done` | `Live page integration test/lint/build pass and state updated` |
 | `W6` | `Execute admin fixed-price management page with TDD evidence` | `T007` | `M1 fixed-price list/offline routes ready` | `Admin page tests/lint/build pass and state updated` |
+| `W7` | `Add fixed-price Prometheus metrics with TDD evidence` | `T008` | `M1+M2 fixed-price purchase/ws ready` | `metrics tests and backend auction regression pass; state updated` |
 
 ## Task Records
 
@@ -415,6 +417,62 @@
 
 - First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
 
+### T008 - `M3 Task8 Prometheus metrics`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-03 18:05` |
+| Completed At | `2026-06-03 18:11` |
+| Branch | `feat/fixed-price-m1` |
+| Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
+| Depends On | `M1+M2 fixed-price purchase/ws ready` |
+| Parallel Group | `W7` |
+
+**TDD Plan**
+
+- Red: 新增 metrics 测试，覆盖 fixed-price metrics 单例注册、`Purchase` 成功/失败/补偿指标、WS publish 指标。
+- Expected failure: `auction-service/pkg/metrics` 缺少 `NewFixedPriceMetrics` / `FixedPriceMetrics`，`FixedPriceService` 与 `FixedPriceWSBroadcaster` 未暴露 metrics 注入与埋点。
+- Green: 在 `backend/auction/pkg/metrics` 增加 fixed-price metrics，接入 `metrics.InitRegistry()`，并在 service/broadcaster 中注入和记录指标。
+- Regression scope: `cd backend/auction && go test ./pkg/metrics ./service`；必要时追加 `go test ./...`。
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `go test ./pkg/metrics ./service -run 'TestFixedPriceMetrics|TestPurchase_EmitsMetrics|TestFixedPriceWSBroadcaster_EmitsPublishMetrics' -count=1 -v` | `RED attempt` | `FAIL: prometheus/testutil missing go.sum entry; test dependency issue, removed testutil usage` | `info` |
+| `go test ./pkg/metrics ./service -run 'TestFixedPriceMetrics|TestPurchase_EmitsMetrics|TestFixedPriceWSBroadcaster_EmitsPublishMetrics' -count=1 -v` | `RED: metrics implementation/injection missing` | `FAIL: undefined NewFixedPriceMetrics; SetMetrics undefined` | `pass` |
+| `go test ./pkg/metrics ./service -run 'TestFixedPriceMetrics|TestPurchase_EmitsMetrics|TestFixedPriceWSBroadcaster_EmitsPublishMetrics' -count=1 -v` | `GREEN after implementation` | `service PASS; pkg/metrics FAIL due histogram test using Observer.Write` | `info` |
+| `gofmt -w pkg/metrics/fixed_price_metrics_test.go && go test ./pkg/metrics ./service -run 'TestFixedPriceMetrics|TestPurchase_EmitsMetrics|TestFixedPriceWSBroadcaster_EmitsPublishMetrics' -count=1 -v` | `Target RED tests pass` | `PASS: pkg/metrics and service target tests` | `pass` |
+| `go test ./pkg/metrics ./service -count=1` | `Affected package regression pass` | `PASS: auction-service/pkg/metrics, auction-service/service` | `pass` |
+| `go test ./... -count=1` | `backend/auction full regression pass` | `PASS: all backend/auction packages` | `pass` |
+| `GetDiagnostics` | `No new diagnostics in edited worktree files` | `info: diagnostics reported unrelated main-worktree hints/warnings, not edited isolated worktree files` | `info` |
+
+**Modified Files**
+
+- `docs/superpowers/sdd/runs/2026-06-03-2026-06-01-fixed-price-m3-frontend-state.md`
+- `backend/auction/pkg/metrics/fixed_price_metrics.go`
+- `backend/auction/pkg/metrics/fixed_price_metrics_test.go`
+- `backend/auction/pkg/metrics/auction_metrics.go`
+- `backend/auction/service/fixed_price.go`
+- `backend/auction/service/fixed_price_metrics_test.go`
+- `backend/auction/service/fixed_price_broadcaster.go`
+- `backend/auction/service/fixed_price_broadcaster_metrics_test.go`
+- `backend/auction/main.go`
+
+**Risks**
+
+- 按现有服务架构应放入 `backend/auction/pkg/metrics` 并由 `metrics.InitRegistry()` 统一注册；plan 中 `backend/auction/metrics/` 路径会形成未接入主程序的并行包，因此不采用。
+- `fixed_price_stock_remaining{item_id}` 按 plan 保留 item 维度；该维度随商品增长，应在 Grafana/Prometheus 侧控制保留周期或采样范围。
+- 当前 `/metrics` 暴露由已有 `prometheus.DefaultGatherer.Gather()` 逻辑负责，本任务只接入 collectors 与业务记录点，未改 HTTP 暴露格式。
+
+**Handoff**
+
+- Completion summary: `M3 Task8 Prometheus metrics done; purchase result/latency, stock remaining, WS publish, compensation metrics implemented and verified`
+- Remaining work: `M3 Task9 Grafana dashboard / alert rules, M3 Task10 E2E smoke if continuing plan`
+- First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
+
 ## Final Review Checklist
 
 - [x] State file was created before subagent dispatch.
@@ -435,3 +493,4 @@
 - `T005 done`: H5 FixedPriceFlair component implemented with TDD evidence.
 - `T006 done`: H5 Live page mounts fixed-price cards, purchase modal, and flair with TDD evidence.
 - `T007 done`: Admin LiveStreamFixedPrice page implemented with list/listing/offline TDD evidence; API aligned to existing Gateway fixed-price routes.
+- `T008 done`: Backend fixed-price Prometheus metrics implemented with TDD evidence; purchase result/latency, stock remaining, WS publish, and compensation metrics verified.

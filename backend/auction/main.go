@@ -189,6 +189,7 @@ func main() {
 	fixedPriceStock := service.NewStockGuard(dao.GetRedis())
 	fixedPriceIdem := service.NewIdemStore(dao.GetRedis())
 	fixedPriceBroadcaster := service.NewFixedPriceWSBroadcaster(hub, nil)
+	fixedPriceBroadcaster.SetMetrics(metrics.GetFixedPriceMetrics())
 	fixedPriceService := service.NewFixedPriceService(
 		db,
 		fixedPriceItemDAO,
@@ -201,6 +202,7 @@ func main() {
 		nil, // 生产用 realClock
 		fixedPriceBroadcaster,
 	)
+	fixedPriceService.SetMetrics(metrics.GetFixedPriceMetrics())
 	fixedPriceHandler := handler.NewFixedPriceHandler(fixedPriceService, userBalanceDAO)
 
 	// 初始化认证 Handler

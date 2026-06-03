@@ -8,6 +8,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"auction-service/model"
+	"auction-service/pkg/metrics"
 	"auction-service/websocket"
 )
 
@@ -42,6 +43,7 @@ type FixedPriceWSBroadcaster struct {
 
 	mu      sync.Mutex
 	pending map[int64]*fixedPriceStockPending
+	metrics *metrics.FixedPriceMetrics
 }
 
 func NewFixedPriceWSBroadcaster(hub *websocket.Hub, clk Clock) *FixedPriceWSBroadcaster {
@@ -53,6 +55,10 @@ func NewFixedPriceWSBroadcaster(hub *websocket.Hub, clk Clock) *FixedPriceWSBroa
 		clk:     clk,
 		pending: make(map[int64]*fixedPriceStockPending),
 	}
+}
+
+func (b *FixedPriceWSBroadcaster) SetMetrics(m *metrics.FixedPriceMetrics) {
+	b.metrics = m
 }
 
 func (b *FixedPriceWSBroadcaster) Listed(_ context.Context, item *model.FixedPriceItem) {
@@ -138,6 +144,9 @@ func (b *FixedPriceWSBroadcaster) flushStock(liveStreamID, itemID int64, remaini
 }
 
 func (b *FixedPriceWSBroadcaster) tryBroadcast(liveStreamID int64, msg *websocket.Message) {
+	if b.metrics != nil && msg != nil {
+		b.metrics.RecordWSPublish(string(msg.Type))
+	}
 	_ = b.hub.TryBroadcastToRoom(liveStreamID, msg)
 }
 

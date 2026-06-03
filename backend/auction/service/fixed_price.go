@@ -10,6 +10,7 @@ import (
 
 	"auction-service/dao"
 	"auction-service/model"
+	"auction-service/pkg/metrics"
 )
 
 // 一口价业务错误。handler 层负责映射为对外错误码与 HTTP 状态。
@@ -71,6 +72,7 @@ type FixedPriceService struct {
 	products    ProductChecker
 	clk         Clock
 	broadcaster FixedPriceBroadcaster
+	metrics     *metrics.FixedPriceMetrics
 }
 
 // NewFixedPriceService 装配一口价 service。clk 传 nil 时使用 realClock。
@@ -104,6 +106,10 @@ func NewFixedPriceService(
 		clk:         clk,
 		broadcaster: broadcaster,
 	}
+}
+
+func (s *FixedPriceService) SetMetrics(m *metrics.FixedPriceMetrics) {
+	s.metrics = m
 }
 
 // ListItemReq 上架请求。
@@ -154,8 +160,10 @@ func (s *FixedPriceService) ListItem(ctx context.Context, r ListItemReq) (*model
 	}
 	if err := s.stock.Init(ctx, item.ID, r.TotalStock); err != nil {
 		_ = s.items.UpdateStatus(ctx, item.ID, model.FixedPriceStatusOffline)
+		s.recordCompensation("stock_init_failed")
 		return nil, err
 	}
+	s.recordStockRemaining(item.ID, r.TotalStock)
 	s.broadcaster.Listed(ctx, item)
 	return item, nil
 }
@@ -220,6 +228,13 @@ func (s *FixedPriceService) ListByLiveStream(ctx context.Context, r ListLiveItem
 // auction 单库单事务（扣余额 + 写购买记录）→ 失败 Saga 补偿（回补 Redis 库存）→
 // 成功后持久化幂等键 → 末件标记售罄。
 func (s *FixedPriceService) Purchase(ctx context.Context, r PurchaseReq) (*PurchaseResult, error) {
+	start := time.Now()
+	result := "other"
+	defer func() {
+		s.recordPurchase(result)
+		s.recordPurchaseLatency("total", time.Since(start))
+	}()
+
 	if !s.idem.IsValidKey(r.IdemKey) {
 		return nil, ErrInvalidParam
 	}
@@ -233,6 +248,7 @@ func (s *FixedPriceService) Purchase(ctx context.Context, r PurchaseReq) (*Purch
 			return nil, err
 		}
 		rem, _ := s.stock.Remaining(ctx, r.ItemID)
+		result = "duplicate"
 		return &PurchaseResult{
 			PurchaseID: purchaseID, ItemID: r.ItemID, Price: item.Price,
 			RemainingStock: rem, Replayed: true,
@@ -248,13 +264,16 @@ func (s *FixedPriceService) Purchase(ctx context.Context, r PurchaseReq) (*Purch
 	case model.FixedPriceStatusOnSale:
 		// 继续
 	case model.FixedPriceStatusSoldOut:
+		result = "sold_out"
 		return nil, ErrSoldOut
 	default:
 		return nil, ErrNotOnSale
 	}
 
 	// 3. Lua 原子预扣库存。
+	luaStart := time.Now()
 	res, err := s.stock.TryAcquire(ctx, r.ItemID, r.UserID)
+	s.recordPurchaseLatency("lua", time.Since(luaStart))
 	if err != nil {
 		return nil, err
 	}
@@ -262,13 +281,16 @@ func (s *FixedPriceService) Purchase(ctx context.Context, r PurchaseReq) (*Purch
 	case StockResultUninitialized:
 		return nil, ErrNotOnSale
 	case StockResultSoldOut:
+		result = "sold_out"
 		return nil, ErrSoldOut
 	case StockResultAlreadyBought:
+		result = "duplicate"
 		return s.replayExistingPurchase(ctx, item, r.UserID, r.IdemKey)
 	}
 	rem, err := s.stock.Remaining(ctx, r.ItemID)
 	if err != nil {
 		_ = s.stock.Compensate(ctx, r.ItemID, r.UserID)
+		s.recordCompensation("stock_remaining_failed")
 		return nil, err
 	}
 
@@ -276,6 +298,7 @@ func (s *FixedPriceService) Purchase(ctx context.Context, r PurchaseReq) (*Purch
 	purchase := &model.FixedPricePurchase{
 		ItemID: item.ID, UserID: r.UserID, IdempotencyKey: r.IdemKey, Price: item.Price,
 	}
+	dbStart := time.Now()
 	txErr := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		affected, e := s.balance.DeductWithTx(ctx, tx, r.UserID, item.Price)
 		if e != nil {
@@ -289,13 +312,18 @@ func (s *FixedPriceService) Purchase(ctx context.Context, r PurchaseReq) (*Purch
 		}
 		return nil
 	})
+	s.recordPurchaseLatency("db", time.Since(dbStart))
 
 	// 5. 事务失败 → Saga 补偿，回补 Redis 库存与 bought 集合。
 	if txErr != nil {
 		_ = s.stock.Compensate(ctx, r.ItemID, r.UserID)
 		if errors.Is(txErr, dao.ErrAlreadyBought) {
+			result = "duplicate"
+			s.recordCompensation("duplicate")
 			return s.replayExistingPurchase(ctx, item, r.UserID, r.IdemKey)
 		}
+		result = fixedPricePurchaseResult(txErr)
+		s.recordCompensation(result)
 		return nil, txErr
 	}
 
@@ -304,6 +332,7 @@ func (s *FixedPriceService) Purchase(ctx context.Context, r PurchaseReq) (*Purch
 	_ = s.items.DecrementRemainingStock(ctx, r.ItemID, rem)
 
 	// 7. 实时广播。库存 DB 兜底写与广播均为 best-effort，不影响核心购买结果。
+	s.recordStockRemaining(item.ID, rem)
 	s.broadcaster.StockChanged(ctx, item.LiveStreamID, item.ID, rem)
 	s.broadcaster.Flair(ctx, item.LiveStreamID, item.ID, r.UserID, item.Price)
 	if rem == 0 {
@@ -312,10 +341,48 @@ func (s *FixedPriceService) Purchase(ctx context.Context, r PurchaseReq) (*Purch
 		}
 	}
 
+	result = "success"
 	return &PurchaseResult{
 		PurchaseID: purchase.ID, ItemID: r.ItemID, Price: item.Price,
 		RemainingStock: rem, Replayed: false,
 	}, nil
+}
+
+func fixedPricePurchaseResult(err error) string {
+	switch {
+	case errors.Is(err, ErrSoldOut):
+		return "sold_out"
+	case errors.Is(err, ErrInsufficient):
+		return "insufficient_balance"
+	case errors.Is(err, ErrAlreadyBought), errors.Is(err, dao.ErrAlreadyBought):
+		return "duplicate"
+	default:
+		return "other"
+	}
+}
+
+func (s *FixedPriceService) recordPurchase(result string) {
+	if s.metrics != nil {
+		s.metrics.RecordPurchase(result)
+	}
+}
+
+func (s *FixedPriceService) recordPurchaseLatency(stage string, d time.Duration) {
+	if s.metrics != nil {
+		s.metrics.RecordPurchaseLatency(stage, d)
+	}
+}
+
+func (s *FixedPriceService) recordStockRemaining(itemID int64, remaining int) {
+	if s.metrics != nil {
+		s.metrics.SetStockRemaining(itemID, remaining)
+	}
+}
+
+func (s *FixedPriceService) recordCompensation(reason string) {
+	if s.metrics != nil {
+		s.metrics.RecordCompensation(reason)
+	}
 }
 
 func (s *FixedPriceService) replayExistingPurchase(ctx context.Context, item *model.FixedPriceItem, userID int64, idemKey string) (*PurchaseResult, error) {
