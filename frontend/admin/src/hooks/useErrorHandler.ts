@@ -34,11 +34,9 @@ export function useErrorHandler(options: UseErrorHandlerOptions = {}) {
 
     // 401 错误自动跳转登录页
     if (redirectToLogin && (error.status === 401 || errorMsg.action === 'redirect_login')) {
-      localStorage.removeItem('admin_auth_token');
-      localStorage.removeItem('admin_auth_user');
       localStorage.removeItem('token');
       localStorage.removeItem('userInfo');
-      navigate('/admin-login', { replace: true });
+      navigate('/login');
     }
 
     return errorMsg;

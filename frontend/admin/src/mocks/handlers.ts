@@ -87,6 +87,24 @@ export const handlers = [
     });
   }),
 
+  // 兼容旧路径
+  http.post('/api/v1/admin/login', async () => {
+    await delay(100);
+    return HttpResponse.json({
+      code: 0,
+      message: 'success',
+      data: {
+        token: 'mock-admin-jwt-token',
+        user: {
+          id: 1,
+          name: 'Admin',
+          email: 'admin@example.com',
+          role: 2,
+        },
+      },
+    });
+  }),
+
   // 获取统计概览数据 (Dashboard 使用)
   http.get('/api/v1/statistics/overview', async () => {
     await delay(100);
