@@ -116,7 +116,7 @@ async function request<T>(
 ): Promise<T> {
   const { showError = true, timeout = REQUEST_TIMEOUT } = config || {};
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('admin_auth_token') || localStorage.getItem('token');
   const url = `${API_BASE_URL}${path}`;
 
   try {

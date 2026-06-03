@@ -4,10 +4,11 @@ import { Gavel, Lock, ArrowRight, Mail, Phone } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { authApi, LoginRequest } from "@/shared/auth"
+import { authApi, LoginRequest, useAuth } from "@/shared/auth"
 
 export default function Login() {
   const navigate = useNavigate()
+  const { login } = useAuth()
   const [loading, setLoading] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [loginType, setLoginType] = React.useState<'email' | 'phone'>('email')
@@ -35,9 +36,7 @@ export default function Login() {
 
       const response = await authApi.login(loginData)
 
-      // 存储token和用户信息（使用 AuthContext 期望的 key）
-      localStorage.setItem('admin_auth_token', response.token)
-      localStorage.setItem('admin_auth_user', JSON.stringify(response.user))
+      login(response.token, response.user)
 
       // 跳转到首页
       navigate("/dashboard")
