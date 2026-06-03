@@ -30,8 +30,8 @@ services:
 
   product:
     build:
-      context: ./backend/product
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: product/Dockerfile
     image: dy-ai-live-auction-product:demo
     environment:
       - PRODUCT_SERVICE_PORT=:8081

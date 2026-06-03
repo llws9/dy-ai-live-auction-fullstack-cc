@@ -5,10 +5,15 @@ ENV GOPROXY=https://goproxy.cn,direct \
     CGO_ENABLED=0 \
     GOOS=linux
 
-COPY go.mod go.sum ./
+COPY product/go.mod product/go.sum ./product/
+COPY shared/llm/go.mod ./shared/llm/
+WORKDIR /src/product
 RUN go mod download
 
-COPY . .
+WORKDIR /src
+COPY product ./product
+COPY shared/llm ./shared/llm
+WORKDIR /src/product
 RUN go build -o /out/product-service .
 
 FROM docker.m.daocloud.io/library/alpine:3.19
