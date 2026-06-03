@@ -89,5 +89,6 @@ jobs:
       - name: Build Admin
         run: |
           npm ci --include=optional
+          npm install @tailwindcss/oxide-linux-x64-gnu@4.3.0 --no-save
           npm run build
         working-directory: frontend/admin
