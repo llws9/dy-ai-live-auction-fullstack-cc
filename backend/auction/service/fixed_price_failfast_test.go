@@ -79,3 +79,25 @@ func TestPurchase_RedisDown_FailFast(t *testing.T) {
 		Where("item_id = ?", item.ID).Count(&cnt).Error)
 	assert.Equal(t, int64(0), cnt, "fail-fast 路径不得写购买记录")
 }
+
+func TestListItem_RedisInitFailed_DoesNotLeaveOnSaleItem(t *testing.T) {
+	svc, mr, db := setupFailFastService(t)
+	ctx := context.Background()
+
+	mr.Close()
+	_, err := svc.ListItem(ctx, ListItemReq{
+		LiveStreamID: 1001,
+		ProductID:    5001,
+		CreatorID:    100,
+		Price:        decimal.NewFromInt(99),
+		TotalStock:   5,
+		MaxPerUser:   1,
+	})
+	require.Error(t, err)
+
+	var cnt int64
+	require.NoError(t, db.WithContext(ctx).Model(&model.FixedPriceItem{}).
+		Where("status = ?", model.FixedPriceStatusOnSale).
+		Count(&cnt).Error)
+	assert.Equal(t, int64(0), cnt, "Redis 初始化失败时不得留下对外可售的 DB item")
+}

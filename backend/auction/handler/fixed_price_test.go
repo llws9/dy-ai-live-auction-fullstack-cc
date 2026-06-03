@@ -32,6 +32,10 @@ type fakeFixedPriceUsecase struct {
 	listErr    error
 	listReqs   []service.ListItemReq
 
+	liveItems    []*service.LiveFixedPriceItem
+	liveItemsErr error
+	liveItemReqs []service.ListLiveItemsReq
+
 	offlineErr   error
 	offlineCalls []int64
 
@@ -53,6 +57,11 @@ func (f *fakeFixedPriceUsecase) Purchase(_ context.Context, r service.PurchaseRe
 func (f *fakeFixedPriceUsecase) ListItem(_ context.Context, r service.ListItemReq) (*model.FixedPriceItem, error) {
 	f.listReqs = append(f.listReqs, r)
 	return f.listResult, f.listErr
+}
+
+func (f *fakeFixedPriceUsecase) ListByLiveStream(_ context.Context, r service.ListLiveItemsReq) ([]*service.LiveFixedPriceItem, error) {
+	f.liveItemReqs = append(f.liveItemReqs, r)
+	return f.liveItems, f.liveItemsErr
 }
 
 func (f *fakeFixedPriceUsecase) Offline(_ context.Context, itemID, _ int64) error {
@@ -317,6 +326,30 @@ func TestDetailHandler_NotFound_404(t *testing.T) {
 	w := ut.PerformRequest(eng, http.MethodGet, "/api/v1/fixed-price/items/9999", nil)
 	resp := w.Result()
 	assert.Equal(t, 404, resp.StatusCode())
+}
+
+func TestLiveStreamFixedPriceListHandler_Public(t *testing.T) {
+	uc := &fakeFixedPriceUsecase{liveItems: []*service.LiveFixedPriceItem{{
+		Item: &model.FixedPriceItem{
+			ID: 7001, LiveStreamID: 1001, ProductID: 5001,
+			Price: decimal.NewFromInt(99), TotalStock: 100, RemainingStock: 87,
+			MaxPerUser: 1, Status: model.FixedPriceStatusOnSale,
+		},
+		RemainingStock: 87,
+	}}}
+	eng := newFixedPriceTestServer(uc, &fakeFPBalanceProvider{})
+
+	w := ut.PerformRequest(eng, http.MethodGet, "/api/v1/live-streams/1001/fixed-price/items", nil)
+	resp := w.Result()
+	require.Equal(t, 200, resp.StatusCode())
+	var out map[string][]map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body(), &out))
+	require.Len(t, out["items"], 1)
+	assert.Equal(t, float64(7001), out["items"][0]["id"])
+	assert.Equal(t, "99.00", out["items"][0]["price"])
+	assert.Equal(t, float64(87), out["items"][0]["remaining_stock"])
+	require.Len(t, uc.liveItemReqs, 1)
+	assert.Equal(t, int64(1001), uc.liveItemReqs[0].LiveStreamID)
 }
 
 func TestMyPurchaseHandler_Bought(t *testing.T) {

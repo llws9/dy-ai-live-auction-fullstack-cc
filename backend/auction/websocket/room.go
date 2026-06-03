@@ -9,7 +9,7 @@ import (
 type Room struct {
 	AuctionID int64
 
-	clients    map[string]*Client
+	clients     map[string]*Client
 	clientsLock sync.RWMutex
 
 	Register   chan *Client
@@ -84,6 +84,9 @@ func (r *Room) broadcastMessage(message *Message) {
 	defer r.clientsLock.RUnlock()
 
 	for _, client := range r.clients {
+		if client.IsClosed() {
+			continue
+		}
 		select {
 		case client.Send <- message:
 		default:

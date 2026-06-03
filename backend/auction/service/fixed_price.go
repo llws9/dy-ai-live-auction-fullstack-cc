@@ -28,6 +28,11 @@ const (
 	cleanupDelay  = 5 * time.Second
 )
 
+var (
+	minFixedPriceAmount = decimal.NewFromInt(1).Shift(-2)
+	maxFixedPriceAmount = decimal.NewFromInt(9999999999).Shift(-2)
+)
+
 // StreamOwnerChecker 校验某用户是否为指定直播间的主播（创建者）。
 type StreamOwnerChecker interface {
 	IsOwner(ctx context.Context, liveStreamID, userID int64) (bool, error)
@@ -113,7 +118,7 @@ type ListItemReq struct {
 
 // ListItem 上架一口价商品：校验参数、主播归属、商品存在，落库并初始化 Redis 库存。
 func (s *FixedPriceService) ListItem(ctx context.Context, r ListItemReq) (*model.FixedPriceItem, error) {
-	if r.Price.LessThanOrEqual(decimal.Zero) || r.TotalStock <= 0 || r.TotalStock > maxTotalStock {
+	if !validFixedPriceAmount(r.Price) || r.TotalStock <= 0 || r.TotalStock > maxTotalStock {
 		return nil, ErrInvalidParam
 	}
 	isOwner, err := s.streams.IsOwner(ctx, r.LiveStreamID, r.CreatorID)
@@ -148,10 +153,18 @@ func (s *FixedPriceService) ListItem(ctx context.Context, r ListItemReq) (*model
 		return nil, err
 	}
 	if err := s.stock.Init(ctx, item.ID, r.TotalStock); err != nil {
+		_ = s.items.UpdateStatus(ctx, item.ID, model.FixedPriceStatusOffline)
 		return nil, err
 	}
 	s.broadcaster.Listed(ctx, item)
 	return item, nil
+}
+
+func validFixedPriceAmount(price decimal.Decimal) bool {
+	if price.LessThan(minFixedPriceAmount) || price.GreaterThan(maxFixedPriceAmount) {
+		return false
+	}
+	return price.Equal(price.Round(2))
 }
 
 // PurchaseReq 抢购请求。IdemKey 必须为 UUID v4 形态。
@@ -168,6 +181,37 @@ type PurchaseResult struct {
 	Price          decimal.Decimal
 	RemainingStock int
 	Replayed       bool
+}
+
+// ListLiveItemsReq 查询直播间一口价商品列表。
+type ListLiveItemsReq struct {
+	LiveStreamID int64
+}
+
+// LiveFixedPriceItem 是公开直播间一口价列表的单项结果。
+type LiveFixedPriceItem struct {
+	Item           *model.FixedPriceItem
+	RemainingStock int
+}
+
+// ListByLiveStream 返回指定直播间的在售一口价商品，库存优先使用 Redis 权威值。
+func (s *FixedPriceService) ListByLiveStream(ctx context.Context, r ListLiveItemsReq) ([]*LiveFixedPriceItem, error) {
+	if r.LiveStreamID <= 0 {
+		return nil, ErrInvalidParam
+	}
+	items, err := s.items.ListByLiveStreamID(ctx, r.LiveStreamID, []model.FixedPriceStatus{model.FixedPriceStatusOnSale})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*LiveFixedPriceItem, 0, len(items))
+	for _, item := range items {
+		remaining := item.RemainingStock
+		if live, e := s.stock.Remaining(ctx, item.ID); e == nil {
+			remaining = live
+		}
+		out = append(out, &LiveFixedPriceItem{Item: item, RemainingStock: remaining})
+	}
+	return out, nil
 }
 
 // Purchase 抢购一口价商品（方案③ purchase 自成闭环）。

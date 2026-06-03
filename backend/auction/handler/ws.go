@@ -139,13 +139,14 @@ func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.Respons
 
 			switch msgType {
 			case "ping":
-				pingMsg := &ws.Message{
+				select {
+				case client.Send <- &ws.Message{
 					Type:      "pong",
 					Timestamp: time.Now().UnixMilli(),
 					Data:      "pong",
+				}:
+				default:
 				}
-				data, _ := json.Marshal(pingMsg)
-				conn.WriteMessage(websocket.TextMessage, data)
 			}
 		}
 	}()

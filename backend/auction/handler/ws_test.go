@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -49,4 +50,11 @@ func TestHandleWebSocket_DeliversHubBroadcasts(t *testing.T) {
 	_, msg, err := conn.ReadMessage()
 	require.NoError(t, err)
 	assert.Contains(t, string(msg), `"type":"fixed_price_listed"`)
+}
+
+func TestHandleWebSocket_DoesNotWriteConnOutsideWritePump(t *testing.T) {
+	src, err := os.ReadFile("ws.go")
+	require.NoError(t, err)
+	assert.NotContains(t, string(src), "conn.WriteMessage",
+		"websocket writes must go through client.Send/WritePump to avoid concurrent writers")
 }

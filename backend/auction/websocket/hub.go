@@ -206,6 +206,10 @@ func (h *Hub) BroadcastToUserRoom(userID int64, message *Message) {
 	// 尝试发送到所有客户端，记录发送失败的客户端
 	var blockedClients []*Client
 	for client := range clients {
+		if client.IsClosed() {
+			blockedClients = append(blockedClients, client)
+			continue
+		}
 		select {
 		case client.Send <- message:
 			// 发送成功
@@ -225,7 +229,7 @@ func (h *Hub) BroadcastToUserRoom(userID int64, message *Message) {
 	h.userRoomsMu.Lock()
 	for _, client := range blockedClients {
 		if h.UserRooms[userID] != nil {
-			close(client.Send)
+			client.Close()
 			delete(h.UserRooms[userID], client)
 		}
 	}

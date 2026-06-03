@@ -39,6 +39,21 @@ func TestFixedPriceService_List_RejectsInvalidPrice(t *testing.T) {
 	assert.ErrorIs(t, err, ErrInvalidParam)
 }
 
+func TestFixedPriceService_List_RejectsPriceOutsideTwoCentScale(t *testing.T) {
+	svc := setupFixedPriceService(t)
+	tests := []decimal.Decimal{
+		decimal.NewFromFloat(0.001),
+		decimal.NewFromFloat(99.999),
+	}
+	for _, price := range tests {
+		_, err := svc.ListItem(context.Background(), ListItemReq{
+			LiveStreamID: 1, ProductID: 1, CreatorID: 1,
+			Price: price, TotalStock: 10,
+		})
+		assert.ErrorIs(t, err, ErrInvalidParam)
+	}
+}
+
 func TestFixedPriceService_List_RejectsExcessiveStock(t *testing.T) {
 	svc := setupFixedPriceService(t)
 	_, err := svc.ListItem(context.Background(), ListItemReq{
@@ -74,6 +89,21 @@ func TestFixedPriceService_List_RejectsMissingProduct(t *testing.T) {
 		Price: decimal.NewFromInt(99), TotalStock: 10,
 	})
 	assert.ErrorIs(t, err, ErrProductNotFound)
+}
+
+func TestFixedPriceService_ListByLiveStream_ReturnsOnSaleItemsWithRedisStock(t *testing.T) {
+	svc := setupFixedPriceService(t)
+	ctx := context.Background()
+	item := setupItem(t, svc, 5, decimal.NewFromInt(99))
+	res, err := svc.stock.TryAcquire(ctx, item.ID, 100)
+	require.NoError(t, err)
+	require.Equal(t, StockResultSuccess, res)
+
+	items, err := svc.ListByLiveStream(ctx, ListLiveItemsReq{LiveStreamID: item.LiveStreamID})
+	require.NoError(t, err)
+	require.Len(t, items, 1)
+	assert.Equal(t, item.ID, items[0].Item.ID)
+	assert.Equal(t, 4, items[0].RemainingStock)
 }
 
 // ---- T7 抢购 ----
