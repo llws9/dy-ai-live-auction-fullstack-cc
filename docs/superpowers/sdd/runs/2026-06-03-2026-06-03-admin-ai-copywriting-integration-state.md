@@ -299,7 +299,7 @@
 
 | API / Field | Change | Frontend Impact | Backend Impact | Docs Updated |
 | --- | --- | --- | --- | --- |
-| `POST /api/v1/products/ai/copywriting` | `Admin frontend adds client wrapper and UI call` | `New button and prefill flow` | `none` | `yes` |
+| `POST /api/v1/products/ai/copywriting` | `Admin frontend handles raw CopywritingResponse and wrapped ApiResponse` | `New button and prefill flow works with real backend shape` | `none` | `yes` |
 
 ## Test Commands
 
@@ -308,8 +308,8 @@
 | Frontend Admin Helpers | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/goodsEditAi.test.ts` | yes | `PASS: included in T004 focused run` | `T001,T004` |
 | Frontend Admin API | `cd frontend/admin && npm test -- --runTestsByPath src/shared/api/__tests__/product.test.ts` | yes | `PASS: 1 test passed` | `T002` |
 | Frontend Admin GoodsEdit | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/GoodsEdit.ai.test.tsx` | yes | `PASS: 3 tests passed` | `T003` |
-| Frontend Admin Focused | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/goodsEditAi.test.ts src/shared/api/__tests__/product.test.ts src/pages-new/__tests__/GoodsEdit.ai.test.tsx` | yes | `PASS: 3 suites, 9 tests passed` | `T004` |
-| Frontend Admin Build | `cd frontend/admin && npm run build` | yes | `PASS: tsc && vite build completed` | `T004` |
+| Frontend Admin Focused | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/goodsEditAi.test.ts src/shared/api/__tests__/product.test.ts src/pages-new/__tests__/GoodsEdit.ai.test.tsx` | yes | `PASS: 3 suites, 9 tests passed after review fix` | `T004,review-fix` |
+| Frontend Admin Build | `cd frontend/admin && npm run build` | yes | `PASS: tsc && vite build completed after review fix` | `T004,review-fix` |
 | Frontend Admin Full Tests | `cd frontend/admin && npm test -- --runInBand` | no | `not_run` | `Run if runtime is acceptable; record unrelated failures` |
 
 ## Final Review Checklist
@@ -343,3 +343,42 @@
 **建议下一步**
 
 - `发起 review 或提交 PR`
+
+## Review Fixes
+
+### RF001 - `Handle raw copywriting response contract`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Source | `code-review 77501bd3..cc688506` |
+| Severity | `P1` |
+| Branch | `feat/admin-ai-copywriting-integration` |
+| Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-ai-copywriting-integration` |
+
+**Issue**
+
+- `request.ts` always returned `data.data`, but the real backend copywriting success response is a raw `CopywritingResponse`.
+
+**Fix**
+
+- `request.ts` now returns `data.data` only when the JSON object owns a `data` field; otherwise it returns the raw JSON as `T`.
+- `product.test.ts` now uses a real fetch-level raw response contract test instead of mocking `post()`.
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `cd frontend/admin && npm test -- --runTestsByPath src/shared/api/__tests__/product.test.ts` | `RED before fix: result undefined for raw response` | `FAIL: Cannot read properties of undefined (reading 'name')` | `passed_expected_red` |
+| `cd frontend/admin && npm test -- --runTestsByPath src/shared/api/__tests__/product.test.ts src/pages-new/__tests__/GoodsEdit.ai.test.tsx src/pages-new/__tests__/goodsEditAi.test.ts` | `focused tests pass` | `PASS: 3 suites, 9 tests passed` | `passed` |
+| `cd frontend/admin && npm run build` | `Admin build passes` | `PASS: tsc && vite build completed` | `passed` |
+| `git diff --check -- frontend/admin/src/shared/api/request.ts frontend/admin/src/shared/api/__tests__/product.test.ts` | `no whitespace errors` | `exit 0` | `passed` |
+
+**Modified Files**
+
+- `frontend/admin/src/shared/api/request.ts`
+- `frontend/admin/src/shared/api/__tests__/product.test.ts`
+
+**Risks / Blockers**
+
+- `none known`

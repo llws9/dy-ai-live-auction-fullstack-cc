@@ -1,26 +1,25 @@
-import { post } from '../request';
 import { productApi } from '../product';
-
-jest.mock('../request', () => ({
-  get: jest.fn(),
-  post: jest.fn(),
-  put: jest.fn(),
-  del: jest.fn(),
-  buildQuery: jest.fn(() => ''),
-}));
 
 describe('productApi.generateCopywriting', () => {
   beforeEach(() => {
+    localStorage.clear();
     jest.clearAllMocks();
   });
 
-  it('posts to the Gateway AI copywriting route with a 70s timeout', async () => {
-    (post as jest.Mock).mockResolvedValue({
-      name: 'AI 标题',
-      description: 'AI 描述',
-      selling_points: ['卖点一'],
-      suggested_start_price: '199.00',
+  it('posts to the Gateway AI copywriting route and accepts the backend raw response shape', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: {
+        get: (name: string) => (name.toLowerCase() === 'content-type' ? 'application/json' : null),
+      },
+      json: async () => ({
+        name: 'AI 标题',
+        description: 'AI 描述',
+        selling_points: ['卖点一'],
+        suggested_start_price: '199.00',
+      }),
     });
+    global.fetch = fetchMock;
 
     const payload = {
       images: ['https://cdn.example.com/product.jpg'],
@@ -29,7 +28,13 @@ describe('productApi.generateCopywriting', () => {
 
     const result = await productApi.generateCopywriting(payload);
 
-    expect(post).toHaveBeenCalledWith('/products/ai/copywriting', payload, { timeout: 70000 });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/products/ai/copywriting',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
+    );
     expect(result.name).toBe('AI 标题');
   });
 });
