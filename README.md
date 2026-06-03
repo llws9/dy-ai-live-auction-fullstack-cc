@@ -50,7 +50,9 @@ dy-ai-live-auction-fullstack-cc/
 ├── scripts/
 │   ├── init.sql          # 数据库初始化
 │   ├── nacos-init.sql    # Nacos 初始化
-│   └── start-all.sh      # 启动脚本
+│   ├── start-all.sh      # Docker Compose 统一启动脚本
+│   ├── start-local-backend.sh # 本地 Go 后端启动脚本
+│   └── start-frontend.sh # 本地前端启动脚本
 ├── docker-compose.yml    # Docker 编排
 └── Makefile              # 构建命令
 ```
@@ -70,21 +72,83 @@ docker-compose ps
 docker-compose logs -f
 ```
 
-### 本地开发
+### 本地脚本启动（推荐用于开发联调）
+
+本地脚本启动会复用 Docker 中的基础设施，仅把 Go 后端和前端跑在宿主机，便于调试、打断点和查看日志。
+
+#### 1. 启动基础设施
 
 ```bash
-# 1. 启动基础设施
-docker-compose up -d mysql redis nacos
-
-# 2. 启动后端服务
-cd backend/gateway && go run main.go &
-cd backend/product && go run main.go &
-cd backend/auction && go run main.go &
-
-# 3. 启动前端
-cd frontend/h5 && npm run dev &
-cd frontend/admin && npm run dev &
+# 后端本地脚本依赖 MySQL、Redis、RabbitMQ 三个端口可用
+INTERNAL_API_TOKEN=dev docker compose up -d mysql redis rabbitmq
 ```
+
+说明：
+- MySQL 默认连接：`127.0.0.1:3306`，用户 `root`，密码 `root`，数据库 `auction`。
+- Redis 默认连接：`127.0.0.1:6379`。
+- RabbitMQ 默认连接：`127.0.0.1:5672`，用户 `guest`，密码 `guest`。
+- 本地后端脚本会通过环境变量禁用 Nacos 在线依赖，不需要启动 Nacos。
+
+#### 2. 启动本地后端
+
+```bash
+# 启动 gateway/product/auction 三个 Go 服务
+./scripts/start-local-backend.sh start
+
+# 查看本地后端状态
+./scripts/start-local-backend.sh status
+
+# 重启本地后端
+./scripts/start-local-backend.sh restart
+
+# 停止本地后端
+./scripts/start-local-backend.sh stop
+```
+
+脚本行为：
+- 启动服务：`auction`、`product`、`gateway`。
+- 监听端口：Gateway `8080`、Product `8081`、Auction HTTP `8082`、Auction WS `8083`。
+- 日志目录：`.tmp/local-backend/`，例如 `.tmp/local-backend/gateway.log`。
+- 端口冲突时会直接失败并打印占用进程，不会自动 kill 现有进程。
+- 启动前会检查 `3306`、`6379`、`5672` 是否已就绪。
+
+#### 3. 启动本地前端
+
+```bash
+# 启动 H5 和 Admin 前端
+./scripts/start-frontend.sh
+```
+
+访问地址：
+- H5 用户端：`http://localhost:5173`
+- Admin 管理端：`http://localhost:5175`
+- Gateway API：`http://localhost:8080/api/v1`
+- Auction WebSocket：`ws://localhost:8083/ws`
+
+前端日志：
+- H5：`/tmp/h5-auction.log`
+- Admin：`/tmp/admin-auction.log`
+
+> 注意：`scripts/start-frontend.sh` 会检查 `5173` 和 `5175` 端口，并尝试停止占用进程；如果你不希望脚本处理端口，可手动进入 `frontend/h5` 和 `frontend/admin` 分别执行 `npm run dev`。
+
+#### 4. 本地测试账号
+
+```text
+H5 用户端：
+手机号：18600000001
+密码：123456
+
+Admin 管理端：
+邮箱：admin@example.com
+密码：admin123
+```
+
+#### 5. 常见问题
+
+- 如果 H5 登录提示“请求过于频繁”，可检查 Redis 中是否存在异常限流 key：`redis-cli ttl ratelimit:127.0.0.1`。
+- 如需清理本地网关限流状态，可执行：`redis-cli del ratelimit:127.0.0.1`。
+- 如果后端脚本提示端口被占用，先用 `lsof -nP -iTCP:<port> -sTCP:LISTEN` 定位占用进程，再决定是否停止。
+- 如果前端无法访问 API，请确认 H5 Vite 代理指向 `http://localhost:8080`，并确认 `gateway` 已运行。
 
 ## 数据初始化
 
