@@ -285,7 +285,7 @@ export function del<T>(path: string, config?: RequestConfig): Promise<T> {
 // 用户相关 API
 export const userApi = {
   // 获取用户信息
-  getProfile: () => get<any>('/user/profile'),
+  getProfile: () => get<any>('/users/me'),
 
   // 更新用户信息
   updateProfile: (data: any) => put<any>('/user/profile', data),
@@ -428,8 +428,12 @@ export const followApi = {
 // 直播间 API
 export const liveStreamApi = {
   // 获取直播间列表
-  list: (page: number = 1, pageSize: number = 20) => {
-    return get<any>(`/live-streams?page=${page}&page_size=${pageSize}`);
+  list: (page: number = 1, pageSize: number = 20, status?: number) => {
+    const query = new URLSearchParams();
+    query.set('page', String(page));
+    query.set('page_size', String(pageSize));
+    if (status !== undefined) query.set('status', String(status));
+    return get<any>(`/live-streams?${query.toString()}`);
   },
 
   // 获取直播间详情

@@ -61,6 +61,7 @@ func TestPendingReminderInternalRouteRequiresInternalToken(t *testing.T) {
 		nil,
 		handler.NewLiveReminderHandler(&routeReminderProvider{}),
 		&handler.LiveStreamStatsHandler{},
+		nil,
 	)
 
 	unauthorized := ut.PerformRequest(

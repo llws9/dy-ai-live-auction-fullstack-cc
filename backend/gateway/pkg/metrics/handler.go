@@ -16,6 +16,55 @@ type TrackEventRequest struct {
 	Timestamp int64                  `json:"timestamp"`                     // 时间戳
 }
 
+var allowedTouchpointEvents = map[string]struct{}{
+	"summary_exposed":           {},
+	"entry_clicked":             {},
+	"notification_list_exposed": {},
+	"notification_item_clicked": {},
+	"mark_read":                 {},
+	"hot_pull_triggered":        {},
+	"live_reminder_exposed":     {},
+	"live_reminder_clicked":     {},
+	"live_reminder_dismissed":   {},
+}
+
+var allowedTouchpointSources = map[string]struct{}{
+	"home":                {},
+	"bottom_nav":          {},
+	"profile":             {},
+	"notification_center": {},
+	"mobile_shell":        {},
+	"notification_hook":   {},
+}
+
+var allowedTouchpointEntries = map[string]struct{}{
+	"notification_bell":   {},
+	"profile_tab":         {},
+	"auction_history":     {},
+	"notification_center": {},
+	"notification_item":   {},
+	"mark_all_read":       {},
+	"hot_pull":            {},
+	"live_reminder_modal": {},
+}
+
+var allowedTouchpointTypes = map[string]struct{}{
+	"all":             {},
+	"pending_payment": {},
+	"outbid":          {},
+	"ending_soon":     {},
+	"live_start":      {},
+	"notification":    {},
+}
+
+var allowedTouchpointResults = map[string]struct{}{
+	"success":   {},
+	"failed":    {},
+	"clicked":   {},
+	"dismissed": {},
+	"debounced": {},
+}
+
 // TrackEvent 处理前端埋点请求
 func TrackEvent(m *Metrics) app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
@@ -64,6 +113,9 @@ func TrackEvent(m *Metrics) app.HandlerFunc {
 			method := getStringParam(req.Params, "method", "password")
 			m.UserLogin.WithLabelValues(method).Inc()
 
+		case "touchpoint_event":
+			recordTouchpointEvent(m, req)
+
 		default:
 			// 通用事件计数
 			// 可以扩展自定义指标
@@ -71,6 +123,22 @@ func TrackEvent(m *Metrics) app.HandlerFunc {
 
 		c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	}
+}
+
+func normalizeLabel(value string, allowed map[string]struct{}) string {
+	if _, ok := allowed[value]; ok {
+		return value
+	}
+	return "unknown"
+}
+
+func recordTouchpointEvent(m *Metrics, req TrackEventRequest) {
+	event := normalizeLabel(req.EventName, allowedTouchpointEvents)
+	source := normalizeLabel(getStringParam(req.Params, "source", "unknown"), allowedTouchpointSources)
+	entry := normalizeLabel(getStringParam(req.Params, "entry", "unknown"), allowedTouchpointEntries)
+	touchpointType := normalizeLabel(getStringParam(req.Params, "type", "unknown"), allowedTouchpointTypes)
+	result := normalizeLabel(getStringParam(req.Params, "result", "unknown"), allowedTouchpointResults)
+	m.RecordTouchpointEvent(event, source, entry, touchpointType, result)
 }
 
 // getStringParam 从参数中获取字符串

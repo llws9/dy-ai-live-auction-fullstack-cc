@@ -5,6 +5,7 @@ import HomePage from '../index';
 import { auctionApi, productApi } from '../../../services/api';
 import { notificationApi } from '../../../services/notification';
 import { useAuth } from '../../../store/authContext';
+import { trackEvent } from '../../../utils/trackEvent';
 
 jest.mock('../../../services/api', () => ({
   auctionApi: {
@@ -31,10 +32,17 @@ jest.mock('../../../components/ThemeToggle', () => ({
   default: () => null,
 }));
 
+jest.mock('../../../utils/trackEvent', () => ({
+  trackEvent: jest.fn(),
+  getCountBucket: (count: number) =>
+    count <= 0 ? '0' : count === 1 ? '1' : count <= 5 ? '2_5' : count <= 10 ? '6_10' : '10_plus',
+}));
+
 const mockedAuctionApi = auctionApi as jest.Mocked<typeof auctionApi>;
 const mockedProductApi = productApi as jest.Mocked<typeof productApi>;
 const mockedNotificationApi = notificationApi as jest.Mocked<typeof notificationApi>;
 const mockedUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
+const mockTrackEvent = trackEvent as jest.MockedFunction<typeof trackEvent>;
 
 const renderHome = () =>
   render(
@@ -109,6 +117,36 @@ describe('HomePage 分类联动 (T2.10)', () => {
     await waitFor(() => expect(mockedAuctionApi.list).toHaveBeenCalled());
     expect(screen.getByRole('button', { name: '全部' })).toBeInTheDocument();
   });
+
+  it('过滤与固定 tab 重名的后端分类，避免「收藏」右侧重复渲染「全部」', async () => {
+    mockedProductApi.listCategories.mockResolvedValueOnce([
+      { id: 0, name: '全部' },
+      { id: 1, name: '珠宝腕表' },
+    ]);
+
+    renderHome();
+
+    await waitFor(() => expect(mockedProductApi.listCategories).toHaveBeenCalled());
+    expect(screen.getAllByRole('button', { name: '全部' })).toHaveLength(1);
+    expect(await screen.findByRole('button', { name: '珠宝腕表' })).toBeInTheDocument();
+  });
+
+  it('首页头部快捷入口使用 SVG 图形图标而不是文字占位', async () => {
+    renderHome();
+
+    await waitFor(() => expect(mockedAuctionApi.list).toHaveBeenCalled());
+
+    const searchAction = screen.getByLabelText('搜索暂未开放');
+    const followAction = screen.getByLabelText('我的收藏');
+    const notificationAction = screen.getByLabelText('消息通知');
+
+    expect(searchAction.querySelector('svg')).toBeInTheDocument();
+    expect(followAction.querySelector('svg')).toBeInTheDocument();
+    expect(notificationAction.querySelector('svg')).toBeInTheDocument();
+    expect(searchAction).not.toHaveTextContent('搜');
+    expect(followAction).not.toHaveTextContent('收');
+    expect(notificationAction).not.toHaveTextContent('铃');
+  });
 });
 
 describe('HomePage 未读消息红点 (T3.6 / F-D2)', () => {
@@ -177,5 +215,19 @@ describe('HomePage 未读消息红点 (T3.6 / F-D2)', () => {
     });
 
     await waitFor(() => expect(mockedNotificationApi.getUnreadCount).toHaveBeenCalledTimes(2));
+  });
+
+  it('点击通知铃铛时记录首页入口点击埋点', async () => {
+    renderHome();
+
+    const notificationLink = await screen.findByRole('link', { name: '消息通知' });
+    fireEvent.click(notificationLink);
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('entry_clicked', {
+      source: 'home',
+      entry: 'notification_bell',
+      type: 'notification',
+      result: 'clicked',
+    });
   });
 });

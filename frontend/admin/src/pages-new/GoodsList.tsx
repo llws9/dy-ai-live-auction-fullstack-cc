@@ -20,15 +20,13 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+import { Badge, type BadgeProps } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { useNavigate } from "react-router-dom"
 import { productApi, Product } from "@/shared/api"
 
-type BadgeVariant = React.ComponentProps<typeof Badge>["variant"]
-
-const statusMap: Record<number, { label: string; variant: BadgeVariant }> = {
+const statusMap: Record<number, { label: string; variant: BadgeProps["variant"] }> = {
   0: { label: "未发布", variant: "secondary" },
   1: { label: "已发布", variant: "success" },
   2: { label: "已下架", variant: "outline" },

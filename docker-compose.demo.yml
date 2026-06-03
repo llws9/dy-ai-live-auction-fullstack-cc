@@ -1,0 +1,137 @@
+services:
+  gateway:
+    build:
+      context: ./backend/gateway
+      dockerfile: Dockerfile
+    image: dy-ai-live-auction-gateway:demo
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      - GATEWAY_PORT=:8080
+      - PRODUCT_SERVICE_URL=http://product:8081
+      - AUCTION_SERVICE_URL=http://auction:8082
+      - TEST_SERVICE_URL=http://127.0.0.1:18090
+      - TEST_SERVICE_WS_URL=ws://127.0.0.1:18092
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}
+      - JWT_SECRET=${JWT_SECRET:?set JWT_SECRET}
+      - GROWTHBOOK_ENABLED=false
+      - GROWTHBOOK_API_HOST=http://127.0.0.1:3200
+      - GROWTHBOOK_CLIENT_KEY=disabled
+      - GROWTHBOOK_SECRET_KEY=disabled
+    depends_on:
+      - product
+      - auction
+      - redis
+    restart: unless-stopped
+    networks:
+      - auction-demo
+
+  product:
+    build:
+      context: ./backend
+      dockerfile: product/Dockerfile
+    image: dy-ai-live-auction-product:demo
+    environment:
+      - PRODUCT_SERVICE_PORT=:8081
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=${DB_PASSWORD:?set DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-auction}
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - AUCTION_SERVICE_URL=http://auction:8082
+      - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}
+      - ARK_API_KEY=${ARK_API_KEY:?set ARK_API_KEY}
+    depends_on:
+      - mysql
+      - redis
+    restart: unless-stopped
+    networks:
+      - auction-demo
+
+  auction:
+    build:
+      context: ./backend/auction
+      dockerfile: Dockerfile
+    image: dy-ai-live-auction-auction:demo
+    ports:
+      - "127.0.0.1:8083:8083"
+    environment:
+      - HTTP_PORT=:8082
+      - WS_PORT=:8083
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=${DB_PASSWORD:?set DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-auction}
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-guest}
+      - RABBITMQ_VHOST=/
+      - JWT_SECRET=${JWT_SECRET:?set JWT_SECRET}
+      - PRODUCT_SERVICE_URL=http://product:8081
+      - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}
+      - NACOS_ENABLED=false
+    depends_on:
+      - mysql
+      - redis
+      - rabbitmq
+    restart: unless-stopped
+    networks:
+      - auction-demo
+
+  mysql:
+    image: docker.m.daocloud.io/library/mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME:-auction}
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    volumes:
+      - mysql-demo-data:/var/lib/mysql
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    restart: unless-stopped
+    networks:
+      - auction-demo
+
+  redis:
+    image: docker.m.daocloud.io/library/redis:7-alpine
+    command: >
+      sh -c 'if [ -n "$$REDIS_PASSWORD" ]; then
+        exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD";
+      else
+        exec redis-server --appendonly yes;
+      fi'
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    volumes:
+      - redis-demo-data:/data
+    restart: unless-stopped
+    networks:
+      - auction-demo
+
+  rabbitmq:
+    image: docker.m.daocloud.io/library/rabbitmq:3-management-alpine
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-guest}
+    volumes:
+      - rabbitmq-demo-data:/var/lib/rabbitmq
+    restart: unless-stopped
+    networks:
+      - auction-demo
+
+networks:
+  auction-demo:
+    driver: bridge
+
+volumes:
+  mysql-demo-data:
+  redis-demo-data:
+  rabbitmq-demo-data:

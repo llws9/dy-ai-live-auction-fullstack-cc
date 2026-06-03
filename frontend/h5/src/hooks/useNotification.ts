@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { notificationApi, NotificationItem } from '../services/notification';
 import { NotificationData } from './useWebSocket';
+import { getCountBucket, trackEvent } from '../utils/trackEvent';
 
 interface NotificationState {
   notifications: NotificationItem[];
@@ -152,6 +153,13 @@ export const useNotification = () => {
     const now = Date.now();
     if (lastHotPullTimeRef.current && now - lastHotPullTimeRef.current < HOT_PULL_MIN_INTERVAL) {
       console.log('[HotPull] Skipped due to debounce');
+      trackEvent('hot_pull_triggered', {
+        source: 'notification_hook',
+        entry: 'hot_pull',
+        type: 'live_start',
+        result: 'debounced',
+        countBucket: '0',
+      });
       return;
     }
     lastHotPullTimeRef.current = now;
@@ -159,6 +167,13 @@ export const useNotification = () => {
     try {
       console.log('[HotPull] Fetching notifications...');
       const data = await notificationApi.hotPull();
+      trackEvent('hot_pull_triggered', {
+        source: 'notification_hook',
+        entry: 'hot_pull',
+        type: 'live_start',
+        result: 'success',
+        countBucket: getCountBucket(data.notifications?.length ?? 0),
+      });
 
       // 更新通知列表（新增的通知放到前面）
       if (data.notifications && data.notifications.length > 0) {
@@ -178,6 +193,13 @@ export const useNotification = () => {
       }
     } catch (error) {
       console.error('[HotPull] Failed:', error);
+      trackEvent('hot_pull_triggered', {
+        source: 'notification_hook',
+        entry: 'hot_pull',
+        type: 'live_start',
+        result: 'failed',
+        countBucket: '0',
+      });
     }
   }, []);
 

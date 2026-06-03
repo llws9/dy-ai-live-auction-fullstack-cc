@@ -416,13 +416,13 @@ curl http://localhost:3100/ready
 │                        前端埋点                                 │
 │  trackLiveRoomEnter / trackBidClick / trackPaymentStart        │
 └──────────────────────────┬──────────────────────────────────────┘
-                           │ POST /api/track
+                           │ POST /api/v1/track
                            ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Gateway Service                              │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
 │  │ 埋点 API    │  │ Metrics API │  │ 业务服务    │             │
-│  │ /api/track  │  │ /metrics    │  │             │             │
+│  │ /api/v1/track  │  │ /metrics    │  │             │             │
 │  └──────┬──────┘  └──────┬──────┘  └─────────────┘             │
 └─────────┼────────────────┼──────────────────────────────────────┘
           │                │
@@ -568,7 +568,7 @@ histogram_quantile(0.90, sum(rate(auction_bid_amount_bucket[1h])) by (le))
 import { initTracking } from '@/shared/tracking';
 
 initTracking({
-  endpoint: '/api/track',
+  endpoint: '/api/v1/track',
   debug: true,
   batchSize: 10,
   flushInterval: 5000,
@@ -628,7 +628,7 @@ observability/prometheus/
 | Grafana | http://localhost:3002 | admin/admin |
 | Prometheus | http://localhost:9090 | - |
 | Metrics API | http://localhost:8080/metrics | - |
-| 埋点 API | POST http://localhost:8080/api/track | - |
+| 埋点 API | POST http://localhost:8080/api/v1/track | - |
 
 ### 预置仪表板
 
@@ -646,12 +646,12 @@ observability/prometheus/
 
 ```bash
 # 测试直播间进入埋点
-curl -X POST http://localhost:8080/api/track \
+curl -X POST http://localhost:8080/api/v1/track \
   -H "Content-Type: application/json" \
   -d '{"event_type":"live_room_enter","params":{"room_id":"123","user_type":"vip"}}'
 
 # 测试出价点击埋点
-curl -X POST http://localhost:8080/api/track \
+curl -X POST http://localhost:8080/api/v1/track \
   -H "Content-Type: application/json" \
   -d '{"event_type":"bid_click","params":{"auction_id":"456","current_price":999}}'
 

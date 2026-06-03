@@ -5,6 +5,7 @@ import { notificationApi } from '@/services/notification';
 import { useAuth } from '@/store/authContext';
 import PageHeader from '@/components/shared/PageHeader';
 import BadgeDot from '@/components/BadgeDot';
+import { trackEvent } from '@/utils/trackEvent';
 import styles from './Home.module.css';
 
 // 固定 tab：「全部」「收藏」无需 category_id；动态 tab 来自 GET /categories
@@ -46,6 +47,33 @@ interface HomeAuction {
 
 const SPECIAL_TABS: SpecialTab[] = ['全部', '收藏'];
 
+const SearchIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path
+      d="M10.8 18.1a7.3 7.3 0 1 1 5.16-2.14l4.04 4.04-1.42 1.42-4.04-4.04a7.27 7.27 0 0 1-3.74.72Zm0-2a5.3 5.3 0 1 0 0-10.6 5.3 5.3 0 0 0 0 10.6Z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
+const HeartIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path
+      d="M12 20.7 10.74 19.6C5.98 15.44 3 12.84 3 9.28 3 6.36 5.28 4 8.16 4c1.62 0 3.18.76 4.19 1.95A5.48 5.48 0 0 1 16.54 4C19.42 4 21.7 6.36 21.7 9.28c0 3.56-2.98 6.16-7.74 10.32L12 20.7Zm.02-2.66.62-.54c4.24-3.7 6.96-6.08 6.96-8.22C19.6 7.46 18.24 6 16.54 6c-1.32 0-2.6.84-3.06 2.02h-2.24C10.78 6.84 9.48 6 8.16 6 6.46 6 5.1 7.46 5.1 9.28c0 2.14 2.72 4.52 6.96 8.22l-.04.54Z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
+const BellIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path
+      d="M18 10.6c0-3.08-1.64-5.66-4.5-6.34V3a1.5 1.5 0 0 0-3 0v1.26C7.64 4.94 6 7.5 6 10.6v4.9l-1.72 1.72V18h15.44v-.78L18 15.5v-4.9ZM8 16v-5.4C8 8.12 9.5 6 12 6s4 2.12 4 4.6V16H8Zm1.86 3a2.24 2.24 0 0 0 4.28 0H9.86Z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
 const extractList = (response: any): RawAuction[] => {
   if (Array.isArray(response)) return response;
   if (Array.isArray(response?.list)) return response.list;
@@ -70,6 +98,7 @@ const extractCategories = (response: any): CategoryTab[] => {
     if (Array.isArray(c)) {
       return c
         .filter((item: any) => item && typeof item.id === 'number' && typeof item.name === 'string')
+        .filter((item: any) => !SPECIAL_TABS.includes(item.name as SpecialTab))
         .map((item: any) => ({ id: item.id, name: item.name }));
     }
   }
@@ -218,13 +247,25 @@ const HomePage: React.FC = () => {
         actions={
           <>
             <span className={styles.iconButton} aria-label="搜索暂未开放" title="搜索暂未开放">
-              搜
+              <SearchIcon />
             </span>
             <Link className={styles.iconButton} to="/following" aria-label="我的收藏">
-              收
+              <HeartIcon />
             </Link>
-            <Link className={styles.iconButton} to="/notifications" aria-label="消息通知">
-              铃
+            <Link
+              className={styles.iconButton}
+              to="/notifications"
+              aria-label="消息通知"
+              onClick={() =>
+                trackEvent('entry_clicked', {
+                  source: 'home',
+                  entry: 'notification_bell',
+                  type: 'notification',
+                  result: 'clicked',
+                })
+              }
+            >
+              <BellIcon />
               {unreadCount > 0 && (
                 <BadgeDot count={unreadCount} className={styles.notificationBadge} />
               )}

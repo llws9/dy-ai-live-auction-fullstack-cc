@@ -114,8 +114,8 @@ CREATE TABLE IF NOT EXISTS `group_capacity` (
 
 -- His Config Info Table
 CREATE TABLE IF NOT EXISTS `his_config_info` (
-  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  `nid` bigint(20) unsigned NOT NULL,
+  `id` bigint(20) unsigned NOT NULL,
+  `nid` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `data_id` varchar(255) NOT NULL,
   `group_id` varchar(128) NOT NULL,
   `app_name` varchar(128) DEFAULT NULL COMMENT 'app_name',

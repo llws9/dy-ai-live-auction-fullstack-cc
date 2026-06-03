@@ -137,7 +137,7 @@ sum(rate(http_requests_total{status=~"2.."}[5m]))
 import { initTracking, getTracker } from '@/shared/tracking';
 
 // 初始化
-initTracking({ endpoint: '/api/track', debug: true });
+initTracking({ endpoint: '/api/v1/track', debug: true });
 
 // 使用
 getTracker().trackLiveRoomEnter('room-123', 'vip');

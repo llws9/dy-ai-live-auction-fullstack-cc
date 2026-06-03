@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { trackEvent } from '../../utils/trackEvent';
 import styles from './LiveReminderModal.module.css';
 
 export interface StreamInfo {
@@ -18,10 +19,12 @@ interface LiveReminderModalProps {
 const LiveReminderModal: React.FC<LiveReminderModalProps> = ({ isOpen, onClose, stream }) => {
   const navigate = useNavigate();
   const [shouldRender, setShouldRender] = useState(false);
+  const actionTrackedRef = useRef(false);
 
   // 控制动画挂载/卸载
   useEffect(() => {
     if (isOpen) {
+      actionTrackedRef.current = false;
       setShouldRender(true);
       return;
     }
@@ -38,16 +41,39 @@ const LiveReminderModal: React.FC<LiveReminderModalProps> = ({ isOpen, onClose, 
 
   if (!shouldRender || !stream) return null;
 
-  const handleJump = () => {
+  const trackActionOnce = (eventName: 'live_reminder_clicked' | 'live_reminder_dismissed', result: 'clicked' | 'dismissed') => {
+    if (actionTrackedRef.current) {
+      return false;
+    }
+    actionTrackedRef.current = true;
+    trackEvent(eventName, {
+      source: 'mobile_shell',
+      entry: 'live_reminder_modal',
+      type: 'live_start',
+      result,
+    });
+    return true;
+  };
+
+  const trackDismiss = () => {
+    if (!trackActionOnce('live_reminder_dismissed', 'dismissed')) {
+      return;
+    }
     onClose();
-    // 假设跳转到直播间路由，具体路径根据实际情况调整
+  };
+
+  const handleJump = () => {
+    if (!trackActionOnce('live_reminder_clicked', 'clicked')) {
+      return;
+    }
+    onClose();
     navigate(`/live`);
   };
 
   return (
     <div 
       className={`${styles.overlay} ${!isOpen ? styles.fadeOut : ''}`} 
-      onClick={onClose}
+      onClick={trackDismiss}
     >
       <div 
         className={`${styles.modal} ${!isOpen ? styles.slideDown : ''}`} 
@@ -87,7 +113,7 @@ const LiveReminderModal: React.FC<LiveReminderModalProps> = ({ isOpen, onClose, 
         <div className={styles.footer}>
           <button 
             className={`${styles.button} ${styles.buttonCancel}`} 
-            onClick={onClose}
+            onClick={trackDismiss}
           >
             稍后再看
           </button>

@@ -2,6 +2,8 @@
 
 一个完整的直播竞拍全栈系统，支持实时竞价、商品管理、用户认证、A/B 测试等功能。
 
+> 部署入口：当前 `main` 分支对应的精简部署操作文档见 [deploy/demo/MAIN_DEPLOY_QUICKSTART.md](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/deploy/demo/MAIN_DEPLOY_QUICKSTART.md)
+
 ## 技术栈
 
 ### 后端

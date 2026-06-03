@@ -1,10 +1,11 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import MobileContainer from '../../components/MobileShell/MobileContainer';
 import BottomNav from '../../components/MobileShell/BottomNav';
 import { notificationApi } from '../../services/notification';
 import { useAuth } from '../../store/authContext';
 import { ThemeProvider } from '../../store/themeContext';
+import { trackEvent } from '../../utils/trackEvent';
 
 jest.mock('../../services/notification', () => ({
   notificationApi: {
@@ -17,6 +18,12 @@ jest.mock('../../store/authContext', () => ({
   useAuth: jest.fn(),
 }));
 
+jest.mock('../../utils/trackEvent', () => ({
+  trackEvent: jest.fn(),
+  getCountBucket: (count: number) =>
+    count <= 0 ? '0' : count === 1 ? '1' : count <= 5 ? '2_5' : count <= 10 ? '6_10' : '10_plus',
+}));
+
 const mockGetTouchpointSummary = notificationApi.getTouchpointSummary as jest.MockedFunction<
   typeof notificationApi.getTouchpointSummary
 >;
@@ -24,6 +31,7 @@ const mockGetPendingLiveReminder = notificationApi.getPendingLiveReminder as jes
   typeof notificationApi.getPendingLiveReminder
 >;
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
+const mockTrackEvent = trackEvent as jest.MockedFunction<typeof trackEvent>;
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void;
@@ -104,6 +112,21 @@ describe('MobileShell', () => {
     expect(await screen.findByLabelText('7 条待处理提醒')).toHaveTextContent('7');
   });
 
+  it('uses a live-safe content layout on live routes so the room stops above the bottom navigation', async () => {
+    render(
+      <MemoryRouter initialEntries={['/live']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>直播间内容</main>
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('直播间内容').parentElement).toHaveClass('contentLive');
+    await waitFor(() => expect(mockGetPendingLiveReminder).toHaveBeenCalledTimes(1));
+  });
+
   it('shows unread total badge on profile nav item from backend summary', async () => {
     render(
       <MemoryRouter initialEntries={['/']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
@@ -113,6 +136,33 @@ describe('MobileShell', () => {
 
     expect(await screen.findByLabelText('7 条待处理提醒')).toHaveTextContent('7');
     expect(mockGetTouchpointSummary).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(mockTrackEvent).toHaveBeenCalledWith('summary_exposed', {
+        source: 'bottom_nav',
+        entry: 'profile_tab',
+        type: 'all',
+        result: 'success',
+        countBucket: '6_10',
+      })
+    );
+  });
+
+  it('tracks profile tab entry clicks from bottom navigation', async () => {
+    render(
+      <MemoryRouter initialEntries={['/']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <BottomNav />
+      </MemoryRouter>
+    );
+
+    const profileLink = await screen.findByRole('link', { name: /我的/ });
+    fireEvent.click(profileLink);
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('entry_clicked', {
+      source: 'bottom_nav',
+      entry: 'profile_tab',
+      type: 'all',
+      result: 'clicked',
+    });
   });
 
   it('refetches touchpoint summary for account changes and ignores stale responses', async () => {
@@ -170,7 +220,13 @@ describe('MobileShell', () => {
   it.each(['/detail', '/result', '/notifications', '/following', '/history', '/login'])(
     'hides bottom navigation on %s',
     async (path) => {
-      mockGetTouchpointSummary.mockRejectedValue(new Error('hidden nav should not render badges'));
+      mockGetTouchpointSummary.mockResolvedValue({
+        unreadTotal: 7,
+        pendingPayment: 2,
+        wonNotPaid: 1,
+        outbid: 3,
+        endingSoon: 1,
+      });
 
       render(
         <MemoryRouter initialEntries={[path]} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
@@ -180,6 +236,7 @@ describe('MobileShell', () => {
 
       expect(screen.queryByRole('navigation', { name: '底部导航' })).not.toBeInTheDocument();
       await waitFor(() => expect(screen.queryByRole('navigation', { name: '底部导航' })).not.toBeInTheDocument());
+      expect(mockTrackEvent).not.toHaveBeenCalledWith('summary_exposed', expect.anything());
     },
   );
 
@@ -210,6 +267,200 @@ describe('MobileShell', () => {
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('直播开播提醒')).toBeInTheDocument();
     expect(mockGetPendingLiveReminder).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(mockTrackEvent).toHaveBeenCalledWith('live_reminder_exposed', {
+        source: 'mobile_shell',
+        entry: 'live_reminder_modal',
+        type: 'live_start',
+        result: 'success',
+      }),
+    );
+  });
+
+  it('tracks live reminder click action', async () => {
+    mockGetPendingLiveReminder.mockResolvedValue({
+      hasReminder: true,
+      stream: {
+        id: 1,
+        name: '云端珍藏直播间',
+        avatarUrl: '',
+        statusText: '正在直播',
+        liveRoomId: 1,
+        startedAt: 1717000000000,
+      },
+    });
+
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>页面内容</main>
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: '立即前往' }));
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('live_reminder_clicked', {
+      source: 'mobile_shell',
+      entry: 'live_reminder_modal',
+      type: 'live_start',
+      result: 'clicked',
+    });
+  });
+
+  it('tracks live reminder dismiss action', async () => {
+    mockGetPendingLiveReminder.mockResolvedValue({
+      hasReminder: true,
+      stream: {
+        id: 1,
+        name: '云端珍藏直播间',
+        avatarUrl: '',
+        statusText: '正在直播',
+        liveRoomId: 1,
+        startedAt: 1717000000000,
+      },
+    });
+
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>页面内容</main>
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: '稍后再看' }));
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('live_reminder_dismissed', {
+      source: 'mobile_shell',
+      entry: 'live_reminder_modal',
+      type: 'live_start',
+      result: 'dismissed',
+    });
+  });
+
+  it('tracks live reminder overlay dismiss action', async () => {
+    mockGetPendingLiveReminder.mockResolvedValue({
+      hasReminder: true,
+      stream: {
+        id: 1,
+        name: '云端珍藏直播间',
+        avatarUrl: '',
+        statusText: '正在直播',
+        liveRoomId: 1,
+        startedAt: 1717000000000,
+      },
+    });
+
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>页面内容</main>
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    const overlay = dialog.parentElement;
+    expect(overlay).not.toBeNull();
+
+    fireEvent.click(overlay as HTMLElement);
+
+    expect(mockTrackEvent).toHaveBeenCalledWith('live_reminder_dismissed', {
+      source: 'mobile_shell',
+      entry: 'live_reminder_modal',
+      type: 'live_start',
+      result: 'dismissed',
+    });
+  });
+
+  it('does not duplicate live reminder click tracking on rapid double click', async () => {
+    mockGetPendingLiveReminder.mockResolvedValue({
+      hasReminder: true,
+      stream: {
+        id: 1,
+        name: '云端珍藏直播间',
+        avatarUrl: '',
+        statusText: '正在直播',
+        liveRoomId: 1,
+        startedAt: 1717000000000,
+      },
+    });
+
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>页面内容</main>
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const confirmButton = await screen.findByRole('button', { name: '立即前往' });
+    fireEvent.click(confirmButton);
+    fireEvent.click(confirmButton);
+
+    const clickEvents = mockTrackEvent.mock.calls.filter(([eventName]) => eventName === 'live_reminder_clicked');
+    expect(clickEvents).toHaveLength(1);
+    expect(clickEvents[0]).toEqual([
+      'live_reminder_clicked',
+      {
+        source: 'mobile_shell',
+        entry: 'live_reminder_modal',
+        type: 'live_start',
+        result: 'clicked',
+      },
+    ]);
+  });
+
+  it('does not duplicate live reminder dismiss tracking on rapid overlay double click', async () => {
+    mockGetPendingLiveReminder.mockResolvedValue({
+      hasReminder: true,
+      stream: {
+        id: 1,
+        name: '云端珍藏直播间',
+        avatarUrl: '',
+        statusText: '正在直播',
+        liveRoomId: 1,
+        startedAt: 1717000000000,
+      },
+    });
+
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>页面内容</main>
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    const overlay = dialog.parentElement;
+    expect(overlay).not.toBeNull();
+
+    fireEvent.click(overlay as HTMLElement);
+    fireEvent.click(overlay as HTMLElement);
+
+    const dismissEvents = mockTrackEvent.mock.calls.filter(([eventName]) => eventName === 'live_reminder_dismissed');
+    expect(dismissEvents).toHaveLength(1);
+    expect(dismissEvents[0]).toEqual([
+      'live_reminder_dismissed',
+      {
+        source: 'mobile_shell',
+        entry: 'live_reminder_modal',
+        type: 'live_start',
+        result: 'dismissed',
+      },
+    ]);
   });
 
   it('refetches pending reminder for account changes and ignores stale responses', async () => {

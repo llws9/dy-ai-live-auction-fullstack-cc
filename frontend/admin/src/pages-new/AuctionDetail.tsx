@@ -17,15 +17,13 @@ import {
 } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Badge, type BadgeProps } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { auctionApi, productApi } from "@/shared/api"
 
-type BadgeVariant = React.ComponentProps<typeof Badge>["variant"]
-
-const statusMap: Record<number, { label: string; variant: BadgeVariant }> = {
-  0: { label: "待开始", variant: "secondary" },
+const statusMap: Record<number, { label: string; variant: BadgeProps["variant"] }> = {
+  0: { label: "待开始", variant: "blue" },
   1: { label: "进行中", variant: "success" },
   2: { label: "延时中", variant: "warning" },
   3: { label: "已结束", variant: "outline" },

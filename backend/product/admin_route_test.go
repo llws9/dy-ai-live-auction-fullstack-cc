@@ -25,6 +25,7 @@ func TestAdminOrderRoutesRequireInternalToken(t *testing.T) {
 		handler.NewProductHandler(nil),
 		handler.NewLiveStreamHandler(nil),
 		handler.NewCategoryHandler(nil),
+		handler.NewCopywritingHandler(nil),
 		handler.NewInternalHandler(nil, nil),
 	)
 

@@ -71,6 +71,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	v1.GET("/products/:id/rules", productProxy.Forward)
 
 	// 商品发布/下架需要商家或管理员权限
+	authGroup.POST("/products/ai/copywriting", middleware.RequireMerchant(), productProxy.Forward)
 	authGroup.POST("/products/:id/publish", middleware.RequireMerchant(), productProxy.Forward)
 	authGroup.POST("/products/:id/unpublish", middleware.RequireMerchant(), productProxy.Forward)
 
@@ -148,6 +149,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	// T010: 直播间详情。公开访问，但若客户端带合法 Bearer token，
 	// OptionalJWTAuth 会注入 user_id，proxy.Forward 据此把 X-User-ID 透传给 product-service，
 	// 用于查询 is_following 等登录态字段（spec B / F-B1, T2.5）。
+	v1.GET("/live-streams", productProxy.Forward) // H5 直播 feed 公开列表
 	v1.GET("/live-streams/:id", middleware.OptionalJWTAuth(cfg.JWT.Secret), productProxy.Forward)
 
 	// ========== 通知服务路由 ==========

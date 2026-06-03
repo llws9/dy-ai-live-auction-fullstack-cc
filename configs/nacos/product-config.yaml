@@ -18,3 +18,11 @@ redis:
 
 services:
   auction_service_url: "http://auction:8082"
+
+llm:
+  provider: "doubao"
+  timeout_ms: 60000
+  doubao:
+    base_url: "https://ark.cn-beijing.volces.com/api/v3"
+    api_key: "${ARK_API_KEY}"
+    model: "doubao-seed-1-6-vision-250815"

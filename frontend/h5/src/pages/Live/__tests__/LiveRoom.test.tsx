@@ -1,21 +1,23 @@
 import React from 'react';
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import LiveRoom from '../index';
+import LiveRoomSlide from '../LiveRoomSlide';
 import { purchase } from '../../../api/fixedPrice';
 import { useFixedPriceItems } from '../../../hooks/useFixedPriceItems';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '../../../services/api';
 import WebSocketService from '../../../services/websocket';
+import { useLiveChatStore } from '../../../store/liveChatStore';
 
 const mockShowGlobalToast = jest.fn();
 const mockNavigate = jest.fn();
 const mockWebSocketInstance = {
   on: jest.fn(),
+  off: jest.fn(),
+  sendChat: jest.fn(() => true),
   onNotification: jest.fn(),
   connect: jest.fn().mockResolvedValue(undefined),
   requestSync: jest.fn(),
   disconnect: jest.fn(),
-  off: jest.fn(),
 };
 
 jest.mock('../../../services/api', () => ({
@@ -160,12 +162,15 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoom />
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
       </MemoryRouter>
     );
 
     expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
     expect(screen.getByText('拍卖师王老师')).toBeInTheDocument();
+
+    // 排行与出价/收藏按钮均在 sheet 内，先展开 sheet
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
     expect(screen.getByText('张三')).toBeInTheDocument();
 
     expect(mockedLiveStreamApi.get).toHaveBeenCalledWith(3);
@@ -178,6 +183,8 @@ describe('LiveRoom migration', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /立即出价/ }));
     await waitFor(() => expect(mockedBidApi.placeBid).toHaveBeenCalledWith(5, 1300));
+    // 出价成功后 sheet 自动收起，重新展开以校验排行已刷新
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
     expect(await screen.findByText('测试用户')).toBeInTheDocument();
   });
 
@@ -199,12 +206,13 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoom />
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
       </MemoryRouter>
     );
 
     await waitFor(() => expect(mockedFollowApi.getFollowStatus).toHaveBeenCalledWith(3));
 
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
     // 按钮文案应为「已收藏」，点击触发取消收藏
     const followBtn = await screen.findByRole('button', { name: /已收藏/ });
     fireEvent.click(followBtn);
@@ -224,11 +232,11 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoom />
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
       </MemoryRouter>
     );
 
-    await waitFor(() => expect(MockedWebSocketService).toHaveBeenCalledWith(5, 'token-1'));
+    await waitFor(() => expect(MockedWebSocketService).toHaveBeenCalledWith(5, 'token-1', 3));
     expect(mockWebSocketInstance.onNotification).toHaveBeenCalledTimes(1);
     expect(screen.queryByLabelText('触达 Toast 测试')).not.toBeInTheDocument();
 
@@ -266,7 +274,7 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoom />
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
       </MemoryRouter>
     );
 
@@ -304,7 +312,7 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoom />
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
       </MemoryRouter>
     );
 
@@ -323,7 +331,7 @@ describe('LiveRoom migration', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/result?id=5');
   });
 
-  it('mounts fixed-price cards, purchase modal, and flair on the live page', async () => {
+  it('mounts fixed-price cards, purchase modal, and flair on the live slide', async () => {
     let fixedPriceFlairHandler: ((message: any) => void) | undefined;
     const fixedPriceSocket = {
       on: jest.fn((type: string, handler: (message: any) => void) => {
@@ -333,7 +341,7 @@ describe('LiveRoom migration', () => {
       }),
       off: jest.fn(),
     };
-    mockWebSocketInstance.on.mockImplementation((type: string, _handler: (message: any) => void) => {
+    mockWebSocketInstance.on.mockImplementation((type: string) => {
       if (type === 'fixed_price_flair') {
         throw new Error('fixed-price flair must use liveStreamId socket, not auction socket');
       }
@@ -351,13 +359,20 @@ describe('LiveRoom migration', () => {
       byId: {},
       socket: fixedPriceSocket,
     });
+    mockedPurchase.mockResolvedValue({
+      order_id: 88,
+      item_id: 7001,
+      price: '88.00',
+      remaining_stock: 4,
+      status: 'success',
+    });
 
     render(
       <MemoryRouter
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoom />
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
       </MemoryRouter>
     );
 
@@ -383,5 +398,43 @@ describe('LiveRoom migration', () => {
       });
     });
     expect(await screen.findByText('Alice')).toBeInTheDocument();
+  });
+
+  it('mounts ChatPanel, dispatches chat_message into store and sends via sendChat', async () => {
+    useLiveChatStore.getState().reset();
+    const chatHandlers: Record<string, (data: any) => void> = {};
+    mockWebSocketInstance.on.mockImplementation((type: string, handler: (data: any) => void) => {
+      chatHandlers[type] = handler;
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={['/live?id=3&auction_id=5']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByText('明代紫砂壶'));
+
+    await waitFor(() => expect(chatHandlers['chat_message']).toBeDefined());
+
+    act(() => {
+      chatHandlers['chat_message']({
+        live_stream_id: 3,
+        user_id: 2,
+        user_name: '王五',
+        text: '主播好',
+        sent_at: Date.now(),
+      });
+    });
+    expect(await screen.findByText('王五')).toBeInTheDocument();
+    expect(screen.getByText('主播好')).toBeInTheDocument();
+
+    const input = screen.getByPlaceholderText(/说点什么/);
+    fireEvent.change(input, { target: { value: '出价加油' } });
+    fireEvent.click(screen.getByRole('button', { name: /发送/ }));
+    expect(mockWebSocketInstance.sendChat).toHaveBeenCalledWith('出价加油', expect.any(String));
   });
 });

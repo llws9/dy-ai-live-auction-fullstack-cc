@@ -20,6 +20,9 @@ func NewWebSocketManager(hub *Hub, redisClient *redis.Client) *WebSocketManager 
 	if redisClient != nil {
 		stateManager = NewStateManager(redisClient)
 	}
+	if hub != nil {
+		hub.SetStateManager(stateManager)
+	}
 
 	return &WebSocketManager{
 		hub:          hub,
@@ -42,6 +45,7 @@ func (m *WebSocketManager) GetStateManager() *StateManager {
 func (m *WebSocketManager) RegisterClient(client *Client) {
 	// 保存连接状态到 Redis
 	if m.stateManager != nil {
+		client.SetStateManager(m.stateManager)
 		state := &ConnectionState{
 			ClientID:       client.ID,
 			AuctionID:      client.AuctionID,

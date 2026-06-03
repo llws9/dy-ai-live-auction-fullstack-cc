@@ -10,6 +10,7 @@
 
 .viewport {
   position: relative;
+  --bottom-nav-height: calc(64px + var(--safe-bottom));
   width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
@@ -23,6 +24,12 @@
   padding-bottom: calc(80px + var(--safe-bottom));
 }
 
+.contentLive {
+  min-height: calc(100vh - var(--bottom-nav-height));
+  min-height: calc(100dvh - var(--bottom-nav-height));
+  padding-bottom: 0;
+}
+
 .bottomNav {
   position: fixed;
   left: 50%;
@@ -30,7 +37,7 @@
   z-index: 20;
   width: 100%;
   max-width: 430px;
-  height: calc(64px + var(--safe-bottom));
+  height: var(--bottom-nav-height);
   padding: 8px 24px calc(8px + var(--safe-bottom));
   display: flex;
   align-items: center;
@@ -86,6 +93,10 @@
 
   .content {
     min-height: min(100vh, 812px);
+  }
+
+  .contentLive {
+    min-height: calc(min(100vh, 812px) - var(--bottom-nav-height));
   }
 
   .bottomNav {

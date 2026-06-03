@@ -4,6 +4,7 @@ import { orderApi, userApi } from '../../services/api';
 import { useAuth } from '../../store/authContext';
 import BadgeDot from '../../components/BadgeDot';
 import { useTouchpointNotifications } from '../../hooks/useTouchpointNotifications';
+import { trackEvent } from '../../utils/trackEvent';
 import styles from './Profile.module.css';
 
 interface ProfileUser {
@@ -168,6 +169,24 @@ const UserCenter: React.FC = () => {
     }
   };
 
+  const trackAuctionHistoryClick = () => {
+    trackEvent('entry_clicked', {
+      source: 'profile',
+      entry: 'auction_history',
+      type: 'pending_payment',
+      result: 'clicked',
+    });
+  };
+
+  const trackNotificationCenterClick = () => {
+    trackEvent('entry_clicked', {
+      source: 'profile',
+      entry: 'notification_center',
+      type: 'notification',
+      result: 'clicked',
+    });
+  };
+
   if (loading) {
     return (
       <section className={styles.statePage} aria-live="polite">
@@ -266,7 +285,7 @@ const UserCenter: React.FC = () => {
       </section>
 
       <nav className={styles.menu} aria-label="个人中心功能">
-        <Link to="/history" className={styles.menuItem}>
+        <Link to="/history" className={styles.menuItem} onClick={trackAuctionHistoryClick}>
           <span className={styles.menuIcon}>A</span>
           <span className={styles.menuLabel}>
             我的竞拍
@@ -279,7 +298,7 @@ const UserCenter: React.FC = () => {
           <span>我的收藏</span>
           <b>›</b>
         </Link>
-        <Link to="/notifications" className={styles.menuItem}>
+        <Link to="/notifications" className={styles.menuItem} onClick={trackNotificationCenterClick}>
           <span className={styles.menuIcon}>N</span>
           <span>消息通知</span>
           <b>›</b>

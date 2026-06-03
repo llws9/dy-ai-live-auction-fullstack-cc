@@ -34,6 +34,11 @@ interface RankItem {
   amount: number;
 }
 
+const toMoneyNumber = (value: unknown, fallback = 0) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+};
+
 function getStatusText(status: number): string {
   const statusMap: Record<number, string> = {
     0: '待开始',
@@ -68,7 +73,7 @@ const AuctionPage: React.FC = () => {
           id: Date.now() + index,
           user_id: item.user_id,
           user_name: item.user_name || `用户${item.user_id}`,
-          amount: item.amount,
+          amount: toMoneyNumber(item.amount),
           created_at: new Date().toISOString(),
         }));
         setBidRecords(records);
@@ -77,7 +82,7 @@ const AuctionPage: React.FC = () => {
 
     ws.on('bid_placed', (data: any) => {
       if (data.current_price) {
-        setAuction((prev) => (prev ? { ...prev, current_price: data.current_price } : prev));
+        setAuction((prev) => (prev ? { ...prev, current_price: toMoneyNumber(data.current_price, prev.current_price) } : prev));
       }
     });
 
@@ -87,7 +92,7 @@ const AuctionPage: React.FC = () => {
           prev
             ? {
               ...prev,
-            current_price: data.current_price,
+            current_price: toMoneyNumber(data.current_price, prev.current_price),
             winner_id: data.winner_id,
             end_time: new Date(data.end_time).toISOString(),
             status: data.status,
@@ -100,7 +105,7 @@ const AuctionPage: React.FC = () => {
             id: Date.now() + index,
             user_id: item.user_id,
             user_name: item.user_name || `用户${item.user_id}`,
-            amount: item.amount,
+            amount: toMoneyNumber(item.amount),
             created_at: new Date().toISOString(),
           }));
           setBidRecords(records);

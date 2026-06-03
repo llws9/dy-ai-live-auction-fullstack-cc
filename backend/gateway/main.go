@@ -92,7 +92,7 @@ func main() {
 	router.RegisterRoutes(h, cfg, gbClient)
 
 	// 前端埋点 API
-	h.POST("/api/track", metrics.TrackEvent(m))
+	h.POST("/api/v1/track", metrics.TrackEvent(m))
 
 	// 启动 Prometheus 指标服务（独立端口 9090）
 	go func() {
