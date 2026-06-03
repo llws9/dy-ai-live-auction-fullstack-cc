@@ -36,11 +36,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `4` |
-| Done | `3` |
+| Done | `4` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `1` |
-| Last Updated | `2026-06-03 21:21` |
+| Pending | `0` |
+| Last Updated | `2026-06-03 21:25` |
 
 ## Task Matrix
 
@@ -49,7 +49,7 @@
 | `T001` | `AI helper pure functions` | `done` | `subagent-t001` | `W1` | `-` | `Task 1` | `frontend/admin/src/pages-new/goodsEditAi.ts`, `frontend/admin/src/pages-new/__tests__/goodsEditAi.test.ts` |
 | `T002` | `Product API wrapper` | `done` | `subagent-t002` | `W1` | `-` | `Task 2` | `frontend/admin/src/shared/api/product.ts`, `frontend/admin/src/shared/api/index.ts`, `frontend/admin/src/shared/api/__tests__/product.test.ts` |
 | `T003` | `GoodsEdit UI integration` | `done` | `subagent-t003` | `W2` | `T001,T002` | `Task 3` | `frontend/admin/src/pages-new/GoodsEdit.tsx`, `frontend/admin/src/pages-new/__tests__/GoodsEdit.ai.test.tsx` |
-| `T004` | `Regression build and MSW mock` | `pending` | `unassigned` | `W3` | `T001,T002,T003` | `Task 4` | `frontend/admin/src/mocks/handlers.ts` |
+| `T004` | `Regression build and MSW mock` | `done` | `subagent-t004` | `W3` | `T001,T002,T003` | `Task 4` | `frontend/admin/src/mocks/handlers.ts` |
 
 ## Wave Plan
 
@@ -236,10 +236,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `subagent-t004` |
+| Started At | `2026-06-03 18:58` |
+| Completed At | `2026-06-03 21:25` |
 | Branch | `feat/admin-ai-copywriting-integration` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-ai-copywriting-integration` |
 | Depends On | `T001,T002,T003` |
@@ -266,15 +266,18 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `focused tests and build pass` | `not_run` | `pending` |
+| `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/goodsEditAi.test.ts src/shared/api/__tests__/product.test.ts src/pages-new/__tests__/GoodsEdit.ai.test.tsx` | `Baseline focused tests pass before mock route` | `PASS: 3 suites, 9 tests passed` | `passed` |
+| `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/goodsEditAi.test.ts src/shared/api/__tests__/product.test.ts src/pages-new/__tests__/GoodsEdit.ai.test.tsx` | `Focused tests pass after mock route` | `PASS: 3 suites, 9 tests passed` | `passed` |
+| `cd frontend/admin && npm run build` | `Admin production build passes` | `PASS: tsc && vite build completed` | `passed` |
 
 **Modified Files**
 
-- `pending`
+- `frontend/admin/src/mocks/handlers.ts`
+- `docs/superpowers/sdd/runs/2026-06-03-2026-06-03-admin-ai-copywriting-integration-state.md`
 
 **Commits**
 
-- `pending`
+- `test(admin): mock AI copywriting endpoint`
 
 **Risks / Blockers**
 
@@ -282,9 +285,9 @@
 
 **Handoff**
 
-- Completion summary: `pending`
-- Remaining work: `pending`
-- First response line used: `pending`
+- Completion summary: `Added MSW mock route for POST /api/v1/products/ai/copywriting and verified focused Admin tests plus production build.`
+- Remaining work: `none for T004`
+- First response line used: `当前分支/worktree：feat/admin-ai-copywriting-integration @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-ai-copywriting-integration`
 
 ## Cross-Task Decisions
 
@@ -302,27 +305,41 @@
 
 | Area | Command | Required | Last Result | Notes |
 | --- | --- | --- | --- | --- |
-| Frontend Admin Helpers | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/goodsEditAi.test.ts` | yes | `not_run` | `T001` |
+| Frontend Admin Helpers | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/goodsEditAi.test.ts` | yes | `PASS: included in T004 focused run` | `T001,T004` |
 | Frontend Admin API | `cd frontend/admin && npm test -- --runTestsByPath src/shared/api/__tests__/product.test.ts` | yes | `PASS: 1 test passed` | `T002` |
 | Frontend Admin GoodsEdit | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/GoodsEdit.ai.test.tsx` | yes | `PASS: 3 tests passed` | `T003` |
 | Frontend Admin Focused | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/goodsEditAi.test.ts src/shared/api/__tests__/product.test.ts src/pages-new/__tests__/GoodsEdit.ai.test.tsx` | yes | `PASS: 3 suites, 9 tests passed` | `T004` |
-| Frontend Admin Build | `cd frontend/admin && npm run build` | yes | `not_run` | `T004` |
+| Frontend Admin Build | `cd frontend/admin && npm run build` | yes | `PASS: tsc && vite build completed` | `T004` |
 | Frontend Admin Full Tests | `cd frontend/admin && npm test -- --runInBand` | no | `not_run` | `Run if runtime is acceptable; record unrelated failures` |
 
 ## Final Review Checklist
 
-- [ ] 所有任务状态已更新。
-- [ ] 没有未解释的 `blocked` 任务。
-- [ ] 每个 `done` 任务都有测试或替代验证证据。
-- [ ] 每个实现型任务都遵循 TDD 或写明无法 TDD 的原因。
-- [ ] API 契约变更已同步文档。
-- [ ] 最终回答第一句展示当前分支/worktree。
+- [x] 所有任务状态已更新。
+- [x] 没有未解释的 `blocked` 任务。
+- [x] 每个 `done` 任务都有测试或替代验证证据。
+- [x] 每个实现型任务都遵循 TDD 或写明无法 TDD 的原因。
+- [x] API 契约变更已同步文档。
+- [x] 最终回答第一句展示当前分支/worktree。
 - [ ] 用户已获得下一步选项：继续下一波、发起 review、提交 PR、归档。
 
 ## Final Handoff
 
 当前分支/worktree：feat/admin-ai-copywriting-integration @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-ai-copywriting-integration
 
-**状态**
+**完成项**
 
-- `initialized`
+- `T001-T004 done`
+- `T004 added MSW mock route for POST /api/v1/products/ai/copywriting`
+
+**未完成项**
+
+- `none`
+
+**验证结果**
+
+- `PASS: focused Admin tests, 3 suites, 9 tests`
+- `PASS: cd frontend/admin && npm run build`
+
+**建议下一步**
+
+- `发起 review 或提交 PR`

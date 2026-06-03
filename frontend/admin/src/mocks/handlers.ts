@@ -246,6 +246,21 @@ export const handlers = [
     });
   }),
 
+  // AI 一键文案
+  http.post('/api/v1/products/ai/copywriting', async () => {
+    await delay(300);
+    return HttpResponse.json({
+      code: 0,
+      message: 'success',
+      data: {
+        name: 'AI 复古相机',
+        description: '这是一台适合直播竞拍的复古相机，外观经典，成色良好，适合收藏与日常拍摄使用。',
+        selling_points: ['复古外观', '成色良好', '适合收藏'],
+        suggested_start_price: '199.00',
+      },
+    });
+  }),
+
   // 更新商品
   http.put('/api/v1/admin/products/:id', async ({ params, request }) => {
     await delay(50);
