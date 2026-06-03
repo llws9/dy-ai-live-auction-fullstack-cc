@@ -118,6 +118,12 @@ class WebSocketService {
       };
 
       this.ws.onerror = (error) => {
+        if (this.isManualClose) {
+          this.isConnecting = false;
+          this.connectingPromise = null;
+          resolve();
+          return;
+        }
         console.error('WebSocket error:', error);
         this.isConnecting = false;
         this.connectingPromise = null;
@@ -125,10 +131,15 @@ class WebSocketService {
       };
 
       this.ws.onclose = (event) => {
-        console.log('WebSocket closed', event.code);
         this.isConnecting = false;
         this.connectingPromise = null;
         this.stopPing();
+
+        if (this.isManualClose) {
+          return;
+        }
+
+        console.log('WebSocket closed', event.code);
 
         // 鉴权失败：清理本地凭据并重定向登录页，停止重连
         if (event.code === WS_AUTH_FAILED_CLOSE_CODE) {

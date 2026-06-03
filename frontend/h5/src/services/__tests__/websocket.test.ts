@@ -15,7 +15,7 @@ class MockWebSocket {
 
   readyState = MockWebSocket.OPEN;
   onopen: (() => void) | null = null;
-  onclose: (() => void) | null = null;
+  onclose: ((event: { code: number }) => void) | null = null;
   onmessage: ((event: { data: string }) => void) | null = null;
   onerror: ((error: Error) => void) | null = null;
 
@@ -119,6 +119,26 @@ describe('WebSocketService', () => {
 
     // Should disconnect without error
     expect(true).toBe(true);
+  });
+
+  it('does not log errors when a connecting socket is manually disconnected', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    const connectPromise = service.connect().catch(() => undefined);
+    const socket = MockWebSocket.instances[0];
+
+    service.disconnect();
+    socket.onerror?.(new Error('closed before established'));
+    socket.onclose?.({ code: 1006 });
+
+    await connectPromise;
+
+    expect(errorSpy).not.toHaveBeenCalledWith('WebSocket error:', expect.any(Error));
+    expect(logSpy).not.toHaveBeenCalledWith('WebSocket closed', 1006);
+
+    errorSpy.mockRestore();
+    logSpy.mockRestore();
   });
 
   it('dispatches notification websocket messages to both notification APIs', async () => {
