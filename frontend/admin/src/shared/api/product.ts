@@ -26,6 +26,19 @@ export interface RuleCreateData {
   trigger_delay_before: number;
 }
 
+export interface CopywritingGenerateData {
+  images: string[];
+  category_id?: number;
+  keywords?: string;
+}
+
+export interface CopywritingDraft {
+  name: string;
+  description: string;
+  selling_points: string[];
+  suggested_start_price: string;
+}
+
 export const productApi = {
   // 获取商品列表
   list: (params?: ProductListParams) => {
@@ -38,6 +51,10 @@ export const productApi = {
 
   // 创建商品
   create: (data: ProductCreateData) => post<Product>('/products', data),
+
+  // AI 一键文案
+  generateCopywriting: (data: CopywritingGenerateData) =>
+    post<CopywritingDraft>('/products/ai/copywriting', data, { timeout: 70000 }),
 
   // 更新商品
   update: (id: number, data: Partial<ProductCreateData>) => put<Product>(`/products/${id}`, data),

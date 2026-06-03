@@ -36,18 +36,18 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `4` |
-| Done | `1` |
+| Done | `2` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `3` |
-| Last Updated | `2026-06-03 18:53` |
+| Pending | `2` |
+| Last Updated | `2026-06-03 21:14` |
 
 ## Task Matrix
 
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Allowed Files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `AI helper pure functions` | `done` | `subagent-t001` | `W1` | `-` | `Task 1` | `frontend/admin/src/pages-new/goodsEditAi.ts`, `frontend/admin/src/pages-new/__tests__/goodsEditAi.test.ts` |
-| `T002` | `Product API wrapper` | `pending` | `unassigned` | `W1` | `-` | `Task 2` | `frontend/admin/src/shared/api/product.ts`, `frontend/admin/src/shared/api/index.ts`, `frontend/admin/src/shared/api/__tests__/product.test.ts` |
+| `T002` | `Product API wrapper` | `done` | `subagent-t002` | `W1` | `-` | `Task 2` | `frontend/admin/src/shared/api/product.ts`, `frontend/admin/src/shared/api/index.ts`, `frontend/admin/src/shared/api/__tests__/product.test.ts` |
 | `T003` | `GoodsEdit UI integration` | `pending` | `unassigned` | `W2` | `T001,T002` | `Task 3` | `frontend/admin/src/pages-new/GoodsEdit.tsx`, `frontend/admin/src/pages-new/__tests__/GoodsEdit.ai.test.tsx` |
 | `T004` | `Regression build and MSW mock` | `pending` | `unassigned` | `W3` | `T001,T002,T003` | `Task 4` | `frontend/admin/src/mocks/handlers.ts` |
 
@@ -121,10 +121,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `subagent-t002` |
+| Started At | `2026-06-03 18:47` |
+| Completed At | `2026-06-03 21:14` |
 | Branch | `feat/admin-ai-copywriting-integration` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-ai-copywriting-integration` |
 | Depends On | `-` |
@@ -152,15 +152,18 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `RED then GREEN` | `not_run` | `pending` |
+| `cd frontend/admin && npm test -- --runTestsByPath src/shared/api/__tests__/product.test.ts` | `RED: productApi.generateCopywriting is not a function` | `FAIL: TypeError: productApi.generateCopywriting is not a function` | `passed_expected_red` |
+| `cd frontend/admin && npm test -- --runTestsByPath src/shared/api/__tests__/product.test.ts` | `GREEN: product API wrapper test passes` | `PASS: 1 test passed` | `passed` |
 
 **Modified Files**
 
-- `pending`
+- `frontend/admin/src/shared/api/product.ts`
+- `frontend/admin/src/shared/api/index.ts`
+- `frontend/admin/src/shared/api/__tests__/product.test.ts`
 
 **Commits**
 
-- `pending`
+- `feat(admin): add AI copywriting product API`
 
 **Risks / Blockers**
 
@@ -168,9 +171,9 @@
 
 **Handoff**
 
-- Completion summary: `pending`
-- Remaining work: `pending`
-- First response line used: `pending`
+- Completion summary: `Added CopywritingGenerateData, CopywritingDraft, and productApi.generateCopywriting with Gateway route and 70s timeout in both product API wrapper entry points.`
+- Remaining work: `T003-T004 pending`
+- First response line used: `当前分支/worktree：feat/admin-ai-copywriting-integration @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-ai-copywriting-integration`
 
 ### T003 - `GoodsEdit UI integration`
 
@@ -297,7 +300,7 @@
 | Area | Command | Required | Last Result | Notes |
 | --- | --- | --- | --- | --- |
 | Frontend Admin Helpers | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/goodsEditAi.test.ts` | yes | `not_run` | `T001` |
-| Frontend Admin API | `cd frontend/admin && npm test -- --runTestsByPath src/shared/api/__tests__/product.test.ts` | yes | `not_run` | `T002` |
+| Frontend Admin API | `cd frontend/admin && npm test -- --runTestsByPath src/shared/api/__tests__/product.test.ts` | yes | `PASS: 1 test passed` | `T002` |
 | Frontend Admin GoodsEdit | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/GoodsEdit.ai.test.tsx` | yes | `not_run` | `T003` |
 | Frontend Admin Focused | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/goodsEditAi.test.ts src/shared/api/__tests__/product.test.ts src/pages-new/__tests__/GoodsEdit.ai.test.tsx` | yes | `not_run` | `T004` |
 | Frontend Admin Build | `cd frontend/admin && npm run build` | yes | `not_run` | `T004` |
