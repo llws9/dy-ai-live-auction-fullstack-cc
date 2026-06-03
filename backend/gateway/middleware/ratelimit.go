@@ -53,6 +53,8 @@ func (rl *RateLimiter) Middleware() app.HandlerFunc {
 		// 第一次请求时设置过期时间
 		if count == 1 {
 			rl.redis.Expire(ctx, key, rl.window)
+		} else {
+			rl.repairMissingTTL(ctx, key)
 		}
 
 		// 超过限制返回 429
@@ -66,6 +68,20 @@ func (rl *RateLimiter) Middleware() app.HandlerFunc {
 		}
 
 		c.Next(ctx)
+	}
+}
+
+func (rl *RateLimiter) repairMissingTTL(ctx context.Context, key string) {
+	repairMissingTTL(ctx, rl.redis, key, rl.window)
+}
+
+func repairMissingTTL(ctx context.Context, rdb *redis.Client, key string, window time.Duration) {
+	ttl, err := rdb.TTL(ctx, key).Result()
+	if err != nil {
+		return
+	}
+	if ttl == -1 {
+		_ = rdb.Expire(ctx, key, window).Err()
 	}
 }
 
@@ -92,6 +108,8 @@ func PathRateLimit(redis *redis.Client, limit int, window time.Duration) app.Han
 
 		if count == 1 {
 			redis.Expire(ctx, key, window)
+		} else {
+			repairMissingTTL(ctx, redis, key, window)
 		}
 
 		if count > int64(limit) {

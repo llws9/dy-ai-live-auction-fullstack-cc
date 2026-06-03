@@ -1,10 +1,14 @@
 package middleware
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Note: These tests use mock Redis. In production, use miniredis or similar for integration tests.
@@ -91,6 +95,29 @@ func TestRateLimiter_WindowReset(t *testing.T) {
 		// New window should allow requests again
 		assert.True(t, true)
 	})
+}
+
+func TestRateLimiter_RepairsMissingTTL(t *testing.T) {
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() { _ = rdb.Close() })
+
+	ctx := context.Background()
+	key := "ratelimit:127.0.0.1"
+	require.NoError(t, rdb.Set(ctx, key, "37631", 0).Err())
+	require.Equal(t, time.Duration(-1), rdb.TTL(ctx, key).Val())
+
+	limiter := NewRateLimiter(&RateLimitConfig{
+		Redis:  rdb,
+		Limit:  1000,
+		Window: time.Second,
+	})
+
+	limiter.repairMissingTTL(ctx, key)
+
+	ttl := rdb.TTL(ctx, key).Val()
+	require.Greater(t, ttl, time.Duration(0))
+	require.LessOrEqual(t, ttl, time.Second)
 }
 
 func TestIPRateLimit(t *testing.T) {
