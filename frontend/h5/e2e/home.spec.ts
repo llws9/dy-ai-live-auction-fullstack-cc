@@ -48,3 +48,34 @@ test.describe('Home Page - 新版 H5 UI', () => {
     await expect(page.getByRole('heading', { name: '星河钻石腕表' })).toBeVisible();
   });
 });
+
+test.describe('Home Page - mobile shell layout', () => {
+  test.use({
+    viewport: { width: 512, height: 768 },
+    isMobile: true,
+    hasTouch: true,
+  });
+
+  test('keeps bottom navigation fixed on wide mobile browser viewport', async ({ page }) => {
+    await mockNewUiApis(page);
+    await page.goto('/');
+
+    const nav = page.getByRole('navigation', { name: '底部导航' });
+    await expect(nav).toBeVisible();
+
+    const metrics = await nav.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+      return {
+        position: style.position,
+        top: rect.top,
+        bottom: rect.bottom,
+        viewportHeight: window.innerHeight,
+      };
+    });
+
+    expect(metrics.position).toBe('fixed');
+    expect(metrics.top).toBeGreaterThanOrEqual(0);
+    expect(metrics.bottom).toBeLessThanOrEqual(metrics.viewportHeight);
+  });
+});
