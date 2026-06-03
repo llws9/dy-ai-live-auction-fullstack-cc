@@ -136,22 +136,10 @@ const LiveFeedPage: React.FC = () => {
   };
 
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const mouseStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    if (!t) return;
-    touchStartRef.current = { x: t.clientX, y: t.clientY };
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handleSwipeDelta = (deltaX: number, deltaY: number) => {
     if (bidPending) return; // 出价 pending 锁房：禁止 feed 切房
-    const start = touchStartRef.current;
-    touchStartRef.current = null;
-    if (!start) return;
-    const t = e.changedTouches[0];
-    if (!t) return;
-    const deltaX = t.clientX - start.x;
-    const deltaY = t.clientY - start.y;
     if (Math.abs(deltaY) <= Math.abs(deltaX)) return; // 纵向必须占主导
 
     if (deltaY <= -SWIPE_THRESHOLD_PX) {
@@ -166,6 +154,33 @@ const LiveFeedPage: React.FC = () => {
       if (currentIndex <= 0) return;
       goToRoom(currentIndex - 1);
     }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    if (!t) return;
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    if (!t) return;
+    handleSwipeDelta(t.clientX - start.x, t.clientY - start.y);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    mouseStartRef.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    const start = mouseStartRef.current;
+    mouseStartRef.current = null;
+    if (!start) return;
+    handleSwipeDelta(e.clientX - start.x, e.clientY - start.y);
   };
 
   if (loading) {
@@ -185,7 +200,12 @@ const LiveFeedPage: React.FC = () => {
   const urlAuctionId = Number.isFinite(urlAuctionIdRaw) && urlAuctionIdRaw > 0 ? urlAuctionIdRaw : undefined;
 
   return (
-    <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+    >
       {currentRoom && (
         <LiveRoomSlide
           key={currentRoom.id}

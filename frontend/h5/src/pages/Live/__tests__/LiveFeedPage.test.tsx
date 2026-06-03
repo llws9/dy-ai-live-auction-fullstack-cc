@@ -98,6 +98,20 @@ describe('LiveFeedPage feed 骨架', () => {
     );
   });
 
+  it('底部导航进入无 id 的 /live 时，桌面拖拽上滑也能切到下一个房间', async () => {
+    renderFeed('/live');
+    const slide = await screen.findByTestId('live-room-slide');
+    expect(slide).toHaveTextContent('slide:3:11:undefined:true');
+
+    const container = slide.parentElement as HTMLElement;
+    fireEvent.mouseDown(container, { clientX: 100, clientY: 300 });
+    fireEvent.mouseUp(container, { clientX: 100, clientY: 220 });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('live-room-slide')).toHaveTextContent('slide:4:12:12:true')
+    );
+  });
+
   it('到末尾继续上滑提示没有更多', async () => {
     mockedLiveStreamApi.list.mockResolvedValue({
       list: [{ id: 3, name: '房间A', current_auction_id: 11 }],
