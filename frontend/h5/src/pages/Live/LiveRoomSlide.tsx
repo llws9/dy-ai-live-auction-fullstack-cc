@@ -6,6 +6,7 @@ import { useAuth } from '@/store/authContext';
 import { useToast } from '../../components/Toast';
 import { ChatPanel } from '../../components/LiveChat/ChatPanel';
 import { useLiveChatStore } from '../../store/liveChatStore';
+import { repairUtf8Mojibake } from '../../utils/textEncoding';
 import BidDock from './BidDock';
 import styles from './Live.module.css';
 
@@ -31,6 +32,7 @@ interface ProductRules {
 interface Product {
   id?: number;
   name?: string;
+  description?: string;
   images?: string[] | string;
   cover_image?: string;
   rules?: ProductRules;
@@ -520,7 +522,9 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   }
 
   const hostName = liveStream?.host_name || liveStream?.creator_name || '拍卖师';
-  const roomName = liveStream?.name || '竞拍直播间';
+  const roomName = repairUtf8Mojibake(liveStream?.name) || '竞拍直播间';
+  const productName = repairUtf8Mojibake(product?.name || auction?.product?.name) || '竞拍商品';
+  const productIntro = repairUtf8Mojibake(product?.description || auction?.product?.description || roomName);
   const liveCoverImage = productImage || liveStream?.cover_image || '';
   const hostAvatar = liveStream?.host_avatar || liveStream?.avatar || '';
 
@@ -530,7 +534,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         {liveStream?.video_url ? (
           <video className={styles.video} src={liveStream.video_url} poster={liveCoverImage} autoPlay muted loop playsInline />
         ) : liveCoverImage ? (
-          <img className={styles.video} src={liveCoverImage} alt={product?.name || roomName} />
+          <img className={styles.video} src={liveCoverImage} alt={productName || roomName} />
         ) : (
           <div className={styles.videoFallback}>暂无直播画面</div>
         )}
@@ -584,10 +588,10 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         </div>
 
         <article className={styles.productCard}>
-          {productImage ? <img src={productImage} alt={product?.name || '竞拍商品'} /> : <div className={styles.productFallback}>暂无图片</div>}
+          {productImage ? <img src={productImage} alt={productName} /> : <div className={styles.productFallback}>暂无图片</div>}
           <div>
-            <h1>{product?.name || '竞拍商品'}</h1>
-            <p>{roomName}</p>
+            <h1>{productName}</h1>
+            <p>{productIntro}</p>
             <div className={styles.followRow}>
               <button className={styles.followButton} disabled={followingPending} onClick={handleFollow} type="button">
                 {followingPending ? '处理中...' : following ? '已收藏' : '收藏'}

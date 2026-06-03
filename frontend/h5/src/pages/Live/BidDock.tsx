@@ -1,8 +1,9 @@
 import React from 'react';
+import { repairUtf8Mojibake } from '@/utils/textEncoding';
 import styles from './Live.module.css';
 
 interface BidDockProps {
-  product?: { name?: string } | null;
+  product?: { name?: string; description?: string } | null;
   productImage?: string;
   roomName?: string;
   currentPrice: number;
@@ -31,6 +32,9 @@ const BidDock: React.FC<BidDockProps> = ({
   onRequireLogin,
   children,
 }) => {
+  const productName = repairUtf8Mojibake(product?.name) || '竞拍商品';
+  const productIntro = repairUtf8Mojibake(product?.description || roomName);
+
   const handleBidClick = (event: React.MouseEvent) => {
     event.stopPropagation();
     if (!isAuthenticated) {
@@ -45,13 +49,13 @@ const BidDock: React.FC<BidDockProps> = ({
       <div className={styles.dock} role="group" onClick={() => onOpen('info')}>
         <div className={styles.dockProduct}>
           {productImage ? (
-            <img src={productImage} alt={product?.name || '竞拍商品'} />
+            <img src={productImage} alt={productName} />
           ) : (
             <div className={styles.dockFallback}>品</div>
           )}
           <div className={styles.dockInfo}>
-            <p>{product?.name || '竞拍商品'}</p>
-            <span>{roomName}</span>
+            <p>{productName}</p>
+            <span>{productIntro}</span>
             <span className={styles.dockPrice}>当前最高价 ¥{formatMoney(currentPrice)}</span>
           </div>
         </div>

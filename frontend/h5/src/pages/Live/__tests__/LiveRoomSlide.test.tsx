@@ -92,6 +92,9 @@ const LocationDisplay: React.FC = () => {
   return <div data-testid="location-search">{location.search}</div>;
 };
 
+const toUtf8Mojibake = (text: string) =>
+  encodeURIComponent(text).replace(/%([0-9A-F]{2})/g, (_, hex: string) => String.fromCharCode(parseInt(hex, 16)));
+
 const renderSlide = (props: Partial<React.ComponentProps<typeof LiveRoomSlide>> = {}) =>
   render(
     <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
@@ -260,5 +263,34 @@ describe('LiveRoomSlide', () => {
     fireEvent.click(screen.getByRole('button', { name: /立即出价/ }));
     await waitFor(() => expect(mockedBidApi.placeBid).toHaveBeenCalledWith(5, 1300));
     await waitFor(() => expect(screen.getByTestId('location-search')).not.toHaveTextContent('sheet'));
+  });
+
+  it('repairs mojibake product and room copy in collapsed and expanded states', async () => {
+    mockedProductApi.get.mockResolvedValue({
+      id: 7,
+      name: toUtf8Mojibake('明代紫砂壶'),
+      description: toUtf8Mojibake('名家手作孤品'),
+      images: ['/product.jpg'],
+      rules: { start_price: 800, increment: 100 },
+    });
+    mockedLiveStreamApi.get.mockResolvedValue({
+      id: 3,
+      name: toUtf8Mojibake('瓷器珍藏夜场'),
+      host_name: '拍卖师王老师',
+      viewer_count: 128,
+      is_following: false,
+      followers_count: 12,
+    });
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    expect(screen.getByText('名家手作孤品')).toBeInTheDocument();
+    expect(screen.queryByText(/æ|å|ç|è/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('明代紫砂壶'));
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(1);
+    expect(screen.getAllByText('名家手作孤品').length).toBeGreaterThan(1);
   });
 });
