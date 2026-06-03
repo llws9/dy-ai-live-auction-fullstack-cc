@@ -317,4 +317,6 @@ func InitRegistry() {
 	InitSkyLampMetrics()
 	// 初始化 NotificationMetrics
 	InitNotificationMetrics()
+	// 初始化 FixedPriceMetrics
+	InitFixedPriceMetrics()
 }

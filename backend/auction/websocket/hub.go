@@ -159,6 +159,16 @@ func (h *Hub) BroadcastToRoom(auctionID int64, message *Message) {
 	}
 }
 
+// TryBroadcastToRoom 非阻塞广播；队列满时返回 false，由调用方决定是否丢弃。
+func (h *Hub) TryBroadcastToRoom(auctionID int64, message *Message) bool {
+	select {
+	case h.broadcast <- &BroadcastMessage{AuctionID: auctionID, Message: message}:
+		return true
+	default:
+		return false
+	}
+}
+
 // GetRoomCount 获取房间数量
 func (h *Hub) GetRoomCount() int {
 	h.roomsLock.RLock()
@@ -217,6 +227,10 @@ func (h *Hub) BroadcastToUserRoom(userID int64, message *Message) {
 	// 尝试发送到所有客户端，记录发送失败的客户端
 	var blockedClients []*Client
 	for client := range clients {
+		if client.IsClosed() {
+			blockedClients = append(blockedClients, client)
+			continue
+		}
 		select {
 		case client.Send <- message:
 			// 发送成功
@@ -236,7 +250,7 @@ func (h *Hub) BroadcastToUserRoom(userID int64, message *Message) {
 	h.userRoomsMu.Lock()
 	for _, client := range blockedClients {
 		if h.UserRooms[userID] != nil {
-			close(client.Send)
+			client.Close()
 			delete(h.UserRooms[userID], client)
 		}
 	}

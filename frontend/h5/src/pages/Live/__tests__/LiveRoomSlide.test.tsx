@@ -4,6 +4,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import LiveRoomSlide from '../LiveRoomSlide';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '../../../services/api';
 import WebSocketService from '../../../services/websocket';
+import { useFixedPriceItems } from '../../../hooks/useFixedPriceItems';
 
 const mockShowGlobalToast = jest.fn();
 const mockNavigate = jest.fn();
@@ -42,6 +43,10 @@ jest.mock('../../../services/api', () => ({
 jest.mock('../../../services/websocket', () => ({
   __esModule: true,
   default: jest.fn(() => mockWebSocketInstance),
+}));
+
+jest.mock('../../../hooks/useFixedPriceItems', () => ({
+  useFixedPriceItems: jest.fn(),
 }));
 
 jest.mock('@/utils/env', () => ({
@@ -86,6 +91,7 @@ const mockedFollowApi = followApi as jest.Mocked<typeof followApi>;
 const mockedLiveStreamApi = liveStreamApi as jest.Mocked<typeof liveStreamApi>;
 const mockedProductApi = productApi as jest.Mocked<typeof productApi>;
 const MockedWebSocketService = WebSocketService as jest.MockedClass<typeof WebSocketService>;
+const mockedUseFixedPriceItems = useFixedPriceItems as jest.MockedFunction<typeof useFixedPriceItems>;
 
 const LocationDisplay: React.FC = () => {
   const location = useLocation();
@@ -113,6 +119,7 @@ describe('LiveRoomSlide', () => {
     jest.clearAllMocks();
     mockWebSocketInstance.connect.mockResolvedValue(undefined);
     mockWebSocketInstance.onNotification.mockReturnValue(jest.fn());
+    mockedUseFixedPriceItems.mockReturnValue({ items: [], byId: {}, socket: null });
 
     mockedAuctionApi.get.mockResolvedValue({
       id: 5,

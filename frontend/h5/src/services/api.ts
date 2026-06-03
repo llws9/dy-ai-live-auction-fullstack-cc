@@ -144,14 +144,17 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeout: numb
   }
 }
 
+type RequestConfig = {
+  showError?: boolean;
+  timeout?: number;
+  headers?: HeadersInit;
+};
+
 // 通用请求方法
 async function request<T>(
   path: string,
   options?: RequestInit,
-  config?: {
-    showError?: boolean;  // 是否显示错误提示
-    timeout?: number;     // 自定义超时时间
-  }
+  config?: RequestConfig
 ): Promise<T> {
   const { showError = true, timeout = REQUEST_TIMEOUT } = config || {};
 
@@ -167,6 +170,7 @@ async function request<T>(
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...config?.headers,
           ...options?.headers,
         },
         ...options,
@@ -253,12 +257,12 @@ async function request<T>(
 }
 
 // GET 请求
-export function get<T>(path: string, config?: { showError?: boolean; timeout?: number }): Promise<T> {
+export function get<T>(path: string, config?: RequestConfig): Promise<T> {
   return request<T>(path, { method: 'GET' }, config);
 }
 
 // POST 请求
-export function post<T>(path: string, data?: any, config?: { showError?: boolean; timeout?: number }): Promise<T> {
+export function post<T>(path: string, data?: any, config?: RequestConfig): Promise<T> {
   return request<T>(path, {
     method: 'POST',
     body: data ? JSON.stringify(data) : undefined,
@@ -266,7 +270,7 @@ export function post<T>(path: string, data?: any, config?: { showError?: boolean
 }
 
 // PUT 请求
-export function put<T>(path: string, data?: any, config?: { showError?: boolean; timeout?: number }): Promise<T> {
+export function put<T>(path: string, data?: any, config?: RequestConfig): Promise<T> {
   return request<T>(path, {
     method: 'PUT',
     body: data ? JSON.stringify(data) : undefined,
@@ -274,7 +278,7 @@ export function put<T>(path: string, data?: any, config?: { showError?: boolean;
 }
 
 // DELETE 请求
-export function del<T>(path: string, config?: { showError?: boolean; timeout?: number }): Promise<T> {
+export function del<T>(path: string, config?: RequestConfig): Promise<T> {
   return request<T>(path, { method: 'DELETE' }, config);
 }
 

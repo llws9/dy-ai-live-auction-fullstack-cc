@@ -1,4 +1,7 @@
 import '@testing-library/jest-dom';
+import { TextDecoder, TextEncoder } from 'util';
+
+Object.assign(globalThis, { TextDecoder, TextEncoder });
 
 // MSW server setup - only for integration tests
 // Unit tests don't need MSW

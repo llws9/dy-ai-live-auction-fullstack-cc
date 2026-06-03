@@ -127,6 +127,51 @@ export const liveStreamApi = {
   ban: (id: number, reason: string) => put<any>(`/admin/live-streams/${id}/ban`, { reason }),
 };
 
+export type FixedPriceAdminStatus = 'on_sale' | 'sold_out' | 'offline'
+
+export interface FixedPriceAdminItem {
+  id: number
+  live_stream_id: number
+  product_id: number
+  product_title?: string
+  product?: {
+    id?: number
+    title?: string
+    cover_image?: string
+  }
+  price: string
+  total_stock: number
+  remaining_stock: number
+  status: FixedPriceAdminStatus
+  created_at?: string
+}
+
+export interface FixedPriceAdminListResponse {
+  items: FixedPriceAdminItem[]
+  total?: number
+  page?: number
+  page_size?: number
+}
+
+export const fixedPriceAdminApi = {
+  list: (liveStreamId: number, params?: { page?: number; page_size?: number }) => {
+    const query = buildQuery(params || {})
+    const suffix = query ? `?${query}` : ''
+    return get<FixedPriceAdminListResponse>(`/admin/live-streams/${liveStreamId}/fixed-price/items${suffix}`)
+  },
+
+  listItem: (liveStreamId: number, data: { product_id: number; price: string; stock: number }) =>
+    post<FixedPriceAdminItem>('/fixed-price/items', {
+      live_stream_id: liveStreamId,
+      product_id: data.product_id,
+      price: data.price,
+      total_stock: data.stock,
+      max_per_user: 1,
+    }),
+
+  offline: (itemId: number) => post<{ id: number; status: FixedPriceAdminStatus }>(`/fixed-price/items/${itemId}/offline`),
+}
+
 // 通知API
 export const notificationApi = {
   list: (params?: { page?: number; page_size?: number; unread_only?: boolean }) => {

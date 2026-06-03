@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -125,8 +124,7 @@ func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.Respons
 			"auction_id": auctionID,
 		},
 	}
-	data, _ := json.Marshal(welcomeMsg)
-	conn.WriteMessage(websocket.TextMessage, data)
+	client.Send <- welcomeMsg
 
 	// 启动标准读写泵：ReadPump 处理 ping/sync_request/chat_send，WritePump 统一写出
 	go client.ReadPump()

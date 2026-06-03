@@ -1,0 +1,121 @@
+.card {
+  --fixed-price-card-bg: rgba(255, 255, 255, 0.96);
+  --fixed-price-card-border: rgba(249, 115, 22, 0.16);
+  --fixed-price-accent: var(--color-primary-500, #f97316);
+  --fixed-price-accent-strong: var(--color-primary-600, #ea580c);
+
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3, 12px);
+  min-height: 88px;
+  padding: var(--spacing-3, 12px);
+  border: 1px solid var(--fixed-price-card-border);
+  border-radius: var(--radius-xl, 16px);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(251, 191, 36, 0.18), transparent 30%),
+    var(--fixed-price-card-bg);
+  box-shadow: 0 10px 28px rgba(124, 45, 18, 0.1);
+}
+
+.cover,
+.coverFallback {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  border-radius: var(--radius-lg, 12px);
+}
+
+.cover {
+  display: block;
+  object-fit: cover;
+}
+
+.coverFallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary, #525252);
+  font-size: 12px;
+  font-weight: 600;
+  background:
+    linear-gradient(135deg, rgba(249, 115, 22, 0.14), rgba(251, 191, 36, 0.18)),
+    #fff7ed;
+}
+
+.info {
+  min-width: 0;
+  flex: 1;
+}
+
+.badge {
+  width: fit-content;
+  margin-bottom: var(--spacing-1, 4px);
+  padding: 2px 7px;
+  border-radius: var(--radius-full, 9999px);
+  color: var(--fixed-price-accent-strong);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+  background: rgba(249, 115, 22, 0.1);
+}
+
+.title {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-primary, #171717);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-2, 8px);
+  margin-top: var(--spacing-1, 4px);
+}
+
+.price {
+  color: var(--fixed-price-accent-strong);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.stock {
+  color: var(--text-secondary, #525252);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.purchaseButton {
+  min-width: 88px;
+  min-height: 44px;
+  border: none;
+  border-radius: var(--radius-full, 9999px);
+  color: var(--text-inverse, #ffffff);
+  font-size: 14px;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--fixed-price-accent), var(--fixed-price-accent-strong));
+  box-shadow: 0 8px 16px rgba(249, 115, 22, 0.28);
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+}
+
+.purchaseButton:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.purchaseButton:focus-visible {
+  outline: 2px solid var(--fixed-price-accent);
+  outline-offset: 2px;
+}
+
+.purchaseButton:disabled {
+  color: var(--text-secondary, #525252);
+  background: rgba(163, 163, 163, 0.18);
+  box-shadow: none;
+  cursor: not-allowed;
+}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -43,7 +44,7 @@ type Client struct {
 	chatHandler  *ChatHandler
 
 	closeOnce sync.Once
-	closed    bool
+	closed    atomic.Bool
 }
 
 // NewClient 创建客户端
@@ -271,13 +272,14 @@ func (c *Client) handleSyncRequest(msg *Message) {
 // Close 关闭客户端连接
 func (c *Client) Close() {
 	c.closeOnce.Do(func() {
-		c.closed = true
-		close(c.Send)
-		c.conn.Close()
+		c.closed.Store(true)
+		if c.conn != nil {
+			c.conn.Close()
+		}
 	})
 }
 
 // IsClosed 检查是否已关闭
 func (c *Client) IsClosed() bool {
-	return c.closed
+	return c.closed.Load()
 }

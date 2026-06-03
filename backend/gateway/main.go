@@ -69,7 +69,7 @@ func main() {
 	h.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-User-ID"},
+		AllowHeaders:     defaultCORSAllowHeaders(),
 		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
@@ -111,4 +111,8 @@ func main() {
 	log.Printf("Product Service: %s", cfg.Services.ProductURL)
 	log.Printf("Auction Service: %s", cfg.Services.AuctionURL)
 	h.Spin()
+}
+
+func defaultCORSAllowHeaders() []string {
+	return []string{"Origin", "Content-Type", "Authorization", "X-User-ID", "X-Idempotency-Key"}
 }

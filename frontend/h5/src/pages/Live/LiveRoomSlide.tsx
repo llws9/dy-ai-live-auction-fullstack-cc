@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import type { FixedPriceItem } from '@/api/fixedPrice';
+import FixedPriceCard from '@/components/FixedPriceCard';
+import FixedPriceFlair from '@/components/FixedPriceFlair';
+import FixedPricePurchaseModal from '@/components/FixedPricePurchaseModal';
+import { useFixedPriceItems } from '@/hooks/useFixedPriceItems';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '@/services/api';
 import WebSocketService from '@/services/websocket';
 import { useAuth } from '@/store/authContext';
@@ -169,6 +174,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const [now, setNow] = useState(() => Date.now());
   const { showToast: showGlobalToast } = useToast();
   const wsRef = useRef<WebSocketService | null>(null);
+  const [fixedPriceModalItem, setFixedPriceModalItem] = useState<FixedPriceItem | null>(null);
 
   const auctionRules = auction?.rules ?? auction?.rule ?? auction?.auction_rule;
   const currentPrice = toAmount(auction?.current_price);
@@ -177,6 +183,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const minBid = Math.max(currentPrice, startPrice) + increment;
   const isActive = auction?.status === 1 || auction?.status === 2;
   const effectiveLiveStreamId = liveStreamId || auction?.live_stream_id || liveStream?.id || 0;
+  const { items: fixedPriceItems, socket: fixedPriceSocket } = useFixedPriceItems(effectiveLiveStreamId);
   const productImage = getFirstImage(product || auction?.product);
 
   const timeLeft = useMemo(() => {
@@ -561,6 +568,21 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         </header>
       </div>
 
+      {fixedPriceItems.length > 0 && (
+        <div
+          className={`${styles.fixedPriceList} ${sheet !== null ? styles.fixedPriceListHidden : ''}`}
+          aria-label="一口价商品列表"
+        >
+          {fixedPriceItems.map((item) => (
+            <FixedPriceCard
+              key={item.id}
+              item={item}
+              onPurchase={() => setFixedPriceModalItem(item)}
+            />
+          ))}
+        </div>
+      )}
+
       <BidDock
         product={product || auction?.product}
         productImage={productImage}
@@ -661,6 +683,19 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       </BidDock>
 
       {toast && <div className={styles.toast} role="status">{toast}</div>}
+      {fixedPriceModalItem && (
+        <FixedPricePurchaseModal
+          item={fixedPriceModalItem}
+          liveStreamId={effectiveLiveStreamId}
+          open={true}
+          onClose={() => setFixedPriceModalItem(null)}
+          onSuccess={(orderId) => {
+            setFixedPriceModalItem(null);
+            navigate(`/order/${orderId}`);
+          }}
+        />
+      )}
+      <FixedPriceFlair socket={fixedPriceSocket} />
     </section>
   );
 };

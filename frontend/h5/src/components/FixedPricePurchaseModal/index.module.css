@@ -1,0 +1,163 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(23, 23, 23, 0.48);
+  backdrop-filter: blur(10px);
+}
+
+.modal {
+  --fixed-price-accent: var(--color-primary-500, #f97316);
+  --fixed-price-accent-strong: var(--color-primary-600, #ea580c);
+
+  position: relative;
+  width: min(100%, 420px);
+  padding: 22px;
+  border: 1px solid rgba(249, 115, 22, 0.18);
+  border-radius: 24px;
+  color: var(--text-primary, #171717);
+  background:
+    radial-gradient(circle at 24% 0%, rgba(251, 191, 36, 0.22), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 247, 237, 0.98));
+  box-shadow: 0 24px 60px rgba(124, 45, 18, 0.22);
+}
+
+.closeButton {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: var(--radius-full, 9999px);
+  color: var(--text-secondary, #525252);
+  font-size: 24px;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+}
+
+.badge {
+  width: fit-content;
+  margin-bottom: 10px;
+  padding: 5px 10px;
+  border-radius: var(--radius-full, 9999px);
+  color: var(--fixed-price-accent-strong);
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(249, 115, 22, 0.12);
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.productName {
+  margin: 8px 0 0;
+  color: var(--text-secondary, #525252);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.pricePanel {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  align-items: baseline;
+  margin: 18px 0;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.priceLabel {
+  color: var(--text-secondary, #525252);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.price {
+  color: var(--fixed-price-accent-strong);
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.stock {
+  grid-column: 1 / -1;
+  color: var(--text-secondary, #525252);
+  font-size: 13px;
+}
+
+.purchaseButton,
+.rechargeButton,
+.secondaryButton {
+  min-height: 44px;
+  border: none;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 15px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.purchaseButton {
+  width: 100%;
+  color: var(--text-inverse, #ffffff);
+  background: linear-gradient(135deg, var(--fixed-price-accent), var(--fixed-price-accent-strong));
+  box-shadow: 0 12px 24px rgba(249, 115, 22, 0.28);
+}
+
+.purchaseButton:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.balanceDialog {
+  position: fixed;
+  left: 50%;
+  bottom: 104px;
+  z-index: 70;
+  width: min(calc(100% - 36px), 360px);
+  padding: 18px;
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: 0 18px 50px rgba(23, 23, 23, 0.22);
+  transform: translateX(-50%);
+}
+
+.balanceDialog h3 {
+  margin: 0;
+  color: var(--text-primary, #171717);
+  font-size: 18px;
+}
+
+.balanceDialog p {
+  margin: 8px 0 16px;
+  color: var(--text-secondary, #525252);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.balanceActions {
+  display: flex;
+  gap: 10px;
+}
+
+.secondaryButton {
+  flex: 1;
+  color: var(--text-secondary, #525252);
+  background: rgba(163, 163, 163, 0.14);
+}
+
+.rechargeButton {
+  flex: 1;
+  color: var(--text-inverse, #ffffff);
+  background: linear-gradient(135deg, #0f172a, #334155);
+}

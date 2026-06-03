@@ -89,6 +89,20 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	v1.GET("/auctions/:id/bids", auctionProxy.Forward)
 	v1.GET("/auctions/:id/ranking", auctionProxy.Forward)
 
+	// ========== 一口价秒杀路由（A5 M1 / spec §4.1） ==========
+	// 上架 / 下架需要主播或管理员权限。
+	authGroup.POST("/fixed-price/items", middleware.RequireStreamer(), auctionProxy.Forward)
+	authGroup.POST("/fixed-price/items/:id/offline", middleware.RequireStreamer(), auctionProxy.Forward)
+	// 商品详情公开访问。
+	v1.GET("/fixed-price/items/:id", auctionProxy.Forward)
+	// 抢购 / 查询我是否已购需要登录；X-Idempotency-Key 由 proxy 透传给下游。
+	authGroup.POST("/fixed-price/items/:id/purchase", auctionProxy.Forward)
+	authGroup.GET("/fixed-price/items/:id/my-purchase", auctionProxy.Forward)
+	// 直播间一口价列表公开访问。
+	v1.GET("/live-streams/:id/fixed-price/items", auctionProxy.Forward)
+	// 管理端需要查看售罄/下架记录，必须走受保护的全状态列表。
+	authGroup.GET("/admin/live-streams/:id/fixed-price/items", middleware.RequireStreamer(), auctionProxy.Forward)
+
 	// ========== 直播间关注路由 ==========
 	authGroup.POST("/live-streams/:id/follow", auctionProxy.Forward)
 	authGroup.DELETE("/live-streams/:id/follow", auctionProxy.Forward)

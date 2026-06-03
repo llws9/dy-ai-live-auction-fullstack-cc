@@ -7,13 +7,16 @@ import { useAuth } from "@/shared/auth"
 
 export default function Profile() {
   const { user } = useAuth()
+
   // 用户信息（从AuthContext获取）
-  const userInfo = user || {
+  const userInfo = user ?? {
+    id: 0,
     name: '管理员',
     email: '',
     phone: '',
     avatar: '',
     role: 2,
+    created_at: '',
   }
 
   return (

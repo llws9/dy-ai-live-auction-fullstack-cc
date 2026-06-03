@@ -1,0 +1,29 @@
+groups:
+  - name: fixed_price_alerts
+    interval: 15s
+    rules:
+      - alert: FixedPricePurchaseP99High
+        expr: |
+          histogram_quantile(0.99, sum by (le) (rate(fixed_price_purchase_latency_seconds_bucket{stage="total"}[5m]))) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+          category: business
+          service: auction-service
+        annotations:
+          summary: "一口价抢购 P99 延迟过高"
+          description: "一口价抢购 total 阶段 P99 延迟 {{ $value }}s 已超过 200ms，持续 5 分钟"
+          runbook_url: "docs/superpowers/specs/2026-06-01-fixed-price-sale-design.md#6"
+
+      - alert: FixedPriceCompensationRateHigh
+        expr: |
+          sum(rate(fixed_price_compensation_total[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          category: business
+          service: auction-service
+        annotations:
+          summary: "一口价补偿事务频率过高"
+          description: "一口价补偿事务速率 {{ $value }} ops/s 已超过 0.01，可能存在库存/余额事务异常"
+          runbook_url: "docs/superpowers/specs/2026-06-01-fixed-price-sale-design.md#6"

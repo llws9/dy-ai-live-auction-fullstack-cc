@@ -2,6 +2,8 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import LiveRoomSlide from '../LiveRoomSlide';
+import { purchase } from '../../../api/fixedPrice';
+import { useFixedPriceItems } from '../../../hooks/useFixedPriceItems';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '../../../services/api';
 import WebSocketService from '../../../services/websocket';
 import { useLiveChatStore } from '../../../store/liveChatStore';
@@ -46,6 +48,15 @@ jest.mock('../../../services/websocket', () => ({
   default: jest.fn(() => mockWebSocketInstance),
 }));
 
+jest.mock('../../../hooks/useFixedPriceItems', () => ({
+  useFixedPriceItems: jest.fn(),
+}));
+
+jest.mock('../../../api/fixedPrice', () => ({
+  generateIdempotencyKey: jest.fn(() => 'idem-live-page-001'),
+  purchase: jest.fn(),
+}));
+
 jest.mock('@/utils/env', () => ({
   IS_DEV: true,
   IS_PROD: false,
@@ -87,6 +98,8 @@ const mockedBidApi = bidApi as jest.Mocked<typeof bidApi>;
 const mockedFollowApi = followApi as jest.Mocked<typeof followApi>;
 const mockedLiveStreamApi = liveStreamApi as jest.Mocked<typeof liveStreamApi>;
 const mockedProductApi = productApi as jest.Mocked<typeof productApi>;
+const mockedUseFixedPriceItems = useFixedPriceItems as jest.MockedFunction<typeof useFixedPriceItems>;
+const mockedPurchase = purchase as jest.MockedFunction<typeof purchase>;
 const MockedWebSocketService = WebSocketService as jest.MockedClass<typeof WebSocketService>;
 
 describe('LiveRoom migration', () => {
@@ -94,6 +107,9 @@ describe('LiveRoom migration', () => {
     jest.clearAllMocks();
     mockWebSocketInstance.connect.mockResolvedValue(undefined);
     mockWebSocketInstance.onNotification.mockReturnValue(jest.fn());
+    mockWebSocketInstance.on.mockImplementation(() => undefined);
+    mockWebSocketInstance.off.mockImplementation(() => undefined);
+    mockedUseFixedPriceItems.mockReturnValue({ items: [], byId: {}, socket: null });
 
     mockedAuctionApi.get.mockResolvedValue({
       id: 5,
@@ -131,6 +147,13 @@ describe('LiveRoom migration', () => {
     mockedFollowApi.unfollowLiveStream.mockResolvedValue({});
     mockedFollowApi.getFollowersStats.mockResolvedValue({ count: 12 });
     mockedFollowApi.getFollowStatus.mockResolvedValue({ is_following: false });
+    mockedPurchase.mockResolvedValue({
+      order_id: 88,
+      item_id: 7001,
+      price: '88.00',
+      remaining_stock: 4,
+      status: 'success',
+    });
   });
 
   it('loads live auction data and wires bid/follow actions', async () => {
@@ -308,6 +331,75 @@ describe('LiveRoom migration', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/result?id=5');
   });
 
+  it('mounts fixed-price cards, purchase modal, and flair on the live slide', async () => {
+    let fixedPriceFlairHandler: ((message: any) => void) | undefined;
+    const fixedPriceSocket = {
+      on: jest.fn((type: string, handler: (message: any) => void) => {
+        if (type === 'fixed_price_flair') {
+          fixedPriceFlairHandler = handler;
+        }
+      }),
+      off: jest.fn(),
+    };
+    mockWebSocketInstance.on.mockImplementation((type: string) => {
+      if (type === 'fixed_price_flair') {
+        throw new Error('fixed-price flair must use liveStreamId socket, not auction socket');
+      }
+    });
+    mockedUseFixedPriceItems.mockReturnValue({
+      items: [{
+        id: 7001,
+        product_id: 5001,
+        price: '88.00',
+        total_stock: 10,
+        remaining_stock: 5,
+        status: 'on_sale',
+        product_brief: { id: 5001, title: '一口价翡翠', cover_image: '/fp.jpg' },
+      }],
+      byId: {},
+      socket: fixedPriceSocket,
+    });
+    mockedPurchase.mockResolvedValue({
+      order_id: 88,
+      item_id: 7001,
+      price: '88.00',
+      remaining_stock: 4,
+      status: 'success',
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={['/live?id=3&auction_id=5']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('一口价翡翠')).toBeInTheDocument();
+    expect(mockedUseFixedPriceItems).toHaveBeenCalledWith(3);
+
+    fireEvent.click(screen.getByRole('button', { name: /立即抢/ }));
+    expect(await screen.findByRole('dialog', { name: /确认抢购/ })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /确认抢购/ }));
+    await waitFor(() => expect(mockedPurchase).toHaveBeenCalledWith({
+      itemId: 7001,
+      idempotencyKey: 'idem-live-page-001',
+    }));
+    expect(mockNavigate).toHaveBeenCalledWith('/order/88');
+
+    expect(fixedPriceSocket.on).toHaveBeenCalledWith('fixed_price_flair', expect.any(Function));
+    act(() => {
+      fixedPriceFlairHandler?.({
+        buyer_nickname: 'Alice',
+        product_title: '一口价翡翠',
+        price: '88.00',
+      });
+    });
+    expect(await screen.findByText('Alice')).toBeInTheDocument();
+  });
+
   it('mounts ChatPanel, dispatches chat_message into store and sends via sendChat', async () => {
     useLiveChatStore.getState().reset();
     const chatHandlers: Record<string, (data: any) => void> = {};
@@ -326,10 +418,8 @@ describe('LiveRoom migration', () => {
 
     fireEvent.click(await screen.findByText('明代紫砂壶'));
 
-    // chat_message handler 已注册
     await waitFor(() => expect(chatHandlers['chat_message']).toBeDefined());
 
-    // 收到一条 chat_message 应进入 store 并渲染气泡
     act(() => {
       chatHandlers['chat_message']({
         live_stream_id: 3,
@@ -342,7 +432,6 @@ describe('LiveRoom migration', () => {
     expect(await screen.findByText('王五')).toBeInTheDocument();
     expect(screen.getByText('主播好')).toBeInTheDocument();
 
-    // 输入并发送应调用 sendChat
     const input = screen.getByPlaceholderText(/说点什么/);
     fireEvent.change(input, { target: { value: '出价加油' } });
     fireEvent.click(screen.getByRole('button', { name: /发送/ }));

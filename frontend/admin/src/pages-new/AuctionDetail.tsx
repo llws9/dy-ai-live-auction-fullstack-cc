@@ -219,7 +219,7 @@ export default function AuctionDetail() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                  <Tooltip formatter={(value) => `¥${Number(value).toLocaleString()}`} />
+                  <Tooltip formatter={(value: unknown) => formatCurrencyValue(value)} />
                   <Line type="monotone" dataKey="price" stroke="#f59e0b" strokeWidth={3} dot={{ r: 6, fill: '#f59e0b' }} />
                 </LineChart>
               </ResponsiveContainer>
@@ -342,6 +342,10 @@ export default function AuctionDetail() {
       </div>
     </div>
   )
+}
+
+function formatCurrencyValue(value: unknown) {
+  return typeof value === "number" ? `¥${value.toLocaleString()}` : `¥${value ?? ""}`
 }
 
 function RuleItem({ label, value }: { label: string; value: string }) {

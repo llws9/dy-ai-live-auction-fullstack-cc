@@ -31,7 +31,7 @@ import { orderApi, statisticsApi } from "@/shared/api"
 
 const statusMap: Record<number, { label: string; variant: BadgeProps["variant"]; icon: React.ElementType }> = {
   0: { label: "待支付", variant: "warning", icon: CreditCard },
-  1: { label: "已支付", variant: "blue", icon: ShoppingBag },
+  1: { label: "已支付", variant: "secondary", icon: ShoppingBag },
   2: { label: "已发货", variant: "success", icon: Truck },
   3: { label: "已完成", variant: "success", icon: CheckCircle },
   4: { label: "已取消", variant: "outline", icon: XCircle },

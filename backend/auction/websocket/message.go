@@ -31,6 +31,13 @@ const (
 	MessageTypeSkyLampAutoBid   MessageType = "sky_lamp_auto_bid"  // 自动跟价
 	MessageTypeSkyLampStopped   MessageType = "sky_lamp_stopped"   // 天灯停止
 
+	// 一口价秒杀相关消息类型
+	MessageTypeFixedPriceListed  MessageType = "fixed_price_listed"
+	MessageTypeFixedPriceStock   MessageType = "fixed_price_stock"
+	MessageTypeFixedPriceSoldOut MessageType = "fixed_price_sold_out"
+	MessageTypeFixedPriceOffline MessageType = "fixed_price_offline"
+	MessageTypeFixedPriceFlair   MessageType = "fixed_price_flair"
+
 	// 弹幕相关消息类型（M2）
 	MessageTypeChatSend    MessageType = "chat_send"    // 客户端 -> 服务端
 	MessageTypeChatMessage MessageType = "chat_message" // 服务端 -> 客户端
@@ -165,6 +172,40 @@ type SkyLampStoppedData struct {
 	TotalBidCount int    `json:"total_bid_count"`
 }
 
+// FixedPriceListedData 一口价上架通知。
+type FixedPriceListedData struct {
+	ItemID         int64  `json:"item_id"`
+	LiveStreamID   int64  `json:"live_stream_id"`
+	ProductID      int64  `json:"product_id"`
+	Price          string `json:"price"`
+	TotalStock     int    `json:"total_stock"`
+	RemainingStock int    `json:"remaining_stock"`
+	Status         string `json:"status"`
+}
+
+// FixedPriceStockData 一口价库存变更通知。
+type FixedPriceStockData struct {
+	ItemID         int64 `json:"item_id"`
+	RemainingStock int   `json:"remaining_stock"`
+}
+
+// FixedPriceSoldOutData 一口价售罄通知。
+type FixedPriceSoldOutData struct {
+	ItemID int64 `json:"item_id"`
+}
+
+// FixedPriceOfflineData 一口价下架通知。
+type FixedPriceOfflineData struct {
+	ItemID int64 `json:"item_id"`
+}
+
+// FixedPriceFlairData 一口价购买飘屏通知。
+type FixedPriceFlairData struct {
+	ItemID  int64  `json:"item_id"`
+	BuyerID int64  `json:"buyer_id"`
+	Price   string `json:"price"`
+}
+
 // NewMessage 创建消息
 func NewMessage(msgType MessageType, data interface{}) *Message {
 	return &Message{
@@ -287,6 +328,31 @@ func NewSkyLampStoppedMessage(auctionID, userID int64, reason string, totalBidCo
 			TotalBidCount: totalBidCount,
 		},
 	}
+}
+
+// NewFixedPriceListedMessage 创建一口价上架消息。
+func NewFixedPriceListedMessage(data *FixedPriceListedData) *Message {
+	return NewMessage(MessageTypeFixedPriceListed, data)
+}
+
+// NewFixedPriceStockMessage 创建一口价库存变更消息。
+func NewFixedPriceStockMessage(itemID int64, remainingStock int) *Message {
+	return NewMessage(MessageTypeFixedPriceStock, &FixedPriceStockData{ItemID: itemID, RemainingStock: remainingStock})
+}
+
+// NewFixedPriceSoldOutMessage 创建一口价售罄消息。
+func NewFixedPriceSoldOutMessage(itemID int64) *Message {
+	return NewMessage(MessageTypeFixedPriceSoldOut, &FixedPriceSoldOutData{ItemID: itemID})
+}
+
+// NewFixedPriceOfflineMessage 创建一口价下架消息。
+func NewFixedPriceOfflineMessage(itemID int64) *Message {
+	return NewMessage(MessageTypeFixedPriceOffline, &FixedPriceOfflineData{ItemID: itemID})
+}
+
+// NewFixedPriceFlairMessage 创建一口价购买飘屏消息。
+func NewFixedPriceFlairMessage(data *FixedPriceFlairData) *Message {
+	return NewMessage(MessageTypeFixedPriceFlair, data)
 }
 
 // ChatSendData 客户端发送的弹幕请求
