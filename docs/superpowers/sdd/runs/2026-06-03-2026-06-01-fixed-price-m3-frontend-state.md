@@ -8,7 +8,7 @@
 | --- | --- |
 | Run ID | `2026-06-03-2026-06-01-fixed-price-m3-frontend` |
 | Topic | `2026-06-01-fixed-price-m3-frontend` |
-| Goal | `M3 Task1-6 H5 fixedPrice API/client hook/components + Live 页面挂载` |
+| Goal | `M3 Task1-7 H5 fixedPrice API/client hook/components + Live 页面挂载 + 管理端上下架页面` |
 | Mode | `subagent-driven` |
 | Branch | `feat/fixed-price-m1` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
@@ -26,18 +26,18 @@
 | State Template | `docs/superpowers/sdd/state-template.md` | yes | yes |
 | Plan | `docs/superpowers/plans/2026-06-01-fixed-price-m3-frontend.md` | yes | yes |
 | Tasks | `docs/superpowers/plans/2026-06-01-fixed-price-m3-frontend.md` | yes | yes |
-| Scope | `M3 Task1 + Task2 H5 fixedPrice API client/useFixedPriceItems hook; M3 Task3 FixedPriceCard; M3 Task4 FixedPricePurchaseModal; M3 Task5 FixedPriceFlair; M3 Task6 mount fixed-price components into Live page` | no | yes |
+| Scope | `M3 Task1 + Task2 H5 fixedPrice API client/useFixedPriceItems hook; M3 Task3 FixedPriceCard; M3 Task4 FixedPricePurchaseModal; M3 Task5 FixedPriceFlair; M3 Task6 mount fixed-price components into Live page; M3 Task7 admin fixed-price list/listing/offline page` | no | yes |
 
 ## Execution Summary
 
 | Metric | Value |
 | --- | --- |
-| Total Tasks | `6` |
-| Done | `6` |
+| Total Tasks | `7` |
+| Done | `7` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 17:21` |
+| Last Updated | `2026-06-03 18:02` |
 
 ## Task Matrix
 
@@ -49,6 +49,7 @@
 | `T004` | `M3 Task4 FixedPricePurchaseModal component` | `done` | `main-agent` | `W3` | `T001; T003` | `purchase modal success/402/409/network retry branches` | `frontend/h5/src/components/FixedPricePurchaseModal/index.tsx; frontend/h5/src/components/FixedPricePurchaseModal/index.module.css; frontend/h5/src/components/FixedPricePurchaseModal/__tests__/FixedPricePurchaseModal.test.tsx` |
 | `T005` | `M3 Task5 FixedPriceFlair component` | `done` | `main-agent` | `W4` | `M2 fixed_price_flair WS message ready` | `subscribe fixed_price_flair, render 4s right-to-left overlay, max 3 stacked` | `frontend/h5/src/components/FixedPriceFlair/index.tsx; frontend/h5/src/components/FixedPriceFlair/index.module.css; frontend/h5/src/components/FixedPriceFlair/__tests__/FixedPriceFlair.test.tsx` |
 | `T006` | `M3 Task6 mount fixed-price components into Live page` | `done` | `main-agent` | `W5` | `T001-T005` | `Live page mounts hook/card/modal/flair and wires purchase flow` | `frontend/h5/src/pages/Live/index.tsx; frontend/h5/src/pages/Live/Live.module.css; frontend/h5/src/pages/Live/__tests__/LiveRoom.test.tsx` |
+| `T007` | `M3 Task7 admin fixed-price listing/offline page` | `done` | `main-agent` | `W6` | `M1 fixed-price list/offline routes ready` | `Admin live-stream fixed-price list + listing form + offline action` | `frontend/admin/src/pages/LiveStreamFixedPrice/index.tsx; frontend/admin/src/pages/LiveStreamFixedPrice/__tests__/LiveStreamFixedPrice.test.tsx; frontend/admin/src/shared/api/index.ts; frontend/admin/src/App.tsx; frontend/admin/src/components/Layout.tsx; frontend/admin/jest.config.cjs; frontend/admin/jest.setup.ts; frontend/admin/package.json; frontend/admin/src/vite-env.d.ts` |
 
 ## Wave Plan
 
@@ -59,6 +60,7 @@
 | `W3` | `Execute FixedPricePurchaseModal component with TDD evidence` | `T004` | `T001 API client and T003 card available` | `purchase modal tests/lint/build pass and state updated` |
 | `W4` | `Execute FixedPriceFlair component with TDD evidence` | `T005` | `M2 fixed_price_flair WS message ready` | `FixedPriceFlair tests/lint/build pass and state updated` |
 | `W5` | `Mount fixed-price components into Live page with TDD evidence` | `T006` | `T001-T005 done` | `Live page integration test/lint/build pass and state updated` |
+| `W6` | `Execute admin fixed-price management page with TDD evidence` | `T007` | `M1 fixed-price list/offline routes ready` | `Admin page tests/lint/build pass and state updated` |
 
 ## Task Records
 
@@ -354,6 +356,65 @@
 - First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
 
 
+### T007 - `M3 Task7 admin fixed-price listing/offline page`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-03 17:34` |
+| Completed At | `2026-06-03 18:02` |
+| Branch | `feat/fixed-price-m1` |
+| Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
+| Depends On | `M1 fixed-price list/offline routes ready` |
+| Parallel Group | `W6` |
+
+**TDD Plan**
+
+- Red: 新增 `frontend/admin/src/pages/LiveStreamFixedPrice/__tests__/LiveStreamFixedPrice.test.tsx`，覆盖初始列表 GET、上架成功后新增行、下架确认后调用 API 并把行状态置为 offline。
+- Green: 新增 `frontend/admin/src/pages/LiveStreamFixedPrice/index.tsx` 与 `fixedPriceAdminApi`，使用 `/api/v1` 下 admin fixed-price 路由；补充 `/live/fixed-price` 路由与侧边栏入口。
+- Review Red: 将上架成功测试改为模拟后端最小响应 `{ id, remaining_stock, status }`，确认页面不会凭空拿到 `product_id/price/total_stock`。
+- Review Green: `handleSubmit` 用提交表单值补全 `created` 响应后再插入表格，避免成功上架后出现不完整行。
+- Decision: plan 示例的 `/admin/...fixed-price...` 路由当前后端/Gateway 未落地；为避免运行时 404，前端 API 对齐已存在契约：`GET /live-streams/:id/fixed-price/items`、`POST /fixed-price/items`、`POST /fixed-price/items/:id/offline`。
+- Verify: 运行目标 Jest、受影响文件 eslint、admin build。
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `npm test -- --runTestsByPath src/pages/LiveStreamFixedPrice/__tests__/LiveStreamFixedPrice.test.tsx --runInBand` | `RED: fails because ../index module is missing` | `FAIL: Cannot find module '../index'` | `pass` |
+| `npm test -- --runTestsByPath src/pages/LiveStreamFixedPrice/__tests__/LiveStreamFixedPrice.test.tsx --runInBand` | `GREEN: list/listing/offline page tests pass` | `PASS: 1 suite, 3 tests` | `pass` |
+| `npm test -- --runTestsByPath src/pages/LiveStreamFixedPrice/__tests__/LiveStreamFixedPrice.test.tsx --runInBand` | `Review RED: minimal backend listItem response should still render product/price/stock from submitted form` | `FAIL: Unable to find an element with the text: 商品 #5002` | `pass` |
+| `npm test -- --runTestsByPath src/pages/LiveStreamFixedPrice/__tests__/LiveStreamFixedPrice.test.tsx --runInBand` | `Review GREEN: completed row renders with submitted product/price/stock` | `PASS: 1 suite, 3 tests` | `pass` |
+| `npm test -- --runTestsByPath src/pages/LiveStreamFixedPrice/__tests__/LiveStreamFixedPrice.test.tsx src/__tests__/components/Button.test.tsx --runInBand` | `Task7 + shared component regression pass` | `PASS: 2 suites, 16 tests` | `pass` |
+| `npm test -- --runInBand` | `Admin Jest suite pass` | `PASS: 5 suites, 45 tests` | `pass` |
+| `npx eslint src/pages/LiveStreamFixedPrice/index.tsx src/pages/LiveStreamFixedPrice/__tests__/LiveStreamFixedPrice.test.tsx src/shared/api/index.ts src/App.tsx src/components/Layout.tsx jest.setup.ts --ext ts,tsx --max-warnings 0` | `Edited files lint clean` | `FAIL: frontend/admin has no ESLint config file` | `info` |
+| `npm run build` | `TypeScript + Vite build pass` | `FAIL: existing admin TS errors in pages-new/* and shared/api/*; Task7 TS2783 duplicate-field error fixed and no LiveStreamFixedPrice production file remains in error list` | `info` |
+| `GetDiagnostics` | `No diagnostics for edited files` | `not_available: access denied for isolated worktree` | `info` |
+
+**Modified Files**
+
+- `docs/superpowers/sdd/runs/2026-06-03-2026-06-01-fixed-price-m3-frontend-state.md`
+- `frontend/admin/jest.config.cjs`
+- `frontend/admin/jest.setup.ts`
+- `frontend/admin/package.json`
+- `frontend/admin/src/App.tsx`
+- `frontend/admin/src/components/Layout.tsx`
+- `frontend/admin/src/pages/LiveStreamFixedPrice/index.tsx`
+- `frontend/admin/src/pages/LiveStreamFixedPrice/__tests__/LiveStreamFixedPrice.test.tsx`
+- `frontend/admin/src/shared/api/index.ts`
+- `frontend/admin/src/vite-env.d.ts`
+
+**Risks**
+
+- `frontend/admin` 当前没有 ESLint 配置文件，无法执行文件级 lint；本任务未新增 ESLint 配置，避免扩大范围。
+- `npm run build` 仍被存量 `pages-new/*` 未使用导入、Badge variant 类型、Recharts formatter 类型、Profile user 类型等错误阻塞；本任务已修正新增测试导致的 jest-dom matcher 类型噪声。
+- 管理端 API 路由已按当前后端/Gateway 实际契约实现，偏离 plan 示例的 `/admin/...` 路径；后续若补 admin 专属路由，可只替换 `fixedPriceAdminApi`。
+
+**Handoff**
+
+- First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
+
 ## Final Review Checklist
 
 - [x] State file was created before subagent dispatch.
@@ -373,3 +434,4 @@
 - `T004 done`: H5 FixedPricePurchaseModal component implemented with TDD evidence.
 - `T005 done`: H5 FixedPriceFlair component implemented with TDD evidence.
 - `T006 done`: H5 Live page mounts fixed-price cards, purchase modal, and flair with TDD evidence.
+- `T007 done`: Admin LiveStreamFixedPrice page implemented with list/listing/offline TDD evidence; API aligned to existing Gateway fixed-price routes.

@@ -15,7 +15,6 @@ import {
   Search
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "./ui/button"
 import { Avatar } from "./ui/avatar"
 
 interface NavItem {
@@ -51,6 +50,7 @@ const navItems: NavItem[] = [
     icon: Video,
     children: [
       { title: "直播间列表", path: "/live/list" },
+      { title: "一口价上下架", path: "/live/fixed-price" },
       { title: "创建直播间", path: "/live/create" },
     ]
   },

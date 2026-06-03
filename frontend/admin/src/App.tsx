@@ -1,4 +1,3 @@
-import React from "react"
 import { Routes, Route, useLocation, Navigate } from "react-router-dom"
 import { Layout } from "@/components/Layout"
 import Login from "@/pages-new/Login"
@@ -10,6 +9,7 @@ import AuctionDetail from "@/pages-new/AuctionDetail"
 import AuctionRules from "@/pages-new/AuctionRules"
 import LiveList from "@/pages-new/LiveList"
 import LiveDetail from "@/pages-new/LiveDetail"
+import LiveStreamFixedPrice from "@/pages/LiveStreamFixedPrice"
 import OrderList from "@/pages-new/OrderList"
 import OrderDetail from "@/pages-new/OrderDetail"
 import Stats from "@/pages-new/Stats"
@@ -47,6 +47,7 @@ function AppContent() {
           <Route path="/auction/rules/edit" element={<AuctionRules />} />
           <Route path="/live/list" element={<LiveList />} />
           <Route path="/live/detail" element={<LiveDetail />} />
+          <Route path="/live/fixed-price" element={<LiveStreamFixedPrice />} />
           <Route path="/live/create" element={<LiveList />} />
           <Route path="/order/list" element={<OrderList />} />
           <Route path="/order/detail" element={<OrderDetail />} />
