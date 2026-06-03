@@ -106,6 +106,28 @@ func TestFixedPriceService_ListByLiveStream_ReturnsOnSaleItemsWithRedisStock(t *
 	assert.Equal(t, 4, items[0].RemainingStock)
 }
 
+func TestFixedPriceService_ListAllByLiveStream_ReturnsAllStatusesForAdmin(t *testing.T) {
+	svc := setupFixedPriceService(t)
+	ctx := context.Background()
+	onSale := setupItem(t, svc, 5, decimal.NewFromInt(99))
+	soldOut := setupItem(t, svc, 3, decimal.NewFromInt(88))
+	offline := setupItem(t, svc, 2, decimal.NewFromInt(77))
+	require.NoError(t, svc.items.UpdateStatus(ctx, soldOut.ID, model.FixedPriceStatusSoldOut))
+	require.NoError(t, svc.items.UpdateStatus(ctx, offline.ID, model.FixedPriceStatusOffline))
+
+	items, err := svc.ListAllByLiveStream(ctx, ListLiveItemsReq{LiveStreamID: onSale.LiveStreamID})
+	require.NoError(t, err)
+	require.Len(t, items, 3)
+
+	statuses := make(map[model.FixedPriceStatus]bool)
+	for _, item := range items {
+		statuses[item.Item.Status] = true
+	}
+	assert.True(t, statuses[model.FixedPriceStatusOnSale])
+	assert.True(t, statuses[model.FixedPriceStatusSoldOut])
+	assert.True(t, statuses[model.FixedPriceStatusOffline])
+}
+
 // ---- T7 抢购 ----
 
 func TestPurchase_HappyPath(t *testing.T) {

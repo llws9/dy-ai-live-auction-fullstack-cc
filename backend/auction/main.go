@@ -204,6 +204,7 @@ func main() {
 	)
 	fixedPriceService.SetMetrics(metrics.GetFixedPriceMetrics())
 	fixedPriceHandler := handler.NewFixedPriceHandler(fixedPriceService, userBalanceDAO)
+	fixedPriceHandler.SetProductClient(productClient)
 
 	// 初始化认证 Handler
 	jwtExpire := 24 // 24小时

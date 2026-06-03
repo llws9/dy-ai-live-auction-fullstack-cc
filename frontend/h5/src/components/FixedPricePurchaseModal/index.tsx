@@ -85,9 +85,8 @@ export default function FixedPricePurchaseModal({
       try {
         const result = await purchase({ itemId: item.id, idempotencyKey });
         showToast('抢到了！', 'success', 2500);
+        setSubmitting(false);
         onSuccess(result.order_id);
-        onClose();
-        navigate(`/order/${result.order_id}`);
         return;
       } catch (error) {
         const typedError = error as PurchaseErrorLike;

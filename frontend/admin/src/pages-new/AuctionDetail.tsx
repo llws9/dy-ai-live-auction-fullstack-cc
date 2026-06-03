@@ -1,10 +1,6 @@
 import React from "react"
 import {
   ArrowLeft,
-  Clock,
-  Users,
-  Gavel,
-  TrendingUp,
   History,
   AlertCircle,
   ShieldCheck,
@@ -26,8 +22,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { auctionApi, productApi } from "@/shared/api"
 
-const statusMap: Record<number, { label: string; variant: string }> = {
-  0: { label: "待开始", variant: "blue" },
+type BadgeVariant = React.ComponentProps<typeof Badge>["variant"]
+
+const statusMap: Record<number, { label: string; variant: BadgeVariant }> = {
+  0: { label: "待开始", variant: "secondary" },
   1: { label: "进行中", variant: "success" },
   2: { label: "延时中", variant: "warning" },
   3: { label: "已结束", variant: "outline" },
@@ -111,7 +109,7 @@ export default function AuctionDetail() {
   // 价格走势数据（基于出价记录）
   const priceData = React.useMemo(() => {
     if (!bids.length) return [{ time: '开始', price: auction?.current_price || 0 }]
-    return bids.slice(0, 20).reverse().map((bid, index) => ({
+    return bids.slice(0, 20).reverse().map((bid) => ({
       time: new Date(bid.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
       price: bid.price,
     }))
@@ -223,7 +221,7 @@ export default function AuctionDetail() {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                  <Tooltip formatter={(value: number) => `¥${value.toLocaleString()}`} />
+                  <Tooltip formatter={(value: unknown) => formatCurrencyValue(value)} />
                   <Line type="monotone" dataKey="price" stroke="#f59e0b" strokeWidth={3} dot={{ r: 6, fill: '#f59e0b' }} />
                 </LineChart>
               </ResponsiveContainer>
@@ -346,6 +344,10 @@ export default function AuctionDetail() {
       </div>
     </div>
   )
+}
+
+function formatCurrencyValue(value: unknown) {
+  return typeof value === "number" ? `¥${value.toLocaleString()}` : `¥${value ?? ""}`
 }
 
 function RuleItem({ label, value }: { label: string; value: string }) {

@@ -222,6 +222,26 @@ func (s *FixedPriceService) ListByLiveStream(ctx context.Context, r ListLiveItem
 	return out, nil
 }
 
+// ListAllByLiveStream 返回指定直播间的全部一口价商品，供管理端查看售罄/下架记录。
+func (s *FixedPriceService) ListAllByLiveStream(ctx context.Context, r ListLiveItemsReq) ([]*LiveFixedPriceItem, error) {
+	if r.LiveStreamID <= 0 {
+		return nil, ErrInvalidParam
+	}
+	items, err := s.items.ListByLiveStreamID(ctx, r.LiveStreamID, nil)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*LiveFixedPriceItem, 0, len(items))
+	for _, item := range items {
+		remaining := item.RemainingStock
+		if live, e := s.stock.Remaining(ctx, item.ID); e == nil {
+			remaining = live
+		}
+		out = append(out, &LiveFixedPriceItem{Item: item, RemainingStock: remaining})
+	}
+	return out, nil
+}
+
 // Purchase 抢购一口价商品（方案③ purchase 自成闭环）。
 //
 // 链路：幂等校验 → 幂等命中复用 → 状态预检 → Lua 原子预扣库存 →

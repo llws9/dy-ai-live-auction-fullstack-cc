@@ -601,7 +601,10 @@ const LiveRoomPage: React.FC = () => {
           liveStreamId={effectiveLiveStreamId}
           open={true}
           onClose={() => setFixedPriceModalItem(null)}
-          onSuccess={() => setFixedPriceModalItem(null)}
+          onSuccess={(orderId) => {
+            setFixedPriceModalItem(null);
+            navigate(`/order/${orderId}`);
+          }}
         />
       )}
       <FixedPriceFlair socket={fixedPriceSocket} />

@@ -37,7 +37,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 18:38` |
+| Last Updated | `2026-06-03 21:12` |
 
 ## Task Matrix
 
@@ -593,3 +593,41 @@
 - `T008 done`: Backend fixed-price Prometheus metrics implemented with TDD evidence; purchase result/latency, stock remaining, WS publish, and compensation metrics verified.
 - `T009 done`: Grafana dashboard and Prometheus alert rules implemented with contract validation.
 - `T010 done`: H5 fixed-price E2E smoke implemented and verified with 4 Chromium scenarios.
+
+## Post-M3 Code Review Fixes
+
+当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1
+
+**Review Findings Fixed**
+
+- `fixed_price_flair` contract mismatch: 后端真实 payload 只有 `item_id/buyer_id/price` 时，H5 现在使用 `用户 #buyer_id` 和 `商品 #item_id` 兜底展示，不再丢弃飘屏消息。
+- Admin fixed-price list status scope: 管理端新增 `/admin/live-streams/:id/fixed-price/items` 全状态链路，公开 `/live-streams/:id/fixed-price/items` 仍只暴露在售商品。
+- Purchase modal success ownership: `FixedPricePurchaseModal` 成功后只负责 toast 与 `onSuccess(orderId)`，关闭和跳转统一由 `Live` 页面层处理，避免双重副作用。
+- Admin TypeScript compile fixes retained: 修复 `frontend/admin/src/pages-new` 和 `shared/api` 下存量 TS 编译问题，重点包括 `Badge` variant 类型收窄、Recharts formatter 类型、未使用 imports、Profile fallback user shape。
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `npm test -- --runTestsByPath src/components/FixedPriceFlair/__tests__/FixedPriceFlair.test.tsx --runInBand` | `RED: backend real payload is dropped before fix` | `FAIL: Unable to find /用户 #1001/` | `pass` |
+| `npm test -- --runTestsByPath src/components/FixedPriceFlair/__tests__/FixedPriceFlair.test.tsx --runInBand` | `GREEN: flair accepts backend payload` | `PASS: 1 suite, 6 tests` | `pass` |
+| `go test ./service ./handler -run 'TestFixedPriceService_ListAllByLiveStream_ReturnsAllStatusesForAdmin|TestAdminLiveStreamFixedPriceListHandler_ReturnsAllStatuses' -count=1` | `RED then GREEN for auction admin all-status list` | `PASS: auction-service/service and handler` | `pass` |
+| `go test ./router -run TestFixedPriceAdminLiveStreamListRoute_RequireStreamer -count=1` | `RED then GREEN for gateway protected admin route` | `PASS: gateway-service/router` | `pass` |
+| `npm test -- --runTestsByPath src/shared/api/__tests__/fixedPriceAdminApi.test.ts --runInBand` | `RED then GREEN for Admin API endpoint` | `PASS: 1 suite, 1 test` | `pass` |
+| `npm test -- --runTestsByPath src/components/FixedPricePurchaseModal/__tests__/FixedPricePurchaseModal.test.tsx --runInBand` | `RED: modal still closes/navigates on success before fix` | `FAIL: onClose called` | `pass` |
+| `npm test -- --runTestsByPath src/components/FixedPriceFlair/__tests__/FixedPriceFlair.test.tsx src/components/FixedPricePurchaseModal/__tests__/FixedPricePurchaseModal.test.tsx src/pages/Live/__tests__/LiveRoom.test.tsx --runInBand` | `H5 targeted regression pass` | `PASS: 3 suites, 17 tests` | `pass` |
+| `npm test -- --runTestsByPath src/shared/api/__tests__/fixedPriceAdminApi.test.ts src/pages/LiveStreamFixedPrice/__tests__/LiveStreamFixedPrice.test.tsx --runInBand` | `Admin targeted regression pass` | `PASS: 2 suites, 4 tests` | `pass` |
+| `go test ./... -count=1` in `backend/auction` | `Auction full test pass` | `PASS: all auction packages` | `pass` |
+| `go build ./...` in `backend/auction` | `Auction compile pass` | `PASS: exit 0` | `pass` |
+| `go test ./... -count=1` in `backend/gateway` | `Gateway full test pass` | `PASS: all gateway packages` | `pass` |
+| `go build ./...` in `backend/gateway` | `Gateway compile pass` | `PASS: exit 0` | `pass` |
+| `npm run build` in `frontend/h5` | `H5 tsc + Vite build pass` | `PASS: built in 1.15s` | `pass` |
+| `npm run build` in `frontend/admin` | `Admin tsc + Vite build pass` | `PASS: built in 3.55s` | `pass` |
+| `git diff --check` | `No whitespace errors` | `PASS: exit 0` | `pass` |
+| `git diff --name-only -- frontend/admin/dist frontend/h5/dist` | `No generated dist changes remain` | `PASS: empty output after restoring admin dist` | `pass` |
+
+**Risks / Notes**
+
+- E2E smoke remains mock-based; it verifies H5 interaction and WS reducer behavior, not a real staging backend contract.
+- `GetDiagnostics` could not inspect isolated worktree files due editor workspace access restrictions; build/test commands are the source of truth for this verification round.
+- `frontend/admin/dist` was restored after build verification to honor repository rule that generated admin dist artifacts must not be committed.

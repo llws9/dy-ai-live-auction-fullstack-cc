@@ -10,6 +10,7 @@ import (
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 
+	"auction-service/client"
 	"auction-service/model"
 	"auction-service/service"
 )
@@ -18,6 +19,7 @@ import (
 type FixedPriceUsecase interface {
 	ListItem(ctx context.Context, r service.ListItemReq) (*model.FixedPriceItem, error)
 	ListByLiveStream(ctx context.Context, r service.ListLiveItemsReq) ([]*service.LiveFixedPriceItem, error)
+	ListAllByLiveStream(ctx context.Context, r service.ListLiveItemsReq) ([]*service.LiveFixedPriceItem, error)
 	Purchase(ctx context.Context, r service.PurchaseReq) (*service.PurchaseResult, error)
 	Offline(ctx context.Context, itemID, userID int64) error
 	GetItem(ctx context.Context, itemID int64) (*model.FixedPriceItem, error)
@@ -31,12 +33,18 @@ type FixedPriceUsecase interface {
 // X-Idempotency-Key 由 gateway 透传，抢购强制校验。
 // handler 仅做 HTTP shell + 错误码映射，业务编排在 FixedPriceUsecase。
 type FixedPriceHandler struct {
-	uc      FixedPriceUsecase
-	balance BalanceProvider
+	uc            FixedPriceUsecase
+	balance       BalanceProvider
+	productClient client.ProductClient
 }
 
 func NewFixedPriceHandler(uc FixedPriceUsecase, balance BalanceProvider) *FixedPriceHandler {
 	return &FixedPriceHandler{uc: uc, balance: balance}
+}
+
+// SetProductClient 注入 product-service 客户端，用于回填 product_title。
+func (h *FixedPriceHandler) SetProductClient(pc client.ProductClient) {
+	h.productClient = pc
 }
 
 // fpErrResp 一口价统一错误响应（spec §4.3）。
@@ -194,8 +202,13 @@ func (h *FixedPriceHandler) List(ctx context.Context, c *app.RequestContext) {
 	case err == nil:
 		c.JSON(200, map[string]any{
 			"id":              item.ID,
-			"status":          fpStatusString(item.Status),
+			"live_stream_id":  item.LiveStreamID,
+			"product_id":      item.ProductID,
+			"price":           item.Price.StringFixed(2),
+			"total_stock":     item.TotalStock,
 			"remaining_stock": item.RemainingStock,
+			"max_per_user":    item.MaxPerUser,
+			"status":          fpStatusString(item.Status),
 			"created_at":      item.CreatedAt,
 		})
 	case errors.Is(err, service.ErrInvalidParam):
@@ -287,6 +300,67 @@ func (h *FixedPriceHandler) ListByLiveStream(ctx context.Context, c *app.Request
 	c.JSON(200, map[string]any{"items": resp})
 }
 
+// ListAllByLiveStream GET /admin/live-streams/:id/fixed-price/items。管理端读取全部状态。
+// 授权由 Gateway RequireStreamer 中间件保证；handler 层仅做认证校验作为纵深防御。
+func (h *FixedPriceHandler) ListAllByLiveStream(ctx context.Context, c *app.RequestContext) {
+	if _, ok := requireFPUser(c); !ok {
+		return
+	}
+	liveStreamID, ok := parseFPLiveStreamID(c)
+	if !ok {
+		return
+	}
+	items, err := h.uc.ListAllByLiveStream(ctx, service.ListLiveItemsReq{LiveStreamID: liveStreamID})
+	if err != nil {
+		writeFPErr(c, 500, "FP_INTERNAL", "服务异常", nil)
+		return
+	}
+
+	// 批量回填 product_title
+	productTitles := h.batchProductTitles(ctx, items)
+
+	resp := make([]map[string]any, 0, len(items))
+	for _, it := range items {
+		item := it.Item
+		entry := map[string]any{
+			"id":              item.ID,
+			"live_stream_id":  item.LiveStreamID,
+			"product_id":      item.ProductID,
+			"price":           item.Price.StringFixed(2),
+			"total_stock":     item.TotalStock,
+			"remaining_stock": it.RemainingStock,
+			"max_per_user":    item.MaxPerUser,
+			"status":          fpStatusString(item.Status),
+			"created_at":      item.CreatedAt,
+		}
+		if title, ok := productTitles[item.ProductID]; ok {
+			entry["product_title"] = title
+		}
+		resp = append(resp, entry)
+	}
+	c.JSON(200, map[string]any{"items": resp, "total": len(resp)})
+}
+
+// batchProductTitles 批量查询 product_title，失败时静默降级（返回空 map）。
+func (h *FixedPriceHandler) batchProductTitles(ctx context.Context, items []*service.LiveFixedPriceItem) map[int64]string {
+	if h.productClient == nil || len(items) == 0 {
+		return nil
+	}
+	ids := make([]int64, 0, len(items))
+	for _, it := range items {
+		ids = append(ids, it.Item.ProductID)
+	}
+	summaries, err := h.productClient.BatchGetSummaries(ctx, ids)
+	if err != nil {
+		return nil
+	}
+	out := make(map[int64]string, len(summaries))
+	for id, s := range summaries {
+		out[id] = s.Name
+	}
+	return out
+}
+
 // MyPurchase GET /fixed-price/items/:id/my-purchase（spec §4.1 / T10）。无跨域，查本服务购买记录。
 func (h *FixedPriceHandler) MyPurchase(ctx context.Context, c *app.RequestContext) {
 	itemID, ok := parseFPItemID(c)
@@ -313,6 +387,7 @@ func (h *FixedPriceHandler) MyPurchase(ctx context.Context, c *app.RequestContex
 // RegisterFixedPriceRoutes 在 /api/v1 组下挂载一口价路由。
 func RegisterFixedPriceRoutes(g *route.RouterGroup, h *FixedPriceHandler) {
 	g.GET("/live-streams/:id/fixed-price/items", h.ListByLiveStream)
+	g.GET("/admin/live-streams/:id/fixed-price/items", h.ListAllByLiveStream)
 	fp := g.Group("/fixed-price")
 	fp.POST("/items", h.List)
 	fp.POST("/items/:id/offline", h.Offline)

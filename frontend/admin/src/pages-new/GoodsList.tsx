@@ -6,7 +6,6 @@ import {
   Edit,
   Trash2,
   Eye,
-  ExternalLink,
   Filter,
   Upload,
   ArrowDown
@@ -27,7 +26,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useNavigate } from "react-router-dom"
 import { productApi, Product } from "@/shared/api"
 
-const statusMap: Record<number, { label: string; variant: string }> = {
+type BadgeVariant = React.ComponentProps<typeof Badge>["variant"]
+
+const statusMap: Record<number, { label: string; variant: BadgeVariant }> = {
   0: { label: "未发布", variant: "secondary" },
   1: { label: "已发布", variant: "success" },
   2: { label: "已下架", variant: "outline" },

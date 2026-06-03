@@ -7,8 +7,9 @@ const MAX_VISIBLE_FLAIRS = 3;
 
 type FixedPriceFlairPayload = {
   item_id?: number;
-  buyer_nickname: string;
-  product_title: string;
+  buyer_id?: number;
+  buyer_nickname?: string;
+  product_title?: string;
   price: string;
 };
 
@@ -50,14 +51,22 @@ function normalizePayload(message: FixedPriceFlairMessage | FixedPriceFlairPaylo
   const wrapped = message as FixedPriceFlairMessage;
   const candidate = wrapped.payload ?? wrapped.data ?? message;
 
-  if (!candidate?.buyer_nickname || !candidate.product_title || !candidate.price) {
+  if (!candidate?.price) {
+    return null;
+  }
+
+  const buyerNickname = candidate.buyer_nickname || (candidate.buyer_id ? `用户 #${candidate.buyer_id}` : '');
+  const productTitle = candidate.product_title || (candidate.item_id ? `商品 #${candidate.item_id}` : '');
+
+  if (!buyerNickname || !productTitle) {
     return null;
   }
 
   return {
     item_id: candidate.item_id,
-    buyer_nickname: candidate.buyer_nickname,
-    product_title: candidate.product_title,
+    buyer_id: candidate.buyer_id,
+    buyer_nickname: buyerNickname,
+    product_title: productTitle,
     price: candidate.price,
   };
 }

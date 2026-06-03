@@ -99,6 +99,8 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.GET("/fixed-price/items/:id/my-purchase", auctionProxy.Forward)
 	// 直播间一口价列表公开访问。
 	v1.GET("/live-streams/:id/fixed-price/items", auctionProxy.Forward)
+	// 管理端需要查看售罄/下架记录，必须走受保护的全状态列表。
+	authGroup.GET("/admin/live-streams/:id/fixed-price/items", middleware.RequireStreamer(), auctionProxy.Forward)
 
 	// ========== 直播间关注路由 ==========
 	authGroup.POST("/live-streams/:id/follow", auctionProxy.Forward)

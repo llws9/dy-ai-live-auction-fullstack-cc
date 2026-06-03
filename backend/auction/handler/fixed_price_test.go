@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
@@ -17,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
+	"auction-service/client"
 	"auction-service/model"
 	"auction-service/service"
 )
@@ -35,6 +37,10 @@ type fakeFixedPriceUsecase struct {
 	liveItems    []*service.LiveFixedPriceItem
 	liveItemsErr error
 	liveItemReqs []service.ListLiveItemsReq
+
+	adminItems    []*service.LiveFixedPriceItem
+	adminItemsErr error
+	adminItemReqs []service.ListLiveItemsReq
 
 	offlineErr   error
 	offlineCalls []int64
@@ -62,6 +68,11 @@ func (f *fakeFixedPriceUsecase) ListItem(_ context.Context, r service.ListItemRe
 func (f *fakeFixedPriceUsecase) ListByLiveStream(_ context.Context, r service.ListLiveItemsReq) ([]*service.LiveFixedPriceItem, error) {
 	f.liveItemReqs = append(f.liveItemReqs, r)
 	return f.liveItems, f.liveItemsErr
+}
+
+func (f *fakeFixedPriceUsecase) ListAllByLiveStream(_ context.Context, r service.ListLiveItemsReq) ([]*service.LiveFixedPriceItem, error) {
+	f.adminItemReqs = append(f.adminItemReqs, r)
+	return f.adminItems, f.adminItemsErr
 }
 
 func (f *fakeFixedPriceUsecase) Offline(_ context.Context, itemID, _ int64) error {
@@ -107,6 +118,10 @@ func (f *fakeFPBalanceProvider) GetByUserID(_ context.Context, _ int64) (decimal
 // newFixedPriceTestServer 构建挂载一口价路由的 Hertz engine。
 // 通过轻量中间件把 X-User-ID 翻译为 c.Set("user_id")，对齐生产 gatewayIdentityMiddleware。
 func newFixedPriceTestServer(uc FixedPriceUsecase, bp BalanceProvider) *route.Engine {
+	return newFixedPriceTestServerWithProductClient(uc, bp, nil)
+}
+
+func newFixedPriceTestServerWithProductClient(uc FixedPriceUsecase, bp BalanceProvider, pc client.ProductClient) *route.Engine {
 	h := server.Default(server.WithHostPorts("127.0.0.1:0"))
 	h.Use(func(ctx context.Context, c *app.RequestContext) {
 		if v := string(c.GetHeader("X-User-ID")); v != "" {
@@ -117,6 +132,7 @@ func newFixedPriceTestServer(uc FixedPriceUsecase, bp BalanceProvider) *route.En
 		c.Next(ctx)
 	})
 	fph := NewFixedPriceHandler(uc, bp)
+	fph.SetProductClient(pc)
 	v1 := h.Group("/api/v1")
 	RegisterFixedPriceRoutes(v1, fph)
 	return h.Engine
@@ -350,6 +366,111 @@ func TestLiveStreamFixedPriceListHandler_Public(t *testing.T) {
 	assert.Equal(t, float64(87), out["items"][0]["remaining_stock"])
 	require.Len(t, uc.liveItemReqs, 1)
 	assert.Equal(t, int64(1001), uc.liveItemReqs[0].LiveStreamID)
+}
+
+func TestAdminLiveStreamFixedPriceListHandler_ReturnsAllStatuses(t *testing.T) {
+	now := time.Now()
+	uc := &fakeFixedPriceUsecase{adminItems: []*service.LiveFixedPriceItem{
+		{
+			Item: &model.FixedPriceItem{
+				ID: 7001, LiveStreamID: 1001, ProductID: 5001,
+				Price: decimal.NewFromInt(99), TotalStock: 100, RemainingStock: 87,
+				MaxPerUser: 1, Status: model.FixedPriceStatusOnSale, CreatedAt: now,
+			},
+			RemainingStock: 87,
+		},
+		{
+			Item: &model.FixedPriceItem{
+				ID: 7002, LiveStreamID: 1001, ProductID: 5002,
+				Price: decimal.NewFromInt(88), TotalStock: 1, RemainingStock: 0,
+				MaxPerUser: 1, Status: model.FixedPriceStatusSoldOut, CreatedAt: now,
+			},
+			RemainingStock: 0,
+		},
+		{
+			Item: &model.FixedPriceItem{
+				ID: 7003, LiveStreamID: 1001, ProductID: 5003,
+				Price: decimal.NewFromInt(77), TotalStock: 5, RemainingStock: 2,
+				MaxPerUser: 1, Status: model.FixedPriceStatusOffline, CreatedAt: now,
+			},
+			RemainingStock: 2,
+		},
+	}}
+	eng := newFixedPriceTestServer(uc, &fakeFPBalanceProvider{})
+
+	w := ut.PerformRequest(eng, http.MethodGet, "/api/v1/admin/live-streams/1001/fixed-price/items", nil,
+		ut.Header{Key: "X-User-ID", Value: "100"})
+	resp := w.Result()
+	require.Equal(t, 200, resp.StatusCode())
+	var out map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body(), &out))
+	items := out["items"].([]any)
+	require.Len(t, items, 3)
+	assert.Equal(t, "on_sale", items[0].(map[string]any)["status"])
+	assert.Equal(t, "sold_out", items[1].(map[string]any)["status"])
+	assert.Equal(t, "offline", items[2].(map[string]any)["status"])
+	// total 字段存在
+	assert.Equal(t, float64(3), out["total"])
+	// created_at 字段存在且非空
+	assert.NotEmpty(t, items[0].(map[string]any)["created_at"])
+	require.Len(t, uc.adminItemReqs, 1)
+	assert.Equal(t, int64(1001), uc.adminItemReqs[0].LiveStreamID)
+}
+
+func TestAdminLiveStreamFixedPriceListHandler_IncludesProductTitle(t *testing.T) {
+	uc := &fakeFixedPriceUsecase{adminItems: []*service.LiveFixedPriceItem{
+		{
+			Item: &model.FixedPriceItem{
+				ID: 7001, LiveStreamID: 1001, ProductID: 5001,
+				Price: decimal.NewFromInt(99), TotalStock: 100, RemainingStock: 87,
+				MaxPerUser: 1, Status: model.FixedPriceStatusOnSale,
+			},
+			RemainingStock: 87,
+		},
+	}}
+	pc := &fakeProductClient{batchOut: map[int64]client.ProductSummary{
+		5001: {ID: 5001, Name: "翡翠手镯"},
+	}}
+	eng := newFixedPriceTestServerWithProductClient(uc, &fakeFPBalanceProvider{}, pc)
+
+	w := ut.PerformRequest(eng, http.MethodGet, "/api/v1/admin/live-streams/1001/fixed-price/items", nil,
+		ut.Header{Key: "X-User-ID", Value: "100"})
+	resp := w.Result()
+	require.Equal(t, 200, resp.StatusCode())
+	var out map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body(), &out))
+	items := out["items"].([]any)
+	require.Len(t, items, 1)
+	assert.Equal(t, "翡翠手镯", items[0].(map[string]any)["product_title"])
+}
+
+func TestListHandler_ReturnsFullFields(t *testing.T) {
+	uc := &fakeFixedPriceUsecase{listResult: &model.FixedPriceItem{
+		ID: 7001, LiveStreamID: 1001, ProductID: 5001,
+		Price: decimal.NewFromInt(99), TotalStock: 100, RemainingStock: 100,
+		MaxPerUser: 1, Status: model.FixedPriceStatusOnSale,
+	}}
+	eng := newFixedPriceTestServer(uc, &fakeFPBalanceProvider{})
+
+	body, _ := json.Marshal(map[string]any{
+		"live_stream_id": 1001,
+		"product_id":     5001,
+		"price":          "99.00",
+		"total_stock":    100,
+	})
+	w := ut.PerformRequest(eng, http.MethodPost, "/api/v1/fixed-price/items", &ut.Body{Body: bytes.NewReader(body), Len: len(body)},
+		ut.Header{Key: "Content-Type", Value: "application/json"},
+		ut.Header{Key: "X-User-ID", Value: "100"})
+	resp := w.Result()
+	require.Equal(t, 200, resp.StatusCode())
+	var out map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body(), &out))
+	assert.Equal(t, float64(7001), out["id"])
+	assert.Equal(t, "on_sale", out["status"])
+	assert.Equal(t, float64(100), out["remaining_stock"])
+	assert.Equal(t, float64(5001), out["product_id"])
+	assert.Equal(t, "99.00", out["price"])
+	assert.Equal(t, float64(100), out["total_stock"])
 }
 
 func TestMyPurchaseHandler_Bought(t *testing.T) {

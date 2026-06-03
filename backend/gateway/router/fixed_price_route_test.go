@@ -204,3 +204,40 @@ func TestFixedPriceLiveStreamListRoute_PublicForward(t *testing.T) {
 	assert.Equal(t, http.MethodGet, lastMethod.Load().(string))
 	assert.Equal(t, "/api/v1/live-streams/1001/fixed-price/items", lastPath.Load().(string))
 }
+
+func TestFixedPriceAdminLiveStreamListRoute_RequireStreamer(t *testing.T) {
+	h, cfg, calls, lastMethod, lastPath, lastUserID, _ := newFixedPriceTestGateway(t)
+
+	t.Run("admin list as buyer is rejected before auction service", func(t *testing.T) {
+		calls.Store(0)
+		token, err := middleware.GenerateToken(cfg.JWT.Secret, 42, "buyer", 0, 24)
+		assert.NoError(t, err)
+		w := ut.PerformRequest(
+			h.Engine,
+			http.MethodGet,
+			"/api/v1/admin/live-streams/1001/fixed-price/items",
+			nil,
+			ut.Header{Key: "Authorization", Value: "Bearer " + token},
+		)
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode())
+		assert.Equal(t, int64(0), calls.Load())
+	})
+
+	t.Run("admin list as streamer is forwarded", func(t *testing.T) {
+		calls.Store(0)
+		token, err := middleware.GenerateToken(cfg.JWT.Secret, 9, "streamer", 1, 24)
+		assert.NoError(t, err)
+		w := ut.PerformRequest(
+			h.Engine,
+			http.MethodGet,
+			"/api/v1/admin/live-streams/1001/fixed-price/items",
+			nil,
+			ut.Header{Key: "Authorization", Value: "Bearer " + token},
+		)
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode())
+		assert.Equal(t, int64(1), calls.Load())
+		assert.Equal(t, http.MethodGet, lastMethod.Load().(string))
+		assert.Equal(t, "/api/v1/admin/live-streams/1001/fixed-price/items", lastPath.Load().(string))
+		assert.Equal(t, "9", lastUserID.Load().(string))
+	})
+}

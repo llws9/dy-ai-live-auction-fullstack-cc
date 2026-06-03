@@ -157,7 +157,7 @@ export const fixedPriceAdminApi = {
   list: (liveStreamId: number, params?: { page?: number; page_size?: number }) => {
     const query = buildQuery(params || {})
     const suffix = query ? `?${query}` : ''
-    return get<FixedPriceAdminListResponse>(`/live-streams/${liveStreamId}/fixed-price/items${suffix}`)
+    return get<FixedPriceAdminListResponse>(`/admin/live-streams/${liveStreamId}/fixed-price/items${suffix}`)
   },
 
   listItem: (liveStreamId: number, data: { product_id: number; price: string; stock: number }) =>

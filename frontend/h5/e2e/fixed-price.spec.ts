@@ -224,4 +224,20 @@ test.describe('Fixed Price Live Smoke', () => {
     await expect(page.getByLabel('一口价购买飘屏')).toContainText('王女士');
     await expect(page.getByLabel('一口价购买飘屏')).toContainText('刚刚抢到 返场珍珠项链');
   });
+
+  test('flair fallback renders buyer_id and item_id when backend sends only IDs', async ({ page }) => {
+    await openFixedPriceLive(page);
+
+    await page.evaluate(() => {
+      (window as any).__fixedPriceWsEmit('fixed_price_flair', {
+        item_id: 7003,
+        buyer_id: 1001,
+        price: '88.00',
+      });
+    });
+
+    await expect(page.getByLabel('一口价购买飘屏')).toContainText('用户 #1001');
+    await expect(page.getByLabel('一口价购买飘屏')).toContainText('刚刚抢到 商品 #7003');
+    await expect(page.getByLabel('一口价购买飘屏')).toContainText('¥88.00');
+  });
 });

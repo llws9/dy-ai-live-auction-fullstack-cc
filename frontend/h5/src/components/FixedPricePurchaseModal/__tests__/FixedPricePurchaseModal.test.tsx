@@ -55,7 +55,7 @@ describe('FixedPricePurchaseModal', () => {
     mockNavigate.mockClear();
   });
 
-  it('成功路径：200 后提示、关闭弹窗并跳转订单详情', async () => {
+  it('成功路径：200 后只提示并回调订单号，关闭和跳转由页面层负责', async () => {
     jest.mocked(fixedPriceApi.purchase).mockResolvedValue({
       order_id: 9,
       item_id: 7001,
@@ -69,8 +69,8 @@ describe('FixedPricePurchaseModal', () => {
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledWith(9));
     expect(screen.getByText('抢到了！')).toBeInTheDocument();
-    expect(onClose).toHaveBeenCalledTimes(1);
-    expect(mockNavigate).toHaveBeenCalledWith('/order/9');
+    expect(onClose).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it('余额不足 402：弹二级确认，点击去充值后触发回调并跳转充值页', async () => {
@@ -114,6 +114,22 @@ describe('FixedPricePurchaseModal', () => {
 
     await screen.findByText('您已购买过');
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('成功购买后按钮不再处于 submitting 状态', async () => {
+    jest.mocked(fixedPriceApi.purchase).mockResolvedValue({
+      order_id: 9,
+      item_id: 7001,
+      price: '99.00',
+      remaining_stock: 86,
+      status: 'success',
+    });
+
+    renderModal();
+    fireEvent.click(screen.getByRole('button', { name: /确认抢购/ }));
+
+    await waitFor(() => expect(screen.getByText('抢到了！')).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: /确认抢购/ })).not.toBeDisabled();
   });
 
   it('网络异常：复用同一个 idempotencyKey 自动重试 1 次后提示失败', async () => {

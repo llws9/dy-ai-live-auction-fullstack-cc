@@ -1,5 +1,5 @@
 import React from "react"
-import { ArrowLeft, Save, Upload, Plus, X } from "lucide-react"
+import { ArrowLeft, Save, Plus, X } from "lucide-react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

@@ -4,12 +4,14 @@ import FixedPriceFlair from '../index';
 type FlairMessage = {
   payload?: {
     item_id?: number;
+    buyer_id?: number;
     buyer_nickname: string;
     product_title: string;
     price: string;
   };
   data?: {
     item_id?: number;
+    buyer_id?: number;
     buyer_nickname: string;
     product_title: string;
     price: string;
@@ -117,6 +119,27 @@ describe('FixedPriceFlair', () => {
 
     expect(screen.getByText(/DataUser/)).toBeInTheDocument();
     expect(screen.getByText(/南红手串/)).toBeInTheDocument();
+  });
+
+  it('兼容后端真实 fixed_price_flair payload 缺少昵称和商品名的场景', () => {
+    const { socket } = createSubscribeSocket();
+
+    render(<FixedPriceFlair socket={socket} />);
+    const handler = socket.subscribe.mock.calls[0][1] as FlairHandler;
+
+    act(() => {
+      handler({
+        data: {
+          item_id: 7003,
+          buyer_id: 1001,
+          price: '88.00',
+        } as any,
+      });
+    });
+
+    expect(screen.getByText(/用户 #1001/)).toBeInTheDocument();
+    expect(screen.getByText(/商品 #7003/)).toBeInTheDocument();
+    expect(screen.getByText(/¥88.00/)).toBeInTheDocument();
   });
 
   it('兼容 WebSocketService 的 on/off 订阅形态', () => {

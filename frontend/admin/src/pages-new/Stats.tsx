@@ -185,7 +185,7 @@ export default function Stats() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis dataKey="month" axisLine={false} tickLine={false} />
                     <YAxis axisLine={false} tickLine={false} />
-                    <Tooltip formatter={(value: number) => `¥${value.toLocaleString()}`} />
+                    <Tooltip formatter={(value: unknown) => formatCurrencyValue(value)} />
                     <Area type="monotone" dataKey="value" name="营收金额" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -229,6 +229,10 @@ export default function Stats() {
       </Tabs>
     </div>
   )
+}
+
+function formatCurrencyValue(value: unknown) {
+  return typeof value === "number" ? `¥${value.toLocaleString()}` : `¥${value ?? ""}`
 }
 
 function StatsIndicator({ title, value, trend, icon: Icon }: any) {
