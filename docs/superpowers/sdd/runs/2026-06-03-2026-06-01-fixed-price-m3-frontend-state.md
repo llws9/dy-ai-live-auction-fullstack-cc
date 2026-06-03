@@ -8,7 +8,7 @@
 | --- | --- |
 | Run ID | `2026-06-03-2026-06-01-fixed-price-m3-frontend` |
 | Topic | `2026-06-01-fixed-price-m3-frontend` |
-| Goal | `M3 Task1 H5 fixedPrice API 客户端 + 幂等 key` |
+| Goal | `M3 Task1-2 H5 fixedPrice API 客户端 + useFixedPriceItems hook` |
 | Mode | `subagent-driven` |
 | Branch | `feat/fixed-price-m1` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
@@ -26,30 +26,31 @@
 | State Template | `docs/superpowers/sdd/state-template.md` | yes | yes |
 | Plan | `docs/superpowers/plans/2026-06-01-fixed-price-m3-frontend.md` | yes | yes |
 | Tasks | `docs/superpowers/plans/2026-06-01-fixed-price-m3-frontend.md` | yes | yes |
-| Scope | `M3 Task1 H5 fixedPrice API client` | no | yes |
+| Scope | `M3 Task1 + Task2 H5 fixedPrice API client and useFixedPriceItems hook` | no | yes |
 
 ## Execution Summary
 
 | Metric | Value |
 | --- | --- |
-| Total Tasks | `1` |
-| Done | `1` |
+| Total Tasks | `2` |
+| Done | `2` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 16:31` |
+| Last Updated | `2026-06-03 17:09` |
 
 ## Task Matrix
 
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Allowed Files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `M3 Task1 H5 fixedPrice API client` | `done` | `main-agent` | `W1` | `M1+M2 fixed-price routes ready` | `API client + idempotency key` | `frontend/h5/src/api/fixedPrice.ts; frontend/h5/src/api/__tests__/fixedPrice.test.ts` |
+| `T002` | `M3 Task2 useFixedPriceItems hook` | `done` | `main-agent` | `W1` | `T001; M2 fixed-price WS messages ready` | `REST initial list + WS reducer + byId index` | `frontend/h5/src/hooks/useFixedPriceItems.ts; frontend/h5/src/hooks/__tests__/useFixedPriceItems.test.tsx` |
 
 ## Wave Plan
 
 | Wave | Goal | Tasks | Start Condition | Completion Condition |
 | --- | --- | --- | --- | --- |
-| `W1` | `Execute imported tasks with TDD evidence` | `T001` | `state file initialized` | `all tasks done or blocked with reason` |
+| `W1` | `Execute imported tasks with TDD evidence` | `T001,T002` | `state file initialized` | `all tasks done or blocked with reason` |
 
 ## Task Records
 
@@ -100,6 +101,51 @@
 
 - First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
 
+### T002 - `M3 Task2 useFixedPriceItems hook`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-03 16:43` |
+| Completed At | `2026-06-03 17:09` |
+| Branch | `feat/fixed-price-m1` |
+| Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
+| Depends On | `T001; M2 fixed-price WS messages ready` |
+| Parallel Group | `W1` |
+
+**TDD Plan**
+
+- Red: 新增 `frontend/h5/src/hooks/__tests__/useFixedPriceItems.test.tsx`，覆盖 `reduceItems` 对 `fixed_price_listed/stock/sold_out/offline/unknown` 的行为，以及 hook 初次 REST 加载、WS 增量更新、`byId` 索引。
+- Green: 新增 `frontend/h5/src/hooks/useFixedPriceItems.ts`，通过现有 `WebSocketService.on/off` 订阅 4 类一口价实时消息；初次调用 `fetchItems(liveStreamId)`，用 reducer 维护 `items` 并派生 `byId`。
+- Decision: plan 示例依赖不存在的 `useLiveStreamSocket`；按当前代码现状适配 `frontend/h5/src/services/websocket.ts`，避免新增并行 socket 抽象。
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `npm test -- --runTestsByPath src/hooks/__tests__/useFixedPriceItems.test.tsx --runInBand` | `RED: fails because ../useFixedPriceItems module is missing` | `FAIL: Cannot find module '../useFixedPriceItems'` | `pass` |
+| `npm test -- --runTestsByPath src/hooks/__tests__/useFixedPriceItems.test.tsx --runInBand` | `GREEN: reducer + hook tests pass` | `PASS: 1 suite, 7 tests` | `pass` |
+| `npm test -- --runTestsByPath src/api/__tests__/fixedPrice.test.ts src/hooks/__tests__/useFixedPriceItems.test.tsx --runInBand` | `Task1 API + Task2 hook regression pass` | `PASS: 2 suites, 10 tests` | `pass` |
+| `npx eslint src/hooks/useFixedPriceItems.ts src/hooks/__tests__/useFixedPriceItems.test.tsx` | `Edited files lint clean` | `PASS: exit 0` | `pass` |
+| `npm run build` | `TypeScript + Vite build pass` | `PASS: tsc && vite build completed` | `pass` |
+| `GetDiagnostics` | `No diagnostics for edited files` | `not_available: access denied for isolated worktree` | `info` |
+
+**Modified Files**
+
+- `frontend/h5/src/hooks/useFixedPriceItems.ts`
+- `frontend/h5/src/hooks/__tests__/useFixedPriceItems.test.tsx`
+- `docs/superpowers/sdd/runs/2026-06-03-2026-06-01-fixed-price-m3-frontend-state.md`
+
+**Risks**
+
+- `useFixedPriceItems` 直接适配现有 `WebSocketService`，后续若新增统一 `useLiveStreamSocket`，可把 socket 创建/订阅层下沉复用；当前未阻塞 Task2 行为。
+- WS `fixed_price_listed` 后端当前只提供商品基础字段，不含 `product_brief`；reducer 兼容 `payload.item` 与后端原始 payload，UI 展示完整商品信息仍依赖后续聚合字段或初次 REST 列表。
+
+**Handoff**
+
+- First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
+
 
 ## Final Review Checklist
 
@@ -115,3 +161,4 @@
 **状态**
 
 - `T001 done`: H5 fixedPrice API client implemented with TDD evidence.
+- `T002 done`: H5 useFixedPriceItems hook implemented with TDD evidence.
