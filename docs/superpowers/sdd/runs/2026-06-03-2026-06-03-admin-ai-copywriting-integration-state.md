@@ -320,7 +320,7 @@
 - [x] 每个实现型任务都遵循 TDD 或写明无法 TDD 的原因。
 - [x] API 契约变更已同步文档。
 - [x] 最终回答第一句展示当前分支/worktree。
-- [ ] 用户已获得下一步选项：继续下一波、发起 review、提交 PR、归档。
+- [x] 用户已获得下一步选项：继续下一波、发起 review、提交 PR、归档。
 
 ## Final Handoff
 
@@ -338,11 +338,13 @@
 **验证结果**
 
 - `PASS: focused Admin tests, 3 suites, 9 tests`
+- `PASS: post-review focused Admin tests, 3 suites, 9 tests`
 - `PASS: cd frontend/admin && npm run build`
+- `PASS: post-review cd frontend/admin && npm run build`
 
 **建议下一步**
 
-- `发起 review 或提交 PR`
+- `已完成 review；建议合并 feat/admin-ai-copywriting-integration 或创建 PR`
 
 ## Review Fixes
 
