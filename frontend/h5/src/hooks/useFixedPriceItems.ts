@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer } from 'react';
+import { useEffect, useMemo, useReducer, useState } from 'react';
 import { fetchItems, type FixedPriceItem } from '../api/fixedPrice';
 import WebSocketService from '../services/websocket';
 
@@ -90,8 +90,13 @@ export function reduceItems(state: FixedPriceItem[], action: FixedPriceAction): 
 
 export function useFixedPriceItems(liveStreamId: number) {
   const [items, dispatch] = useReducer(reduceItems, [] as FixedPriceItem[]);
+  const [socket, setSocket] = useState<WebSocketService | null>(null);
 
   useEffect(() => {
+    if (liveStreamId <= 0) {
+      return undefined;
+    }
+
     let active = true;
 
     fetchItems(liveStreamId)
@@ -112,8 +117,14 @@ export function useFixedPriceItems(liveStreamId: number) {
   }, [liveStreamId]);
 
   useEffect(() => {
+    if (liveStreamId <= 0) {
+      setSocket(null);
+      return undefined;
+    }
+
     const token = localStorage.getItem('auth_token') ?? localStorage.getItem('token') ?? undefined;
     const socket = new WebSocketService(liveStreamId, token);
+    setSocket(socket);
     const handlers = FIXED_PRICE_MESSAGE_TYPES.map((type: FixedPriceMessageType) => {
       const handler = (payload: unknown) => dispatch({ type, payload });
       socket.on(type, handler);
@@ -127,6 +138,7 @@ export function useFixedPriceItems(liveStreamId: number) {
     return () => {
       handlers.forEach(({ type, handler }) => socket.off(type, handler));
       socket.disconnect();
+      setSocket(null);
     };
   }, [liveStreamId]);
 
@@ -137,5 +149,5 @@ export function useFixedPriceItems(liveStreamId: number) {
     }, {});
   }, [items]);
 
-  return { items, byId };
+  return { items, byId, socket };
 }

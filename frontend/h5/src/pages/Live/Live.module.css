@@ -238,6 +238,26 @@
   font-size: var(--font-size-lg);
 }
 
+.fixedPriceList {
+  position: absolute;
+  right: var(--spacing-4);
+  bottom: calc(180px + env(safe-area-inset-bottom, 0px));
+  left: var(--spacing-4);
+  z-index: 3;
+  display: grid;
+  max-height: 34vh;
+  gap: var(--spacing-2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.fixedPriceListHidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(24px);
+}
+
 .panel {
   position: absolute;
   right: 0;

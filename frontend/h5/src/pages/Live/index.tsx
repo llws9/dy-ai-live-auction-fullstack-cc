@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import type { FixedPriceItem } from '@/api/fixedPrice';
+import FixedPriceCard from '@/components/FixedPriceCard';
+import FixedPriceFlair from '@/components/FixedPriceFlair';
+import FixedPricePurchaseModal from '@/components/FixedPricePurchaseModal';
+import { useFixedPriceItems } from '@/hooks/useFixedPriceItems';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '@/services/api';
 import WebSocketService from '@/services/websocket';
 import { useAuth } from '@/store/authContext';
@@ -144,6 +149,7 @@ const LiveRoomPage: React.FC = () => {
   const [followersCount, setFollowersCount] = useState(0);
   const [followingPending, setFollowingPending] = useState(false);
   const [connected, setConnected] = useState(false);
+  const [fixedPriceModalItem, setFixedPriceModalItem] = useState<FixedPriceItem | null>(null);
   const [toast, setToast] = useState('');
   const [now, setNow] = useState(() => Date.now());
   const { showToast: showGlobalToast } = useToast();
@@ -155,6 +161,7 @@ const LiveRoomPage: React.FC = () => {
   const isActive = auction?.status === 1 || auction?.status === 2;
   const effectiveLiveStreamId = queryLiveStreamId || auction?.live_stream_id || liveStream?.id || 0;
   const productImage = getFirstImage(product || auction?.product);
+  const { items: fixedPriceItems, socket: fixedPriceSocket } = useFixedPriceItems(effectiveLiveStreamId);
 
   const timeLeft = useMemo(() => {
     if (!auction?.end_time) return 0;
@@ -484,6 +491,21 @@ const LiveRoomPage: React.FC = () => {
         </div>
       </button>
 
+      {fixedPriceItems.length > 0 && (
+        <section
+          className={`${styles.fixedPriceList} ${expanded ? styles.fixedPriceListHidden : ''}`}
+          aria-label="直播间一口价商品"
+        >
+          {fixedPriceItems.map((item) => (
+            <FixedPriceCard
+              item={item}
+              key={item.id}
+              onPurchase={() => setFixedPriceModalItem(item)}
+            />
+          ))}
+        </section>
+      )}
+
       <div className={`${styles.panel} ${expanded ? styles.panelExpanded : ''}`}>
         <button className={styles.handle} aria-label={expanded ? '收起竞拍面板' : '展开竞拍面板'} onClick={() => setExpanded(!expanded)} type="button" />
 
@@ -573,6 +595,16 @@ const LiveRoomPage: React.FC = () => {
       </div>
 
       {toast && <div className={styles.toast} role="status">{toast}</div>}
+      {fixedPriceModalItem && (
+        <FixedPricePurchaseModal
+          item={fixedPriceModalItem}
+          liveStreamId={effectiveLiveStreamId}
+          open={true}
+          onClose={() => setFixedPriceModalItem(null)}
+          onSuccess={() => setFixedPriceModalItem(null)}
+        />
+      )}
+      <FixedPriceFlair socket={fixedPriceSocket} />
     </section>
   );
 };

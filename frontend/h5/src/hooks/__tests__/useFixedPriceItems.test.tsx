@@ -114,11 +114,21 @@ describe('useFixedPriceItems', () => {
     expect(fetchItems).toHaveBeenCalledWith(1001);
   });
 
+  it('skips REST and WS setup until liveStreamId is available', () => {
+    const { result } = renderHook(() => useFixedPriceItems(0));
+
+    expect(fetchItems).not.toHaveBeenCalled();
+    expect(mockWsInstances).toHaveLength(0);
+    expect(result.current.items).toEqual([]);
+    expect(result.current.socket).toBeNull();
+  });
+
   it('subscribes to fixed-price websocket messages and applies incremental updates', async () => {
     jest.mocked(fetchItems).mockResolvedValue({ items: [baseItem] });
     const { result } = renderHook(() => useFixedPriceItems(1001));
 
     await waitFor(() => expect(mockWsInstances).toHaveLength(1));
+    await waitFor(() => expect(result.current.socket).toBe(mockWsInstances[0]));
 
     act(() => {
       mockWsInstances[0].emit('fixed_price_stock', { item_id: 7001, remaining_stock: 86 });

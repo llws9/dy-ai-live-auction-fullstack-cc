@@ -8,7 +8,7 @@
 | --- | --- |
 | Run ID | `2026-06-03-2026-06-01-fixed-price-m3-frontend` |
 | Topic | `2026-06-01-fixed-price-m3-frontend` |
-| Goal | `M3 Task1-5 H5 fixedPrice API 客户端 + useFixedPriceItems hook + FixedPriceCard + FixedPricePurchaseModal + FixedPriceFlair` |
+| Goal | `M3 Task1-6 H5 fixedPrice API/client hook/components + Live 页面挂载` |
 | Mode | `subagent-driven` |
 | Branch | `feat/fixed-price-m1` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
@@ -26,18 +26,18 @@
 | State Template | `docs/superpowers/sdd/state-template.md` | yes | yes |
 | Plan | `docs/superpowers/plans/2026-06-01-fixed-price-m3-frontend.md` | yes | yes |
 | Tasks | `docs/superpowers/plans/2026-06-01-fixed-price-m3-frontend.md` | yes | yes |
-| Scope | `M3 Task1 + Task2 H5 fixedPrice API client/useFixedPriceItems hook; M3 Task3 FixedPriceCard; M3 Task4 FixedPricePurchaseModal; M3 Task5 FixedPriceFlair` | no | yes |
+| Scope | `M3 Task1 + Task2 H5 fixedPrice API client/useFixedPriceItems hook; M3 Task3 FixedPriceCard; M3 Task4 FixedPricePurchaseModal; M3 Task5 FixedPriceFlair; M3 Task6 mount fixed-price components into Live page` | no | yes |
 
 ## Execution Summary
 
 | Metric | Value |
 | --- | --- |
-| Total Tasks | `5` |
-| Done | `5` |
+| Total Tasks | `6` |
+| Done | `6` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 17:16` |
+| Last Updated | `2026-06-03 17:21` |
 
 ## Task Matrix
 
@@ -48,6 +48,7 @@
 | `T003` | `M3 Task3 FixedPriceCard component` | `done` | `main-agent` | `W2` | `T001` | `iOS-like H5 card for live/sold_out/offline states` | `frontend/h5/src/components/FixedPriceCard/index.tsx; frontend/h5/src/components/FixedPriceCard/index.module.css; frontend/h5/src/components/FixedPriceCard/__tests__/FixedPriceCard.test.tsx` |
 | `T004` | `M3 Task4 FixedPricePurchaseModal component` | `done` | `main-agent` | `W3` | `T001; T003` | `purchase modal success/402/409/network retry branches` | `frontend/h5/src/components/FixedPricePurchaseModal/index.tsx; frontend/h5/src/components/FixedPricePurchaseModal/index.module.css; frontend/h5/src/components/FixedPricePurchaseModal/__tests__/FixedPricePurchaseModal.test.tsx` |
 | `T005` | `M3 Task5 FixedPriceFlair component` | `done` | `main-agent` | `W4` | `M2 fixed_price_flair WS message ready` | `subscribe fixed_price_flair, render 4s right-to-left overlay, max 3 stacked` | `frontend/h5/src/components/FixedPriceFlair/index.tsx; frontend/h5/src/components/FixedPriceFlair/index.module.css; frontend/h5/src/components/FixedPriceFlair/__tests__/FixedPriceFlair.test.tsx` |
+| `T006` | `M3 Task6 mount fixed-price components into Live page` | `done` | `main-agent` | `W5` | `T001-T005` | `Live page mounts hook/card/modal/flair and wires purchase flow` | `frontend/h5/src/pages/Live/index.tsx; frontend/h5/src/pages/Live/Live.module.css; frontend/h5/src/pages/Live/__tests__/LiveRoom.test.tsx` |
 
 ## Wave Plan
 
@@ -57,6 +58,7 @@
 | `W2` | `Execute FixedPriceCard component with TDD evidence` | `T003` | `T001 API type available` | `FixedPriceCard tests/lint/build pass and state updated` |
 | `W3` | `Execute FixedPricePurchaseModal component with TDD evidence` | `T004` | `T001 API client and T003 card available` | `purchase modal tests/lint/build pass and state updated` |
 | `W4` | `Execute FixedPriceFlair component with TDD evidence` | `T005` | `M2 fixed_price_flair WS message ready` | `FixedPriceFlair tests/lint/build pass and state updated` |
+| `W5` | `Mount fixed-price components into Live page with TDD evidence` | `T006` | `T001-T005 done` | `Live page integration test/lint/build pass and state updated` |
 
 ## Task Records
 
@@ -299,6 +301,58 @@
 
 - First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
 
+### T006 - `M3 Task6 mount fixed-price components into Live page`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-03 17:18` |
+| Completed At | `2026-06-03 17:21` |
+| Branch | `feat/fixed-price-m1` |
+| Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
+| Depends On | `T001-T005` |
+| Parallel Group | `W5` |
+
+**TDD Plan**
+
+- Red: 扩展 `frontend/h5/src/pages/Live/__tests__/LiveRoom.test.tsx`，覆盖 Live 页面调用 `useFixedPriceItems(liveStreamId)`、渲染 `FixedPriceCard`、点击打开 `FixedPricePurchaseModal`、成功抢购后跳订单页，并把页面已有 `WebSocketService` 实例传给 `FixedPriceFlair` 订阅 `fixed_price_flair`。
+- Green: 在 `frontend/h5/src/pages/Live/index.tsx` 挂载 `useFixedPriceItems`、`FixedPriceCard`、`FixedPricePurchaseModal`、`FixedPriceFlair`；复用现有直播页 WebSocket 实例给飘屏，避免单独为 flair 再建一条连接；在 `Live.module.css` 增加一口价卡片浮层布局。
+- Decision: `FixedPricePurchaseModal` 自身已负责成功跳 `/order/:id` 与 402 跳充值页，Live 页面只负责打开/关闭 modal，避免父子重复导航。
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `npm test -- --runTestsByPath src/pages/Live/__tests__/LiveRoom.test.tsx --runInBand` | `RED: fails because Live page does not render fixed-price card` | `FAIL: Unable to find element with text 一口价翡翠` | `pass` |
+| `npm test -- --runTestsByPath src/pages/Live/__tests__/LiveRoom.test.tsx --runInBand` | `GREEN: Live page integration tests pass` | `PASS: 1 suite, 6 tests` | `pass` |
+| `npm test -- --runTestsByPath src/hooks/__tests__/useFixedPriceItems.test.tsx src/pages/Live/__tests__/LiveRoom.test.tsx --runInBand` | `Review RED: skip liveStreamId=0 and flair uses liveStreamId socket` | `FAIL: fetchItems called with 0; flair subscribed to auction socket` | `pass` |
+| `npm test -- --runTestsByPath src/hooks/__tests__/useFixedPriceItems.test.tsx src/pages/Live/__tests__/LiveRoom.test.tsx --runInBand` | `Review GREEN: invalid id skipped and flair uses hook socket` | `PASS: 2 suites, 14 tests` | `pass` |
+| `npm test -- --runTestsByPath src/api/__tests__/fixedPrice.test.ts src/hooks/__tests__/useFixedPriceItems.test.tsx src/components/FixedPriceCard/__tests__/FixedPriceCard.test.tsx src/components/FixedPricePurchaseModal/__tests__/FixedPricePurchaseModal.test.tsx src/components/FixedPriceFlair/__tests__/FixedPriceFlair.test.tsx src/pages/Live/__tests__/LiveRoom.test.tsx --runInBand` | `Task1-6 H5 fixed-price regression pass` | `PASS: 6 suites, 32 tests` | `pass` |
+| `npx eslint src/hooks/useFixedPriceItems.ts src/hooks/__tests__/useFixedPriceItems.test.tsx src/pages/Live/index.tsx src/pages/Live/__tests__/LiveRoom.test.tsx` | `Edited TS/TSX lint clean` | `FAIL: unused test handler parameter; fixed and reran PASS exit 0` | `pass` |
+| `npx eslint src/pages/Live/index.tsx src/pages/Live/__tests__/LiveRoom.test.tsx src/pages/Live/Live.module.css` | `CSS lint attempt` | `FAIL: ESLint parser does not handle CSS; reran TS/TSX lint and used build for CSS integration` | `info` |
+| `npm run build` | `TypeScript + Vite build pass` | `PASS: tsc && vite build completed, 104 modules transformed` | `pass` |
+| `GetDiagnostics` | `No diagnostics for edited files` | `info: VS Code diagnostics only returned unrelated main-worktree Go diagnostics; no edited H5 file diagnostics reported` | `info` |
+
+**Modified Files**
+
+- `frontend/h5/src/pages/Live/index.tsx`
+- `frontend/h5/src/pages/Live/Live.module.css`
+- `frontend/h5/src/pages/Live/__tests__/LiveRoom.test.tsx`
+- `frontend/h5/src/hooks/useFixedPriceItems.ts`
+- `frontend/h5/src/hooks/__tests__/useFixedPriceItems.test.tsx`
+- `docs/superpowers/sdd/runs/2026-06-03-2026-06-01-fixed-price-m3-frontend-state.md`
+
+**Risks**
+
+- Live 页面当前仍保留竞拍 WebSocket 与 `useFixedPriceItems` 内部一口价 WS 两条订阅链路；主复核已修正 `FixedPriceFlair` 使用 `useFixedPriceItems` 暴露的 liveStreamId socket，避免误订阅 auctionId 房间。
+- `useFixedPriceItems` 已跳过 `liveStreamId <= 0` 的 REST/WS 初始化，避免页面初始状态误请求 `/live-streams/0/fixed-price/items`。
+- 一口价浮层在竞拍面板展开时隐藏，防止与底部 panel 交互重叠；真机视觉位置仍建议在后续验收中确认。
+
+**Handoff**
+
+- First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
+
 
 ## Final Review Checklist
 
@@ -318,3 +372,4 @@
 - `T003 done`: H5 FixedPriceCard component implemented with TDD evidence.
 - `T004 done`: H5 FixedPricePurchaseModal component implemented with TDD evidence.
 - `T005 done`: H5 FixedPriceFlair component implemented with TDD evidence.
+- `T006 done`: H5 Live page mounts fixed-price cards, purchase modal, and flair with TDD evidence.
