@@ -1,7 +1,11 @@
 .page {
   position: relative;
+  --live-bottom-nav-height: calc(64px + var(--safe-bottom));
   width: 100%;
-  min-height: 100vh;
+  height: calc(100vh - var(--live-bottom-nav-height));
+  height: calc(100dvh - var(--live-bottom-nav-height));
+  min-height: calc(100vh - var(--live-bottom-nav-height));
+  min-height: calc(100dvh - var(--live-bottom-nav-height));
   background: var(--bg-page);
   color: var(--text-primary);
   overflow: hidden;
@@ -258,7 +262,7 @@
 .dock {
   position: absolute;
   right: var(--spacing-4);
-  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  bottom: var(--spacing-3);
   left: var(--spacing-4);
   z-index: 5;
   display: flex;
@@ -716,6 +720,13 @@
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media (min-width: 431px) {
+  .page {
+    height: calc(min(100vh, 812px) - var(--live-bottom-nav-height));
+    min-height: calc(min(100vh, 812px) - var(--live-bottom-nav-height));
   }
 }
 
