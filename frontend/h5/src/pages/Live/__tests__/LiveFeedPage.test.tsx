@@ -61,6 +61,23 @@ describe('LiveFeedPage feed 骨架', () => {
     expect(slide).toHaveTextContent('slide:3:11:undefined:true');
   });
 
+  it('无 id 时跳过没有当前竞拍的直播间，展示推荐竞拍房间', async () => {
+    mockedLiveStreamApi.list.mockResolvedValue({
+      list: [
+        { id: 3, name: '空直播间', current_auction_id: null },
+        { id: 4, name: '竞拍直播间', current_auction_id: 12 },
+      ],
+      total: 2,
+      page: 1,
+      page_size: 20,
+    });
+
+    renderFeed('/live');
+
+    const slide = await screen.findByTestId('live-room-slide');
+    expect(slide).toHaveTextContent('slide:4:12:undefined:true');
+  });
+
   it('list 为空时展示空态文案', async () => {
     mockedLiveStreamApi.list.mockResolvedValue({ list: [], total: 0, page: 1, page_size: 20 });
     renderFeed('/live');
