@@ -8,7 +8,7 @@
 | --- | --- |
 | Run ID | `2026-06-03-2026-06-01-fixed-price-m3-frontend` |
 | Topic | `2026-06-01-fixed-price-m3-frontend` |
-| Goal | `M3 Task1-3 H5 fixedPrice API 客户端 + useFixedPriceItems hook + FixedPriceCard` |
+| Goal | `M3 Task1-4 H5 fixedPrice API 客户端 + useFixedPriceItems hook + FixedPriceCard + FixedPricePurchaseModal` |
 | Mode | `subagent-driven` |
 | Branch | `feat/fixed-price-m1` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
@@ -26,18 +26,18 @@
 | State Template | `docs/superpowers/sdd/state-template.md` | yes | yes |
 | Plan | `docs/superpowers/plans/2026-06-01-fixed-price-m3-frontend.md` | yes | yes |
 | Tasks | `docs/superpowers/plans/2026-06-01-fixed-price-m3-frontend.md` | yes | yes |
-| Scope | `M3 Task1 + Task2 H5 fixedPrice API client/useFixedPriceItems hook; M3 Task3 FixedPriceCard` | no | yes |
+| Scope | `M3 Task1 + Task2 H5 fixedPrice API client/useFixedPriceItems hook; M3 Task3 FixedPriceCard; M3 Task4 FixedPricePurchaseModal` | no | yes |
 
 ## Execution Summary
 
 | Metric | Value |
 | --- | --- |
-| Total Tasks | `3` |
-| Done | `3` |
+| Total Tasks | `4` |
+| Done | `4` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 16:48` |
+| Last Updated | `2026-06-03 17:45` |
 
 ## Task Matrix
 
@@ -46,6 +46,7 @@
 | `T001` | `M3 Task1 H5 fixedPrice API client` | `done` | `main-agent` | `W1` | `M1+M2 fixed-price routes ready` | `API client + idempotency key` | `frontend/h5/src/api/fixedPrice.ts; frontend/h5/src/api/__tests__/fixedPrice.test.ts` |
 | `T002` | `M3 Task2 useFixedPriceItems hook` | `done` | `main-agent` | `W1` | `T001; M2 fixed-price WS messages ready` | `REST initial list + WS reducer + byId index` | `frontend/h5/src/hooks/useFixedPriceItems.ts; frontend/h5/src/hooks/__tests__/useFixedPriceItems.test.tsx` |
 | `T003` | `M3 Task3 FixedPriceCard component` | `done` | `main-agent` | `W2` | `T001` | `iOS-like H5 card for live/sold_out/offline states` | `frontend/h5/src/components/FixedPriceCard/index.tsx; frontend/h5/src/components/FixedPriceCard/index.module.css; frontend/h5/src/components/FixedPriceCard/__tests__/FixedPriceCard.test.tsx` |
+| `T004` | `M3 Task4 FixedPricePurchaseModal component` | `done` | `main-agent` | `W3` | `T001; T003` | `purchase modal success/402/409/network retry branches` | `frontend/h5/src/components/FixedPricePurchaseModal/index.tsx; frontend/h5/src/components/FixedPricePurchaseModal/index.module.css; frontend/h5/src/components/FixedPricePurchaseModal/__tests__/FixedPricePurchaseModal.test.tsx` |
 
 ## Wave Plan
 
@@ -53,6 +54,7 @@
 | --- | --- | --- | --- | --- |
 | `W1` | `Execute imported tasks with TDD evidence` | `T001,T002` | `state file initialized` | `all tasks done or blocked with reason` |
 | `W2` | `Execute FixedPriceCard component with TDD evidence` | `T003` | `T001 API type available` | `FixedPriceCard tests/lint/build pass and state updated` |
+| `W3` | `Execute FixedPricePurchaseModal component with TDD evidence` | `T004` | `T001 API client and T003 card available` | `purchase modal tests/lint/build pass and state updated` |
 
 ## Task Records
 
@@ -199,6 +201,55 @@
 
 - First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
 
+### T004 - `M3 Task4 FixedPricePurchaseModal component`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-03 17:31` |
+| Completed At | `2026-06-03 17:45` |
+| Branch | `feat/fixed-price-m1` |
+| Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
+| Depends On | `T001 API client; T003 card purchase entry` |
+| Parallel Group | `W3` |
+
+**TDD Plan**
+
+- Red: 新增 `frontend/h5/src/components/FixedPricePurchaseModal/__tests__/FixedPricePurchaseModal.test.tsx`，覆盖成功、402 余额不足、409 售罄、409 已购、网络异常复用幂等 key 重试 1 次。
+- Green: 新增 `FixedPricePurchaseModal` 与 CSS module；首次点击生成并缓存 `idempotencyKey`，成功后 Toast + close + `onSuccess(orderId)` + 跳 `/order/:id`，402 弹二级充值弹窗且点击「去充值」后触发回调并跳转，409 按后端 `FP_*` code 显示「已售罄」/「您已购买过」，网络异常总尝试 2 次。
+- Decision: plan 示例使用 Vitest 和 `index.test.tsx`；当前仓库 H5 使用 Jest 且 `testMatch` 只匹配 `__tests__`，因此按现有约定使用 Jest 测试路径。
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `npm test -- --runTestsByPath src/components/FixedPricePurchaseModal/__tests__/FixedPricePurchaseModal.test.tsx --runInBand` | `RED: fails because ../index module is missing` | `FAIL: Cannot find module '../index'` | `pass` |
+| `npm test -- --runTestsByPath src/components/FixedPricePurchaseModal/__tests__/FixedPricePurchaseModal.test.tsx --runInBand` | `GREEN: purchase modal behavior tests pass` | `PASS: 1 suite, 5 tests` | `pass` |
+| `npm test -- --runTestsByPath src/components/FixedPricePurchaseModal/__tests__/FixedPricePurchaseModal.test.tsx --runInBand` | `Review RED: 402 callback delayed until recharge click and FP_ALREADY_BOUGHT recognized` | `FAIL: callback fired too early; FP_ALREADY_BOUGHT showed sold-out` | `pass` |
+| `npm test -- --runTestsByPath src/api/__tests__/fixedPrice.test.ts src/hooks/__tests__/useFixedPriceItems.test.tsx src/components/FixedPriceCard/__tests__/FixedPriceCard.test.tsx src/components/FixedPricePurchaseModal/__tests__/FixedPricePurchaseModal.test.tsx --runInBand` | `Task1-4 frontend regression pass` | `PASS: 4 suites, 20 tests` | `pass` |
+| `npx eslint src/components/FixedPricePurchaseModal/index.tsx src/components/FixedPricePurchaseModal/__tests__/FixedPricePurchaseModal.test.tsx` | `Edited TS/TSX lint clean` | `PASS: exit 0` | `pass` |
+| `npm run build` | `TypeScript + Vite build pass` | `PASS: tsc && vite build completed` | `pass` |
+| `GetDiagnostics` | `No diagnostics for edited files` | `not_available: access denied for isolated worktree` | `info` |
+
+**Modified Files**
+
+- `frontend/h5/src/components/FixedPricePurchaseModal/index.tsx`
+- `frontend/h5/src/components/FixedPricePurchaseModal/index.module.css`
+- `frontend/h5/src/components/FixedPricePurchaseModal/__tests__/FixedPricePurchaseModal.test.tsx`
+- `docs/superpowers/sdd/runs/2026-06-03-2026-06-01-fixed-price-m3-frontend-state.md`
+
+**Risks**
+
+- `FixedPricePurchaseModal` 依赖调用方位于 `ToastProvider` 和 `react-router-dom` Router 内；当前 H5 页面已有相同 `useToast`/`useNavigate` 使用模式，后续 Task6 挂载时需保持该上下文。
+- 402 分支只做余额不足二级弹窗，用户点击「去充值」后才触发父级回调并跳 `/wallet/recharge`；充值页存在性需在后续页面集成或路由验收中确认。
+- 主复核已修正后端错误码兼容：重复购买识别 `FP_ALREADY_BOUGHT`，售罄默认展示「已售罄」。
+- Jest 输出存在既有 `ts-jest esModuleInterop` 警告与 `MSW setup skipped` 日志，不影响测试结果。
+
+**Handoff**
+
+- First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
+
 
 ## Final Review Checklist
 
@@ -216,3 +267,4 @@
 - `T001 done`: H5 fixedPrice API client implemented with TDD evidence.
 - `T002 done`: H5 useFixedPriceItems hook implemented with TDD evidence.
 - `T003 done`: H5 FixedPriceCard component implemented with TDD evidence.
+- `T004 done`: H5 FixedPricePurchaseModal component implemented with TDD evidence.
