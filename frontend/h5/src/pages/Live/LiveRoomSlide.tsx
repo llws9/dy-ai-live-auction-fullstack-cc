@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import type { FixedPriceItem } from '@/api/fixedPrice';
+import { fetchMyPurchase, type FixedPriceItem } from '@/api/fixedPrice';
 import FixedPriceCard from '@/components/FixedPriceCard';
 import FixedPriceFlair from '@/components/FixedPriceFlair';
 import FixedPricePurchaseModal from '@/components/FixedPricePurchaseModal';
@@ -175,6 +175,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const { showToast: showGlobalToast } = useToast();
   const wsRef = useRef<WebSocketService | null>(null);
   const [fixedPriceModalItem, setFixedPriceModalItem] = useState<FixedPriceItem | null>(null);
+  const [purchasedFixedPriceItemIds, setPurchasedFixedPriceItemIds] = useState<Set<number>>(() => new Set());
 
   const auctionRules = auction?.rules ?? auction?.rule ?? auction?.auction_rule;
   const currentPrice = toAmount(auction?.current_price);
@@ -185,6 +186,46 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const effectiveLiveStreamId = liveStreamId || auction?.live_stream_id || liveStream?.id || 0;
   const { items: fixedPriceItems, socket: fixedPriceSocket } = useFixedPriceItems(effectiveLiveStreamId);
   const productImage = getFirstImage(product || auction?.product);
+  const fixedPriceItemIds = useMemo(() => fixedPriceItems.map((item) => item.id), [fixedPriceItems]);
+
+  useEffect(() => {
+    setPurchasedFixedPriceItemIds(new Set());
+  }, [effectiveLiveStreamId]);
+
+  useEffect(() => {
+    if (!isAuthenticated || fixedPriceItemIds.length === 0) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    Promise.all(
+      fixedPriceItemIds.map(async (itemId) => {
+        try {
+          const result = await fetchMyPurchase(itemId);
+          return result.i_bought ? itemId : null;
+        } catch {
+          return null;
+        }
+      })
+    ).then((boughtItemIds) => {
+      if (cancelled) {
+        return;
+      }
+      setPurchasedFixedPriceItemIds((current) => {
+        const next = new Set(current);
+        boughtItemIds.forEach((itemId) => {
+          if (itemId !== null) {
+            next.add(itemId);
+          }
+        });
+        return next;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fixedPriceItemIds, isAuthenticated]);
 
   const timeLeft = useMemo(() => {
     if (!auction?.end_time) return 0;
@@ -577,6 +618,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
             <FixedPriceCard
               key={item.id}
               item={item}
+              purchased={purchasedFixedPriceItemIds.has(item.id)}
               onPurchase={() => setFixedPriceModalItem(item)}
             />
           ))}
@@ -689,9 +731,13 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           liveStreamId={effectiveLiveStreamId}
           open={true}
           onClose={() => setFixedPriceModalItem(null)}
-          onSuccess={(orderId) => {
+          onSuccess={() => {
+            setPurchasedFixedPriceItemIds((current) => {
+              const next = new Set(current);
+              next.add(fixedPriceModalItem.id);
+              return next;
+            });
             setFixedPriceModalItem(null);
-            navigate(`/order/${orderId}`);
           }}
         />
       )}

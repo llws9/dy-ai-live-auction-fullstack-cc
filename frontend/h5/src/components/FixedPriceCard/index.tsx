@@ -3,6 +3,7 @@ import styles from './index.module.css';
 
 interface FixedPriceCardProps {
   item: FixedPriceItem;
+  purchased?: boolean;
   onPurchase: (itemId: number) => void;
 }
 
@@ -10,7 +11,11 @@ function getProductBrief(item: FixedPriceItem): ProductBrief {
   return item.product_brief ?? item.product ?? { id: item.product_id ?? item.id, title: '一口价商品' };
 }
 
-function getButtonState(item: FixedPriceItem): { disabled: boolean; label: string } {
+function getButtonState(item: FixedPriceItem, purchased: boolean): { disabled: boolean; label: string } {
+  if (purchased) {
+    return { disabled: true, label: '已购买' };
+  }
+
   if (item.status === 'offline') {
     return { disabled: true, label: '已下架' };
   }
@@ -22,9 +27,9 @@ function getButtonState(item: FixedPriceItem): { disabled: boolean; label: strin
   return { disabled: false, label: '立即抢' };
 }
 
-export default function FixedPriceCard({ item, onPurchase }: FixedPriceCardProps) {
+export default function FixedPriceCard({ item, purchased = false, onPurchase }: FixedPriceCardProps) {
   const product = getProductBrief(item);
-  const button = getButtonState(item);
+  const button = getButtonState(item, purchased);
   const stockText = `剩 ${item.remaining_stock} / ${item.total_stock}`;
 
   return (

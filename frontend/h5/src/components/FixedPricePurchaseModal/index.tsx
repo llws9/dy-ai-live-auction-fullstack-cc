@@ -13,7 +13,7 @@ interface FixedPricePurchaseModalProps {
   liveStreamId: number;
   open: boolean;
   onClose: () => void;
-  onSuccess: (orderId: number) => void;
+  onSuccess: () => void;
   onInsufficientBalance?: () => void;
 }
 
@@ -83,10 +83,10 @@ export default function FixedPricePurchaseModal({
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
-        const result = await purchase({ itemId: item.id, idempotencyKey });
+        await purchase({ itemId: item.id, idempotencyKey });
         showToast('抢到了！', 'success', 2500);
         setSubmitting(false);
-        onSuccess(result.order_id);
+        onSuccess();
         return;
       } catch (error) {
         const typedError = error as PurchaseErrorLike;

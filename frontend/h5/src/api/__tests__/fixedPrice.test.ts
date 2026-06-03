@@ -1,4 +1,4 @@
-import { fetchItems, generateIdempotencyKey, purchase } from '../fixedPrice';
+import { fetchItems, fetchMyPurchase, generateIdempotencyKey, purchase } from '../fixedPrice';
 
 const jsonResponse = (data: unknown): Response => ({
   ok: true,
@@ -33,7 +33,7 @@ describe('fixedPrice API', () => {
     );
   });
 
-  it('purchase sends X-Idempotency-Key to the fixed-price purchase endpoint', async () => {
+  it('purchase sends X-Idempotency-Key and normalizes the backend voucher id', async () => {
     localStorage.setItem('auth_token', 'token-1');
     const fetchMock = jest.fn().mockResolvedValue(jsonResponse({
       order_id: 9,
@@ -49,7 +49,7 @@ describe('fixedPrice API', () => {
       idempotencyKey: '550e8400-e29b-41d4-a716-446655440000',
     });
 
-    expect(result.order_id).toBe(9);
+    expect(result.purchase_id).toBe(9);
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v1/fixed-price/items/7001/purchase',
       expect.objectContaining({
@@ -57,6 +57,35 @@ describe('fixedPrice API', () => {
         headers: expect.objectContaining({
           Authorization: 'Bearer token-1',
           'X-Idempotency-Key': '550e8400-e29b-41d4-a716-446655440000',
+        }),
+      })
+    );
+  });
+
+  it('fetchMyPurchase normalizes backend i_bought and voucher id', async () => {
+    localStorage.setItem('auth_token', 'token-1');
+    const fetchMock = jest.fn().mockResolvedValue(jsonResponse({
+      i_bought: true,
+      order_id: 9,
+      price: '99.00',
+      created_at: '2026-06-04T10:00:00Z',
+    }));
+    global.fetch = fetchMock;
+
+    const result = await fetchMyPurchase(7001);
+
+    expect(result).toEqual({
+      i_bought: true,
+      purchase_id: 9,
+      price: '99.00',
+      created_at: '2026-06-04T10:00:00Z',
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/fixed-price/items/7001/my-purchase',
+      expect.objectContaining({
+        method: 'GET',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer token-1',
         }),
       })
     );

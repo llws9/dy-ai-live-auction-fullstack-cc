@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import LiveRoomSlide from '../LiveRoomSlide';
-import { purchase } from '../../../api/fixedPrice';
+import { fetchMyPurchase, purchase } from '../../../api/fixedPrice';
 import { useFixedPriceItems } from '../../../hooks/useFixedPriceItems';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '../../../services/api';
 import WebSocketService from '../../../services/websocket';
@@ -53,6 +53,7 @@ jest.mock('../../../hooks/useFixedPriceItems', () => ({
 }));
 
 jest.mock('../../../api/fixedPrice', () => ({
+  fetchMyPurchase: jest.fn(),
   generateIdempotencyKey: jest.fn(() => 'idem-live-page-001'),
   purchase: jest.fn(),
 }));
@@ -99,6 +100,7 @@ const mockedFollowApi = followApi as jest.Mocked<typeof followApi>;
 const mockedLiveStreamApi = liveStreamApi as jest.Mocked<typeof liveStreamApi>;
 const mockedProductApi = productApi as jest.Mocked<typeof productApi>;
 const mockedUseFixedPriceItems = useFixedPriceItems as jest.MockedFunction<typeof useFixedPriceItems>;
+const mockedFetchMyPurchase = fetchMyPurchase as jest.MockedFunction<typeof fetchMyPurchase>;
 const mockedPurchase = purchase as jest.MockedFunction<typeof purchase>;
 const MockedWebSocketService = WebSocketService as jest.MockedClass<typeof WebSocketService>;
 
@@ -147,8 +149,9 @@ describe('LiveRoom migration', () => {
     mockedFollowApi.unfollowLiveStream.mockResolvedValue({});
     mockedFollowApi.getFollowersStats.mockResolvedValue({ count: 12 });
     mockedFollowApi.getFollowStatus.mockResolvedValue({ is_following: false });
+    mockedFetchMyPurchase.mockResolvedValue({ i_bought: false });
     mockedPurchase.mockResolvedValue({
-      order_id: 88,
+      purchase_id: 88,
       item_id: 7001,
       price: '88.00',
       remaining_stock: 4,
@@ -331,7 +334,7 @@ describe('LiveRoom migration', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/result?id=5');
   });
 
-  it('mounts fixed-price cards, purchase modal, and flair on the live slide', async () => {
+  it('mounts fixed-price cards, purchase modal, and flair without treating purchase voucher as order id', async () => {
     let fixedPriceFlairHandler: ((message: any) => void) | undefined;
     const fixedPriceSocket = {
       on: jest.fn((type: string, handler: (message: any) => void) => {
@@ -387,7 +390,12 @@ describe('LiveRoom migration', () => {
       itemId: 7001,
       idempotencyKey: 'idem-live-page-001',
     }));
-    expect(mockNavigate).toHaveBeenCalledWith('/order/88');
+    expect(mockNavigate).not.toHaveBeenCalledWith('/order/88');
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /确认抢购/ })).not.toBeInTheDocument());
+    const purchasedButton = screen.getByRole('button', { name: /已购买/ });
+    expect(purchasedButton).toBeDisabled();
+    fireEvent.click(purchasedButton);
+    expect(mockedPurchase).toHaveBeenCalledTimes(1);
 
     expect(fixedPriceSocket.on).toHaveBeenCalledWith('fixed_price_flair', expect.any(Function));
     act(() => {
@@ -398,6 +406,45 @@ describe('LiveRoom migration', () => {
       });
     });
     expect(await screen.findByText('Alice')).toBeInTheDocument();
+  });
+
+  it('hydrates purchased fixed-price items on page load to prevent repeat purchase requests', async () => {
+    mockedUseFixedPriceItems.mockReturnValue({
+      items: [{
+        id: 7001,
+        product_id: 5001,
+        price: '88.00',
+        total_stock: 10,
+        remaining_stock: 5,
+        status: 'on_sale',
+        product_brief: { id: 5001, title: '一口价翡翠', cover_image: '/fp.jpg' },
+      }],
+      byId: {},
+      socket: null,
+    });
+    mockedFetchMyPurchase.mockResolvedValue({
+      i_bought: true,
+      purchase_id: 88,
+      price: '88.00',
+      created_at: '2026-06-04T10:00:00Z',
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={['/live?id=3&auction_id=5']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('一口价翡翠')).toBeInTheDocument();
+    await waitFor(() => expect(mockedFetchMyPurchase).toHaveBeenCalledWith(7001));
+    const purchasedButton = await screen.findByRole('button', { name: /已购买/ });
+    expect(purchasedButton).toBeDisabled();
+
+    fireEvent.click(purchasedButton);
+    expect(mockedPurchase).not.toHaveBeenCalled();
   });
 
   it('mounts ChatPanel, dispatches chat_message into store and sends via sendChat', async () => {

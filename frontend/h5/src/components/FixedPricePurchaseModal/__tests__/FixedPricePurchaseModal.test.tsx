@@ -55,7 +55,7 @@ describe('FixedPricePurchaseModal', () => {
     mockNavigate.mockClear();
   });
 
-  it('成功路径：200 后只提示并回调订单号，关闭和跳转由页面层负责', async () => {
+  it('成功路径：200 后只提示并回调成功，关闭和跳转由页面层负责', async () => {
     jest.mocked(fixedPriceApi.purchase).mockResolvedValue({
       order_id: 9,
       item_id: 7001,
@@ -67,7 +67,7 @@ describe('FixedPricePurchaseModal', () => {
     const { onClose, onSuccess } = renderModal();
     fireEvent.click(screen.getByRole('button', { name: /确认抢购/ }));
 
-    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith(9));
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
     expect(screen.getByText('抢到了！')).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
