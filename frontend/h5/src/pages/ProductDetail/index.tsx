@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { auctionApi, bidApi, productApi } from '@/services/api';
 import { useAuth } from '@/store/authContext';
 import PageHeader from '@/components/shared/PageHeader';
+import { repairUtf8Mojibake } from '@/utils/textEncoding';
 import styles from './ProductDetail.module.css';
 
 interface AuctionDetail {
@@ -108,7 +109,8 @@ const ProductDetail: React.FC = () => {
   const currentPrice = auction?.current_price ?? rules.start_price ?? 0;
   const statusInfo = getStatusInfo(auction?.status);
   const productImage = getFirstImage(product);
-  const productName = product?.name || (auction ? `竞拍场次 #${auction.id}` : '商品详情');
+  const productName = repairUtf8Mojibake(product?.name) || (auction ? `竞拍场次 #${auction.id}` : '商品详情');
+  const productDescription = repairUtf8Mojibake(product?.description) || '暂无描述';
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -274,7 +276,7 @@ const ProductDetail: React.FC = () => {
 
         <section className={styles.card}>
           <h3>商品描述</h3>
-          <p className={styles.description}>{product?.description || '暂无描述'}</p>
+          <p className={styles.description}>{productDescription}</p>
         </section>
 
         <section className={styles.card}>

@@ -92,4 +92,32 @@ describe('ProductDetail migration', () => {
     await waitFor(() => expect(mockedBidApi.placeBid).toHaveBeenCalledWith(12, 1300));
     expect(await screen.findByText('出价成功！¥1,300')).toBeInTheDocument();
   });
+
+  it('repairs mojibake product copy on detail page', async () => {
+    mockedProductApi.get.mockResolvedValueOnce({
+      id: 34,
+      name: 'è€è±é’»çŸ³æˆ’æŒ‡',
+      description: 'ç²¾é€‰ä¸»çŸ³ï¼Œç«å½©å‡ºè‰²',
+      images: ['/ring.jpg'],
+      rules: {
+        start_price: 1000,
+        increment: 100,
+      },
+    });
+
+    render(
+      <ThemeProvider>
+        <MemoryRouter
+          initialEntries={['/detail?id=12']}
+          future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+        >
+          <ProductDetail />
+        </MemoryRouter>
+      </ThemeProvider>
+    );
+
+    expect(await screen.findByText('老花钻石戒指')).toBeInTheDocument();
+    expect(screen.getByText('精选主石，火彩出色')).toBeInTheDocument();
+    expect(screen.queryByText('è€è±é’»çŸ³æˆ’æŒ‡')).not.toBeInTheDocument();
+  });
 });
