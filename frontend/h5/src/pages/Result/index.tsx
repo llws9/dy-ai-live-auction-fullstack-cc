@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { auctionApi, orderApi, productApi } from '@/services/api';
 import { useAuth } from '@/store/authContext';
 import PageHeader from '@/components/shared/PageHeader';
+import { repairUtf8Mojibake } from '@/utils/textEncoding';
 import styles from './Result.module.css';
 
 interface BidRecord {
@@ -140,7 +141,7 @@ const ResultPage: React.FC = () => {
   const finalPrice = result?.final_price ?? result?.current_price ?? wonBid?.amount ?? 0;
   const isWinner = Boolean(user?.id && result?.winner_id === user.id);
   const productImage = getFirstImage(product);
-  const productName = product?.name || (auctionNo ? `竞拍场次 #${auctionNo}` : '竞拍结果');
+  const productName = repairUtf8Mojibake(product?.name) || (auctionNo ? `竞拍场次 #${auctionNo}` : '竞拍结果');
   const statusText = result?.status === 3 ? '已结束' : '结果已生成';
   const orderStatusText = useMemo(() => getOrderStatusText(order?.status), [order?.status]);
 

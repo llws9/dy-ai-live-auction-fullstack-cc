@@ -100,6 +100,26 @@ describe('AuctionResult migration', () => {
     expect(await screen.findByText('支付成功，订单已更新')).toBeInTheDocument();
   });
 
+  it('repairs mojibake product name on result page', async () => {
+    mockedProductApi.get.mockResolvedValueOnce({
+      id: 34,
+      name: 'ç¨€æœ‰ç å®',
+      images: ['/jewelry.jpg'],
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={['/result?id=12']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <ResultPage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('稀有珠宝')).toBeInTheDocument();
+    expect(screen.queryByText('ç¨€æœ‰ç å®')).not.toBeInTheDocument();
+  });
+
   it('shows 查看订单 button that navigates to /order/:id when order_id exists (T3.6)', async () => {
     render(
       <MemoryRouter
