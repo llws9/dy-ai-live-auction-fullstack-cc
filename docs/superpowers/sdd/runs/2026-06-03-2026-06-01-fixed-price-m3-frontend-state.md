@@ -8,7 +8,7 @@
 | --- | --- |
 | Run ID | `2026-06-03-2026-06-01-fixed-price-m3-frontend` |
 | Topic | `2026-06-01-fixed-price-m3-frontend` |
-| Goal | `M3 Task1-8 H5 fixedPrice API/client hook/components + Live 页面挂载 + 管理端上下架页面 + Prometheus metrics` |
+| Goal | `M3 Task1-9 H5 fixedPrice API/client hook/components + Live 页面挂载 + 管理端上下架页面 + Prometheus metrics + Grafana alerts` |
 | Mode | `subagent-driven` |
 | Branch | `feat/fixed-price-m1` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
@@ -26,18 +26,18 @@
 | State Template | `docs/superpowers/sdd/state-template.md` | yes | yes |
 | Plan | `docs/superpowers/plans/2026-06-01-fixed-price-m3-frontend.md` | yes | yes |
 | Tasks | `docs/superpowers/plans/2026-06-01-fixed-price-m3-frontend.md` | yes | yes |
-| Scope | `M3 Task1 + Task2 H5 fixedPrice API client/useFixedPriceItems hook; M3 Task3 FixedPriceCard; M3 Task4 FixedPricePurchaseModal; M3 Task5 FixedPriceFlair; M3 Task6 mount fixed-price components into Live page; M3 Task7 admin fixed-price list/listing/offline page; M3 Task8 Prometheus metrics` | no | yes |
+| Scope | `M3 Task1 + Task2 H5 fixedPrice API client/useFixedPriceItems hook; M3 Task3 FixedPriceCard; M3 Task4 FixedPricePurchaseModal; M3 Task5 FixedPriceFlair; M3 Task6 mount fixed-price components into Live page; M3 Task7 admin fixed-price list/listing/offline page; M3 Task8 Prometheus metrics; M3 Task9 Grafana dashboard and alert rules` | no | yes |
 
 ## Execution Summary
 
 | Metric | Value |
 | --- | --- |
-| Total Tasks | `8` |
-| Done | `8` |
+| Total Tasks | `9` |
+| Done | `9` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 18:11` |
+| Last Updated | `2026-06-03 18:24` |
 
 ## Task Matrix
 
@@ -51,6 +51,7 @@
 | `T006` | `M3 Task6 mount fixed-price components into Live page` | `done` | `main-agent` | `W5` | `T001-T005` | `Live page mounts hook/card/modal/flair and wires purchase flow` | `frontend/h5/src/pages/Live/index.tsx; frontend/h5/src/pages/Live/Live.module.css; frontend/h5/src/pages/Live/__tests__/LiveRoom.test.tsx` |
 | `T007` | `M3 Task7 admin fixed-price listing/offline page` | `done` | `main-agent` | `W6` | `M1 fixed-price list/offline routes ready` | `Admin live-stream fixed-price list + listing form + offline action` | `frontend/admin/src/pages/LiveStreamFixedPrice/index.tsx; frontend/admin/src/pages/LiveStreamFixedPrice/__tests__/LiveStreamFixedPrice.test.tsx; frontend/admin/src/shared/api/index.ts; frontend/admin/src/App.tsx; frontend/admin/src/components/Layout.tsx; frontend/admin/jest.config.cjs; frontend/admin/jest.setup.ts; frontend/admin/package.json; frontend/admin/src/vite-env.d.ts` |
 | `T008` | `M3 Task8 Prometheus metrics` | `done` | `main-agent` | `W7` | `M1+M2 fixed-price purchase/ws ready` | `fixed-price purchase/ws/compensation/stock metrics` | `backend/auction/pkg/metrics/fixed_price_metrics.go; backend/auction/service/fixed_price.go; backend/auction/service/fixed_price_broadcaster.go; backend/auction/service/*metrics*_test.go; backend/auction/main.go` |
+| `T009` | `M3 Task9 Grafana dashboard and alert rules` | `done` | `main-agent` | `W8` | `T008 fixed-price metrics ready` | `dashboard panels + Prometheus alert rules for fixed-price metrics` | `monitoring/grafana/dashboards/fixed-price-dashboard.json; monitoring/prometheus/alert-rules/fixed-price.yml; monitoring/prometheus/prometheus.yml` |
 
 ## Wave Plan
 
@@ -63,6 +64,7 @@
 | `W5` | `Mount fixed-price components into Live page with TDD evidence` | `T006` | `T001-T005 done` | `Live page integration test/lint/build pass and state updated` |
 | `W6` | `Execute admin fixed-price management page with TDD evidence` | `T007` | `M1 fixed-price list/offline routes ready` | `Admin page tests/lint/build pass and state updated` |
 | `W7` | `Add fixed-price Prometheus metrics with TDD evidence` | `T008` | `M1+M2 fixed-price purchase/ws ready` | `metrics tests and backend auction regression pass; state updated` |
+| `W8` | `Add Grafana dashboard and alert rules` | `T009` | `T008 fixed-price metrics ready` | `dashboard JSON parses; alert YAML parses; Prometheus loads alert-rules directory; state updated` |
 
 ## Task Records
 
@@ -473,6 +475,52 @@
 - Remaining work: `M3 Task9 Grafana dashboard / alert rules, M3 Task10 E2E smoke if continuing plan`
 - First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
 
+### T009 - `M3 Task9 Grafana dashboard and alert rules`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-03 18:18` |
+| Completed At | `2026-06-03 18:24` |
+| Branch | `feat/fixed-price-m1` |
+| Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
+| Depends On | `T008 fixed-price metrics ready` |
+| Parallel Group | `W8` |
+
+**TDD Plan**
+
+- Red: 用合约校验命令检查 fixed-price dashboard、alert rule 文件与 `prometheus.yml` 加载入口；预期缺文件与缺加载配置而失败。
+- Green: 新增 Grafana dashboard，覆盖成功率/QPS、P50/P95/P99 延迟、item 库存、WS 推送速率、补偿事务速率；新增两条 Prometheus 告警并接入 `alert-rules/*.yml`。
+- Decision: plan 示例使用 `ops/` 路径，但仓库现有部署体系为 `monitoring/grafana` 与 `monitoring/prometheus`；本任务按实际可加载路径落地，避免创建未被部署系统读取的并行目录。
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `python3 - <<'PY' ... fixed-price observability contract ... PY` | `RED: dashboard/alert files and rule_files entry missing` | `FAIL: missing fixed-price observability contract: monitoring/grafana/dashboards/fixed-price-dashboard.json, monitoring/prometheus/alert-rules/fixed-price.yml, prometheus.yml missing alert-rules/*.yml` | `pass` |
+| `python3 - <<'PY' ... json/metric/alert contract ... PY` | `GREEN: dashboard JSON contains all fixed-price metrics and alerts/prometheus config reference alert rules` | `PASS: fixed-price observability contract ok` | `pass` |
+| `ruby -e 'require "yaml"; ARGV.each { |p| YAML.load_file(p) }; puts "yaml parse ok"' monitoring/prometheus/alert-rules/fixed-price.yml monitoring/prometheus/prometheus.yml` | `YAML parses` | `PASS: yaml parse ok` | `pass` |
+| `command -v promtool` | `Prometheus rule syntax validator available` | `FAIL: promtool not installed in local environment` | `info` |
+
+**Modified Files**
+
+- `docs/superpowers/sdd/runs/2026-06-03-2026-06-01-fixed-price-m3-frontend-state.md`
+- `monitoring/grafana/dashboards/fixed-price-dashboard.json`
+- `monitoring/prometheus/alert-rules/fixed-price.yml`
+- `monitoring/prometheus/prometheus.yml`
+
+**Risks**
+
+- 本地环境缺少 `promtool`，未执行 Prometheus 官方规则语义校验；已用 YAML 解析与表达式合约校验替代。
+- Grafana dashboard 为静态 JSON provisioning 文件，仍需在实际 Grafana 环境确认 datasource uid `prometheus` 与 provisioning 路径一致。
+
+**Handoff**
+
+- Completion summary: `M3 Task9 Grafana dashboard and fixed-price alert rules done with contract validation`
+- Remaining work: `M3 Task10 E2E smoke / acceptance verification`
+- First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
+
 ## Final Review Checklist
 
 - [x] State file was created before subagent dispatch.
@@ -494,3 +542,4 @@
 - `T006 done`: H5 Live page mounts fixed-price cards, purchase modal, and flair with TDD evidence.
 - `T007 done`: Admin LiveStreamFixedPrice page implemented with list/listing/offline TDD evidence; API aligned to existing Gateway fixed-price routes.
 - `T008 done`: Backend fixed-price Prometheus metrics implemented with TDD evidence; purchase result/latency, stock remaining, WS publish, and compensation metrics verified.
+- `T009 done`: Grafana dashboard and Prometheus alert rules implemented with contract validation.

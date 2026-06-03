@@ -16,6 +16,7 @@ alerting:
 rule_files:
   - 'alerts.yml'
   - 'recording_rules.yml'
+  - 'alert-rules/*.yml'
 
 # 抓取配置
 scrape_configs:
