@@ -17,8 +17,8 @@ func TestLoad_LLM_DefaultsAndEnvOverride(t *testing.T) {
 	if cfg.LLM.Provider != "doubao" {
 		t.Fatalf("default provider want=doubao got=%q", cfg.LLM.Provider)
 	}
-	if cfg.LLM.TimeoutMs != 30000 {
-		t.Fatalf("default TimeoutMs want=30000 got=%d", cfg.LLM.TimeoutMs)
+	if cfg.LLM.TimeoutMs != 60000 {
+		t.Fatalf("default TimeoutMs want=60000 got=%d", cfg.LLM.TimeoutMs)
 	}
 	if !strings.HasPrefix(cfg.LLM.Doubao.BaseURL, "https://ark.cn-beijing.volces.com") {
 		t.Fatalf("default BaseURL unexpected: %q", cfg.LLM.Doubao.BaseURL)
@@ -73,8 +73,8 @@ services:
 	if cfg.LLM.Provider != "doubao" {
 		t.Fatalf("default provider want=doubao got=%q", cfg.LLM.Provider)
 	}
-	if cfg.LLM.TimeoutMs != 30000 {
-		t.Fatalf("default timeout_ms want=30000 got=%d", cfg.LLM.TimeoutMs)
+	if cfg.LLM.TimeoutMs != 60000 {
+		t.Fatalf("default timeout_ms want=60000 got=%d", cfg.LLM.TimeoutMs)
 	}
 	if cfg.LLM.Doubao.BaseURL != "https://ark.cn-beijing.volces.com/api/v3" {
 		t.Fatalf("default base_url unexpected: %q", cfg.LLM.Doubao.BaseURL)

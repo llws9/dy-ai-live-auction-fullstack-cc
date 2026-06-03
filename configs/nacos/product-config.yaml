@@ -21,7 +21,7 @@ services:
 
 llm:
   provider: "doubao"
-  timeout_ms: 30000
+  timeout_ms: 60000
   doubao:
     base_url: "https://ark.cn-beijing.volces.com/api/v3"
     api_key: "${ARK_API_KEY}"

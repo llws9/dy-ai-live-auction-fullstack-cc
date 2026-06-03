@@ -12,7 +12,7 @@ import (
 
 const (
 	defaultLLMProvider  = "doubao"
-	defaultLLMTimeoutMs = 30000
+	defaultLLMTimeoutMs = 60000
 	defaultArkBaseURL   = "https://ark.cn-beijing.volces.com/api/v3"
 	defaultArkModel     = "doubao-seed-1-6-vision-250815"
 )
