@@ -4,6 +4,7 @@ import { orderApi, userApi } from '../../services/api';
 import { useAuth } from '../../store/authContext';
 import BadgeDot from '../../components/BadgeDot';
 import { useTouchpointNotifications } from '../../hooks/useTouchpointNotifications';
+import { repairUtf8Mojibake } from '../../utils/textEncoding';
 import { trackEvent } from '../../utils/trackEvent';
 import styles from './Profile.module.css';
 
@@ -152,10 +153,11 @@ const UserCenter: React.FC = () => {
   }, [authUser]);
 
   const userInfo = useMemo<ProfileUser>(() => {
+    const displayName = profile?.name || authUser?.name || '用户';
     return {
       ...authUser,
       ...profile,
-      name: profile?.name || authUser?.name || '用户',
+      name: repairUtf8Mojibake(displayName),
     };
   }, [authUser, profile]);
 

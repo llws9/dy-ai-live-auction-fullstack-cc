@@ -105,6 +105,26 @@ describe('Profile migration', () => {
     expect(mockedOrderApi.list).toHaveBeenCalledTimes(1);
   });
 
+  it('repairs mojibake profile names before rendering the heading', async () => {
+    mockedUserApi.getProfile.mockResolvedValue({
+      id: 9,
+      name: 'æµ‹è¯•ç”¨æˆ·',
+      email: 'buyer@example.com',
+      avatar: '',
+      role: 0,
+      created_at: '2026-05-01T00:00:00Z',
+    });
+
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <Profile />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('heading', { name: '测试用户' })).toBeInTheDocument();
+    expect(screen.queryByText('æµ‹è¯•ç”¨æˆ·')).not.toBeInTheDocument();
+  });
+
   it('wires retained profile entry buttons and logout', async () => {
     render(
       <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>

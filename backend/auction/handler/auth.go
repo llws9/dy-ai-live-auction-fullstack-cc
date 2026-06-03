@@ -143,7 +143,7 @@ func (h *AuthHandler) Register(ctx context.Context, c *app.RequestContext) {
 	}
 
 	// 生成Token
-	token, err := h.generateToken(user.ID, user.Name)
+	token, err := h.generateToken(user.ID, user.Name, user.Role)
 	if err != nil {
 		c.JSON(500, map[string]interface{}{
 			"code":    500,
@@ -226,7 +226,7 @@ func (h *AuthHandler) Login(ctx context.Context, c *app.RequestContext) {
 	_ = h.userDAO.UpdateLastLogin(ctx, user.ID)
 
 	// 生成Token
-	token, err := h.generateToken(user.ID, user.Name)
+	token, err := h.generateToken(user.ID, user.Name, user.Role)
 	if err != nil {
 		c.JSON(500, map[string]interface{}{
 			"code":    500,
@@ -280,10 +280,11 @@ func (h *AuthHandler) GetCurrentUser(ctx context.Context, c *app.RequestContext)
 }
 
 // generateToken 生成JWT Token
-func (h *AuthHandler) generateToken(userID int64, username string) (string, error) {
+func (h *AuthHandler) generateToken(userID int64, username string, role int) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id":  userID,
 		"username": username,
+		"role":     role,
 		"exp":      time.Now().Add(time.Duration(h.jwtExpire) * time.Hour).Unix(),
 		"iat":      time.Now().Unix(),
 		"nbf":      time.Now().Unix(),

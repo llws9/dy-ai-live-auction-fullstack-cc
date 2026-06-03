@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Login from '../Login';
-import { AuthProvider, RequireAuth } from '@/shared/auth';
+import { AuthProvider, RequireAuth, useAuth } from '@/shared/auth';
 import { authApi } from '@/shared/api/auth';
 
 jest.mock('@/shared/api/auth', () => ({
@@ -12,6 +12,11 @@ jest.mock('@/shared/api/auth', () => ({
 }));
 
 const mockedAuthApi = authApi as jest.Mocked<typeof authApi>;
+
+function DashboardGreeting() {
+  const { user } = useAuth();
+  return <h1>欢迎，{user?.name || '管理员'}</h1>;
+}
 
 function renderLoginFlow() {
   return render(
@@ -23,7 +28,7 @@ function renderLoginFlow() {
             path="/dashboard"
             element={
               <RequireAuth>
-                <div>后台首页</div>
+                <DashboardGreeting />
               </RequireAuth>
             }
           />
@@ -59,8 +64,33 @@ describe('Login auth flow', () => {
     await userEvent.click(screen.getByRole('button', { name: /立即登录/ }));
 
     await waitFor(() => {
-      expect(screen.getByText('后台首页')).toBeInTheDocument();
+      expect(screen.getByText('欢迎，本地管理员')).toBeInTheDocument();
     });
     expect(localStorage.getItem('admin_auth_token')).toBe('admin-token');
+  });
+
+  it('repairs mojibake user names before rendering the dashboard greeting', async () => {
+    mockedAuthApi.login.mockResolvedValue({
+      token: 'admin-token',
+      user: {
+        id: 1003,
+        name: 'ç³»ç»Ÿç®¡ç†å‘˜',
+        phone: '13900000003',
+        role: 2,
+        status: 1,
+      },
+    } as any);
+
+    renderLoginFlow();
+
+    await userEvent.click(screen.getByRole('button', { name: '手机登录' }));
+    await userEvent.type(screen.getByPlaceholderText('手机号码'), '13900000003');
+    await userEvent.type(screen.getByPlaceholderText('密码'), 'Demo@123456');
+    await userEvent.click(screen.getByRole('button', { name: /立即登录/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText('欢迎，系统管理员')).toBeInTheDocument();
+    });
+    expect(JSON.parse(localStorage.getItem('admin_auth_user') || '{}').name).toBe('系统管理员');
   });
 });

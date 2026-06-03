@@ -16,6 +16,69 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const WINDOWS_1252_REVERSE: Record<string, number> = {
+  '€': 0x80,
+  '‚': 0x82,
+  'ƒ': 0x83,
+  '„': 0x84,
+  '…': 0x85,
+  '†': 0x86,
+  '‡': 0x87,
+  'ˆ': 0x88,
+  '‰': 0x89,
+  'Š': 0x8a,
+  '‹': 0x8b,
+  'Œ': 0x8c,
+  'Ž': 0x8e,
+  '‘': 0x91,
+  '’': 0x92,
+  '“': 0x93,
+  '”': 0x94,
+  '•': 0x95,
+  '–': 0x96,
+  '—': 0x97,
+  '˜': 0x98,
+  '™': 0x99,
+  'š': 0x9a,
+  '›': 0x9b,
+  'œ': 0x9c,
+  'ž': 0x9e,
+  'Ÿ': 0x9f,
+};
+
+function decodePossibleMojibake(value: string): string {
+  if (!/[ÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßà-ÿ\u0080-\u009f]/.test(value)) {
+    return value;
+  }
+
+  const bytes: number[] = [];
+  for (const char of value) {
+    const code = char.charCodeAt(0);
+    if (code <= 0xff) {
+      bytes.push(code);
+      continue;
+    }
+    const mapped = WINDOWS_1252_REVERSE[char];
+    if (mapped === undefined) {
+      return value;
+    }
+    bytes.push(mapped);
+  }
+
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(new Uint8Array(bytes));
+  } catch {
+    return value;
+  }
+}
+
+function normalizeUser(user: User): User {
+  return {
+    ...user,
+    name: decodePossibleMojibake(user.name),
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -28,9 +91,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (storedToken && storedUser) {
       try {
-        const parsedUser = JSON.parse(storedUser);
+        const parsedUser = normalizeUser(JSON.parse(storedUser));
         setToken(storedToken);
         setUser(parsedUser);
+        localStorage.setItem('admin_auth_user', JSON.stringify(parsedUser));
       } catch (e) {
         localStorage.removeItem('admin_auth_token');
         localStorage.removeItem('admin_auth_user');
@@ -42,10 +106,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // 登录
   const login = useCallback((newToken: string, newUser: User) => {
+    const normalizedUser = normalizeUser(newUser);
     localStorage.setItem('admin_auth_token', newToken);
-    localStorage.setItem('admin_auth_user', JSON.stringify(newUser));
+    localStorage.setItem('admin_auth_user', JSON.stringify(normalizedUser));
     setToken(newToken);
-    setUser(newUser);
+    setUser(normalizedUser);
   }, []);
 
   // 登出
@@ -61,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!token) return;
 
     try {
-      const currentUser = await authApi.getCurrentUser();
+      const currentUser = normalizeUser(await authApi.getCurrentUser());
       setUser(currentUser);
       localStorage.setItem('admin_auth_user', JSON.stringify(currentUser));
     } catch (e) {
