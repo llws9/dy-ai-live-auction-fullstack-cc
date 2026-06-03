@@ -1,4 +1,6 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { ChatPanel } from '../ChatPanel';
 import { useLiveChatStore } from '../../../store/liveChatStore';
 
@@ -64,5 +66,13 @@ describe('ChatPanel', () => {
     render(<ChatPanel currentUserId={1} onSend={jest.fn()} />);
     expect(screen.getByText('Bob')).toBeInTheDocument();
     expect(screen.getByText('arriving')).toBeInTheDocument();
+  });
+
+  it('keeps the chat panel in normal sheet flow without a dark overlay bar', () => {
+    const css = readFileSync(join(__dirname, '..', 'ChatPanel.module.css'), 'utf8');
+
+    expect(css).not.toMatch(/\.panel\s*\{[\s\S]*?position:\s*absolute;/);
+    expect(css).not.toMatch(/\.inputBar\s*\{[\s\S]*?position:\s*absolute;/);
+    expect(css).not.toContain('rgba(0, 0, 0, 0.6)');
   });
 });
