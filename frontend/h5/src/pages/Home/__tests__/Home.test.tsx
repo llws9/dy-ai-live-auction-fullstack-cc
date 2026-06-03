@@ -147,6 +147,30 @@ describe('HomePage 分类联动 (T2.10)', () => {
     expect(followAction).not.toHaveTextContent('收');
     expect(notificationAction).not.toHaveTextContent('铃');
   });
+
+  it('修复首页竞拍卡片中的 cp1252 风格中文乱码', async () => {
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [
+        {
+          id: 9,
+          product_id: 13,
+          live_stream_id: 5,
+          status: 1,
+          current_price: 3400,
+          product: {
+            id: 13,
+            name: 'è€èœœèœ¡æ‰‹ä¸²',
+          },
+        },
+      ],
+      total: 1,
+    });
+
+    renderHome();
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: '老蜜蜡手串' })).toBeTruthy());
+    expect(screen.queryByText('è€èœœèœ¡æ‰‹ä¸²')).toBeNull();
+  });
 });
 
 describe('HomePage 未读消息红点 (T3.6 / F-D2)', () => {

@@ -6,6 +6,7 @@ import { useAuth } from '@/store/authContext';
 import PageHeader from '@/components/shared/PageHeader';
 import BadgeDot from '@/components/BadgeDot';
 import { trackEvent } from '@/utils/trackEvent';
+import { repairUtf8Mojibake } from '@/utils/textEncoding';
 import styles from './Home.module.css';
 
 // 固定 tab：「全部」「收藏」无需 category_id；动态 tab 来自 GET /categories
@@ -314,7 +315,7 @@ const HomePage: React.FC = () => {
             {auctions.map((auction) => {
               const statusInfo = getStatusInfo(auction.status);
               const productImage = getFirstImage(auction.product);
-              const productName = auction.product?.name || `竞拍场次 #${auction.id}`;
+              const productName = repairUtf8Mojibake(auction.product?.name) || `竞拍场次 #${auction.id}`;
               const livePath = `/live?id=${auction.liveStreamId ?? ''}&auction_id=${auction.id}`;
 
               return (
