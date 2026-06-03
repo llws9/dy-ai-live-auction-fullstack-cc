@@ -109,6 +109,8 @@ describe('MobileShell', () => {
     expect(screen.getByRole('link', { name: /直播间/ })).toHaveAttribute('href', '/live');
     expect(screen.getByRole('link', { name: /我的/ })).toHaveAttribute('href', '/profile');
     expect(screen.getByRole('link', { name: /我的/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: /我的/ })).toHaveAttribute('data-state', 'active');
+    expect(screen.getByRole('link', { name: /首页/ })).toHaveAttribute('data-state', 'inactive');
     expect(await screen.findByLabelText('7 条待处理提醒')).toHaveTextContent('7');
   });
 

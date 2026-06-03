@@ -70,6 +70,7 @@ function BottomNav() {
             key={item.path}
             to={item.path}
             className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
+            data-state={isActive ? 'active' : 'inactive'}
             aria-current={isActive ? 'page' : undefined}
             onClick={() => trackNavClick(item.path)}
           >
@@ -79,7 +80,7 @@ function BottomNav() {
               </span>
               {item.badge && <BadgeDot count={unreadTotal} />}
             </span>
-            <span>{item.label}</span>
+            <span className={styles.navLabel}>{item.label}</span>
           </Link>
         );
       })}
