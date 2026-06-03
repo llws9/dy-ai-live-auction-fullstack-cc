@@ -8,7 +8,7 @@
 | --- | --- |
 | Run ID | `2026-06-03-2026-06-01-fixed-price-m3-frontend` |
 | Topic | `2026-06-01-fixed-price-m3-frontend` |
-| Goal | `M3 Task1-2 H5 fixedPrice API 客户端 + useFixedPriceItems hook` |
+| Goal | `M3 Task1-3 H5 fixedPrice API 客户端 + useFixedPriceItems hook + FixedPriceCard` |
 | Mode | `subagent-driven` |
 | Branch | `feat/fixed-price-m1` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
@@ -26,18 +26,18 @@
 | State Template | `docs/superpowers/sdd/state-template.md` | yes | yes |
 | Plan | `docs/superpowers/plans/2026-06-01-fixed-price-m3-frontend.md` | yes | yes |
 | Tasks | `docs/superpowers/plans/2026-06-01-fixed-price-m3-frontend.md` | yes | yes |
-| Scope | `M3 Task1 + Task2 H5 fixedPrice API client and useFixedPriceItems hook` | no | yes |
+| Scope | `M3 Task1 + Task2 H5 fixedPrice API client/useFixedPriceItems hook; M3 Task3 FixedPriceCard` | no | yes |
 
 ## Execution Summary
 
 | Metric | Value |
 | --- | --- |
-| Total Tasks | `2` |
-| Done | `2` |
+| Total Tasks | `3` |
+| Done | `3` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 17:09` |
+| Last Updated | `2026-06-03 16:48` |
 
 ## Task Matrix
 
@@ -45,12 +45,14 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `M3 Task1 H5 fixedPrice API client` | `done` | `main-agent` | `W1` | `M1+M2 fixed-price routes ready` | `API client + idempotency key` | `frontend/h5/src/api/fixedPrice.ts; frontend/h5/src/api/__tests__/fixedPrice.test.ts` |
 | `T002` | `M3 Task2 useFixedPriceItems hook` | `done` | `main-agent` | `W1` | `T001; M2 fixed-price WS messages ready` | `REST initial list + WS reducer + byId index` | `frontend/h5/src/hooks/useFixedPriceItems.ts; frontend/h5/src/hooks/__tests__/useFixedPriceItems.test.tsx` |
+| `T003` | `M3 Task3 FixedPriceCard component` | `done` | `main-agent` | `W2` | `T001` | `iOS-like H5 card for live/sold_out/offline states` | `frontend/h5/src/components/FixedPriceCard/index.tsx; frontend/h5/src/components/FixedPriceCard/index.module.css; frontend/h5/src/components/FixedPriceCard/__tests__/FixedPriceCard.test.tsx` |
 
 ## Wave Plan
 
 | Wave | Goal | Tasks | Start Condition | Completion Condition |
 | --- | --- | --- | --- | --- |
 | `W1` | `Execute imported tasks with TDD evidence` | `T001,T002` | `state file initialized` | `all tasks done or blocked with reason` |
+| `W2` | `Execute FixedPriceCard component with TDD evidence` | `T003` | `T001 API type available` | `FixedPriceCard tests/lint/build pass and state updated` |
 
 ## Task Records
 
@@ -146,6 +148,57 @@
 
 - First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
 
+### T003 - `M3 Task3 FixedPriceCard component`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-03 16:42` |
+| Completed At | `2026-06-03 16:48` |
+| Branch | `feat/fixed-price-m1` |
+| Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
+| Depends On | `T001 API type available` |
+| Parallel Group | `W2` |
+
+**TDD Plan**
+
+- Red: 新增 `frontend/h5/src/components/FixedPriceCard/__tests__/FixedPriceCard.test.tsx`，覆盖价格/库存展示、live 点击 `onPurchase(item.id)`、sold_out/offline/库存为 0 禁用文案、缺图降级。
+- Green: 新增 `FixedPriceCard` 与 CSS module，按 iOS-like 要求实现 `min-height >= 88px`、按钮 `min-height >= 44px`、CSS 变量化，并兼容 `product_brief`/`product` 两种商品摘要来源。
+- Verify: 运行目标 Jest、Task1-3 前端回归、eslint、H5 build。
+- Decision: plan 示例测试路径 `index.test.tsx` 不符合当前 Jest `testMatch`（只匹配 `__tests__`）；按仓库现有约定改为 `__tests__/FixedPriceCard.test.tsx`。
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `npm test -- --runTestsByPath src/components/FixedPriceCard/index.test.tsx --runInBand` | `RED attempt: component missing` | `FAIL: No tests found because Jest only matches __tests__` | `info` |
+| `npm test -- --runTestsByPath src/components/FixedPriceCard/__tests__/FixedPriceCard.test.tsx --runInBand` | `RED: fails because ../index module is missing` | `FAIL: Cannot find module '../index'` | `pass` |
+| `npm test -- --runTestsByPath src/components/FixedPriceCard/__tests__/FixedPriceCard.test.tsx --runInBand` | `GREEN: FixedPriceCard behavior tests pass` | `PASS: 1 suite, 5 tests` | `pass` |
+| `npm test -- --runTestsByPath src/api/__tests__/fixedPrice.test.ts src/hooks/__tests__/useFixedPriceItems.test.tsx src/components/FixedPriceCard/__tests__/FixedPriceCard.test.tsx --runInBand` | `Task1-3 frontend regression pass` | `PASS: 3 suites, 15 tests` | `pass` |
+| `npx eslint src/components/FixedPriceCard/index.tsx src/components/FixedPriceCard/__tests__/FixedPriceCard.test.tsx` | `Edited TS/TSX lint clean` | `PASS: exit 0` | `pass` |
+| `npm run build` | `TypeScript + Vite build pass` | `PASS: tsc && vite build completed` | `pass` |
+| `npm test -- --runTestsByPath src/api/__tests__/fixedPrice.test.ts src/hooks/__tests__/useFixedPriceItems.test.tsx src/components/FixedPriceCard/__tests__/FixedPriceCard.test.tsx --runInBand && npx eslint src/components/FixedPriceCard/index.tsx src/components/FixedPriceCard/__tests__/FixedPriceCard.test.tsx && npm run build` | `Final combined verification pass` | `PASS: 3 suites, 15 tests; eslint exit 0; build completed` | `pass` |
+| `bits-code-guard local diff review` | `No blocking defects for Task3 diff` | `PASS: no findings; report generated` | `pass` |
+| `GetDiagnostics` | `No diagnostics for edited files` | `not_available: access denied for isolated worktree` | `info` |
+
+**Modified Files**
+
+- `frontend/h5/src/components/FixedPriceCard/index.tsx`
+- `frontend/h5/src/components/FixedPriceCard/index.module.css`
+- `frontend/h5/src/components/FixedPriceCard/__tests__/FixedPriceCard.test.tsx`
+- `docs/superpowers/sdd/runs/2026-06-03-2026-06-01-fixed-price-m3-frontend-state.md`
+
+**Risks**
+
+- `FixedPriceCard` 兼容 `status: live/on_sale` 的可购买状态与 `sold_out/offline` 禁用状态；后续 Task6 挂载时仍需确认页面容器布局。
+- 缺少封面图时渲染本地文本空态，不引入占位图资源。
+- Jest 输出存在既有 `ts-jest esModuleInterop` 警告与 `MSW setup skipped` 日志，不影响测试结果。
+
+**Handoff**
+
+- First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
+
 
 ## Final Review Checklist
 
@@ -162,3 +215,4 @@
 
 - `T001 done`: H5 fixedPrice API client implemented with TDD evidence.
 - `T002 done`: H5 useFixedPriceItems hook implemented with TDD evidence.
+- `T003 done`: H5 FixedPriceCard component implemented with TDD evidence.
