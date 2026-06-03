@@ -8,7 +8,7 @@
 | --- | --- |
 | Run ID | `2026-06-03-2026-06-01-fixed-price-m3-frontend` |
 | Topic | `2026-06-01-fixed-price-m3-frontend` |
-| Goal | `M3 Task1-9 H5 fixedPrice API/client hook/components + Live 页面挂载 + 管理端上下架页面 + Prometheus metrics + Grafana alerts` |
+| Goal | `M3 Task1-10 H5 fixedPrice API/client hook/components + Live 页面挂载 + 管理端上下架页面 + Prometheus metrics + Grafana alerts + E2E smoke` |
 | Mode | `subagent-driven` |
 | Branch | `feat/fixed-price-m1` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
@@ -26,18 +26,18 @@
 | State Template | `docs/superpowers/sdd/state-template.md` | yes | yes |
 | Plan | `docs/superpowers/plans/2026-06-01-fixed-price-m3-frontend.md` | yes | yes |
 | Tasks | `docs/superpowers/plans/2026-06-01-fixed-price-m3-frontend.md` | yes | yes |
-| Scope | `M3 Task1 + Task2 H5 fixedPrice API client/useFixedPriceItems hook; M3 Task3 FixedPriceCard; M3 Task4 FixedPricePurchaseModal; M3 Task5 FixedPriceFlair; M3 Task6 mount fixed-price components into Live page; M3 Task7 admin fixed-price list/listing/offline page; M3 Task8 Prometheus metrics; M3 Task9 Grafana dashboard and alert rules` | no | yes |
+| Scope | `M3 Task1 + Task2 H5 fixedPrice API client/useFixedPriceItems hook; M3 Task3 FixedPriceCard; M3 Task4 FixedPricePurchaseModal; M3 Task5 FixedPriceFlair; M3 Task6 mount fixed-price components into Live page; M3 Task7 admin fixed-price list/listing/offline page; M3 Task8 Prometheus metrics; M3 Task9 Grafana dashboard and alert rules; M3 Task10 E2E smoke` | no | yes |
 
 ## Execution Summary
 
 | Metric | Value |
 | --- | --- |
-| Total Tasks | `9` |
-| Done | `9` |
+| Total Tasks | `10` |
+| Done | `10` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-03 18:24` |
+| Last Updated | `2026-06-03 18:38` |
 
 ## Task Matrix
 
@@ -52,6 +52,7 @@
 | `T007` | `M3 Task7 admin fixed-price listing/offline page` | `done` | `main-agent` | `W6` | `M1 fixed-price list/offline routes ready` | `Admin live-stream fixed-price list + listing form + offline action` | `frontend/admin/src/pages/LiveStreamFixedPrice/index.tsx; frontend/admin/src/pages/LiveStreamFixedPrice/__tests__/LiveStreamFixedPrice.test.tsx; frontend/admin/src/shared/api/index.ts; frontend/admin/src/App.tsx; frontend/admin/src/components/Layout.tsx; frontend/admin/jest.config.cjs; frontend/admin/jest.setup.ts; frontend/admin/package.json; frontend/admin/src/vite-env.d.ts` |
 | `T008` | `M3 Task8 Prometheus metrics` | `done` | `main-agent` | `W7` | `M1+M2 fixed-price purchase/ws ready` | `fixed-price purchase/ws/compensation/stock metrics` | `backend/auction/pkg/metrics/fixed_price_metrics.go; backend/auction/service/fixed_price.go; backend/auction/service/fixed_price_broadcaster.go; backend/auction/service/*metrics*_test.go; backend/auction/main.go` |
 | `T009` | `M3 Task9 Grafana dashboard and alert rules` | `done` | `main-agent` | `W8` | `T008 fixed-price metrics ready` | `dashboard panels + Prometheus alert rules for fixed-price metrics` | `monitoring/grafana/dashboards/fixed-price-dashboard.json; monitoring/prometheus/alert-rules/fixed-price.yml; monitoring/prometheus/prometheus.yml` |
+| `T010` | `M3 Task10 E2E smoke` | `done` | `main-agent` | `W9` | `T001-T009` | `H5 fixed-price happy/edge/realtime smoke` | `frontend/h5/e2e/fixed-price.spec.ts` |
 
 ## Wave Plan
 
@@ -65,6 +66,7 @@
 | `W6` | `Execute admin fixed-price management page with TDD evidence` | `T007` | `M1 fixed-price list/offline routes ready` | `Admin page tests/lint/build pass and state updated` |
 | `W7` | `Add fixed-price Prometheus metrics with TDD evidence` | `T008` | `M1+M2 fixed-price purchase/ws ready` | `metrics tests and backend auction regression pass; state updated` |
 | `W8` | `Add Grafana dashboard and alert rules` | `T009` | `T008 fixed-price metrics ready` | `dashboard JSON parses; alert YAML parses; Prometheus loads alert-rules directory; state updated` |
+| `W9` | `Add H5 fixed-price E2E smoke` | `T010` | `T001-T009 done` | `Playwright chromium smoke passes; generated artifacts excluded; state updated` |
 
 ## Task Records
 
@@ -521,6 +523,53 @@
 - Remaining work: `M3 Task10 E2E smoke / acceptance verification`
 - First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
 
+### T010 - `M3 Task10 E2E smoke`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-03 18:30` |
+| Completed At | `2026-06-03 18:38` |
+| Branch | `feat/fixed-price-m1` |
+| Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1` |
+| Depends On | `T001-T009` |
+| Parallel Group | `W9` |
+
+**TDD Plan**
+
+- Red: 运行 `frontend/h5` 目标 Playwright 文件，预期测试文件不存在；首次被本地 `5173` 端口占用拦截后，切换 `E2E_PORT=5193` 得到 `No tests found`。
+- Green: 新增 `frontend/h5/e2e/fixed-price.spec.ts`，通过 mocked REST 与 mocked WebSocket 覆盖 4 个 smoke 场景：成功抢购跳订单、余额不足去充值、下架实时移除卡片、重新上架与飘屏。
+- Review fix: 首轮 GREEN 失败于 `返场珍珠项链` 文本选择器不唯一；改用 heading 选择器后通过。
+- Decision: plan 示例为仓库根 `tests/e2e/fixed-price.spec.ts`，但现有 H5 Playwright `testDir` 是 `frontend/h5/e2e`，本任务按现有框架落地。
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `npm run test:e2e -- e2e/fixed-price.spec.ts --project=chromium` | `RED attempt` | `FAIL: http://localhost:5173 is already used` | `info` |
+| `E2E_PORT=5193 npm run test:e2e -- e2e/fixed-price.spec.ts --project=chromium` | `RED: no fixed-price smoke file yet` | `FAIL: No tests found` | `pass` |
+| `E2E_PORT=5193 npm run test:e2e -- e2e/fixed-price.spec.ts --project=chromium` | `GREEN attempt: 4 smoke scenarios pass` | `FAIL: strict mode violation for getByText('返场珍珠项链') because card title and flair text both match` | `info` |
+| `E2E_PORT=5193 npm run test:e2e -- e2e/fixed-price.spec.ts --project=chromium` | `GREEN: 4 smoke scenarios pass` | `PASS: 4 passed` | `pass` |
+| `git status --short` | `Only source/state files remain after generated artifact cleanup` | `PASS: only frontend/h5/e2e/fixed-price.spec.ts remained before state update` | `pass` |
+| `GetDiagnostics` | `No new diagnostics in edited worktree files` | `info: diagnostics reported unrelated main-worktree hints/warnings, not edited isolated worktree files` | `info` |
+
+**Modified Files**
+
+- `docs/superpowers/sdd/runs/2026-06-03-2026-06-01-fixed-price-m3-frontend-state.md`
+- `frontend/h5/e2e/fixed-price.spec.ts`
+
+**Risks**
+
+- E2E 使用 mocked REST/WebSocket，验证前端链路和交互状态，不替代真实 staging 全链路验收。
+- Playwright 会更新已跟踪的报告和 Vite cache 生成物；本任务已恢复这些生成产物，避免提交噪声。
+
+**Handoff**
+
+- Completion summary: `M3 Task10 H5 fixed-price E2E smoke done; 4 chromium scenarios passed`
+- Remaining work: `Optional final full verification / PR closeout`
+- First response line used: `当前分支/worktree：feat/fixed-price-m1 @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-fixed-price-m1`
+
 ## Final Review Checklist
 
 - [x] State file was created before subagent dispatch.
@@ -543,3 +592,4 @@
 - `T007 done`: Admin LiveStreamFixedPrice page implemented with list/listing/offline TDD evidence; API aligned to existing Gateway fixed-price routes.
 - `T008 done`: Backend fixed-price Prometheus metrics implemented with TDD evidence; purchase result/latency, stock remaining, WS publish, and compensation metrics verified.
 - `T009 done`: Grafana dashboard and Prometheus alert rules implemented with contract validation.
+- `T010 done`: H5 fixed-price E2E smoke implemented and verified with 4 Chromium scenarios.
