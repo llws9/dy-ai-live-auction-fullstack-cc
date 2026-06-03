@@ -91,7 +91,7 @@ func GetConfigFromEnv() *Config {
 // GetServiceConfigInfo 从环境变量获取服务配置信息
 func GetServiceConfigInfo() (group, dataId string) {
 	group = getEnvOrDefault("NACOS_GROUP", "default")
-	dataId = getEnvOrDefault("NACOS_DATA_ID", "gateway-config.yaml")
+	dataId = getEnvOrDefault("NACOS_DATA_ID", "product-config.yaml")
 	return group, dataId
 }
 

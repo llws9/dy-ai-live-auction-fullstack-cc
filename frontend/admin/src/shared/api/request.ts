@@ -75,12 +75,13 @@ async function handleErrorResponse(response: Response): Promise<never> {
 
   // 401未授权
   if (response.status === 401) {
+    localStorage.removeItem('admin_auth_token');
+    localStorage.removeItem('admin_auth_user');
     localStorage.removeItem('token');
     localStorage.removeItem('userInfo');
 
-    const loginPath = window.location.pathname.includes('/admin') ? '/' : '/login';
-    if (window.location.pathname !== loginPath) {
-      window.location.href = loginPath;
+    if (window.location.hash !== '#/admin-login') {
+      window.location.hash = '/admin-login';
     }
 
     throw error;
@@ -116,7 +117,7 @@ async function request<T>(
 ): Promise<T> {
   const { showError = true, timeout = REQUEST_TIMEOUT } = config || {};
 
-  const token = localStorage.getItem('admin_auth_token') || localStorage.getItem('token');
+  const token = localStorage.getItem('admin_auth_token');
   const url = `${API_BASE_URL}${path}`;
 
   try {

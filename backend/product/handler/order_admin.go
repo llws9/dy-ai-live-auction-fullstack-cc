@@ -135,17 +135,6 @@ func (h *OrderHandler) AdminGet(ctx context.Context, c *app.RequestContext) {
 	})
 }
 
-func requireAdminRole(c *app.RequestContext) bool {
-	if string(c.GetHeader("X-User-Role")) == "admin" {
-		return true
-	}
-	c.JSON(403, map[string]interface{}{
-		"code":    403,
-		"message": "权限不足：需要管理员权限",
-	})
-	return false
-}
-
 func isValidOrderStatus(status model.OrderStatus) bool {
 	switch status {
 	case model.OrderStatusPending, model.OrderStatusPaid, model.OrderStatusShipped, model.OrderStatusCompleted:

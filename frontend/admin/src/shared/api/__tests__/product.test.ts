@@ -62,4 +62,54 @@ describe('productApi.generateCopywriting', () => {
       })
     );
   });
+
+  it('does not use the legacy token key as the Authorization bearer token', async () => {
+    localStorage.setItem('token', 'legacy-token');
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: {
+        get: (name: string) => (name.toLowerCase() === 'content-type' ? 'application/json' : null),
+      },
+      json: async () => ({ name: 'AI 标题', description: 'AI 描述' }),
+    });
+    global.fetch = fetchMock;
+
+    await productApi.generateCopywriting({
+      images: ['https://cdn.example.com/product.jpg'],
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/products/ai/copywriting',
+      expect.objectContaining({
+        headers: expect.not.objectContaining({
+          Authorization: 'Bearer legacy-token',
+        }),
+      })
+    );
+  });
+
+  it('clears the admin auth keys when the API returns 401', async () => {
+    localStorage.setItem('admin_auth_token', 'expired-admin-token');
+    localStorage.setItem('admin_auth_user', JSON.stringify({ id: 999 }));
+    localStorage.setItem('token', 'legacy-token');
+    localStorage.setItem('userInfo', JSON.stringify({ id: 1 }));
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      headers: {
+        get: (name: string) => (name.toLowerCase() === 'content-type' ? 'application/json' : null),
+      },
+      json: async () => ({ code: 401, message: '未授权' }),
+    });
+
+    await expect(productApi.generateCopywriting({
+      images: ['https://cdn.example.com/product.jpg'],
+    })).rejects.toMatchObject({ status: 401 });
+
+    expect(localStorage.getItem('admin_auth_token')).toBeNull();
+    expect(localStorage.getItem('admin_auth_user')).toBeNull();
+    expect(localStorage.getItem('token')).toBeNull();
+    expect(localStorage.getItem('userInfo')).toBeNull();
+  });
 });

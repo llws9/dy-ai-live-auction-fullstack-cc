@@ -33,13 +33,7 @@ func NewStatisticsHandler(statisticsService *service.StatisticsService) *Statist
 // @Failure 500 {object} map[string]interface{}
 // @Router /statistics/overview [get]
 func (h *StatisticsHandler) GetOverview(ctx context.Context, c *app.RequestContext) {
-	// 权限检查：仅管理员可访问
-	role, exists := c.Get("role")
-	if !exists || role.(int) != 2 { // RoleAdmin = 2
-		c.JSON(403, map[string]interface{}{
-			"code":    403,
-			"message": "无权限访问",
-		})
+	if !requireAdminRole(c) {
 		return
 	}
 
@@ -69,13 +63,7 @@ func (h *StatisticsHandler) GetOverview(ctx context.Context, c *app.RequestConte
 // @Failure 500 {object} map[string]interface{}
 // @Router /statistics/auctions [get]
 func (h *StatisticsHandler) GetAuctionStatistics(ctx context.Context, c *app.RequestContext) {
-	// 权限检查
-	role, exists := c.Get("role")
-	if !exists || role.(int) != 2 {
-		c.JSON(403, map[string]interface{}{
-			"code":    403,
-			"message": "无权限访问",
-		})
+	if !requireAdminRole(c) {
 		return
 	}
 
@@ -119,13 +107,7 @@ func (h *StatisticsHandler) GetAuctionStatistics(ctx context.Context, c *app.Req
 // @Failure 500 {object} map[string]interface{}
 // @Router /statistics/revenue [get]
 func (h *StatisticsHandler) GetRevenueStatistics(ctx context.Context, c *app.RequestContext) {
-	// 权限检查
-	role, exists := c.Get("role")
-	if !exists || role.(int) != 2 {
-		c.JSON(403, map[string]interface{}{
-			"code":    403,
-			"message": "无权限访问",
-		})
+	if !requireAdminRole(c) {
 		return
 	}
 
@@ -170,13 +152,7 @@ func (h *StatisticsHandler) GetRevenueStatistics(ctx context.Context, c *app.Req
 // @Failure 500 {object} map[string]interface{}
 // @Router /statistics/users [get]
 func (h *StatisticsHandler) GetUserStatistics(ctx context.Context, c *app.RequestContext) {
-	// 权限检查
-	role, exists := c.Get("role")
-	if !exists || role.(int) != 2 {
-		c.JSON(403, map[string]interface{}{
-			"code":    403,
-			"message": "无权限访问",
-		})
+	if !requireAdminRole(c) {
 		return
 	}
 
