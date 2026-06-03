@@ -344,7 +344,7 @@
 
 **建议下一步**
 
-- `已完成 review；建议合并 feat/admin-ai-copywriting-integration 或创建 PR`
+- `TRAE-code-review issue fixed; 建议合并 feat/admin-ai-copywriting-integration 或创建 PR`
 
 ## Review Fixes
 
@@ -380,6 +380,43 @@
 
 - `frontend/admin/src/shared/api/request.ts`
 - `frontend/admin/src/shared/api/__tests__/product.test.ts`
+
+**Risks / Blockers**
+
+- `none known`
+
+### RF002 - `Distinguish invalid image URLs from six-image truncation`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Source | `TRAE-code-review` |
+| Severity | `minor` |
+| Branch | `feat/admin-ai-copywriting-integration` |
+| Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-ai-copywriting-integration` |
+
+**Issue**
+
+- `GoodsEdit` previously used a single length comparison after filtering images, so mixed invalid URL + valid URL inputs showed the six-image truncation message and still called AI.
+
+**Fix**
+
+- `GoodsEdit` now checks invalid non-empty image URLs first and blocks with `图片 URL 必须以 http:// 或 https:// 开头`.
+- `GoodsEdit.ai.test.tsx` covers the mixed invalid/valid URL regression.
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/GoodsEdit.ai.test.tsx` | `RED before fix` | `FAIL: generateCopywriting was called for invalid mixed URL input` | `passed_expected_red` |
+| `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/GoodsEdit.ai.test.tsx src/pages-new/__tests__/goodsEditAi.test.ts src/shared/api/__tests__/product.test.ts` | `focused tests pass` | `PASS: 3 suites, 10 tests passed` | `passed` |
+| `cd frontend/admin && npm run build` | `Admin build passes` | `PASS: tsc && vite build completed` | `passed` |
+| `git diff --check -- frontend/admin/src/pages-new/GoodsEdit.tsx frontend/admin/src/pages-new/__tests__/GoodsEdit.ai.test.tsx` | `no whitespace errors` | `exit 0` | `passed` |
+
+**Modified Files**
+
+- `frontend/admin/src/pages-new/GoodsEdit.tsx`
+- `frontend/admin/src/pages-new/__tests__/GoodsEdit.ai.test.tsx`
 
 **Risks / Blockers**
 

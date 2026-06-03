@@ -56,6 +56,24 @@ describe('GoodsEdit AI copywriting integration', () => {
     expect(window.alert).toHaveBeenCalledWith('请先添加至少一张商品图片')
   })
 
+  it('shows an invalid image URL message when some added images are not http or https', () => {
+    renderGoodsEdit()
+
+    fireEvent.change(screen.getByPlaceholderText('输入图片URL'), {
+      target: { value: 'ftp://cdn.example.com/bad.jpg' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '添加图片 URL' }))
+    fireEvent.change(screen.getByPlaceholderText('输入图片URL'), {
+      target: { value: 'https://cdn.example.com/good.jpg' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '添加图片 URL' }))
+
+    fireEvent.click(screen.getByRole('button', { name: /AI 一键文案/ }))
+
+    expect(productApi.generateCopywriting).not.toHaveBeenCalled()
+    expect(window.alert).toHaveBeenCalledWith('图片 URL 必须以 http:// 或 https:// 开头')
+  })
+
   it('generates AI copywriting and applies the draft to the form', async () => {
     ;(productApi.generateCopywriting as jest.Mock).mockResolvedValue({
       name: 'AI 复古相机',

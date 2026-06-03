@@ -85,6 +85,15 @@ export default function GoodsEdit() {
 
   // AI 一键文案只预填当前表单，不自动保存或发布。
   const handleGenerateCopywriting = async () => {
+    const hasInvalidImage = formData.images.some((image) => {
+      const value = image.trim()
+      return value !== '' && !value.startsWith('http://') && !value.startsWith('https://')
+    })
+    if (hasInvalidImage) {
+      alert('图片 URL 必须以 http:// 或 https:// 开头')
+      return
+    }
+
     const images = getValidCopywritingImages(formData.images)
     if (images.length === 0) {
       alert('请先添加至少一张商品图片')
