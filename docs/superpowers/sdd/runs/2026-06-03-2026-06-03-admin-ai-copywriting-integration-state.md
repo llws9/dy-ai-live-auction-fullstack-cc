@@ -310,7 +310,7 @@
 | Frontend Admin GoodsEdit | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/GoodsEdit.ai.test.tsx` | yes | `PASS: 3 tests passed` | `T003` |
 | Frontend Admin Focused | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/goodsEditAi.test.ts src/shared/api/__tests__/product.test.ts src/pages-new/__tests__/GoodsEdit.ai.test.tsx` | yes | `PASS: 3 suites, 9 tests passed after review fix` | `T004,review-fix` |
 | Frontend Admin Build | `cd frontend/admin && npm run build` | yes | `PASS: tsc && vite build completed after review fix` | `T004,review-fix` |
-| Frontend Admin Full Tests | `cd frontend/admin && npm test -- --runInBand` | no | `not_run` | `Run if runtime is acceptable; record unrelated failures` |
+| Frontend Admin Full Tests | `cd frontend/admin && npm test -- --runInBand` | no | `PASS: 7 suites, 52 tests passed` | `Executed after TRAE-code-review fix` |
 
 ## Final Review Checklist
 
@@ -339,12 +339,13 @@
 
 - `PASS: focused Admin tests, 3 suites, 9 tests`
 - `PASS: post-review focused Admin tests, 3 suites, 9 tests`
+- `PASS: full Admin Jest, 7 suites, 52 tests`
 - `PASS: cd frontend/admin && npm run build`
 - `PASS: post-review cd frontend/admin && npm run build`
 
 **建议下一步**
 
-- `TRAE-code-review issue fixed; 建议合并 feat/admin-ai-copywriting-integration 或创建 PR`
+- `Full Admin Jest passed; 建议合并 feat/admin-ai-copywriting-integration 或创建 PR`
 
 ## Review Fixes
 
