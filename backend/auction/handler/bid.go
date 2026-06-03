@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/shopspring/decimal"
 
 	"auction-service/service"
 )
@@ -23,8 +24,8 @@ func NewBidHandler(bidService *service.BidService) *BidHandler {
 
 // PlaceBidRequest 出价请求
 type PlaceBidRequest struct {
-	Amount float64 `json:"amount" binding:"required,gt=0"`
-	UserID int64   `json:"user_id,omitempty"` // 用于测试，生产环境应删除
+	Amount decimal.Decimal `json:"amount" binding:"required"`
+	UserID int64           `json:"user_id,omitempty"` // 用于测试，生产环境应删除
 }
 
 // PlaceBid 出价
@@ -59,6 +60,13 @@ func (h *BidHandler) PlaceBid(ctx context.Context, c *app.RequestContext) {
 		c.JSON(400, map[string]interface{}{
 			"code":    400,
 			"message": "请求参数错误: " + err.Error(),
+		})
+		return
+	}
+	if !req.Amount.GreaterThan(decimal.Zero) {
+		c.JSON(400, map[string]interface{}{
+			"code":    400,
+			"message": "出价金额必须大于0",
 		})
 		return
 	}
@@ -139,10 +147,10 @@ func (h *BidHandler) GetRanking(ctx context.Context, c *app.RequestContext) {
 	ranking := make([]map[string]interface{}, len(bids))
 	for i, bid := range bids {
 		ranking[i] = map[string]interface{}{
-			"rank":      i + 1,
-			"user_id":   bid.UserID,
-			"amount":    bid.Amount,
-			"bid_time":  bid.CreatedAt,
+			"rank":     i + 1,
+			"user_id":  bid.UserID,
+			"amount":   bid.Amount,
+			"bid_time": bid.CreatedAt,
 		}
 	}
 

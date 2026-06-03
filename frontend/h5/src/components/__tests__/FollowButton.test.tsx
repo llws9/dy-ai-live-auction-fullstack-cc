@@ -1,20 +1,24 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import FollowButton from '../FollowButton';
-import { AuthProvider } from '../../store/authContext';
+import { AuthProvider, useAuth } from '../../store/authContext';
+
+jest.mock('../../store/authContext', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+  useAuth: jest.fn(),
+}));
 
 // Mock useNavigate
-const mockNavigate = vi.fn();
-vi.mock('react-router-dom', () => ({
+const mockNavigate = jest.fn();
+jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
 
 // Mock followApi
-vi.mock('../../services/api', () => ({
+jest.mock('../../services/api', () => ({
   followApi: {
-    followLiveStream: vi.fn(),
-    unfollowLiveStream: vi.fn(),
+    followLiveStream: jest.fn(),
+    unfollowLiveStream: jest.fn(),
   },
 }));
 
@@ -28,7 +32,18 @@ describe('FollowButton Component', () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
+    (useAuth as jest.Mock).mockReturnValue({
+      isAuthenticated: true,
+      user: { id: 1, name: '测试用户', role: 0 },
+      token: 'token-1',
+      loading: false,
+      login: jest.fn(),
+      setAuth: jest.fn(),
+      logout: jest.fn(),
+      isAdmin: jest.fn(() => false),
+      isMerchant: jest.fn(() => false),
+    });
   });
 
   it('should render follow button', () => {
@@ -86,7 +101,7 @@ describe('FollowButton Component', () => {
   });
 
   it('should call onFollowSuccess callback', async () => {
-    const onFollowSuccess = vi.fn();
+    const onFollowSuccess = jest.fn();
     renderWithAuth(
       <FollowButton {...defaultProps} onFollowSuccess={onFollowSuccess} />
     );

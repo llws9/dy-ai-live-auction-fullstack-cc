@@ -17,8 +17,9 @@ import (
 
 // ProxyHandler 代理处理器
 type ProxyHandler struct {
-	targetURL string
-	client    *http.Client
+	targetURL     string
+	internalToken string
+	client        *http.Client
 }
 
 // NewProxyHandler 创建代理处理器
@@ -29,6 +30,12 @@ func NewProxyHandler(targetURL string) *ProxyHandler {
 			Timeout: 0, // 不设置超时，由客户端控制
 		},
 	}
+}
+
+func NewProxyHandlerWithInternalToken(targetURL, internalToken string) *ProxyHandler {
+	p := NewProxyHandler(targetURL)
+	p.internalToken = internalToken
+	return p
 }
 
 // Forward 转发请求到后端服务
@@ -65,6 +72,9 @@ func (p *ProxyHandler) Forward(ctx context.Context, c *app.RequestContext) {
 		if strings.EqualFold(keyStr, "Host") {
 			return
 		}
+		if strings.EqualFold(keyStr, "X-Internal-Token") {
+			return
+		}
 		req.Header.Set(keyStr, string(value))
 	})
 
@@ -78,6 +88,9 @@ func (p *ProxyHandler) Forward(ctx context.Context, c *app.RequestContext) {
 	// X-User-Role: 下游服务用其判断角色 (admin/streamer/merchant)
 	if role, exists := c.Get("user_role"); exists {
 		req.Header.Set("X-User-Role", toRoleString(role))
+	}
+	if p.internalToken != "" {
+		req.Header.Set("X-Internal-Token", p.internalToken)
 	}
 	// X-Experiment-Context: 透传 gateway 评估的 A/B feature 结果给下游
 	if expCtx := middleware.GetExperimentContextHeader(c); expCtx != "" {
@@ -137,7 +150,8 @@ func toString(v interface{}) string {
 
 // toRoleString 将 user_role (int) 转为下游可理解的字符串。
 // 与 auction/pkg/experiment.FromHeaders 的解析约定保持一致:
-//   admin > merchant/streamer > 普通用户。
+//
+//	admin > merchant/streamer > 普通用户。
 func toRoleString(v interface{}) string {
 	role := 0
 	switch x := v.(type) {
@@ -174,8 +188,8 @@ func HandleWebSocket(ctx context.Context, c *app.RequestContext, auctionServiceU
 		"code":    200,
 		"message": "WebSocket 端点",
 		"data": map[string]interface{}{
-			"ws_url":     wsURL,
-			"auction_id": auctionID,
+			"ws_url":      wsURL,
+			"auction_id":  auctionID,
 			"instruction": "请直接连接后端服务的 WebSocket 端点",
 		},
 	})

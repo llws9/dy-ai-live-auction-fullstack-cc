@@ -1,10 +1,10 @@
 import React from "react"
-import { ArrowLeft, Truck, Package, User, CreditCard, Loader2 } from "lucide-react"
+import { ArrowLeft, Package, User, Loader2 } from "lucide-react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { orderApi, productApi } from "@/shared/api"
+import { orderApi } from "@/shared/api"
 
 const statusMap: Record<number, { label: string; badgeClass: string }> = {
   0: { label: "待支付", badgeClass: "bg-blue-500 text-white" },

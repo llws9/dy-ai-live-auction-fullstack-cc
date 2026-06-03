@@ -35,9 +35,13 @@ export default function StepTimeline({ events }: Props) {
   // 同名 step 多次（如 bid）做 #N 编号，但保留时间顺序
   const items = useMemo(() => {
     const counter: Record<string, number> = {};
+    const stepCounts: Record<string, number> = {};
+    events.forEach((e) => {
+      stepCounts[e.step] = (stepCounts[e.step] || 0) + 1;
+    });
     return events.map((e, i) => {
       counter[e.step] = (counter[e.step] || 0) + 1;
-      const total = events.filter((x) => x.step === e.step).length;
+      const total = stepCounts[e.step];
       const idxLabel = total > 1 ? ` #${counter[e.step]}` : '';
       const label = (stepLabels[e.step] || e.step) + idxLabel;
       return { ...e, key: `${e.step}-${i}`, label };

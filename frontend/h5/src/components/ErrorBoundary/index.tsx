@@ -2,6 +2,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { logError } from '../../utils/errorMessages';
+import { IS_DEV } from '../../utils/env';
 
 interface Props {
   children: ReactNode;
@@ -36,7 +37,7 @@ class ErrorBoundary extends Component<Props, State> {
     });
 
     // 开发环境下打印错误
-    if (import.meta.env.DEV) {
+    if (IS_DEV) {
       console.error('ErrorBoundary caught an error:', error, errorInfo);
     }
   }
@@ -67,7 +68,7 @@ class ErrorBoundary extends Component<Props, State> {
             <p style={styles.message}>
               很抱歉，页面遇到了一些问题
             </p>
-            {import.meta.env.DEV && this.state.error && (
+            {IS_DEV && this.state.error && (
               <details style={styles.details}>
                 <summary style={styles.summary}>查看错误详情</summary>
                 <pre style={styles.errorText}>{this.state.error.toString()}</pre>

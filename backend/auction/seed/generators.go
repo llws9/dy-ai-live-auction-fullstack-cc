@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"auction-service/model"
+
+	"github.com/shopspring/decimal"
 )
 
 // SeedConfig 种子数据配置
@@ -13,18 +15,18 @@ type SeedConfig struct {
 	Size string
 
 	// 数据数量配置
-	AuctionsCount        int
-	BidsPerAuction      int
-	NotificationsCount  int
-	SkyLampCount        int
-	FollowCount         int
-	ReminderCount       int
+	AuctionsCount      int
+	BidsPerAuction     int
+	NotificationsCount int
+	SkyLampCount       int
+	FollowCount        int
+	ReminderCount      int
 
 	// 比例配置
-	PendingRatio  float64
-	OngoingRatio  float64
-	DelayedRatio  float64
-	EndedRatio    float64
+	PendingRatio   float64
+	OngoingRatio   float64
+	DelayedRatio   float64
+	EndedRatio     float64
 	CancelledRatio float64
 }
 
@@ -87,7 +89,7 @@ func GenerateAuctions(cfg *SeedConfig, productIDs, liveStreamIDs, creatorIDs []i
 			LiveStreamID: &liveStreamID,
 			CreatorID:    &creatorID,
 			Status:       model.AuctionStatusPending,
-			CurrentPrice: 0,
+			CurrentPrice: decimal.Zero,
 			StartTime:    startTime,
 			EndTime:      endTime,
 			DelayUsed:    0,
@@ -97,7 +99,7 @@ func GenerateAuctions(cfg *SeedConfig, productIDs, liveStreamIDs, creatorIDs []i
 	for i := 0; i < ongoingCount; i++ {
 		startTime := now.Add(-time.Minute * time.Duration(5+r.Intn(30)))
 		endTime := now.Add(time.Minute * time.Duration(5+r.Intn(10)))
-		currentPrice := float64(50 + r.Intn(500))
+		currentPrice := decimal.NewFromInt(int64(50 + r.Intn(500)))
 		winnerID := creatorIDs[r.Intn(len(creatorIDs))]
 		creatorID := creatorIDs[r.Intn(len(creatorIDs))]
 		liveStreamID := liveStreamIDs[r.Intn(len(liveStreamIDs))]
@@ -117,7 +119,7 @@ func GenerateAuctions(cfg *SeedConfig, productIDs, liveStreamIDs, creatorIDs []i
 	for i := 0; i < delayedCount; i++ {
 		startTime := now.Add(-time.Minute * 30)
 		endTime := now.Add(time.Minute * time.Duration(r.Intn(5)))
-		currentPrice := float64(100 + r.Intn(400))
+		currentPrice := decimal.NewFromInt(int64(100 + r.Intn(400)))
 		winnerID := creatorIDs[r.Intn(len(creatorIDs))]
 		creatorID := creatorIDs[r.Intn(len(creatorIDs))]
 		liveStreamID := liveStreamIDs[r.Intn(len(liveStreamIDs))]
@@ -137,7 +139,7 @@ func GenerateAuctions(cfg *SeedConfig, productIDs, liveStreamIDs, creatorIDs []i
 	for i := 0; i < endedCount; i++ {
 		startTime := now.Add(-time.Hour * time.Duration(1+r.Intn(24)))
 		endTime := startTime.Add(time.Minute * 15)
-		currentPrice := float64(100 + r.Intn(500))
+		currentPrice := decimal.NewFromInt(int64(100 + r.Intn(500)))
 		winnerID := creatorIDs[r.Intn(len(creatorIDs))]
 		creatorID := creatorIDs[r.Intn(len(creatorIDs))]
 		liveStreamID := liveStreamIDs[r.Intn(len(liveStreamIDs))]
@@ -164,7 +166,7 @@ func GenerateAuctions(cfg *SeedConfig, productIDs, liveStreamIDs, creatorIDs []i
 			LiveStreamID: &liveStreamID,
 			CreatorID:    &creatorID,
 			Status:       model.AuctionStatusCancelled,
-			CurrentPrice: 0,
+			CurrentPrice: decimal.Zero,
 			StartTime:    startTime,
 			EndTime:      endTime,
 			DelayUsed:    0,
@@ -190,13 +192,13 @@ func GenerateBids(cfg *SeedConfig, auctions []model.Auction, userIDs []int64) []
 			bidCount = 3
 		}
 
-		basePrice := auction.CurrentPrice - float64(bidCount*10)
-		if basePrice < 50 {
-			basePrice = 50
+		basePrice := auction.CurrentPrice.Sub(decimal.NewFromInt(int64(bidCount * 10)))
+		if basePrice.LessThan(decimal.NewFromInt(50)) {
+			basePrice = decimal.NewFromInt(50)
 		}
 
 		for j := 0; j < bidCount; j++ {
-			amount := basePrice + float64(j*10) + float64(r.Intn(5))
+			amount := basePrice.Add(decimal.NewFromInt(int64(j*10 + r.Intn(5))))
 			bids = append(bids, model.Bid{
 				AuctionID: auction.ID,
 				UserID:    userIDs[r.Intn(len(userIDs))],

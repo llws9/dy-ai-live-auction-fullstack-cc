@@ -1,1 +1,13 @@
 .ttadk/
+.superpowers/brainstorm/
+
+# Dependencies
+node_modules/
+
+# Frontend build/cache artifacts
+dist/
+.vite/
+*.tsbuildinfo
+
+# Exported local documents
+specs/doc_export/

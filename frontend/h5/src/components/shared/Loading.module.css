@@ -14,13 +14,13 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--surface-glass);
   z-index: 9999;
 }
 
 .spinner {
-  border: 3px solid var(--color-neutral-200);
-  border-top-color: var(--color-primary-500);
+  border: 3px solid var(--skeleton-bg);
+  border-top-color: var(--text-brand);
   border-radius: var(--radius-full);
   animation: spin 0.8s linear infinite;
 }

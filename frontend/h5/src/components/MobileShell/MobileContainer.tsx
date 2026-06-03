@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { notificationApi } from '../../services/notification';
 import { useAuth } from '../../store/authContext';
 import { trackEvent } from '../../utils/trackEvent';
@@ -11,11 +12,13 @@ interface MobileContainerProps {
 }
 
 function MobileContainer({ children }: MobileContainerProps) {
+  const { pathname } = useLocation();
   const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [reminderStream, setReminderStream] = useState<StreamInfo | null>(null);
   const { isAuthenticated, loading: authLoading, token, user } = useAuth();
   const userId = user?.id ?? null;
   const identityRef = useRef({ token, userId });
+  const isLiveRoute = pathname.startsWith('/live');
 
   identityRef.current = { token, userId };
 
@@ -64,7 +67,7 @@ function MobileContainer({ children }: MobileContainerProps) {
   return (
     <div className={styles.shell} data-testid="mobile-shell">
       <div className={styles.viewport}>
-        <div className={styles.content}>{children}</div>
+        <div className={`${styles.content} ${isLiveRoute ? styles.contentLive : ''}`}>{children}</div>
         <BottomNav />
         <LiveReminderModal
           isOpen={isReminderOpen}

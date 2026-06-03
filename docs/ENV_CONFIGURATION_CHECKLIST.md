@@ -42,6 +42,7 @@
 - [ ] `backend/gateway/config/config.go`：`TEST_SERVICE_WS_URL` 默认 `ws://localhost:18092`
 - [ ] `backend/gateway/config/config.go`：`INTERNAL_API_TOKEN` 必须从运行时环境变量注入，不从仓库/Nacos 明文配置读取真实值
 - [ ] `backend/auction/config/config.go`：`INTERNAL_API_TOKEN` 必须从运行时环境变量注入，且必须与 Gateway 使用同一个值
+- [ ] `backend/product/main.go`：`INTERNAL_API_TOKEN` 必须从运行时环境变量注入，且必须与 Gateway/Auction 使用同一个值
 - [ ] `backend/test/config/config.go`：`TEST_HTTP_PORT` 默认 `:18090`
 - [ ] `backend/test/config/config.go`：`TEST_WS_PORT` 默认 `:18092`
 - [ ] `backend/test/config/config.go`：`TEST_GATEWAY_URL` 默认 `http://localhost:8080`
@@ -54,7 +55,7 @@
 
 - [ ] `backend/.env`：`GATEWAY_PORT=:8080`
 - [ ] `backend/.env`：`PRODUCT_SERVICE_PORT=:8081`
-- [ ] `backend/.env` 或当前 shell：`INTERNAL_API_TOKEN=<same-random-token>`，Gateway 与 Auction 必须使用同一个值
+- [ ] `backend/.env` 或当前 shell：`INTERNAL_API_TOKEN=<same-random-token>`，Gateway、Product 与 Auction 必须使用同一个值
 - [ ] `backend/.env`：`TEST_SERVICE_URL=http://localhost:18090`
 - [ ] `backend/.env`：`TEST_SERVICE_WS_URL=ws://localhost:18092`
 - [ ] `backend/.env`：`TEST_GATEWAY_URL=http://localhost:8080`
@@ -68,19 +69,19 @@
 - [ ] `docker-compose.yml`：Gateway 暴露 `8080:8080`
 - [ ] `docker-compose.yml`：Product 暴露 `8081:8081`
 - [ ] `docker-compose.yml`：Auction 暴露 `8082:8082` 和 `8083:8083`
-- [ ] `docker-compose.yml`：Gateway 与 Auction 均通过 `${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}` 读取同一个运行时 token
+- [ ] `docker-compose.yml`：Gateway、Product 与 Auction 均通过 `${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}` 读取同一个运行时 token
 - [ ] `scripts/start-frontend.sh`：只启动 H5 `5173` 和 Admin `5175`
 - [ ] 若需要 Test Dashboard，一律手动执行 `cd frontend/test-dashboard && npm run dev`
 - [ ] 当前主 `docker-compose.yml` 未包含 `test-service` / `test-dashboard`，不要把它当测试平台完整启动方式
 
 ## 内部服务 Token 要求
 
-`INTERNAL_API_TOKEN` 是 Gateway 调用 Auction `/internal/*` 接口的服务间凭证。它是运行时必填配置，不是代码配置。
+`INTERNAL_API_TOKEN` 是 Gateway 调用 Auction/Product 内部管理接口的服务间凭证。它是运行时必填配置，不是代码配置。
 
-- **必须同值**: `gateway-service` 与 `auction-service` 必须注入同一个 `INTERNAL_API_TOKEN`。
+- **必须同值**: `gateway-service`、`product-service` 与 `auction-service` 必须注入同一个 `INTERNAL_API_TOKEN`。
 - **必须保密**: 不要把真实 token 写入 `configs/nacos/*.yaml`、`docker-compose.yml`、README、提交历史或前端环境变量。
 - **必须随机**: 本地和部署环境都应使用足够长的随机值，例如 `openssl rand -hex 32`。
-- **必须先注入再启动**: 未设置 `INTERNAL_API_TOKEN` 时，涉及开播提醒的内部转发会 fail closed。
+- **必须先注入再启动**: 未设置 `INTERNAL_API_TOKEN` 时，涉及开播提醒和 product 管理订单的内部转发会 fail closed。
 
 本地 Docker Compose 示例：
 

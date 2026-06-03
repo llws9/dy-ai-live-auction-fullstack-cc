@@ -33,7 +33,7 @@ type AuctionMetrics struct {
 	wsErrors         *prometheus.CounterVec
 
 	// 用户指标
-	watchUserCount   prometheus.Gauge
+	watchUserCount prometheus.Gauge
 }
 
 // Init 初始化指标
@@ -263,9 +263,10 @@ func (m *AuctionMetrics) RecordAuctionCompleted(auction *model.Auction, startPri
 	m.auctionDuration.WithLabelValues(hasWinnerStr).Observe(durationSeconds)
 
 	if hasWinner && startPrice > 0 {
-		premiumRate := (auction.CurrentPrice - startPrice) / startPrice
+		currentPrice, _ := auction.CurrentPrice.Float64()
+		premiumRate := (currentPrice - startPrice) / startPrice
 		m.premiumRate.WithLabelValues("current").Set(premiumRate)
-		m.gmv.WithLabelValues("current").Add(auction.CurrentPrice)
+		m.gmv.WithLabelValues("current").Add(currentPrice)
 	}
 }
 

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -12,6 +13,8 @@ import (
 	"auction-service/client"
 	"auction-service/dao"
 	"auction-service/model"
+
+	"github.com/shopspring/decimal"
 )
 
 // fakeProductClient 是 client.ProductClient 的可控替身，用于 BuildAuctionListResponse 编排测试。
@@ -69,8 +72,8 @@ func TestBuildAuctionListResponse(t *testing.T) {
 		now := time.Now()
 		fl := &fakeLister{
 			out: []model.Auction{
-				{ID: 100, ProductID: 11, Status: model.AuctionStatusOngoing, CurrentPrice: 200, StartTime: now, EndTime: now.Add(time.Hour)},
-				{ID: 101, ProductID: 22, Status: model.AuctionStatusEnded, CurrentPrice: 300, StartTime: now, EndTime: now.Add(time.Hour)},
+				{ID: 100, ProductID: 11, Status: model.AuctionStatusOngoing, CurrentPrice: decimal.NewFromInt(200), StartTime: now, EndTime: now.Add(time.Hour)},
+				{ID: 101, ProductID: 22, Status: model.AuctionStatusEnded, CurrentPrice: decimal.NewFromInt(300), StartTime: now, EndTime: now.Add(time.Hour)},
 			},
 			outTotal: 2,
 		}
@@ -186,4 +189,32 @@ func TestBuildAuctionListResponse(t *testing.T) {
 		assert.Equal(t, int64(0), items[0].Product.ID)
 		assert.Equal(t, "", items[0].Product.Name)
 	})
+}
+
+// TestAuctionListResponseShape 锁定 GET /auctions 响应字段为 list（而非 items），
+// 与 admin/h5 前端契约对齐（h5 已实现 list+items 双兼容，admin 仅消费 list）。
+func TestAuctionListResponseShape(t *testing.T) {
+	resp := map[string]interface{}{
+		"code":    200,
+		"message": "success",
+		"data": map[string]interface{}{
+			"list":      []interface{}{},
+			"total":     0,
+			"page":      1,
+			"page_size": 20,
+		},
+	}
+
+	raw, err := json.Marshal(resp)
+	require.NoError(t, err)
+
+	var parsed map[string]interface{}
+	require.NoError(t, json.Unmarshal(raw, &parsed))
+
+	data := parsed["data"].(map[string]interface{})
+	assert.NotNil(t, data["list"])
+	assert.Nil(t, data["items"], "must use list, not items")
+	assert.Contains(t, data, "total")
+	assert.Contains(t, data, "page")
+	assert.Contains(t, data, "page_size")
 }

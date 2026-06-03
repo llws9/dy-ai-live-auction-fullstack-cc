@@ -1,14 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { startDummy, discoverWS, cancelTest } from '@/api/test';
 import { useWSStore } from '@/store/wsStore';
 import { useTestStore } from '@/store/testStore';
 import ProgressBar from '@/components/ProgressBar';
+import { Metric } from '@/components/ui/Metric';
+import { cardStyle, titleStyle, primaryBtn, secondaryBtn } from '@/components/ui/styles';
 
 export default function Dashboard() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { connected, testID, progress, step, metrics, history, connect, disconnect } = useWSStore();
   const setCurrent = useTestStore((s) => s.setCurrent);
+
+  // 卸载时清理 WS 与全局 store，避免跨页幻影状态
+  useEffect(() => () => disconnect(), [disconnect]);
 
   const handleStart = async () => {
     setError(null);
@@ -52,46 +57,13 @@ export default function Dashboard() {
     <div>
       <h1 style={{ fontSize: 22, marginBottom: 16 }}>控制台</h1>
 
-      <section
-        style={{
-          padding: 16,
-          border: '1px solid #e5e7eb',
-          borderRadius: 8,
-          marginBottom: 16,
-        }}
-      >
-        <h3 style={{ fontSize: 16, marginBottom: 12 }}>Dummy 进度场景（M1 联调）</h3>
+      <section style={cardStyle}>
+        <h3 style={titleStyle}>Dummy 进度场景（M1 联调）</h3>
         <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-          <button
-            type="button"
-            disabled={running}
-            onClick={handleStart}
-            style={{
-              padding: '8px 16px',
-              background: 'var(--color-primary, #3b82f6)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 6,
-              cursor: running ? 'not-allowed' : 'pointer',
-              opacity: running ? 0.6 : 1,
-            }}
-          >
+          <button type="button" disabled={running} onClick={handleStart} style={primaryBtn(running)}>
             {running ? '启动中...' : '启动 Dummy 测试'}
           </button>
-          <button
-            type="button"
-            disabled={!testID}
-            onClick={handleCancel}
-            style={{
-              padding: '8px 16px',
-              background: '#fff',
-              color: '#1f2937',
-              border: '1px solid #d1d5db',
-              borderRadius: 6,
-              cursor: testID ? 'pointer' : 'not-allowed',
-              opacity: testID ? 1 : 0.6,
-            }}
-          >
+          <button type="button" disabled={!testID} onClick={handleCancel} style={secondaryBtn(!testID)}>
             取消
           </button>
         </div>
@@ -107,15 +79,8 @@ export default function Dashboard() {
         <ProgressBar value={progress} label={step || 'idle'} />
       </section>
 
-      <section
-        style={{
-          padding: 16,
-          border: '1px solid #e5e7eb',
-          borderRadius: 8,
-          marginBottom: 16,
-        }}
-      >
-        <h3 style={{ fontSize: 16, marginBottom: 12 }}>实时指标</h3>
+      <section style={cardStyle}>
+        <h3 style={titleStyle}>实时指标</h3>
         <div
           style={{
             display: 'grid',
@@ -135,14 +100,8 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <section
-        style={{
-          padding: 16,
-          border: '1px solid #e5e7eb',
-          borderRadius: 8,
-        }}
-      >
-        <h3 style={{ fontSize: 16, marginBottom: 12 }}>实时消息（{history.length}）</h3>
+      <section style={{ ...cardStyle, marginBottom: 0 }}>
+        <h3 style={titleStyle}>实时消息（{history.length}）</h3>
         <pre
           style={{
             maxHeight: 240,
@@ -159,22 +118,6 @@ export default function Dashboard() {
             '(暂无)'}
         </pre>
       </section>
-    </div>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      style={{
-        background: '#f8fafc',
-        border: '1px solid #e5e7eb',
-        borderRadius: 6,
-        padding: '10px 12px',
-      }}
-    >
-      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 18, fontFamily: 'monospace', fontWeight: 600 }}>{value}</div>
     </div>
   );
 }

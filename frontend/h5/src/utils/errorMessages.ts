@@ -1,5 +1,7 @@
 // utils/errorMessages.ts - 错误消息映射
 
+import { IS_DEV, IS_PROD } from '@/utils/env';
+
 export interface ErrorMessage {
   title: string;
   message: string;
@@ -184,13 +186,13 @@ export function logError(error: any, context?: string): void {
   };
 
   // 开发环境打印错误
-  if (import.meta.env.DEV) {
+  if (IS_DEV) {
     console.error('[Error Log]', errorInfo);
   }
 
   // 生产环境可以上报到错误监控系统
   // 如：Sentry, BugSnag 等
-  if (import.meta.env.PROD) {
+  if (IS_PROD) {
     // TODO: 集成错误上报服务
     // Sentry.captureException(error, { extra: errorInfo });
   }

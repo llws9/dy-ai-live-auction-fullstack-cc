@@ -16,6 +16,7 @@ import (
 type AuctionHandler struct {
 	auctionService *service.AuctionService
 	productClient  client.ProductClient
+	ruleFetcher    auctionRuleFetcher
 }
 
 // NewAuctionHandler 创建竞拍 Handler
@@ -28,6 +29,11 @@ func NewAuctionHandler(auctionService *service.AuctionService) *AuctionHandler {
 // SetProductClient 注入 product-service 内部接口客户端。
 func (h *AuctionHandler) SetProductClient(pc client.ProductClient) {
 	h.productClient = pc
+}
+
+// SetRuleFetcher 注入竞拍规则读取器，用于详情接口返回前端出价所需的权威规则。
+func (h *AuctionHandler) SetRuleFetcher(fetcher auctionRuleFetcher) {
+	h.ruleFetcher = fetcher
 }
 
 // CreateAuctionRequest 创建竞拍请求
@@ -182,7 +188,16 @@ func (h *AuctionHandler) Get(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	c.JSON(200, auction)
+	resp, err := BuildAuctionDetailResponse(ctx, h.ruleFetcher, auction)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{
+			"code":    500,
+			"message": "获取竞拍规则失败: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(200, resp)
 }
 
 // List 获取竞拍列表
@@ -252,7 +267,7 @@ func (h *AuctionHandler) List(ctx context.Context, c *app.RequestContext) {
 			"code":    200,
 			"message": "success",
 			"data": map[string]interface{}{
-				"items":     items,
+				"list":      items,
 				"total":     total,
 				"page":      page,
 				"page_size": pageSize,
@@ -291,7 +306,7 @@ func (h *AuctionHandler) List(ctx context.Context, c *app.RequestContext) {
 		"code":    200,
 		"message": "success",
 		"data": map[string]interface{}{
-			"items":     auctions,
+			"list":      auctions,
 			"total":     total,
 			"page":      page,
 			"page_size": pageSize,

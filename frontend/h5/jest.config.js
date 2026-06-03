@@ -16,8 +16,7 @@ module.exports = {
     '^@/utils/env$': '<rootDir>/__mocks__/envMock.js',
     '^.+/utils/env$': '<rootDir>/__mocks__/envMock.js',
     '^@/(.*)$': '<rootDir>/src/$1',
-    '^.+\\.module\\.(css|sass|scss)$': 'identity-obj-proxy',
-    '^.+\\.(css|sass|scss)$': '<rootDir>/__mocks__/styleMock.js',
+    '\\.(css|sass|scss)$': '<rootDir>/__mocks__/cssModuleMock.js',
     '^.+\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/__mocks__/fileMock.js',
   },
   coverageThreshold: {

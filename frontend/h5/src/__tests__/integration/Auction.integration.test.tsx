@@ -2,14 +2,26 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import AuctionPage from '@/pages/Auction';
 
+jest.mock('@/store/authContext', () => ({
+  useAuth: () => ({
+    isAuthenticated: true,
+    user: { id: 1, name: '测试用户', role: 0 },
+    token: 'token-1',
+    loading: false,
+  }),
+}));
+
 // Mock the WebSocket service
 jest.mock('../../services/websocket', () => {
-  return jest.fn().mockImplementation(() => ({
-    connect: jest.fn().mockResolvedValue(undefined),
-    disconnect: jest.fn(),
-    on: jest.fn(),
-    requestSync: jest.fn(),
-  }));
+  return {
+    __esModule: true,
+    default: jest.fn().mockImplementation(() => ({
+      connect: jest.fn().mockResolvedValue(undefined),
+      disconnect: jest.fn(),
+      on: jest.fn(),
+      requestSync: jest.fn(),
+    })),
+  };
 });
 
 // Mock fetch
@@ -91,8 +103,9 @@ describe('Auction Page Integration', () => {
       expect(screen.getByText('💰 出价竞拍')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('¥150')).toBeInTheDocument();
-    expect(screen.getByText('进行中')).toBeInTheDocument();
+    expect(screen.getByText('当前价格')).toBeInTheDocument();
+    expect(screen.getByText('150')).toBeInTheDocument();
+    expect(screen.getAllByText('进行中').length).toBeGreaterThan(0);
   });
 
   it('displays auction info section', async () => {

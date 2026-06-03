@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { Toast } from '@/components/shared/Toast';
 
 describe('Toast Component', () => {
@@ -31,14 +31,16 @@ describe('Toast Component', () => {
     const handleClose = jest.fn();
     render(<Toast message="Auto close" visible duration={3000} onClose={handleClose} />);
 
-    jest.advanceTimersByTime(3000);
+    act(() => {
+      jest.advanceTimersByTime(3000);
+    });
     expect(handleClose).toHaveBeenCalled();
     jest.useRealTimers();
   });
 
   it('applies custom className', () => {
     render(<Toast message="Custom" visible className="custom-toast" />);
-    const toast = screen.getByText('Custom').parentElement;
+    const toast = screen.getByRole('alert');
     expect(toast).toHaveClass('custom-toast');
   });
 });

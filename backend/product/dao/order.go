@@ -34,6 +34,17 @@ func (d *OrderDAO) GetByID(ctx context.Context, id int64) (*model.Order, error) 
 	return &order, nil
 }
 
+func (d *OrderDAO) GetByIDAndWinnerID(ctx context.Context, id, winnerID int64) (*model.Order, error) {
+	var order model.Order
+	err := d.db.WithContext(ctx).
+		Where("id = ? AND winner_id = ?", id, winnerID).
+		First(&order).Error
+	if err != nil {
+		return nil, err
+	}
+	return &order, nil
+}
+
 // List 获取订单列表
 func (d *OrderDAO) List(ctx context.Context, userID *int64, page, pageSize int) ([]model.Order, int64, error) {
 	var orders []model.Order

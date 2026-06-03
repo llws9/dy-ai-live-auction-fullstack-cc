@@ -30,7 +30,7 @@
 
 ### 必填运行时密钥
 
-后端本地启动前必须先注入 `INTERNAL_API_TOKEN`。这是 Gateway 调用 Auction `/internal/*` 接口的服务间凭证，`gateway-service` 与 `auction-service` 必须使用同一个值。
+后端本地启动前必须先注入 `INTERNAL_API_TOKEN`。这是 Gateway 调用 Auction/Product 内部接口的服务间凭证，`gateway-service`、`product-service` 与 `auction-service` 必须使用同一个值。
 
 ```bash
 export INTERNAL_API_TOKEN="$(openssl rand -hex 32)"
@@ -38,7 +38,7 @@ export INTERNAL_API_TOKEN="$(openssl rand -hex 32)"
 
 注意：
 - 不要把真实 token 写入 `configs/nacos/*.yaml`、`docker-compose.yml`、README 或前端环境变量。
-- 如果未设置该变量，开播提醒相关的内部转发会按 fail closed 处理。
+- 如果未设置该变量，开播提醒和 product 管理订单相关的内部转发会按 fail closed 处理。
 
 ### 使用启动脚本（推荐）
 
@@ -46,7 +46,7 @@ export INTERNAL_API_TOKEN="$(openssl rand -hex 32)"
 # 回到项目根目录
 cd /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc
 
-# 注入 Gateway/Auction 共享的内部服务 token
+# 注入 Gateway/Product/Auction 共享的内部服务 token
 export INTERNAL_API_TOKEN="$(openssl rand -hex 32)"
 
 # 运行启动脚本

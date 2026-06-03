@@ -1,8 +1,7 @@
 .badge {
-  /* Theme-ready variables with dark mode default fallbacks */
-  --touchpoint-danger: var(--color-danger, #ff3b30);
-  --touchpoint-badge-text: var(--color-on-danger, #ffffff);
-  --touchpoint-border: var(--color-surface, #1a1a1a);
+  --touchpoint-danger: var(--danger-text);
+  --touchpoint-badge-text: var(--bg-surface);
+  --touchpoint-border: var(--bg-surface);
 
   position: absolute;
   top: -4px;

@@ -23,6 +23,7 @@ type RouterConfig struct {
 func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Client) {
 	// 创建代理处理器
 	productProxy := handler.NewProxyHandler(cfg.Services.ProductURL)
+	adminProductProxy := handler.NewProxyHandlerWithInternalToken(cfg.Services.ProductURL, cfg.Services.InternalToken)
 	auctionProxy := handler.NewProxyHandler(cfg.Services.AuctionURL)
 	testProxy := handler.NewProxyHandler(cfg.Services.TestURL)
 	touchpointHandler := handler.NewTouchpointHandler(cfg.Services.AuctionURL, cfg.Services.ProductURL)
@@ -70,6 +71,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	v1.GET("/products/:id/rules", productProxy.Forward)
 
 	// 商品发布/下架需要商家或管理员权限
+	authGroup.POST("/products/ai/copywriting", middleware.RequireMerchant(), productProxy.Forward)
 	authGroup.POST("/products/:id/publish", middleware.RequireMerchant(), productProxy.Forward)
 	authGroup.POST("/products/:id/unpublish", middleware.RequireMerchant(), productProxy.Forward)
 
@@ -115,18 +117,25 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 
 	// ========== 订单服务路由 ==========
 	authGroup.GET("/orders", productProxy.Forward)
-	v1.GET("/orders/:id", productProxy.Forward)
-	v1.POST("/orders/:id/pay", productProxy.Forward)
-	v1.PUT("/orders/:id/ship", productProxy.Forward) // T007: 订单发货
-	// T008: 用户订单历史 — JWT 化（spec C / F-C3, M1 P0 安全修复）
-	// 仅认证用户可读；下游通过 X-User-ID header 透传识别本人，禁止接受 query user_id。
+	authGroup.GET("/orders/:id", productProxy.Forward)
+	authGroup.POST("/orders/:id/pay", productProxy.Forward)
+	authGroup.PUT("/orders/:id/ship", middleware.RequireMerchant(), productProxy.Forward) // T007: 订单发货
+	// 订单列表 & 历史均需 JWT 认证；下游通过 X-User-ID header 识别本人，禁止接受 query user_id。
 	authGroup.GET("/orders/history", productProxy.Forward)
 
+	// 订单 admin 路由：管理员查看全量订单，不再被 X-User-ID 强过滤；
+	// product-service 侧 /admin/orders 不读 X-User-ID，鉴权由这里的 RequireAdmin 中间件保证。
+	authGroup.GET("/admin/orders", middleware.RequireAdmin(), adminProductProxy.Forward)
+	authGroup.GET("/admin/orders/:id", middleware.RequireAdmin(), adminProductProxy.Forward)
+
 	// ========== 直播间路由 ==========
-	authGroup.GET("/admin/live-streams", middleware.RequireAdmin(), productProxy.Forward) // T009: 管理端直播间列表
+	authGroup.GET("/admin/live-streams", middleware.RequireAdmin(), adminProductProxy.Forward) // T009/T4: 管理端直播间列表
+	authGroup.PUT("/admin/live-streams/:id/end", middleware.RequireAdmin(), adminProductProxy.Forward)
+	authGroup.PUT("/admin/live-streams/:id/ban", middleware.RequireAdmin(), adminProductProxy.Forward)
 	// T010: 直播间详情。公开访问，但若客户端带合法 Bearer token，
 	// OptionalJWTAuth 会注入 user_id，proxy.Forward 据此把 X-User-ID 透传给 product-service，
 	// 用于查询 is_following 等登录态字段（spec B / F-B1, T2.5）。
+	v1.GET("/live-streams", productProxy.Forward) // H5 直播 feed 公开列表
 	v1.GET("/live-streams/:id", middleware.OptionalJWTAuth(cfg.JWT.Secret), productProxy.Forward)
 
 	// ========== 通知服务路由 ==========

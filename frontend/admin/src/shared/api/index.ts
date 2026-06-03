@@ -1,6 +1,6 @@
 // API统一封装入口
 
-import { request, get, post, put, del, buildQuery, ApiError, setToastFunction } from './request';
+import { get, post, put, del, buildQuery, ApiError, setToastFunction } from './request';
 
 // 重新导出类型
 export * from './types';
@@ -74,19 +74,23 @@ export const auctionApi = {
 
 // 订单API
 export const orderApi = {
+  // admin 端订单列表：使用 /admin/orders（不被 X-User-ID 过滤），可透传 user_id 筛某用户。
   list: (params?: { user_id?: number; status?: number; page?: number; page_size?: number }) => {
     const query = buildQuery(params || {});
-    return get<{ list: any[]; total: number }>(`/orders?${query}`);
+    return get<{ list: any[]; total: number; page: number; page_size: number }>(`/admin/orders?${query}`);
   },
 
-  get: (id: number) => get<any>(`/orders/${id}`),
+  // admin 端订单详情：使用 /admin/orders/:id（不被 winner_id 过滤）。
+  get: (id: number) => get<any>(`/admin/orders/${id}`),
 
   updateStatus: (id: number, status: number) => put<any>(`/orders/${id}`, { status }),
 
+  // pay 是用户行为，仍走用户路由
   pay: (id: number) => post<any>(`/orders/${id}/pay`),
 
   ship: (id: number) => put<any>(`/orders/${id}/ship`),
 
+  // 用户视角的竞拍历史，保持原路由
   getUserHistory: () => get<any[]>('/orders/history'),
 };
 
@@ -98,7 +102,7 @@ export const liveStreamApi = {
     return get<{ list: any[]; total: number }>(`/live-streams?${query}`);
   },
 
-  adminList: (params?: { page?: number; page_size?: number }) => {
+  adminList: (params?: { status?: number; page?: number; page_size?: number }) => {
     const query = buildQuery(params || {});
     return get<{ list: any[]; total: number }>(`/admin/live-streams?${query}`);
   },
@@ -115,6 +119,12 @@ export const liveStreamApi = {
   unfollow: (id: number) => del<void>(`/live-streams/${id}/follow`),
 
   toggleNotification: (id: number, enabled: boolean) => put<void>(`/live-streams/${id}/notification`, { enabled }),
+
+  start: (id: number) => post<any>(`/live-streams/${id}/start`),
+
+  end: (id: number) => put<any>(`/admin/live-streams/${id}/end`),
+
+  ban: (id: number, reason: string) => put<any>(`/admin/live-streams/${id}/ban`, { reason }),
 };
 
 // 通知API

@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { postCompare, getReport, type TestResult } from '@/api/test';
 import ProgressBar from '@/components/ProgressBar';
+import { cardStyle, titleStyle, primaryBtn } from '@/components/ui/styles';
 
 const PRESETS: Record<string, { left: Record<string, unknown>; right: Record<string, unknown>; desc: string }> = {
   pressure: {
@@ -57,28 +58,36 @@ export default function Compare() {
     }
   };
 
-  // 轮询两边结果
+  const isDone = (r: TestResult | null) =>
+    !!r && (r.Status === 'completed' || r.Status === 'failed' || r.Status === 'cancelled');
+
+  // 用 ref 持有最新 res，避免把 res 放进 effect 依赖导致 setInterval 反复重启
+  const leftResRef = useRef<TestResult | null>(null);
+  const rightResRef = useRef<TestResult | null>(null);
+  useEffect(() => { leftResRef.current = leftRes; }, [leftRes]);
+  useEffect(() => { rightResRef.current = rightRes; }, [rightRes]);
+
+  // 轮询两边结果：只在 leftID/rightID 变化时启停 setInterval，节奏稳定 1s
   useEffect(() => {
     if (!leftID && !rightID) return;
     let stopped = false;
     const tick = async () => {
       if (stopped) return;
       const tasks: Array<Promise<void>> = [];
-      if (leftID) {
-        tasks.push(
-          getReport(leftID).then(setLeftRes).catch(() => {
-            /* ignore */
-          }),
-        );
+      if (leftID && !isDone(leftResRef.current)) {
+        tasks.push(getReport(leftID).then(setLeftRes).catch(() => {}));
       }
-      if (rightID) {
-        tasks.push(
-          getReport(rightID).then(setRightRes).catch(() => {
-            /* ignore */
-          }),
-        );
+      if (rightID && !isDone(rightResRef.current)) {
+        tasks.push(getReport(rightID).then(setRightRes).catch(() => {}));
+      }
+      if (tasks.length === 0) {
+        clearInterval(handle);
+        return;
       }
       await Promise.all(tasks);
+      if (isDone(leftResRef.current) && isDone(rightResRef.current)) {
+        clearInterval(handle);
+      }
     };
     tick();
     const handle = setInterval(tick, 1000);
@@ -88,16 +97,14 @@ export default function Compare() {
     };
   }, [leftID, rightID]);
 
-  const isDone = (r: TestResult | null) =>
-    !!r && (r.Status === 'completed' || r.Status === 'failed' || r.Status === 'cancelled');
   const allDone = isDone(leftRes) && isDone(rightRes);
 
   return (
     <div>
       <h1 style={{ fontSize: 22, marginBottom: 16 }}>A/B 对比模式</h1>
 
-      <section style={card}>
-        <h3 style={title}>预设</h3>
+      <section style={cardStyle}>
+        <h3 style={titleStyle}>预设</h3>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           {(['pressure', 'chaos', 'antisnipe'] as const).map((k) => (
             <button key={k} type="button" onClick={() => applyPreset(k)} style={chipBtn(type === k)}>
@@ -111,7 +118,7 @@ export default function Compare() {
           <CfgEditor side="right" raw={rightRaw} setRaw={setRightRaw} />
         </div>
         <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-          <button type="button" disabled={running} onClick={start} style={btnP(running)}>
+          <button type="button" disabled={running} onClick={start} style={primaryBtn(running)}>
             {running ? '提交中...' : '同时启动 A/B'}
           </button>
           {allDone && (
@@ -163,8 +170,8 @@ function SidePanel({ side, id, res }: { side: Side; id: string | null; res: Test
     }
   }
   return (
-    <section style={{ ...card, borderColor: side === 'left' ? '#3b82f6' : '#f59e0b' }}>
-      <h3 style={title}>{side.toUpperCase()}</h3>
+    <section style={{ ...cardStyle, borderColor: side === 'left' ? '#3b82f6' : '#f59e0b' }}>
+      <h3 style={titleStyle}>{side.toUpperCase()}</h3>
       <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>
         test_id: <code>{id ?? '-'}</code> · 状态: <strong>{status}</strong>
       </div>
@@ -187,17 +194,6 @@ function SidePanel({ side, id, res }: { side: Side; id: string | null; res: Test
   );
 }
 
-const card: React.CSSProperties = { padding: 16, border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 16 };
-const title: React.CSSProperties = { fontSize: 16, marginBottom: 12 };
-const btnP = (d: boolean): React.CSSProperties => ({
-  padding: '8px 16px',
-  background: 'var(--color-primary, #3b82f6)',
-  color: '#fff',
-  border: 'none',
-  borderRadius: 6,
-  cursor: d ? 'not-allowed' : 'pointer',
-  opacity: d ? 0.6 : 1,
-});
 const chipBtn = (active: boolean): React.CSSProperties => ({
   padding: '4px 12px',
   borderRadius: 16,

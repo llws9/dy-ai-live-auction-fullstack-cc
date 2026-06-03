@@ -9,40 +9,40 @@ describe('Card Component', () => {
 
   it('renders with default variant', () => {
     render(<Card>Default</Card>);
-    const card = screen.getByText('Default').parentElement;
+    const card = screen.getByText('Default');
     expect(card).toHaveClass('card');
   });
 
   it('renders with elevated variant', () => {
     render(<Card variant="elevated">Elevated</Card>);
-    const card = screen.getByText('Elevated').parentElement;
+    const card = screen.getByText('Elevated');
     expect(card).toHaveClass('elevated');
   });
 
   it('renders with outlined variant', () => {
     render(<Card variant="outlined">Outlined</Card>);
-    const card = screen.getByText('Outlined').parentElement;
+    const card = screen.getByText('Outlined');
     expect(card).toHaveClass('outlined');
   });
 
   it('applies different padding sizes', () => {
     const { rerender } = render(<Card padding="none">No Padding</Card>);
-    expect(screen.getByText('No Padding').parentElement).toHaveClass('paddingNone');
+    expect(screen.getByText('No Padding')).toHaveClass('padding-none');
 
     rerender(<Card padding="sm">Small Padding</Card>);
-    expect(screen.getByText('Small Padding').parentElement).toHaveClass('paddingSm');
+    expect(screen.getByText('Small Padding')).toHaveClass('padding-sm');
 
     rerender(<Card padding="md">Medium Padding</Card>);
-    expect(screen.getByText('Medium Padding').parentElement).toHaveClass('paddingMd');
+    expect(screen.getByText('Medium Padding')).toHaveClass('padding-md');
 
     rerender(<Card padding="lg">Large Padding</Card>);
-    expect(screen.getByText('Large Padding').parentElement).toHaveClass('paddingLg');
+    expect(screen.getByText('Large Padding')).toHaveClass('padding-lg');
   });
 
   it('applies clickable class when onClick is provided', () => {
     const handleClick = jest.fn();
     render(<Card onClick={handleClick}>Clickable</Card>);
-    const card = screen.getByText('Clickable').parentElement;
+    const card = screen.getByText('Clickable');
     expect(card).toHaveClass('clickable');
   });
 
@@ -55,7 +55,7 @@ describe('Card Component', () => {
 
   it('applies custom className', () => {
     render(<Card className="custom-card">Custom</Card>);
-    const card = screen.getByText('Custom').parentElement;
+    const card = screen.getByText('Custom');
     expect(card).toHaveClass('custom-card');
   });
 });

@@ -154,6 +154,7 @@ func main() {
 
 	// 初始化 Handler 层
 	auctionHandler := handler.NewAuctionHandler(auctionService)
+	auctionHandler.SetRuleFetcher(ruleDAO)
 	// 注入 product-service 内部接口客户端，启用 list 接口的 category 过滤与商品摘要回填（spec C §5.2）。
 	productSvcURL := os.Getenv("PRODUCT_SERVICE_URL")
 	if productSvcURL == "" {
@@ -180,6 +181,7 @@ func main() {
 	userBalanceHandler := handler.NewUserBalanceHandler(userBalanceDAO)
 	userAddressHandler := handler.NewUserAddressHandler(userAddressDAO)
 	internalUserHandler := handler.NewInternalUserHandler(userDAO)
+	currentAuctionHandler := handler.NewInternalCurrentAuctionHandler(handler.NewCurrentAuctionDAOFetcher(auctionDAO))
 
 	// 初始化认证 Handler
 	jwtExpire := 24 // 24小时
@@ -188,6 +190,17 @@ func main() {
 	// 设置 WebSocket Hub 和 JWT 密钥到 Handler
 	wsHandler.SetHub(hub)
 	wsHandler.SetJWTSecret(cfg.JWT.Secret)
+
+	// 装配弹幕处理链：黑词过滤 + Redis 双层频控（M2）
+	chatFilter := websocket.NewChatFilter(50, []string{
+		"微信", "weixin", "vx", "qq", "电话",
+	})
+	chatThrottle := websocket.NewChatThrottle(dao.GetRedis(), websocket.ThrottleConfig{
+		UserMax: 1, UserInterval: time.Second,
+		RoomMax: 20, RoomInterval: time.Second,
+	})
+	chatHandler := websocket.NewChatHandler(hub, chatFilter, chatThrottle)
+	wsHandler.SetChatHandler(chatHandler)
 
 	// 设置 WebSocket Hub 到 NotificationService（用于实时推送）
 	notificationService.SetHub(hub)
@@ -248,6 +261,7 @@ func main() {
 		internalUserHandler,
 		liveReminderHandler,
 		liveStreamStatsHandler,
+		currentAuctionHandler,
 	)
 
 	// 注册 Prometheus metrics 端点
@@ -413,11 +427,14 @@ func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bid
 	v1.POST("/users/me/addresses/:id/default", userAddressHandler.SetDefault)
 }
 
-func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, internalUserHandler *handler.InternalUserHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler) {
+func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, internalUserHandler *handler.InternalUserHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler, currentAuctionHandler *handler.InternalCurrentAuctionHandler) {
 	internal := h.Group("/internal", internalAuth)
 	if internalUserHandler != nil {
 		internal.POST("/users/batch", internalUserHandler.BatchByIDs)
 	}
 	internal.GET("/live/pending-reminder", liveReminderHandler.GetPendingReminder)
 	internal.POST("/live-streams/:id/start", liveStreamStatsHandler.StartLive)
+	if currentAuctionHandler != nil {
+		internal.POST("/auctions/current-by-live-streams", currentAuctionHandler.Handle)
+	}
 }

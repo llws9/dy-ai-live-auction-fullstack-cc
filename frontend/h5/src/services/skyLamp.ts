@@ -1,4 +1,6 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+import { ENV } from '../utils/env';
+
+const API_BASE_URL = ENV.API_BASE_URL;
 
 interface ApiResponse<T = any> {
   code?: number;

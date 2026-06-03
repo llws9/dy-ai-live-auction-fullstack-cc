@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -102,6 +103,27 @@ func TestProxyHandler_Forward(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, c.Response.StatusCode())
 	})
+}
+
+func TestProxyHandler_DoesNotForwardClientInternalToken(t *testing.T) {
+	var seenInternalToken atomic.Value
+	seenInternalToken.Store("")
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		seenInternalToken.Store(r.Header.Get("X-Internal-Token"))
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer mockServer.Close()
+
+	proxy := NewProxyHandler(mockServer.URL)
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/products")
+	c.Request.Header.Set("X-Internal-Token", "client-supplied")
+
+	proxy.Forward(context.Background(), c)
+
+	assert.Equal(t, http.StatusOK, c.Response.StatusCode())
+	assert.Empty(t, seenInternalToken.Load().(string))
 }
 
 func TestProxyHandler_WebSocket(t *testing.T) {

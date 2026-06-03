@@ -7,6 +7,7 @@ import (
 
 	"auction-service/model"
 
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,13 +23,13 @@ func TestPlaceBidResult_Success(t *testing.T) {
 	result := &PlaceBidResult{
 		Success:      true,
 		Message:      "出价成功",
-		CurrentPrice: 100.0,
+		CurrentPrice: decimal.NewFromInt(100),
 		Rank:         1,
 		WinnerID:     1,
 	}
 
 	assert.True(t, result.Success)
-	assert.Equal(t, 100.0, result.CurrentPrice)
+	assert.True(t, result.CurrentPrice.Equal(decimal.NewFromInt(100)))
 }
 
 // TestNotificationService_SendBidOutbidNotification 测试出价超越通知

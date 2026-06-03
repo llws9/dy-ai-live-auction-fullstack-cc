@@ -53,16 +53,17 @@ func BuildAuctionResultResponse(
 		return nil, fmt.Errorf("get auction: %w", err)
 	}
 
+	currentPrice, _ := auction.CurrentPrice.Float64()
 	resp := &AuctionResultResponse{
 		AuctionID:  auction.ID,
 		ProductID:  auction.ProductID,
 		Status:     auction.Status,
-		FinalPrice: auction.CurrentPrice,
+		FinalPrice: currentPrice,
 		WinnerID:   auction.WinnerID,
 		StartedAt:  auction.StartTime,
 		EndedAt:    auction.EndTime,
 		DelayUsed:  auction.DelayUsed,
-		WonBid:     auction.CurrentPrice, // 别名，恒等于 FinalPrice
+		WonBid:     currentPrice, // 别名，恒等于 FinalPrice
 	}
 
 	if pc == nil {

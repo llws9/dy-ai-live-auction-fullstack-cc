@@ -22,14 +22,14 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+import { Badge, type BadgeProps } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { orderApi, statisticsApi } from "@/shared/api"
 
-const statusMap: Record<number, { label: string; variant: string; icon: any }> = {
+const statusMap: Record<number, { label: string; variant: BadgeProps["variant"]; icon: React.ElementType }> = {
   0: { label: "待支付", variant: "warning", icon: CreditCard },
   1: { label: "已支付", variant: "blue", icon: ShoppingBag },
   2: { label: "已发货", variant: "success", icon: Truck },

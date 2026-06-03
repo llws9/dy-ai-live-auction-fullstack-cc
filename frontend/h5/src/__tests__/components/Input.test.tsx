@@ -21,14 +21,14 @@ describe('Input Component', () => {
   it('renders with error state', () => {
     render(<Input placeholder="Error" error="This field is required" />);
     const input = screen.getByPlaceholderText('Error');
-    expect(input).toHaveClass('error');
+    expect(input.parentElement).toHaveClass('error');
     expect(screen.getByText('This field is required')).toBeInTheDocument();
   });
 
   it('renders with success state', () => {
     render(<Input placeholder="Success" success />);
     const input = screen.getByPlaceholderText('Success');
-    expect(input).toHaveClass('success');
+    expect(input.parentElement).toHaveClass('success');
   });
 
   it('renders disabled state', () => {
@@ -38,7 +38,7 @@ describe('Input Component', () => {
   });
 
   it('shows clear button when clearable and has value', () => {
-    render(<Input placeholder="Clearable" clearable defaultValue="test" />);
+    render(<Input placeholder="Clearable" clearable value="test" readOnly />);
     const input = screen.getByPlaceholderText('Clearable') as HTMLInputElement;
     expect(input.value).toBe('test');
     // Clear button should be present
@@ -72,7 +72,7 @@ describe('Input Component', () => {
 
   it('applies custom className', () => {
     render(<Input placeholder="Custom" className="custom-input" />);
-    const container = screen.getByPlaceholderText('Custom').parentElement;
+    const container = screen.getByPlaceholderText('Custom').closest('.custom-input');
     expect(container).toHaveClass('custom-input');
   });
 });

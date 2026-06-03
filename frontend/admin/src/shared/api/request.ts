@@ -1,6 +1,6 @@
 // API请求基础封装
 
-import { ApiResponse, PaginatedResponse } from './types';
+import { ApiResponse } from './types';
 
 const API_BASE_URL = '/api/v1';
 const REQUEST_TIMEOUT = 30000;

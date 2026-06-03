@@ -157,8 +157,10 @@ function buildLayout(
   if (events.length === 0 && !originalEndTime && !actualEndTime) return null;
 
   const tsList: number[] = [];
+  const parseCache = new Map<string, number>();
   events.forEach((e) => {
     const t = Date.parse(e.at);
+    parseCache.set(e.at, t);
     if (!Number.isNaN(t)) tsList.push(t);
   });
   const origMs = originalEndTime ? Date.parse(originalEndTime) : NaN;
@@ -187,7 +189,7 @@ function buildLayout(
     originalPct: Number.isNaN(origMs) ? null : pctOf(origMs),
     actualPct: Number.isNaN(actMs) ? null : pctOf(actMs),
     eventPoints: events.map((e) => ({
-      pct: pctOf(Date.parse(e.at)),
+      pct: pctOf(parseCache.get(e.at) ?? Date.parse(e.at)),
       user_id: e.user_id,
       bid_ok: e.bid_ok,
       triggered: e.triggered,

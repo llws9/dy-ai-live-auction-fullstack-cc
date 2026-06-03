@@ -7,6 +7,8 @@ import (
 	"product-service/dao"
 	"product-service/model"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"gorm.io/driver/sqlite"
@@ -53,7 +55,7 @@ func (suite *OrderTestSuite) SetupTest() {
 func (suite *OrderTestSuite) TestCreateOrder() {
 	ctx := context.Background()
 
-	order, err := suite.service.CreateOrder(ctx, 1, 1, 100, 500.0)
+	order, err := suite.service.CreateOrder(ctx, 1, 1, 100, decimal.NewFromInt(500))
 
 	suite.NoError(err)
 	suite.NotNil(order)
@@ -61,7 +63,7 @@ func (suite *OrderTestSuite) TestCreateOrder() {
 	suite.Equal(int64(1), order.AuctionID)
 	suite.Equal(int64(1), order.ProductID)
 	suite.Equal(int64(100), order.WinnerID)
-	suite.Equal(500.0, order.FinalPrice)
+	suite.Equal(decimal.NewFromInt(500), order.FinalPrice)
 	suite.Equal(model.OrderStatusPending, order.Status)
 }
 
@@ -70,7 +72,7 @@ func (suite *OrderTestSuite) TestGetOrder() {
 	ctx := context.Background()
 
 	// 创建测试订单
-	created, err := suite.service.CreateOrder(ctx, 1, 1, 100, 500.0)
+	created, err := suite.service.CreateOrder(ctx, 1, 1, 100, decimal.NewFromInt(500))
 	suite.NoError(err)
 
 	// 获取订单
@@ -98,7 +100,7 @@ func (suite *OrderTestSuite) TestListOrders() {
 
 	// 创建多个订单
 	for i := 1; i <= 5; i++ {
-		_, err := suite.service.CreateOrder(ctx, int64(i), int64(i), 100, float64(i*100))
+		_, err := suite.service.CreateOrder(ctx, int64(i), int64(i), 100, decimal.NewFromInt(int64(i*100)))
 		suite.NoError(err)
 	}
 
@@ -115,11 +117,11 @@ func (suite *OrderTestSuite) TestListOrders_ByUser() {
 	ctx := context.Background()
 
 	// 创建不同用户的订单
-	_, err := suite.service.CreateOrder(ctx, 1, 1, 100, 100.0)
+	_, err := suite.service.CreateOrder(ctx, 1, 1, 100, decimal.NewFromInt(100))
 	suite.NoError(err)
-	_, err = suite.service.CreateOrder(ctx, 2, 2, 100, 200.0)
+	_, err = suite.service.CreateOrder(ctx, 2, 2, 100, decimal.NewFromInt(200))
 	suite.NoError(err)
-	_, err = suite.service.CreateOrder(ctx, 3, 3, 200, 300.0)
+	_, err = suite.service.CreateOrder(ctx, 3, 3, 200, decimal.NewFromInt(300))
 	suite.NoError(err)
 
 	// 获取用户100的订单
@@ -136,7 +138,7 @@ func (suite *OrderTestSuite) TestPayOrder() {
 	ctx := context.Background()
 
 	// 创建测试订单
-	created, err := suite.service.CreateOrder(ctx, 1, 1, 100, 500.0)
+	created, err := suite.service.CreateOrder(ctx, 1, 1, 100, decimal.NewFromInt(500))
 	suite.NoError(err)
 	suite.Equal(model.OrderStatusPending, created.Status)
 
@@ -153,7 +155,7 @@ func (suite *OrderTestSuite) TestPayOrder_InvalidStatus() {
 	ctx := context.Background()
 
 	// 创建已支付的订单
-	created, err := suite.service.CreateOrder(ctx, 1, 1, 100, 500.0)
+	created, err := suite.service.CreateOrder(ctx, 1, 1, 100, decimal.NewFromInt(500))
 	suite.NoError(err)
 
 	// 第一次支付
@@ -173,7 +175,7 @@ func (suite *OrderTestSuite) TestShipOrder() {
 	ctx := context.Background()
 
 	// 创建并支付订单
-	created, err := suite.service.CreateOrder(ctx, 1, 1, 100, 500.0)
+	created, err := suite.service.CreateOrder(ctx, 1, 1, 100, decimal.NewFromInt(500))
 	suite.NoError(err)
 
 	_, err = suite.service.PayOrder(ctx, int64(created.ID))
@@ -192,7 +194,7 @@ func (suite *OrderTestSuite) TestShipOrder_InvalidStatus() {
 	ctx := context.Background()
 
 	// 创建待支付订单
-	created, err := suite.service.CreateOrder(ctx, 1, 1, 100, 500.0)
+	created, err := suite.service.CreateOrder(ctx, 1, 1, 100, decimal.NewFromInt(500))
 	suite.NoError(err)
 
 	// 尝试发货（应该失败）
@@ -208,7 +210,7 @@ func (suite *OrderTestSuite) TestCompleteOrder() {
 	ctx := context.Background()
 
 	// 创建完整流程的订单
-	created, err := suite.service.CreateOrder(ctx, 1, 1, 100, 500.0)
+	created, err := suite.service.CreateOrder(ctx, 1, 1, 100, decimal.NewFromInt(500))
 	suite.NoError(err)
 
 	_, err = suite.service.PayOrder(ctx, int64(created.ID))
@@ -230,7 +232,7 @@ func (suite *OrderTestSuite) TestCompleteOrder_InvalidStatus() {
 	ctx := context.Background()
 
 	// 创建已支付但未发货的订单
-	created, err := suite.service.CreateOrder(ctx, 1, 1, 100, 500.0)
+	created, err := suite.service.CreateOrder(ctx, 1, 1, 100, decimal.NewFromInt(500))
 	suite.NoError(err)
 
 	_, err = suite.service.PayOrder(ctx, int64(created.ID))
@@ -249,7 +251,7 @@ func (suite *OrderTestSuite) TestOrderStatusFlow() {
 	ctx := context.Background()
 
 	// 完整的订单流程：创建 -> 支付 -> 发货 -> 完成
-	order, err := suite.service.CreateOrder(ctx, 1, 1, 100, 500.0)
+	order, err := suite.service.CreateOrder(ctx, 1, 1, 100, decimal.NewFromInt(500))
 	suite.NoError(err)
 	suite.Equal(model.OrderStatusPending, order.Status)
 
@@ -277,7 +279,7 @@ func (suite *OrderTestSuite) TestNotificationCallback() {
 	suite.service.SetNotificationCallback(&MockNotificationCallback{})
 
 	// 创建并支付订单
-	created, err := suite.service.CreateOrder(ctx, 1, 1, 100, 500.0)
+	created, err := suite.service.CreateOrder(ctx, 1, 1, 100, decimal.NewFromInt(500))
 	suite.NoError(err)
 
 	// 支付（应该触发通知回调）
@@ -303,13 +305,13 @@ func (suite *OrderTestSuite) TestGetSummary() {
 	ctx := context.Background()
 	userID := int64(100)
 
-	_, err := suite.service.CreateOrder(ctx, 101, 1, userID, 500.0)
+	_, err := suite.service.CreateOrder(ctx, 101, 1, userID, decimal.NewFromInt(500))
 	suite.NoError(err)
-	paid, err := suite.service.CreateOrder(ctx, 102, 1, userID, 600.0)
+	paid, err := suite.service.CreateOrder(ctx, 102, 1, userID, decimal.NewFromInt(600))
 	suite.NoError(err)
 	_, err = suite.service.PayOrder(ctx, paid.ID)
 	suite.NoError(err)
-	_, err = suite.service.CreateOrder(ctx, 103, 1, 200, 700.0)
+	_, err = suite.service.CreateOrder(ctx, 103, 1, 200, decimal.NewFromInt(700))
 	suite.NoError(err)
 
 	summary, err := suite.service.GetSummary(ctx, userID)

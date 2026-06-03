@@ -1,10 +1,12 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -16,9 +18,14 @@ type FollowersStatsResponse struct {
 	Count int64 `json:"count"`
 }
 
+type auctionListData struct {
+	Total int64 `json:"total"`
+}
+
 type AuctionClient struct {
-	baseURL string
-	hc      *http.Client
+	baseURL       string
+	hc            *http.Client
+	internalToken string
 }
 
 func NewAuctionClient(baseURL string, timeout time.Duration) *AuctionClient {
@@ -29,6 +36,60 @@ func NewAuctionClient(baseURL string, timeout time.Duration) *AuctionClient {
 		baseURL: baseURL,
 		hc:      &http.Client{Timeout: timeout},
 	}
+}
+
+// SetInternalToken 设置服务间内部调用的鉴权 token，用于访问 auction-service /internal/* 接口。
+func (c *AuctionClient) SetInternalToken(token string) {
+	c.internalToken = token
+}
+
+// CurrentAuctionItem 表示某直播间当前进行中的竞拍信息。
+type CurrentAuctionItem struct {
+	LiveStreamID int64  `json:"live_stream_id"`
+	AuctionID    int64  `json:"auction_id"`
+	ProductID    int64  `json:"product_id"`
+	CurrentPrice string `json:"current_price"`
+	Status       int    `json:"status"`
+}
+
+// CurrentByLiveStreamIDs 批量查询多个直播间的当前竞拍，返回 live_stream_id -> 当前竞拍 的映射。
+func (c *AuctionClient) CurrentByLiveStreamIDs(ctx context.Context, ids []int64) (map[int64]CurrentAuctionItem, error) {
+	reqURL := fmt.Sprintf("%s/internal/auctions/current-by-live-streams", c.baseURL)
+	payload, err := json.Marshal(map[string]interface{}{"live_stream_ids": ids})
+	if err != nil {
+		return nil, fmt.Errorf("marshal request: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, bytes.NewReader(payload))
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.internalToken != "" {
+		req.Header.Set("X-Internal-Token", c.internalToken)
+	}
+
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("call auction-service: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("auction-service returned status %d", resp.StatusCode)
+	}
+	var body struct {
+		Code int `json:"code"`
+		Data struct {
+			Items []CurrentAuctionItem `json:"items"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	result := make(map[int64]CurrentAuctionItem, len(body.Data.Items))
+	for _, item := range body.Data.Items {
+		result[item.LiveStreamID] = item
+	}
+	return result, nil
 }
 
 func (c *AuctionClient) GetFollowStatus(ctx context.Context, userID, liveStreamID int64) (*FollowStatusResponse, error) {
@@ -73,11 +134,39 @@ func (c *AuctionClient) GetFollowersCount(ctx context.Context, liveStreamID int6
 		return 0, fmt.Errorf("auction-service returned status %d", resp.StatusCode)
 	}
 	var body struct {
-		Code int                  `json:"code"`
+		Code int                    `json:"code"`
 		Data FollowersStatsResponse `json:"data"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 		return 0, fmt.Errorf("decode response: %w", err)
 	}
 	return body.Data.Count, nil
+}
+
+func (c *AuctionClient) CountAuctionsByLiveStreamID(ctx context.Context, liveStreamID int64) (int64, error) {
+	values := url.Values{}
+	values.Set("live_stream_id", fmt.Sprintf("%d", liveStreamID))
+	values.Set("page", "1")
+	values.Set("page_size", "1")
+	reqURL := fmt.Sprintf("%s/api/v1/auctions?%s", c.baseURL, values.Encode())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+	if err != nil {
+		return 0, fmt.Errorf("build request: %w", err)
+	}
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("call auction-service: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("auction-service returned status %d", resp.StatusCode)
+	}
+	var body struct {
+		Code int             `json:"code"`
+		Data auctionListData `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return 0, fmt.Errorf("decode response: %w", err)
+	}
+	return body.Data.Total, nil
 }

@@ -27,37 +27,45 @@ const (
 
 // Client WebSocket 客户端
 type Client struct {
-	ID          string
-	AuctionID   int64
-	UserID      int64
-	ConnectedAt time.Time
+	ID            string
+	AuctionID     int64
+	LiveStreamID  int64 // 直播间 ID（0 表示未订阅弹幕）
+	UserID        int64
+	UserName      string // 发弹幕时回填到广播
+	Authenticated bool   // true 表示身份来自服务端验证过的 JWT
+	ConnectedAt   time.Time
 
 	conn *websocket.Conn
 	Send chan *Message
 
 	hub          *Hub
 	stateManager *StateManager
+	chatHandler  *ChatHandler
 
 	closeOnce sync.Once
 	closed    bool
 }
 
 // NewClient 创建客户端
-func NewClient(id string, auctionID, userID int64, conn *websocket.Conn, hub *Hub) *Client {
+func NewClient(id string, auctionID, userID, liveStreamID int64, userName string, authenticated bool, conn *websocket.Conn, hub *Hub) *Client {
 	now := time.Now()
 	client := &Client{
-		ID:          id,
-		AuctionID:   auctionID,
-		UserID:      userID,
-		ConnectedAt: now,
-		conn:        conn,
-		Send:        make(chan *Message, sendBufferSize),
-		hub:         hub,
+		ID:            id,
+		AuctionID:     auctionID,
+		LiveStreamID:  liveStreamID,
+		UserID:        userID,
+		UserName:      userName,
+		Authenticated: authenticated,
+		ConnectedAt:   now,
+		conn:          conn,
+		Send:          make(chan *Message, sendBufferSize),
+		hub:           hub,
 	}
 
 	// 保存连接状态到 Redis
 	if hub != nil && hub.GetStateManager() != nil {
 		sm := hub.GetStateManager()
+		client.SetStateManager(sm)
 		state := &ConnectionState{
 			ClientID:       client.ID,
 			AuctionID:      client.AuctionID,
@@ -87,15 +95,28 @@ func (c *Client) SetStateManager(sm *StateManager) {
 	c.stateManager = sm
 }
 
+// SetChatHandler 注入弹幕处理器
+func (c *Client) SetChatHandler(h *ChatHandler) {
+	c.chatHandler = h
+}
+
+// SetHub 设置所属 Hub（ReadPump 注销时需要）
+func (c *Client) SetHub(hub *Hub) {
+	c.hub = hub
+}
+
 // NewClientSimple 创建客户端（简化版，自动生成ID）
-func NewClientSimple(conn *websocket.Conn, auctionID, userID int64) *Client {
+func NewClientSimple(conn *websocket.Conn, auctionID, userID, liveStreamID int64, userName string, authenticated bool) *Client {
 	id := fmt.Sprintf("%d-%d-%d", auctionID, userID, time.Now().UnixNano())
 	return &Client{
-		ID:        id,
-		AuctionID: auctionID,
-		UserID:    userID,
-		conn:      conn,
-		Send:      make(chan *Message, sendBufferSize),
+		ID:            id,
+		AuctionID:     auctionID,
+		LiveStreamID:  liveStreamID,
+		UserID:        userID,
+		UserName:      userName,
+		Authenticated: authenticated,
+		conn:          conn,
+		Send:          make(chan *Message, sendBufferSize),
 	}
 }
 
@@ -191,9 +212,31 @@ func (c *Client) handleMessage(msg *Message) {
 		// 处理状态同步请求（重连后）
 		c.handleSyncRequest(msg)
 
+	case MessageTypeChatSend:
+		c.handleChatSend(msg)
+
 	default:
 		log.Printf("Unknown message type: %s", msg.Type)
 	}
+}
+
+// handleChatSend 解析 ChatSendData 并交给 ChatHandler
+func (c *Client) handleChatSend(msg *Message) {
+	if c.chatHandler == nil {
+		return
+	}
+
+	raw, err := json.Marshal(msg.Data)
+	if err != nil {
+		c.Send <- NewErrorMessage(ChatErrCodeLengthExceeded, "invalid chat payload")
+		return
+	}
+	var data ChatSendData
+	if err := json.Unmarshal(raw, &data); err != nil {
+		c.Send <- NewErrorMessage(ChatErrCodeLengthExceeded, "invalid chat payload")
+		return
+	}
+	c.chatHandler.Handle(context.Background(), c, &data)
 }
 
 // handleSyncRequest 处理状态同步请求

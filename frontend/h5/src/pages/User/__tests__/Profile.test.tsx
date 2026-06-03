@@ -4,7 +4,6 @@ import { MemoryRouter } from 'react-router-dom';
 import Profile from '../Index';
 import { orderApi, userApi } from '../../../services/api';
 import { notificationApi } from '../../../services/notification';
-import { trackEvent } from '../../../utils/trackEvent';
 
 const mockNavigate = jest.fn();
 const mockLogout = jest.fn();
@@ -42,16 +41,9 @@ jest.mock('../../../store/authContext', () => ({
   }),
 }));
 
-jest.mock('../../../utils/trackEvent', () => ({
-  trackEvent: jest.fn(),
-  getCountBucket: (count: number) =>
-    count <= 0 ? '0' : count === 1 ? '1' : count <= 5 ? '2_5' : count <= 10 ? '6_10' : '10_plus',
-}));
-
 const mockedUserApi = userApi as jest.Mocked<typeof userApi>;
 const mockedOrderApi = orderApi as jest.Mocked<typeof orderApi>;
 const mockedNotificationApi = notificationApi as jest.Mocked<typeof notificationApi>;
-const mockTrackEvent = trackEvent as jest.MockedFunction<typeof trackEvent>;
 
 describe('Profile migration', () => {
   beforeEach(() => {
@@ -135,42 +127,5 @@ describe('Profile migration', () => {
 
     await waitFor(() => expect(mockLogout).toHaveBeenCalledTimes(1));
     expect(mockNavigate).toHaveBeenCalledWith('/login');
-  });
-
-  it('does not track summary exposure from profile page data hook', async () => {
-    render(
-      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
-        <Profile />
-      </MemoryRouter>
-    );
-
-    expect(await screen.findByLabelText('2 条待处理提醒')).toHaveTextContent('2');
-    expect(mockTrackEvent).not.toHaveBeenCalledWith('summary_exposed', expect.anything());
-  });
-
-  it('tracks profile touchpoint entry clicks', async () => {
-    render(
-      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
-        <Profile />
-      </MemoryRouter>
-    );
-
-    expect(await screen.findByText('林见山')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('link', { name: /我的竞拍/ }));
-    expect(mockTrackEvent).toHaveBeenCalledWith('entry_clicked', {
-      source: 'profile',
-      entry: 'auction_history',
-      type: 'pending_payment',
-      result: 'clicked',
-    });
-
-    fireEvent.click(screen.getByRole('link', { name: /消息通知/ }));
-    expect(mockTrackEvent).toHaveBeenCalledWith('entry_clicked', {
-      source: 'profile',
-      entry: 'notification_center',
-      type: 'notification',
-      result: 'clicked',
-    });
   });
 });

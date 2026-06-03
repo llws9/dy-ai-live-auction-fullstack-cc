@@ -112,6 +112,21 @@ describe('MobileShell', () => {
     expect(await screen.findByLabelText('7 条待处理提醒')).toHaveTextContent('7');
   });
 
+  it('uses a live-safe content layout on live routes so the room stops above the bottom navigation', async () => {
+    render(
+      <MemoryRouter initialEntries={['/live']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>直播间内容</main>
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('直播间内容').parentElement).toHaveClass('contentLive');
+    await waitFor(() => expect(mockGetPendingLiveReminder).toHaveBeenCalledTimes(1));
+  });
+
   it('shows unread total badge on profile nav item from backend summary', async () => {
     render(
       <MemoryRouter initialEntries={['/']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>

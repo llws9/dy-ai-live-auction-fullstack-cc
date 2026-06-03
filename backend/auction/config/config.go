@@ -75,8 +75,8 @@ type InternalConfig struct {
 func DefaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
-			HTTPPort:     "8082",
-			WSPort:       "8083",
+			HTTPPort:     ":8082",
+			WSPort:       ":8083",
 			ReadTimeout:  10,
 			WriteTimeout: 10,
 		},

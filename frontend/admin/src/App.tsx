@@ -1,4 +1,3 @@
-import React from "react"
 import { Routes, Route, useLocation, Navigate } from "react-router-dom"
 import { Layout } from "@/components/Layout"
 import Login from "@/pages-new/Login"

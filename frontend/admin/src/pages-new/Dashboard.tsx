@@ -14,7 +14,6 @@ import {
   Loader2
 } from "lucide-react"
 import {
-  LineChart,
   Line,
   XAxis,
   YAxis,
@@ -30,10 +29,9 @@ import {
 } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
-import { statisticsApi } from "@/shared/api"
+import { liveStreamApi, statisticsApi } from "@/shared/api"
 import { useAuth } from "@/shared/auth"
 
 const COLORS = ["#f59e0b", "#3b82f6", "#10b981", "#6366f1"]
@@ -49,6 +47,24 @@ export default function Dashboard() {
   const [overview, setOverview] = React.useState<any>(null)
   const [trendData, setTrendData] = React.useState<any[]>([])
   const [revenueComposition, setRevenueComposition] = React.useState<any[]>([])
+
+  const handleStartLive = async () => {
+    const id = window.prompt("请输入要开启的直播间 ID")
+    if (!id) return
+    const liveStreamId = Number(id)
+    if (!Number.isFinite(liveStreamId) || liveStreamId <= 0) {
+      alert("直播间 ID 无效")
+      return
+    }
+    try {
+      await liveStreamApi.start(liveStreamId)
+      alert("直播已开启")
+      navigate(`/live/detail?id=${liveStreamId}`)
+    } catch (e) {
+      console.error("开启直播失败:", e)
+      alert("开启直播失败")
+    }
+  }
 
   // 获取数据
   React.useEffect(() => {
@@ -120,8 +136,7 @@ export default function Dashboard() {
             <PlusCircle className="mr-2 w-4 h-4" />
             发布商品
           </Button>
-          {/* 开启直播 - 后端无创建直播间接口，暂空置 */}
-          <Button className="bg-amber-500 hover:bg-amber-600 text-[#0f172a]" disabled>
+          <Button className="bg-amber-500 hover:bg-amber-600 text-[#0f172a]" onClick={handleStartLive}>
             <Video className="mr-2 w-4 h-4" />
             开启直播
           </Button>
@@ -255,7 +270,7 @@ export default function Dashboard() {
                     paddingAngle={5}
                     dataKey="value"
                   >
-                    {revenueComposition.map((entry, index) => (
+                    {revenueComposition.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>

@@ -29,9 +29,9 @@ describe('Loading Component', () => {
     expect(container).toBeInTheDocument();
   });
 
-  it('renders full screen overlay when fullScreen is true', () => {
-    render(<Loading fullScreen />);
-    const overlay = document.querySelector('.fullScreen');
+  it('renders full screen overlay when fullscreen is true', () => {
+    render(<Loading fullscreen />);
+    const overlay = document.querySelector('.fullscreen');
     expect(overlay).toBeInTheDocument();
   });
 });

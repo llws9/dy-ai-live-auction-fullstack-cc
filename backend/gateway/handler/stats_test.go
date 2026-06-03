@@ -15,7 +15,7 @@ import (
 // TestBuildUserStats 验证 T2.7 (F-A1) Gateway BFF 聚合：
 //   - 并行调用 auction `/user/followed-live-streams` 与 product `/orders/history`
 //   - won_count 由 product 历史项 is_winner=true 累计
-//   - 单一下游失败时对应字段返回 nil（前端 -）
+//   - 下游失败必须返回错误，避免静默降级
 //   - 透传 X-User-ID
 func TestBuildUserStats(t *testing.T) {
 	ctx := context.Background()
@@ -46,19 +46,17 @@ func TestBuildUserStats(t *testing.T) {
 		defer productSrv.Close()
 
 		fetcher := NewUserStatsFetcher(auctionSrv.URL, productSrv.URL, 2*time.Second)
-		got := fetcher.Fetch(ctx, 7)
+		got, err := fetcher.Fetch(ctx, 7)
 
+		require.NoError(t, err)
 		assert.Equal(t, "7", auctionGotUserID)
 		assert.Equal(t, "7", productGotUserID)
-		require.NotNil(t, got.FollowingCount)
-		assert.Equal(t, int64(12), *got.FollowingCount)
-		require.NotNil(t, got.AuctionHistoryCount)
-		assert.Equal(t, int64(34), *got.AuctionHistoryCount)
-		require.NotNil(t, got.WonCount)
-		assert.Equal(t, int64(2), *got.WonCount)
+		assert.Equal(t, int64(12), got.FollowingCount)
+		assert.Equal(t, int64(34), got.AuctionHistoryCount)
+		assert.Equal(t, int64(2), got.WonCount)
 	})
 
-	t.Run("auction down: following=nil, others computed", func(t *testing.T) {
+	t.Run("auction down: returns error", func(t *testing.T) {
 		auctionSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			http.Error(w, "boom", 500)
 		}))
@@ -72,16 +70,13 @@ func TestBuildUserStats(t *testing.T) {
 		defer productSrv.Close()
 
 		fetcher := NewUserStatsFetcher(auctionSrv.URL, productSrv.URL, 2*time.Second)
-		got := fetcher.Fetch(ctx, 9)
+		got, err := fetcher.Fetch(ctx, 9)
 
-		assert.Nil(t, got.FollowingCount)
-		require.NotNil(t, got.AuctionHistoryCount)
-		assert.Equal(t, int64(5), *got.AuctionHistoryCount)
-		require.NotNil(t, got.WonCount)
-		assert.Equal(t, int64(1), *got.WonCount)
+		require.Error(t, err)
+		assert.Equal(t, UserStats{}, got)
 	})
 
-	t.Run("product down: history+won=nil, following ok", func(t *testing.T) {
+	t.Run("product down: returns error", func(t *testing.T) {
 		auctionSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"code": 200,
@@ -95,24 +90,22 @@ func TestBuildUserStats(t *testing.T) {
 		defer productSrv.Close()
 
 		fetcher := NewUserStatsFetcher(auctionSrv.URL, productSrv.URL, 2*time.Second)
-		got := fetcher.Fetch(ctx, 9)
+		got, err := fetcher.Fetch(ctx, 9)
 
-		require.NotNil(t, got.FollowingCount)
-		assert.Equal(t, int64(7), *got.FollowingCount)
-		assert.Nil(t, got.AuctionHistoryCount)
-		assert.Nil(t, got.WonCount)
+		require.Error(t, err)
+		assert.Equal(t, UserStats{}, got)
 	})
 
-	t.Run("both down: all nil, no error to caller", func(t *testing.T) {
+	t.Run("both down: returns error", func(t *testing.T) {
 		bad := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			http.Error(w, "boom", 500)
 		}))
 		defer bad.Close()
 
 		fetcher := NewUserStatsFetcher(bad.URL, bad.URL, 2*time.Second)
-		got := fetcher.Fetch(ctx, 9)
-		assert.Nil(t, got.FollowingCount)
-		assert.Nil(t, got.AuctionHistoryCount)
-		assert.Nil(t, got.WonCount)
+		got, err := fetcher.Fetch(ctx, 9)
+
+		require.Error(t, err)
+		assert.Equal(t, UserStats{}, got)
 	})
 }

@@ -120,10 +120,10 @@ INTERNAL_API_TOKEN=<generate-with-openssl-rand-hex-32>
 
 `INTERNAL_API_TOKEN` 是运行时必填项：
 
-- `gateway-service` 与 `auction-service` 必须使用同一个 `INTERNAL_API_TOKEN`。
+- `gateway-service`、`product-service` 与 `auction-service` 必须使用同一个 `INTERNAL_API_TOKEN`。
 - 生产环境应从 Secret Manager、CI/CD secret 或宿主机环境变量注入。
 - 不要把真实 token 写入 `configs/nacos/*.yaml`、`docker-compose.yml`、README 或前端环境变量。
-- 未设置该变量时，Gateway 到 Auction 的内部开播/提醒转发会 fail closed。
+- 未设置该变量时，Gateway 到 Auction/Product 的内部管理与开播/提醒转发会 fail closed。
 
 ### 3. 启动服务
 
