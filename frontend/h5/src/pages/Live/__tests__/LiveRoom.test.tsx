@@ -1,14 +1,17 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import LiveRoomSlide from '../LiveRoomSlide';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '../../../services/api';
 import WebSocketService from '../../../services/websocket';
+import { useLiveChatStore } from '../../../store/liveChatStore';
 
 const mockShowGlobalToast = jest.fn();
 const mockNavigate = jest.fn();
 const mockWebSocketInstance = {
   on: jest.fn(),
+  off: jest.fn(),
+  sendChat: jest.fn(() => true),
   onNotification: jest.fn(),
   connect: jest.fn().mockResolvedValue(undefined),
   requestSync: jest.fn(),
@@ -210,7 +213,7 @@ describe('LiveRoom migration', () => {
       </MemoryRouter>
     );
 
-    await waitFor(() => expect(MockedWebSocketService).toHaveBeenCalledWith(5, 'token-1'));
+    await waitFor(() => expect(MockedWebSocketService).toHaveBeenCalledWith(5, 'token-1', 3));
     expect(mockWebSocketInstance.onNotification).toHaveBeenCalledTimes(1);
     expect(screen.queryByLabelText('触达 Toast 测试')).not.toBeInTheDocument();
 
@@ -303,5 +306,46 @@ describe('LiveRoom migration', () => {
     const toastConfig = mockShowGlobalToast.mock.calls[0][0];
     toastConfig.onAction();
     expect(mockNavigate).toHaveBeenCalledWith('/result?id=5');
+  });
+
+  it('mounts ChatPanel, dispatches chat_message into store and sends via sendChat', async () => {
+    useLiveChatStore.getState().reset();
+    const chatHandlers: Record<string, (data: any) => void> = {};
+    mockWebSocketInstance.on.mockImplementation((type: string, handler: (data: any) => void) => {
+      chatHandlers[type] = handler;
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={['/live?id=3&auction_id=5']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByText('明代紫砂壶'));
+
+    // chat_message handler 已注册
+    await waitFor(() => expect(chatHandlers['chat_message']).toBeDefined());
+
+    // 收到一条 chat_message 应进入 store 并渲染气泡
+    act(() => {
+      chatHandlers['chat_message']({
+        live_stream_id: 3,
+        user_id: 2,
+        user_name: '王五',
+        text: '主播好',
+        sent_at: Date.now(),
+      });
+    });
+    expect(await screen.findByText('王五')).toBeInTheDocument();
+    expect(screen.getByText('主播好')).toBeInTheDocument();
+
+    // 输入并发送应调用 sendChat
+    const input = screen.getByPlaceholderText(/说点什么/);
+    fireEvent.change(input, { target: { value: '出价加油' } });
+    fireEvent.click(screen.getByRole('button', { name: /发送/ }));
+    expect(mockWebSocketInstance.sendChat).toHaveBeenCalledWith('出价加油', expect.any(String));
   });
 });

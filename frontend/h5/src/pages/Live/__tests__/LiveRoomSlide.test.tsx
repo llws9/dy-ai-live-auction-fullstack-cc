@@ -9,6 +9,7 @@ const mockShowGlobalToast = jest.fn();
 const mockNavigate = jest.fn();
 const mockWebSocketInstance = {
   on: jest.fn(),
+  off: jest.fn(),
   onNotification: jest.fn(),
   connect: jest.fn().mockResolvedValue(undefined),
   requestSync: jest.fn(),

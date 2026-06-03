@@ -5,18 +5,17 @@ import {
   Calendar,
   Clock,
   Users,
-  ArrowUpRight,
-  MoreVertical
+  ArrowUpRight
 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+import { Badge, type BadgeProps } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useNavigate } from "react-router-dom"
 import { auctionApi, statisticsApi } from "@/shared/api"
 
-const statusMap: Record<number, { label: string; variant: string }> = {
+const statusMap: Record<number, { label: string; variant: BadgeProps["variant"] }> = {
   0: { label: "待开始", variant: "blue" },
   1: { label: "进行中", variant: "success" },
   2: { label: "延时中", variant: "warning" },

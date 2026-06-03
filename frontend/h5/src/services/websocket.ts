@@ -28,6 +28,7 @@ class WebSocketService {
   private ws: WebSocket | null = null;
   private auctionId: number;
   private token: string | null;
+  private liveStreamId: number | null;
   private handlers: Map<string, Set<MessageHandler>> = new Map();
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
@@ -43,9 +44,10 @@ class WebSocketService {
   // 指数退避延迟序列（秒）
   private reconnectDelays = [1, 2, 4, 8, 16, 30, 30, 30, 30, 30];
 
-  constructor(auctionId: number, token?: string) {
+  constructor(auctionId: number, token?: string, liveStreamId?: number) {
     this.auctionId = auctionId;
     this.token = token || null;
+    this.liveStreamId = liveStreamId ?? null;
     this.messageThrottlers = new MessageTypeThrottlers(200);
     this.setupThrottlers();
   }
@@ -90,6 +92,9 @@ class WebSocketService {
       let wsUrl = `${proto}//${window.location.host}/api/v1/ws?auction_id=${this.auctionId}`;
       if (this.token) {
         wsUrl += `&token=${encodeURIComponent(this.token)}`;
+      }
+      if (this.liveStreamId) {
+        wsUrl += `&live_stream_id=${this.liveStreamId}`;
       }
 
       this.ws = new WebSocket(wsUrl);
@@ -179,6 +184,23 @@ class WebSocketService {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
     }
+  }
+
+  /** 发送弹幕 */
+  sendChat(text: string, clientMsgId: string): boolean {
+    if (this.ws?.readyState !== WebSocket.OPEN) return false;
+    if (!this.liveStreamId) return false;
+    const payload = {
+      type: 'chat_send',
+      timestamp: Date.now(),
+      data: {
+        live_stream_id: this.liveStreamId,
+        text,
+        client_msg_id: clientMsgId,
+      },
+    };
+    this.ws.send(JSON.stringify(payload));
+    return true;
   }
 
   // 请求状态同步（重连后使用）

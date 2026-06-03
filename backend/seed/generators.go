@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"product-service/model"
+
+	"github.com/shopspring/decimal"
 )
 
 var (
@@ -107,9 +109,9 @@ func GenerateUsers(cfg *SeedConfig) []model.User {
 			Avatar:   fmt.Sprintf("https://example.com/avatars/admin_%d.jpg", i+1),
 			Email:    &email,
 			Phone:    &phone,
-			Password: "password123_hash", // 简化，实际应用需要hash
+			Password: "password123_hash",   // 简化，实际应用需要hash
 			Role:     int(model.RoleAdmin), // 2
-			Status:   1, // 正常
+			Status:   1,                    // 正常
 		}
 		users = append(users, user)
 	}
@@ -291,13 +293,13 @@ func GenerateAuctionRules(cfg *SeedConfig, products []model.Product) []model.Auc
 		duration := 300 + r.Intn(600)
 
 		auctionRule := model.AuctionRule{
-			ProductID:         product.ID,
-			StartPrice:        startPrice,
-			Increment:         increment,
-			CapPrice:          capPrice,
-			Duration:          duration,
-			DelayDuration:     30,
-			MaxDelayTime:      180,
+			ProductID:          product.ID,
+			StartPrice:         startPrice,
+			Increment:          increment,
+			CapPrice:           capPrice,
+			Duration:           duration,
+			DelayDuration:      30,
+			MaxDelayTime:       180,
 			TriggerDelayBefore: 30,
 		}
 		auctionRules = append(auctionRules, auctionRule)
@@ -331,7 +333,7 @@ func GenerateOrders(cfg *SeedConfig, users []model.User, products []model.Produc
 	for i := 0; i < pendingCount; i++ {
 		buyer := buyers[r.Intn(len(buyers))]
 		product := products[r.Intn(len(products))]
-		finalPrice := float64(50 + r.Intn(500))
+		finalPrice := decimal.NewFromInt(int64(50 + r.Intn(500)))
 
 		order := model.Order{
 			AuctionID:  int64(i + 1), // 假设竞拍ID从1开始
@@ -347,7 +349,7 @@ func GenerateOrders(cfg *SeedConfig, users []model.User, products []model.Produc
 	for i := 0; i < paidCount; i++ {
 		buyer := buyers[r.Intn(len(buyers))]
 		product := products[r.Intn(len(products))]
-		finalPrice := float64(50 + r.Intn(500))
+		finalPrice := decimal.NewFromInt(int64(50 + r.Intn(500)))
 		paidAt := now.Add(-time.Hour * time.Duration(r.Intn(24)))
 
 		order := model.Order{
@@ -365,7 +367,7 @@ func GenerateOrders(cfg *SeedConfig, users []model.User, products []model.Produc
 	for i := 0; i < shippedCount; i++ {
 		buyer := buyers[r.Intn(len(buyers))]
 		product := products[r.Intn(len(products))]
-		finalPrice := float64(50 + r.Intn(500))
+		finalPrice := decimal.NewFromInt(int64(50 + r.Intn(500)))
 		paidAt := now.Add(-time.Hour * 48)
 		shippedAt := now.Add(-time.Hour * time.Duration(r.Intn(24)))
 
@@ -385,7 +387,7 @@ func GenerateOrders(cfg *SeedConfig, users []model.User, products []model.Produc
 	for i := 0; i < completedCount; i++ {
 		buyer := buyers[r.Intn(len(buyers))]
 		product := products[r.Intn(len(products))]
-		finalPrice := float64(50 + r.Intn(500))
+		finalPrice := decimal.NewFromInt(int64(50 + r.Intn(500)))
 		paidAt := now.Add(-time.Hour * 72)
 		shippedAt := now.Add(-time.Hour * 48)
 		completedAt := now.Add(-time.Hour * time.Duration(r.Intn(12)))

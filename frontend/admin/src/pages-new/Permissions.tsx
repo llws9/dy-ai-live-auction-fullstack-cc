@@ -1,5 +1,4 @@
-import React from "react"
-import { Shield, Users, Lock, MoreHorizontal, Plus, ShieldCheck } from "lucide-react"
+import { Shield, Users, MoreHorizontal, Plus } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"

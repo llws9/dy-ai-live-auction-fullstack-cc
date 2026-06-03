@@ -1,7 +1,7 @@
 // 认证API
 
 import { get, post } from './request';
-import { User, ApiResponse } from './types';
+import { User } from './types';
 
 export interface LoginRequest {
   email?: string;

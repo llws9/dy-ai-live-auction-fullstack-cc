@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/shopspring/decimal"
 )
 
 // ConnectionState WebSocket 连接状态
@@ -21,12 +22,12 @@ type ConnectionState struct {
 
 // SyncState 竞拍同步状态
 type SyncState struct {
-	AuctionID    int64     `json:"auction_id"`
-	CurrentPrice float64   `json:"current_price"`
-	WinnerID     int64     `json:"winner_id"`
-	EndTime      time.Time `json:"end_time"`
-	Status       int       `json:"status"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	AuctionID    int64           `json:"auction_id"`
+	CurrentPrice decimal.Decimal `json:"current_price"`
+	WinnerID     int64           `json:"winner_id"`
+	EndTime      time.Time       `json:"end_time"`
+	Status       int             `json:"status"`
+	UpdatedAt    time.Time       `json:"updated_at"`
 }
 
 // StateManager 状态管理器

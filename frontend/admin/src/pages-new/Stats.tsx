@@ -185,7 +185,7 @@ export default function Stats() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis dataKey="month" axisLine={false} tickLine={false} />
                     <YAxis axisLine={false} tickLine={false} />
-                    <Tooltip formatter={(value: number) => `¥${value.toLocaleString()}`} />
+                    <Tooltip formatter={(value) => `¥${Number(value).toLocaleString()}`} />
                     <Area type="monotone" dataKey="value" name="营收金额" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
                   </AreaChart>
                 </ResponsiveContainer>

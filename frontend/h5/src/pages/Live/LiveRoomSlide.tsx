@@ -1,9 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '@/services/api';
 import WebSocketService from '@/services/websocket';
 import { useAuth } from '@/store/authContext';
 import { useToast } from '../../components/Toast';
+import { ChatPanel } from '../../components/LiveChat/ChatPanel';
+import { useLiveChatStore } from '../../store/liveChatStore';
 import BidDock from './BidDock';
 import styles from './Live.module.css';
 
@@ -145,7 +147,7 @@ function auctionResultPathFromNotification(notification: any, fallbackAuctionId:
 const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuctionId, urlAuctionId, active, onBidPendingChange }) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
 
   const [auctionId, setAuctionId] = useState(0);
   const [auction, setAuction] = useState<Auction | null>(null);
@@ -164,6 +166,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const [toast, setToast] = useState('');
   const [now, setNow] = useState(() => Date.now());
   const { showToast: showGlobalToast } = useToast();
+  const wsRef = useRef<WebSocketService | null>(null);
 
   const auctionRules = auction?.rules ?? auction?.rule ?? auction?.auction_rule;
   const currentPrice = toAmount(auction?.current_price);
@@ -333,8 +336,10 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     if (!active) return;
     if (!auctionId) return;
 
-    const ws = new WebSocketService(auctionId, token ?? undefined);
+    const ws = new WebSocketService(auctionId, token ?? undefined, liveStreamId || undefined);
+    wsRef.current = ws;
     const shownNotificationIds = new Set<number | string>();
+    const onChatMessage = (data: any) => useLiveChatStore.getState().receive(data);
 
     // WS 消息归属校验（spec §14.3）：携带 auction_id/live_stream_id 且与当前房间不一致的消息直接丢弃，
     // 不更新价格/排行，避免跨房污染。
@@ -345,13 +350,14 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       return true;
     };
 
+    ws.on('chat_message', onChatMessage);
     ws.on('rank_update', (data) => {
       if (!belongsToThisRoom(data)) return;
       setRanking(normalizeRanking(extractList(data)));
     });
     ws.on('bid_placed', (data) => {
       if (!belongsToThisRoom(data)) return;
-      const nextPrice = Number(data?.current_price ?? data?.amount ?? 0);
+      const nextPrice = toAmount(data?.current_price ?? data?.amount);
       if (nextPrice > 0) {
         setAuction((previous) => previous ? { ...previous, current_price: nextPrice } : previous);
       }
@@ -364,7 +370,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       if (data?.current_price || data?.status || data?.end_time) {
         setAuction((previous) => previous ? {
           ...previous,
-          current_price: data.current_price ?? previous.current_price,
+          current_price: data.current_price !== undefined ? toAmount(data.current_price, toAmount(previous.current_price)) : previous.current_price,
           status: data.status ?? previous.status,
           end_time: data.end_time ?? previous.end_time,
         } : previous);
@@ -375,7 +381,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     });
     ws.on('auction_ended', (data) => {
       if (!belongsToThisRoom(data)) return;
-      setAuction((previous) => previous ? { ...previous, status: 3, current_price: data?.final_price ?? previous.current_price } : previous);
+      setAuction((previous) => previous ? { ...previous, status: 3, current_price: toAmount(data?.final_price, toAmount(previous.current_price)) } : previous);
     });
     const unsubscribeNotification = ws.onNotification((notification) => {
       const id = notification.id;
@@ -411,7 +417,10 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
 
     return () => {
       unsubscribeNotification();
+      ws.off('chat_message', onChatMessage);
       ws.disconnect();
+      wsRef.current = null;
+      useLiveChatStore.getState().reset();
       setConnected(false);
     };
   }, [auctionId, active, liveStreamId, normalizeRanking, token, showGlobalToast, navigate]);
@@ -640,7 +649,10 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
 
         <section className={styles.chatBlock}>
           <h2>直播互动</h2>
-          <p>聊天协议尚未开放，当前仅保留直播间互动入口。</p>
+          <ChatPanel
+            currentUserId={user?.id ?? 0}
+            onSend={(text, clientMsgId) => wsRef.current?.sendChat(text, clientMsgId) ?? false}
+          />
         </section>
       </BidDock>
 

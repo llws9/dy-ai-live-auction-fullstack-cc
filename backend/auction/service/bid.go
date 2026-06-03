@@ -503,7 +503,7 @@ func (s *BidService) broadcastRanking(ctx context.Context, auctionID int64) {
 		rankItems[i] = websocket.RankItem{
 			Rank:   i + 1,
 			UserID: bid.UserID,
-			Amount: decimalToFloat(bid.Amount),
+			Amount: bid.Amount,
 		}
 		if user, ok := userMap[bid.UserID]; ok && user != nil {
 			rankItems[i].UserName = user.Name
