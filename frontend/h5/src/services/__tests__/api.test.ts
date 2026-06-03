@@ -28,7 +28,7 @@ describe('api service auth header', () => {
     await userApi.getProfile();
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/user/profile',
+      '/api/v1/users/me',
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: 'Bearer auth-token-1',

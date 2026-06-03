@@ -157,7 +157,11 @@ async function request<T>(
         throw error;
       }
 
-      return data.data;
+      if (Object.prototype.hasOwnProperty.call(data, 'data')) {
+        return data.data;
+      }
+
+      return data as unknown as T;
     }
 
     return response as any;

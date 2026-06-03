@@ -1,11 +1,17 @@
 import React from "react"
-import { ArrowLeft, Save, Plus, X } from "lucide-react"
+import { ArrowLeft, Save, Plus, X, Sparkles } from "lucide-react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { productApi } from "@/shared/api"
+import {
+  buildCopywritingKeywords,
+  formatAiDescription,
+  getCopywritingErrorMessage,
+  getValidCopywritingImages,
+} from "./goodsEditAi"
 
 export default function GoodsEdit() {
   const navigate = useNavigate()
@@ -15,6 +21,12 @@ export default function GoodsEdit() {
 
   const [loading, setLoading] = React.useState(false)
   const [saving, setSaving] = React.useState(false)
+  const [aiGenerating, setAiGenerating] = React.useState(false)
+  const [aiDraft, setAiDraft] = React.useState<{
+    sellingPoints: string[]
+    suggestedStartPrice: string
+    appliedAt?: string
+  } | null>(null)
   const [formData, setFormData] = React.useState({
     name: '',
     category: '艺术收藏',
@@ -69,6 +81,52 @@ export default function GoodsEdit() {
       ...prev,
       images: prev.images.filter((_, i) => i !== index)
     }))
+  }
+
+  // AI 一键文案只预填当前表单，不自动保存或发布。
+  const handleGenerateCopywriting = async () => {
+    const hasInvalidImage = formData.images.some((image) => {
+      const value = image.trim()
+      return value !== '' && !value.startsWith('http://') && !value.startsWith('https://')
+    })
+    if (hasInvalidImage) {
+      alert('图片 URL 必须以 http:// 或 https:// 开头')
+      return
+    }
+
+    const images = getValidCopywritingImages(formData.images)
+    if (images.length === 0) {
+      alert('请先添加至少一张商品图片')
+      return
+    }
+
+    if (formData.images.length > images.length) {
+      alert('最多使用前 6 张合法图片生成文案')
+    }
+
+    setAiGenerating(true)
+    try {
+      const draft = await productApi.generateCopywriting({
+        images,
+        keywords: buildCopywritingKeywords(formData),
+      })
+
+      setFormData(prev => ({
+        ...prev,
+        name: draft.name,
+        description: formatAiDescription(draft.description, draft.selling_points),
+      }))
+      setAiDraft({
+        sellingPoints: draft.selling_points,
+        suggestedStartPrice: draft.suggested_start_price,
+        appliedAt: new Date().toISOString(),
+      })
+    } catch (e: any) {
+      console.error('AI 文案生成失败:', e)
+      alert(getCopywritingErrorMessage(e))
+    } finally {
+      setAiGenerating(false)
+    }
   }
 
   // 提交表单
@@ -134,8 +192,21 @@ export default function GoodsEdit() {
         <div className="lg:col-span-2 space-y-6">
           <Card className="border-slate-200">
             <CardHeader>
-              <CardTitle className="text-lg">基本信息</CardTitle>
-              <CardDescription>设置商品的名称、类别和描述</CardDescription>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="text-lg">基本信息</CardTitle>
+                  <CardDescription>设置商品的名称、类别和描述</CardDescription>
+                </div>
+                <Button
+                  type="button"
+                  className="bg-amber-500 hover:bg-amber-600 text-[#0f172a] font-bold"
+                  disabled={saving || aiGenerating}
+                  onClick={handleGenerateCopywriting}
+                >
+                  <Sparkles className="mr-2 w-4 h-4" />
+                  {aiGenerating ? 'AI 生成中...' : 'AI 一键文案'}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -221,6 +292,7 @@ export default function GoodsEdit() {
                   />
                   <Button
                     type="button"
+                    aria-label="添加图片 URL"
                     variant="outline"
                     className="border-slate-200"
                     onClick={addImage}
@@ -231,6 +303,36 @@ export default function GoodsEdit() {
               </div>
             </CardContent>
           </Card>
+
+          {aiDraft && (
+            <Card className="border-amber-200 bg-amber-50">
+              <CardHeader>
+                <CardTitle className="text-lg text-amber-900">AI 建议</CardTitle>
+                <CardDescription className="text-amber-800">
+                  AI 仅生成草稿，请确认后再保存或发布。
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {aiDraft.sellingPoints.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-amber-900">核心卖点</div>
+                    <div className="flex flex-wrap gap-2">
+                      {aiDraft.sellingPoints.map((point) => (
+                        <Badge key={point} variant="secondary" className="bg-white text-amber-900 border border-amber-200">
+                          {point}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {aiDraft.suggestedStartPrice && (
+                  <div className="text-sm text-amber-900">
+                    AI 建议起拍价：¥{aiDraft.suggestedStartPrice}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="border-slate-200">
             <CardHeader>

@@ -16,6 +16,19 @@ export const authApi = {
   getCurrentUser: () => get<any>('/users/me'),
 };
 
+export interface CopywritingGenerateData {
+  images: string[];
+  category_id?: number;
+  keywords?: string;
+}
+
+export interface CopywritingDraft {
+  name: string;
+  description: string;
+  selling_points: string[];
+  suggested_start_price: string;
+}
+
 // 商品API - 增加 get 方法
 export const productApi = {
   list: (params?: { status?: number; page?: number; page_size?: number }) => {
@@ -27,6 +40,9 @@ export const productApi = {
 
   create: (data: { name: string; description: string; images: string[]; category?: string }) =>
     post<any>('/products', data),
+
+  generateCopywriting: (data: CopywritingGenerateData) =>
+    post<CopywritingDraft>('/products/ai/copywriting', data, { timeout: 70000 }),
 
   update: (id: number, data: Partial<{ name: string; description: string; images: string[]; category?: string }>) =>
     put<any>(`/products/${id}`, data),
