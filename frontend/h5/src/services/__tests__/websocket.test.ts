@@ -152,6 +152,39 @@ describe('WebSocketService', () => {
     expect(genericNotificationHandler).toHaveBeenCalledTimes(1);
     expect(genericNotificationHandler).toHaveBeenCalledWith(notification);
   });
+
+  it('downgrades sync state cache miss errors without dispatching generic error handlers', async () => {
+    const errorHandler = jest.fn();
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    service.on('error', errorHandler);
+
+    const connectPromise = service.connect();
+    jest.advanceTimersByTime(20);
+    await connectPromise;
+
+    MockWebSocket.instances[0].onmessage?.({
+      data: JSON.stringify({
+        type: 'error',
+        timestamp: Date.now(),
+        data: { code: 500, message: 'Failed to sync state' },
+      }),
+    });
+
+    expect(errorHandler).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith('WebSocket sync state unavailable; falling back to REST state.');
+
+    MockWebSocket.instances[0].onmessage?.({
+      data: JSON.stringify({
+        type: 'error',
+        timestamp: Date.now(),
+        data: { code: 40101, message: 'not authenticated' },
+      }),
+    });
+
+    expect(errorHandler).toHaveBeenCalledTimes(1);
+    expect(errorHandler).toHaveBeenCalledWith({ code: 40101, message: 'not authenticated' });
+    warnSpy.mockRestore();
+  });
 });
 
 // Helper for act

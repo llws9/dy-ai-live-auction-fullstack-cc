@@ -100,6 +100,11 @@ func main() {
 	// 初始化 Service 层
 	auctionService := service.NewAuctionService(auctionDAO)
 	bidService := service.NewBidService(auctionDAO, bidDAO, ruleDAO, userDAO)
+	if stateManager := wsManager.GetStateManager(); stateManager != nil {
+		stateManager.SetSyncStateLoader(service.NewAuctionSyncStateLoader(auctionDAO))
+		auctionService.SetStateManager(stateManager)
+		bidService.SetStateManager(stateManager)
+	}
 	notificationService := service.NewNotificationService(notificationDAO, dao.GetRedis())
 	batchNotificationService := service.NewBatchNotificationService(userLiveStreamFollowDAO, notificationDAO, notificationService)
 	followService := service.NewFollowService(userLiveStreamFollowDAO)

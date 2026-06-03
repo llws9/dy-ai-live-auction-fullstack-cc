@@ -214,6 +214,11 @@ class WebSocketService {
   private handleMessage(message: Message): void {
     this.lastMessage = message;
 
+    if (message.type === 'error' && this.isRecoverableSyncError(message.data)) {
+      console.warn('WebSocket sync state unavailable; falling back to REST state.');
+      return;
+    }
+
     // 特殊处理通知消息
     if (message.type === 'notification') {
       const notification = message.data as NotificationMessage;
@@ -237,6 +242,10 @@ class WebSocketService {
         handlers.forEach((handler) => handler(message.data || message));
       }
     }
+  }
+
+  private isRecoverableSyncError(data: any): boolean {
+    return data?.code === 500 && data?.message === 'Failed to sync state';
   }
 
   // 获取最后收到的消息

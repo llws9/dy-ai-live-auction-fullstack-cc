@@ -8,6 +8,7 @@ import (
 
 	"auction-service/dao"
 	"auction-service/model"
+	"auction-service/websocket"
 
 	"github.com/shopspring/decimal"
 )
@@ -17,6 +18,7 @@ type AuctionService struct {
 	auctionDAO         *dao.AuctionDAO
 	bidDAO             *dao.BidDAO
 	notificationSender NotificationSender
+	stateManager       *websocket.StateManager
 }
 
 // NewAuctionService 创建竞拍服务
@@ -34,6 +36,11 @@ func (s *AuctionService) SetBidDAO(bidDAO *dao.BidDAO) {
 // SetNotificationSender 设置通知发送服务
 func (s *AuctionService) SetNotificationSender(sender NotificationSender) {
 	s.notificationSender = sender
+}
+
+// SetStateManager 设置 WebSocket 同步状态管理器。
+func (s *AuctionService) SetStateManager(stateManager *websocket.StateManager) {
+	s.stateManager = stateManager
 }
 
 // SetSkyLampDAO 设置点天灯DAO（用于更新统计数据）
@@ -92,7 +99,11 @@ func (s *AuctionService) CancelAuction(ctx context.Context, id int64) error {
 		return err
 	}
 
-	return s.auctionDAO.Update(ctx, auction)
+	if err := s.auctionDAO.Update(ctx, auction); err != nil {
+		return err
+	}
+	s.saveSyncState(ctx, auction)
+	return nil
 }
 
 // StartAuction 开始竞拍
@@ -111,7 +122,11 @@ func (s *AuctionService) StartAuction(ctx context.Context, id int64) error {
 		return err
 	}
 
-	return s.auctionDAO.Update(ctx, auction)
+	if err := s.auctionDAO.Update(ctx, auction); err != nil {
+		return err
+	}
+	s.saveSyncState(ctx, auction)
+	return nil
 }
 
 // EndAuction 结束竞拍
@@ -129,11 +144,16 @@ func (s *AuctionService) EndAuction(ctx context.Context, id int64) error {
 	if err := s.auctionDAO.Update(ctx, auction); err != nil {
 		return err
 	}
+	s.saveSyncState(ctx, auction)
 
 	// 发送竞拍结果通知
 	s.sendAuctionResultNotifications(ctx, auction)
 
 	return nil
+}
+
+func (s *AuctionService) saveSyncState(ctx context.Context, auction *model.Auction) {
+	_ = SaveAuctionSyncState(ctx, s.stateManager, auction)
 }
 
 // sendAuctionResultNotifications 发送竞拍结果通知

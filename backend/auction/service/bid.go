@@ -28,6 +28,7 @@ type BidService struct {
 	ruleDAO            *dao.AuctionRuleDAO
 	userDAO            *dao.UserDAO
 	hub                *websocket.Hub
+	stateManager       *websocket.StateManager
 	rankThrottle       *RankingThrottle
 	notificationSender NotificationSender      // 通知发送接口
 	metrics            *metrics.AuctionMetrics // 新增：指标收集器
@@ -58,6 +59,11 @@ func (s *BidService) SetMetrics(m *metrics.AuctionMetrics) {
 // SetHub 设置 WebSocket Hub
 func (s *BidService) SetHub(hub *websocket.Hub) {
 	s.hub = hub
+}
+
+// SetStateManager 设置 WebSocket 同步状态管理器。
+func (s *BidService) SetStateManager(stateManager *websocket.StateManager) {
+	s.stateManager = stateManager
 }
 
 // SetNotificationSender 设置通知发送服务
@@ -268,6 +274,8 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 		return nil, fmt.Errorf("出价失败（重试%d次后）: %w", maxRetries, lastErr)
 	}
 
+	s.refreshSyncState(ctx, req.AuctionID)
+
 	// 11.1 发送出价超越通知
 	if s.notificationSender != nil && previousWinnerID != nil && *previousWinnerID > 0 && *previousWinnerID != req.UserID {
 		notifyUserID := *previousWinnerID
@@ -390,6 +398,7 @@ func (s *BidService) tryExtendAuction(auctionID, productID int64, triggerDelayBe
 	if s.metrics != nil {
 		s.metrics.RecordDelayTriggered(auctionID)
 	}
+	s.refreshSyncState(ctx, auctionID)
 }
 
 // handleCapPriceBid 处理封顶价出价（使用事务保证原子性）
@@ -437,7 +446,20 @@ func (s *BidService) handleCapPriceBid(ctx context.Context, auction *model.Aucti
 		return nil, txErr
 	}
 
+	s.refreshSyncState(ctx, req.AuctionID)
+
 	return result, nil
+}
+
+func (s *BidService) refreshSyncState(ctx context.Context, auctionID int64) {
+	if s.stateManager == nil {
+		return
+	}
+	auction, err := s.auctionDAO.GetByID(ctx, auctionID)
+	if err != nil {
+		return
+	}
+	_ = SaveAuctionSyncState(ctx, s.stateManager, auction)
 }
 
 func decimalToFloat(v decimal.Decimal) float64 {

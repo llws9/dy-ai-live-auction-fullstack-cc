@@ -32,7 +32,21 @@ type SyncState struct {
 
 // StateManager 状态管理器
 type StateManager struct {
-	redis *redis.Client
+	redis      *redis.Client
+	syncLoader SyncStateLoader
+}
+
+// SyncStateLoader provides an authoritative fallback when Redis has no cached sync state.
+type SyncStateLoader interface {
+	LoadSyncState(ctx context.Context, auctionID int64) (*SyncState, error)
+}
+
+// SyncStateLoaderFunc adapts a function to SyncStateLoader.
+type SyncStateLoaderFunc func(ctx context.Context, auctionID int64) (*SyncState, error)
+
+// LoadSyncState implements SyncStateLoader.
+func (f SyncStateLoaderFunc) LoadSyncState(ctx context.Context, auctionID int64) (*SyncState, error) {
+	return f(ctx, auctionID)
 }
 
 // NewStateManager 创建状态管理器
@@ -40,6 +54,11 @@ func NewStateManager(redisClient *redis.Client) *StateManager {
 	return &StateManager{
 		redis: redisClient,
 	}
+}
+
+// SetSyncStateLoader sets the DB-backed fallback used when Redis has no sync state.
+func (m *StateManager) SetSyncStateLoader(loader SyncStateLoader) {
+	m.syncLoader = loader
 }
 
 // SaveConnectionState 保存连接状态
@@ -89,6 +108,16 @@ func (m *StateManager) GetSyncState(ctx context.Context, auctionID int64) (*Sync
 	key := fmt.Sprintf("sync:state:%d", auctionID)
 	data, err := m.redis.Get(ctx, key).Result()
 	if err != nil {
+		if err == redis.Nil && m.syncLoader != nil {
+			state, loadErr := m.syncLoader.LoadSyncState(ctx, auctionID)
+			if loadErr != nil {
+				return nil, loadErr
+			}
+			if state != nil {
+				_ = m.SaveSyncState(ctx, state)
+			}
+			return state, nil
+		}
 		return nil, err
 	}
 
