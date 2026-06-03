@@ -17,11 +17,14 @@ func TestLoad_LLM_DefaultsAndEnvOverride(t *testing.T) {
 	if cfg.LLM.Provider != "doubao" {
 		t.Fatalf("default provider want=doubao got=%q", cfg.LLM.Provider)
 	}
-	if cfg.LLM.TimeoutMs <= 0 {
-		t.Fatalf("default TimeoutMs must be >0, got %d", cfg.LLM.TimeoutMs)
+	if cfg.LLM.TimeoutMs != 30000 {
+		t.Fatalf("default TimeoutMs want=30000 got=%d", cfg.LLM.TimeoutMs)
 	}
 	if !strings.HasPrefix(cfg.LLM.Doubao.BaseURL, "https://ark.cn-beijing.volces.com") {
 		t.Fatalf("default BaseURL unexpected: %q", cfg.LLM.Doubao.BaseURL)
+	}
+	if cfg.LLM.Doubao.Model != "doubao-seed-1-6-vision-250815" {
+		t.Fatalf("default Model unexpected: %q", cfg.LLM.Doubao.Model)
 	}
 }
 
@@ -70,13 +73,13 @@ services:
 	if cfg.LLM.Provider != "doubao" {
 		t.Fatalf("default provider want=doubao got=%q", cfg.LLM.Provider)
 	}
-	if cfg.LLM.TimeoutMs != 8000 {
-		t.Fatalf("default timeout_ms want=8000 got=%d", cfg.LLM.TimeoutMs)
+	if cfg.LLM.TimeoutMs != 30000 {
+		t.Fatalf("default timeout_ms want=30000 got=%d", cfg.LLM.TimeoutMs)
 	}
 	if cfg.LLM.Doubao.BaseURL != "https://ark.cn-beijing.volces.com/api/v3" {
 		t.Fatalf("default base_url unexpected: %q", cfg.LLM.Doubao.BaseURL)
 	}
-	if cfg.LLM.Doubao.Model != "doubao-1.5-vision-pro" {
+	if cfg.LLM.Doubao.Model != "doubao-seed-1-6-vision-250815" {
 		t.Fatalf("default model unexpected: %q", cfg.LLM.Doubao.Model)
 	}
 	if cfg.LLM.Doubao.APIKey != "missing-llm-env-key" {

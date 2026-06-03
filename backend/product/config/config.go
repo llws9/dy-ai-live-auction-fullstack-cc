@@ -12,9 +12,9 @@ import (
 
 const (
 	defaultLLMProvider  = "doubao"
-	defaultLLMTimeoutMs = 8000
+	defaultLLMTimeoutMs = 30000
 	defaultArkBaseURL   = "https://ark.cn-beijing.volces.com/api/v3"
-	defaultArkModel     = "doubao-1.5-vision-pro"
+	defaultArkModel     = "doubao-seed-1-6-vision-250815"
 )
 
 // Config Product 服务配置
