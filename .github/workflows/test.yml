@@ -24,7 +24,7 @@ jobs:
         working-directory: frontend/h5
 
       - name: Upload H5 coverage
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: h5-coverage
           path: frontend/h5/coverage
@@ -38,7 +38,7 @@ jobs:
         working-directory: frontend/admin
 
       - name: Upload Admin coverage
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: admin-coverage
           path: frontend/admin/coverage
@@ -65,7 +65,7 @@ jobs:
         working-directory: frontend/h5
 
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright-report
