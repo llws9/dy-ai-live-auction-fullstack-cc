@@ -272,6 +272,28 @@ describe('LiveRoomSlide', () => {
     await waitFor(() => expect(screen.getByTestId('location-search')).not.toHaveTextContent('sheet'));
   });
 
+  it('disables bid actions when an active-status auction has reached end_time', async () => {
+    mockedAuctionApi.get.mockResolvedValue({
+      id: 5,
+      product_id: 7,
+      live_stream_id: 3,
+      status: 1,
+      current_price: 1200,
+      end_time: new Date(Date.now() - 1000).toISOString(),
+    });
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('已结束')).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: '已结束' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: '出价' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('当前最高价 ¥1,200').closest('div')!);
+    expect(await screen.findByText('00:00')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '竞拍已结束' })).toBeDisabled();
+    expect(mockedBidApi.placeBid).not.toHaveBeenCalled();
+  });
+
   it('repairs mojibake product and room copy in collapsed and expanded states', async () => {
     mockedProductApi.get.mockResolvedValue({
       id: 7,

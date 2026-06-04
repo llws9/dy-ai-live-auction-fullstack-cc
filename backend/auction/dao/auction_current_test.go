@@ -32,9 +32,9 @@ func TestGetCurrentByLiveStreamIDs(t *testing.T) {
 	ls3 := int64(3)
 	now := time.Now()
 	rows := []model.Auction{
-		{ID: 10, ProductID: 100, LiveStreamID: &ls3, Status: model.AuctionStatusOngoing, StartTime: now.Add(-2 * time.Hour)},
-		{ID: 11, ProductID: 101, LiveStreamID: &ls3, Status: model.AuctionStatusDelayed, StartTime: now.Add(-1 * time.Hour)},
-		{ID: 12, ProductID: 102, LiveStreamID: &ls3, Status: model.AuctionStatusEnded, StartTime: now.Add(-1 * time.Hour)},
+		{ID: 10, ProductID: 100, LiveStreamID: &ls3, Status: model.AuctionStatusOngoing, StartTime: now.Add(-2 * time.Hour), EndTime: now.Add(time.Hour)},
+		{ID: 11, ProductID: 101, LiveStreamID: &ls3, Status: model.AuctionStatusDelayed, StartTime: now.Add(-1 * time.Hour), EndTime: now.Add(time.Hour)},
+		{ID: 12, ProductID: 102, LiveStreamID: &ls3, Status: model.AuctionStatusEnded, StartTime: now.Add(-1 * time.Hour), EndTime: now.Add(time.Hour)},
 	}
 	for i := range rows {
 		require.NoError(t, db.Create(&rows[i]).Error)
@@ -51,4 +51,27 @@ func TestGetCurrentByLiveStreamIDs(t *testing.T) {
 	require.False(t, ok4, "live_stream_id=4 无竞拍，不应出现在结果中")
 
 	require.NotEqual(t, int64(12), cur.ID, "ended 的 id=12 不应被选中")
+}
+
+func TestGetCurrentByLiveStreamIDsSkipsExpiredActiveAuction(t *testing.T) {
+	db := newCurrentTestDB(t)
+	dao := NewAuctionDAO(db)
+	ctx := context.Background()
+
+	ls3 := int64(3)
+	now := time.Now()
+	rows := []model.Auction{
+		{ID: 20, ProductID: 200, LiveStreamID: &ls3, Status: model.AuctionStatusOngoing, StartTime: now.Add(-2 * time.Hour), EndTime: now.Add(-time.Minute)},
+		{ID: 21, ProductID: 201, LiveStreamID: &ls3, Status: model.AuctionStatusOngoing, StartTime: now.Add(-3 * time.Hour), EndTime: now.Add(time.Hour)},
+	}
+	for i := range rows {
+		require.NoError(t, db.Create(&rows[i]).Error)
+	}
+
+	got, err := dao.GetCurrentByLiveStreamIDs(ctx, []int64{3})
+	require.NoError(t, err)
+
+	cur, ok := got[3]
+	require.True(t, ok, "应回退到尚未过 end_time 的竞拍")
+	require.Equal(t, int64(21), cur.ID)
 }

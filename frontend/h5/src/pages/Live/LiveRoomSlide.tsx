@@ -119,6 +119,11 @@ const getStatusText = (status?: number) => {
   return '即将开始';
 };
 
+const getEffectiveStatusText = (status: number | undefined, expired: boolean) => {
+  if (expired && (status === 1 || status === 2)) return '已结束';
+  return getStatusText(status);
+};
+
 function toastPayloadFromNotification(notification: any) {
   switch (notification.type) {
     case 'bid_outbid':
@@ -182,7 +187,12 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const increment = toAmount(auctionRules?.increment ?? product?.rules?.increment, 100);
   const startPrice = toAmount(auctionRules?.start_price ?? product?.rules?.start_price ?? auction?.start_price);
   const minBid = Math.max(currentPrice, startPrice) + increment;
-  const isActive = auction?.status === 1 || auction?.status === 2;
+  const timeLeft = useMemo(() => {
+    if (!auction?.end_time) return 0;
+    return Math.max(0, Math.floor((new Date(auction.end_time).getTime() - now) / 1000));
+  }, [auction?.end_time, now]);
+  const hasReachedEndTime = Boolean(auction?.end_time && timeLeft <= 0);
+  const isActive = (auction?.status === 1 || auction?.status === 2) && !hasReachedEndTime;
   const effectiveLiveStreamId = liveStreamId || auction?.live_stream_id || liveStream?.id || 0;
   const { items: fixedPriceItems, socket: fixedPriceSocket } = useFixedPriceItems(effectiveLiveStreamId);
   const productImage = getFirstImage(product || auction?.product);
@@ -226,11 +236,6 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       cancelled = true;
     };
   }, [fixedPriceItemIds, isAuthenticated]);
-
-  const timeLeft = useMemo(() => {
-    if (!auction?.end_time) return 0;
-    return Math.max(0, Math.floor((new Date(auction.end_time).getTime() - now) / 1000));
-  }, [auction?.end_time, now]);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -480,6 +485,10 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       showToast('请先登录后出价');
       return;
     }
+    if (!isActive) {
+      showToast('当前竞拍不可出价');
+      return;
+    }
 
     const amount = Number(bidAmount);
     if (!Number.isFinite(amount) || amount < minBid) {
@@ -604,7 +613,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           </div>
           <div className={styles.statusPill}>
             <span className={isActive ? styles.liveDot : styles.statusDot} />
-            {getStatusText(auction.status)}
+            {getEffectiveStatusText(auction.status, hasReachedEndTime)}
           </div>
         </header>
       </div>
@@ -632,6 +641,8 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         currentPrice={currentPrice || startPrice}
         sheet={sheet}
         isAuthenticated={isAuthenticated}
+        bidDisabled={!isActive}
+        bidDisabledText={hasReachedEndTime ? '已结束' : '不可出价'}
         onOpen={openSheet}
         onClose={closeSheet}
         onRequireLogin={() => showToast('请先登录后出价')}
@@ -709,7 +720,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
             ))}
           </div>
           <button className={styles.bidButton} disabled={!isActive || bidding} onClick={handleBid} type="button">
-            {bidding ? '出价中...' : '立即出价'}
+            {bidding ? '出价中...' : isActive ? '立即出价' : '竞拍已结束'}
           </button>
           {!isAuthenticated && <p className={styles.authHint}>请先登录后出价</p>}
           {!isActive && <p className={styles.authHint}>当前竞拍不可出价</p>}

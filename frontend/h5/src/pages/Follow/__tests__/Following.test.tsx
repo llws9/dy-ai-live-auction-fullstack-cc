@@ -58,8 +58,8 @@ describe('Following migration', () => {
           title: '海派古董夜拍',
           description: '精选古董拍卖',
           creator_name: '陈老师',
-          status: 'inactive',
-          current_auctions_count: 0,
+          status: 'active',
+          current_auctions_count: 1,
           followers_count: 64,
         },
       ],
@@ -111,7 +111,7 @@ describe('Following migration', () => {
           live_stream_name: '主播直播间',
           status: 1,
           viewer_count: 0,
-          auction_count: 0,
+          auction_count: 1,
         },
       ],
     });
@@ -130,5 +130,29 @@ describe('Following migration', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '进入直播间 主播直播间' }));
     expect(mockNavigate).toHaveBeenCalledWith('/live?id=880301');
+  });
+
+  it('marks followed live streams with no active auctions as ended and disables entering', async () => {
+    mockedFollowApi.getFollowedLiveStreams.mockResolvedValueOnce({
+      items: [
+        {
+          live_stream_id: 880301,
+          live_stream_name: '主播直播间',
+          status: 1,
+          viewer_count: 0,
+          auction_count: 0,
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <FollowPage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('主播直播间')).toBeInTheDocument();
+    expect(screen.getByText('已结束')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '进入直播间 主播直播间' })).toBeDisabled();
   });
 });
