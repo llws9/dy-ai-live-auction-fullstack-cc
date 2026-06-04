@@ -118,7 +118,7 @@ async function mockFixedPriceApis(page: Page, purchaseMode: 'success' | 'insuffi
       return;
     }
 
-    if (path === '/user/profile') {
+    if (path === '/users/me') {
       await route.fulfill(json(success(mockUser)));
       return;
     }

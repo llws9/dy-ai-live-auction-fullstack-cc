@@ -123,7 +123,7 @@ export async function mockNewUiApis(page: Page) {
       return;
     }
 
-    if (path === '/user/profile') {
+    if (path === '/users/me') {
       await route.fulfill(json(success(mockUser)));
       return;
     }

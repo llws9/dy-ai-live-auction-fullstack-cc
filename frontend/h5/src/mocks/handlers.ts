@@ -141,7 +141,7 @@ export const handlers = [
   }),
 
   // 获取用户信息
-  http.get('/api/v1/user/profile', async () => {
+  http.get('/api/v1/users/me', async () => {
     await delay(50);
     return HttpResponse.json({
       id: 1,
