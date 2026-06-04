@@ -80,16 +80,21 @@ type BidRange struct {
 
 // GetOverview 获取统计总览
 func (d *StatisticsDAO) GetOverview(ctx context.Context) (*OverviewStatistics, error) {
+	return d.GetOverviewScoped(ctx, nil)
+}
+
+// GetOverviewScoped 获取统计总览；sellerID 非空时仅统计该商家的订单数据。
+func (d *StatisticsDAO) GetOverviewScoped(ctx context.Context, sellerID *int64) (*OverviewStatistics, error) {
 	var overview OverviewStatistics
 
 	// 总订单数作为竞拍场次代理
 	var totalOrders int64
-	d.db.WithContext(ctx).Model(&model.Order{}).Count(&totalOrders)
+	d.scopedOrderQuery(ctx, sellerID).Count(&totalOrders)
 	overview.TotalAuctions = totalOrders
 
 	// 成功订单数
 	var successOrders int64
-	d.db.WithContext(ctx).Model(&model.Order{}).
+	d.scopedOrderQuery(ctx, sellerID).
 		Where("status >= ?", model.OrderStatusPaid).
 		Count(&successOrders)
 
@@ -100,7 +105,7 @@ func (d *StatisticsDAO) GetOverview(ctx context.Context) (*OverviewStatistics, e
 
 	// 总成交额
 	var totalRevenue float64
-	d.db.WithContext(ctx).Model(&model.Order{}).
+	d.scopedOrderQuery(ctx, sellerID).
 		Where("status >= ?", model.OrderStatusPaid).
 		Select("COALESCE(SUM(final_price), 0)").
 		Scan(&totalRevenue)
@@ -108,13 +113,19 @@ func (d *StatisticsDAO) GetOverview(ctx context.Context) (*OverviewStatistics, e
 
 	// 总用户数
 	var totalUsers int64
-	d.db.WithContext(ctx).Model(&model.User{}).Count(&totalUsers)
+	if sellerID != nil {
+		d.scopedOrderQuery(ctx, sellerID).
+			Distinct("winner_id").
+			Count(&totalUsers)
+	} else {
+		d.db.WithContext(ctx).Model(&model.User{}).Count(&totalUsers)
+	}
 	overview.TotalUsers = totalUsers
 
 	// 活跃用户数（近7天有订单）
 	var activeUsers int64
 	sevenDaysAgo := time.Now().AddDate(0, 0, -7)
-	d.db.WithContext(ctx).Model(&model.Order{}).
+	d.scopedOrderQuery(ctx, sellerID).
 		Where("created_at >= ?", sevenDaysAgo).
 		Distinct("winner_id").
 		Count(&activeUsers)
@@ -125,9 +136,14 @@ func (d *StatisticsDAO) GetOverview(ctx context.Context) (*OverviewStatistics, e
 
 // GetAuctionStatistics 获取竞拍统计
 func (d *StatisticsDAO) GetAuctionStatistics(ctx context.Context, startDate, endDate *time.Time) (*AuctionStatistics, error) {
+	return d.GetAuctionStatisticsScoped(ctx, startDate, endDate, nil)
+}
+
+// GetAuctionStatisticsScoped 获取竞拍统计；sellerID 非空时按商家订单范围统计。
+func (d *StatisticsDAO) GetAuctionStatisticsScoped(ctx context.Context, startDate, endDate *time.Time, sellerID *int64) (*AuctionStatistics, error) {
 	var stats AuctionStatistics
 
-	query := d.db.WithContext(ctx).Model(&model.Order{})
+	query := d.scopedOrderQuery(ctx, sellerID)
 	if startDate != nil {
 		query = query.Where("created_at >= ?", startDate)
 	}
@@ -159,13 +175,25 @@ func (d *StatisticsDAO) GetAuctionStatistics(ctx context.Context, startDate, end
 
 // GetRevenueStatistics 获取收入统计
 func (d *StatisticsDAO) GetRevenueStatistics(ctx context.Context, startDate, endDate *time.Time, category string) (*RevenueStatistics, error) {
+	return d.GetRevenueStatisticsScoped(ctx, startDate, endDate, category, nil)
+}
+
+// GetRevenueStatisticsScoped 获取收入统计；sellerID 非空时仅统计该商家的订单收入。
+func (d *StatisticsDAO) GetRevenueStatisticsScoped(ctx context.Context, startDate, endDate *time.Time, category string, sellerID *int64) (*RevenueStatistics, error) {
 	var stats RevenueStatistics
 
 	// 总成交额
 	var totalRevenue float64
-	d.db.WithContext(ctx).Model(&model.Order{}).
+	totalQuery := d.scopedOrderQuery(ctx, sellerID).
 		Where("status >= ?", model.OrderStatusPaid).
-		Select("COALESCE(SUM(final_price), 0)").
+		Select("COALESCE(SUM(final_price), 0)")
+	if startDate != nil {
+		totalQuery = totalQuery.Where("created_at >= ?", startDate)
+	}
+	if endDate != nil {
+		totalQuery = totalQuery.Where("created_at <= ?", endDate)
+	}
+	totalQuery.
 		Scan(&totalRevenue)
 	stats.TotalRevenue = totalRevenue
 
@@ -175,7 +203,7 @@ func (d *StatisticsDAO) GetRevenueStatistics(ctx context.Context, startDate, end
 		date := time.Now().AddDate(0, 0, -i)
 		dateStr := date.Format("2006-01-02")
 		var dayRevenue float64
-		d.db.WithContext(ctx).Model(&model.Order{}).
+		d.scopedOrderQuery(ctx, sellerID).
 			Where("status >= ? AND DATE(created_at) = ?", model.OrderStatusPaid, dateStr).
 			Select("COALESCE(SUM(final_price), 0)").
 			Scan(&dayRevenue)
@@ -189,6 +217,14 @@ func (d *StatisticsDAO) GetRevenueStatistics(ctx context.Context, startDate, end
 	stats.CategoryDistribution = []CategoryRevenue{}
 
 	return &stats, nil
+}
+
+func (d *StatisticsDAO) scopedOrderQuery(ctx context.Context, sellerID *int64) *gorm.DB {
+	query := d.db.WithContext(ctx).Model(&model.Order{})
+	if sellerID != nil {
+		query = query.Where("seller_id = ?", *sellerID)
+	}
+	return query
 }
 
 // GetUserStatistics 获取用户统计

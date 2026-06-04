@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -33,11 +34,12 @@ func NewStatisticsHandler(statisticsService *service.StatisticsService) *Statist
 // @Failure 500 {object} map[string]interface{}
 // @Router /statistics/overview [get]
 func (h *StatisticsHandler) GetOverview(ctx context.Context, c *app.RequestContext) {
-	if !requireAdminRole(c) {
+	sellerID, ok := readStatisticsSellerScope(c)
+	if !ok {
 		return
 	}
 
-	overview, err := h.statisticsService.GetOverview(ctx)
+	overview, err := h.statisticsService.GetOverviewScoped(ctx, sellerID)
 	if err != nil {
 		c.JSON(500, map[string]interface{}{
 			"code":    500,
@@ -63,7 +65,8 @@ func (h *StatisticsHandler) GetOverview(ctx context.Context, c *app.RequestConte
 // @Failure 500 {object} map[string]interface{}
 // @Router /statistics/auctions [get]
 func (h *StatisticsHandler) GetAuctionStatistics(ctx context.Context, c *app.RequestContext) {
-	if !requireAdminRole(c) {
+	sellerID, ok := readStatisticsSellerScope(c)
+	if !ok {
 		return
 	}
 
@@ -80,7 +83,7 @@ func (h *StatisticsHandler) GetAuctionStatistics(ctx context.Context, c *app.Req
 		}
 	}
 
-	stats, err := h.statisticsService.GetAuctionStatistics(ctx, startDate, endDate)
+	stats, err := h.statisticsService.GetAuctionStatisticsScoped(ctx, startDate, endDate, sellerID)
 	if err != nil {
 		c.JSON(500, map[string]interface{}{
 			"code":    500,
@@ -107,7 +110,8 @@ func (h *StatisticsHandler) GetAuctionStatistics(ctx context.Context, c *app.Req
 // @Failure 500 {object} map[string]interface{}
 // @Router /statistics/revenue [get]
 func (h *StatisticsHandler) GetRevenueStatistics(ctx context.Context, c *app.RequestContext) {
-	if !requireAdminRole(c) {
+	sellerID, ok := readStatisticsSellerScope(c)
+	if !ok {
 		return
 	}
 
@@ -126,7 +130,7 @@ func (h *StatisticsHandler) GetRevenueStatistics(ctx context.Context, c *app.Req
 
 	category := c.Query("category")
 
-	stats, err := h.statisticsService.GetRevenueStatistics(ctx, startDate, endDate, category)
+	stats, err := h.statisticsService.GetRevenueStatisticsScoped(ctx, startDate, endDate, category, sellerID)
 	if err != nil {
 		c.JSON(500, map[string]interface{}{
 			"code":    500,
@@ -179,4 +183,29 @@ func (h *StatisticsHandler) GetUserStatistics(ctx context.Context, c *app.Reques
 	}
 
 	c.JSON(200, stats)
+}
+
+func readStatisticsSellerScope(c *app.RequestContext) (*int64, bool) {
+	role := string(c.GetHeader("X-User-Role"))
+	switch role {
+	case roleAdmin:
+		return nil, true
+	case roleMerchant:
+		userIDRaw := string(c.GetHeader("X-User-ID"))
+		userID, err := strconv.ParseInt(userIDRaw, 10, 64)
+		if err != nil || userID <= 0 {
+			c.JSON(401, map[string]interface{}{
+				"code":    401,
+				"message": "未认证，请先登录",
+			})
+			return nil, false
+		}
+		return &userID, true
+	default:
+		c.JSON(403, map[string]interface{}{
+			"code":    403,
+			"message": "权限不足",
+		})
+		return nil, false
+	}
 }

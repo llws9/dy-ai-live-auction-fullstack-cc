@@ -33,11 +33,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `10` |
-| Done | `8` |
+| Done | `9` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `2` |
-| Last Updated | `2026-06-04 22:58` |
+| Pending | `1` |
+| Last Updated | `2026-06-05 00:08` |
 
 ## Task Matrix
 
@@ -49,7 +49,7 @@
 | `T004` | `Merchant auction rule templates` | `done` | `main-agent` | `W3` | `T001,T002` | `Merchant auction rule templates` | `backend/product/model/auction_rule_template.go; backend/product/dao/auction_rule_template.go; backend/product/service/auction_rule_template.go; backend/product/handler/auction_rule_template.go; backend/product/main.go; backend/gateway/router/router.go` |
 | `T005` | `Role-aware live stream management` | `done` | `main-agent` | `W3` | `T001,T002` | `Product live stream admin scope` | `backend/product/handler/live_stream.go; backend/product/service/live_stream.go; backend/product/dao/live_stream.go; backend/product/main.go; backend/gateway/router/router.go` |
 | `T006` | `Seller-scoped orders` | `done` | `main-agent` | `W4` | `T001,T002,T003` | `Order seller scope` | `backend/product/model/order.go; backend/product/dao/order*.go; backend/product/service/order*.go; backend/product/handler/order*.go; backend/gateway/router/router.go` |
-| `T007` | `Role-aware statistics` | `pending` | `unassigned` | `W4` | `T001,T002,T006` | `Product statistics role scope` | `backend/product/handler/statistics.go; backend/product/service/statistics.go; backend/product/dao/statistics.go; backend/gateway/router/router.go` |
+| `T007` | `Role-aware statistics` | `done` | `main-agent` | `W4` | `T001,T002,T006` | `Product statistics role scope` | `backend/product/handler/statistics.go; backend/product/service/statistics.go; backend/product/dao/statistics.go; backend/gateway/router/router.go` |
 | `T008` | `Auction service admin frontend scope` | `done` | `main-agent` | `W3` | `T001` | `Auction admin endpoints and creator scope` | `backend/auction/handler/auction.go; backend/auction/service/auction.go; backend/auction/dao/auction.go; backend/gateway/router/router.go` |
 | `T009` | `Fixed-price merchant-only write enforcement` | `done` | `main-agent` | `W3` | `T001` | `Fixed-price merchant-only write guard` | `backend/auction/handler/fixed_price.go; backend/auction/handler/fixed_price_test.go; backend/gateway/router/router.go` |
 | `T010` | `Integration verification and API smoke tests` | `pending` | `unassigned` | `W5` | `T003,T004,T005,T006,T007,T008,T009` | `Integration verification` | `backend/test/scenarios/admin_role_visibility_test.go; service route tests as needed` |
@@ -371,14 +371,14 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-05 00:00` |
+| Completed At | `2026-06-05 00:08` |
 | Branch | `feat/admin-role-backend` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-role-backend` |
-| Depends On | `-` |
-| Parallel Group | `W1` |
+| Depends On | `T001,T002,T006` |
+| Parallel Group | `W4` |
 
 **TDD Plan**
 
@@ -390,11 +390,31 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `TDD Red -> Green -> Verify evidence` | `not_run` | `pending` |
+| `cd backend/product && go test ./dao -run 'TestStatisticsDAOGetOverviewScopedMerchantOnlyOwnSellerOrders|TestStatisticsDAOGetRevenueStatisticsScopedMerchantOnlyOwnSellerOrders' -count=1` | Red: compile failure before implementation because scoped statistics DAO methods do not exist; Green: focused DAO scope tests pass | Red `GetOverviewScoped undefined`, `GetRevenueStatisticsScoped undefined`; Green `ok product-service/dao 0.551s` | `passed` |
+| `cd backend/product && go test ./handler -run 'TestStatisticsHandlerGetOverviewMerchantOnlyOwnSellerOrders|TestStatisticsHandlerGetUserStatisticsMerchantRejected' -count=1` | Red: merchant overview rejected before role-aware handler; Green: merchant overview is seller-scoped and user stats remain admin-only | Red `expected 200 actual 403`; Green `ok product-service/handler 0.632s` | `passed` |
+| `cd backend/gateway && go test ./router -run 'TestStatisticsRoutesRoleScope' -count=1` | Red: merchant overview rejected by Gateway before route guard change; Green: merchant overview forwards and merchant user stats is blocked | Red `expected 200 actual 403`; Green `ok gateway-service/router 0.493s` | `passed` |
+| `cd backend/product && go test ./... -count=1` | Verify: Product full suite passes | `ok product-service/...` | `passed` |
+| `cd backend/gateway && go test ./... -count=1` | Verify: Gateway full suite passes | `ok gateway-service/...` | `passed` |
+| `git diff --check` | Verify: no whitespace errors | `no output` | `passed` |
+
+**Modified Files**
+
+- `backend/product/dao/statistics.go`
+- `backend/product/dao/statistics_test.go`
+- `backend/product/service/statistics.go`
+- `backend/product/handler/statistics.go`
+- `backend/product/handler/statistics_test.go`
+- `backend/gateway/router/router.go`
+- `backend/gateway/router/admin_statistics_route_test.go`
+
+**Risks / Blockers**
+
+- No blocker. Statistics merchant scope relies on `orders.seller_id`; historical rows without seller ownership remain outside merchant-scoped statistics until backfilled.
+- VS Code diagnostics could not read the isolated worktree path due workspace access restriction, so Go tests and `git diff --check` are the verification source.
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `当前分支/worktree：feat/admin-role-backend @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-role-backend`
 
 
 ### T008 - `Auction service admin frontend scope`
@@ -543,6 +563,8 @@
 | `2026-06-04 22:46` | `T009 completed` | `Fixed-price write routes are merchant-only at Gateway and Auction handler layers` | `T006/T007/T010 remain pending` | `main-agent` |
 | `2026-06-04 22:53` | `Dispatch T006` | `T003 migration includes orders.seller_id; runtime seller scope can start` | `T007 depends on T006` | `main-agent` |
 | `2026-06-04 22:58` | `T006 completed` | `Seller-scoped order reads and ship writes implemented and verified` | `T007 can continue; T010 remains pending` | `main-agent` |
+| `2026-06-05 00:00` | `Dispatch T007` | `T006 done; statistics merchant scope can use orders.seller_id` | `Role-aware statistics in progress` | `main-agent` |
+| `2026-06-05 00:08` | `T007 completed` | `Merchant statistics are seller-scoped and user statistics remain admin-only` | `T010 final integration verification can start` | `main-agent` |
 
 ## Final Review Checklist
 

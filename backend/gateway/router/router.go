@@ -184,10 +184,10 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.GET("/sky-lamp/subscriptions", auctionProxy.Forward)
 	authGroup.GET("/sky-lamp/subscriptions/:id", auctionProxy.Forward)
 
-	// ========== 统计服务路由（需要管理员权限） ==========
-	authGroup.GET("/statistics/overview", middleware.RequireAdmin(), productProxy.Forward)
-	authGroup.GET("/statistics/auctions", middleware.RequireAdmin(), productProxy.Forward)
-	authGroup.GET("/statistics/revenue", middleware.RequireAdmin(), productProxy.Forward)
+	// ========== 统计服务路由 ==========
+	authGroup.GET("/statistics/overview", middleware.RequireMerchantOrAdmin(), productProxy.Forward)
+	authGroup.GET("/statistics/auctions", middleware.RequireMerchantOrAdmin(), productProxy.Forward)
+	authGroup.GET("/statistics/revenue", middleware.RequireMerchantOrAdmin(), productProxy.Forward)
 	authGroup.GET("/statistics/users", middleware.RequireAdmin(), productProxy.Forward)
 
 	// ========== 类别服务路由 ==========

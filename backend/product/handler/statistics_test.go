@@ -67,3 +67,56 @@ func TestStatisticsHandlerGetOverviewAllowsAdminHeader(t *testing.T) {
 	assert.EqualValues(t, 1, body["total_auctions"])
 	assert.EqualValues(t, 1, body["total_users"])
 }
+
+func TestStatisticsHandlerGetOverviewMerchantOnlyOwnSellerOrders(t *testing.T) {
+	h := newStatisticsHandlerWithSeed(t, func(db *gorm.DB) {
+		sellerA := int64(1001)
+		sellerB := int64(1002)
+		require.NoError(t, db.Create(&model.Order{
+			ID:         101,
+			AuctionID:  201,
+			ProductID:  301,
+			SellerID:   &sellerA,
+			WinnerID:   501,
+			FinalPrice: decimal.NewFromInt(188),
+			Status:     model.OrderStatusPaid,
+		}).Error)
+		require.NoError(t, db.Create(&model.Order{
+			ID:         102,
+			AuctionID:  202,
+			ProductID:  302,
+			SellerID:   &sellerB,
+			WinnerID:   502,
+			FinalPrice: decimal.NewFromInt(288),
+			Status:     model.OrderStatusPaid,
+		}).Error)
+	})
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/statistics/overview")
+	c.Request.Header.Set("X-User-Role", "merchant")
+	c.Request.Header.Set("X-User-ID", "1001")
+
+	h.GetOverview(context.Background(), c)
+
+	assert.Equal(t, 200, c.Response.StatusCode())
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.EqualValues(t, 1, body["total_auctions"])
+	assert.EqualValues(t, 188, body["total_revenue"])
+}
+
+func TestStatisticsHandlerGetUserStatisticsMerchantRejected(t *testing.T) {
+	h := newStatisticsHandlerWithSeed(t, nil)
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/statistics/users")
+	c.Request.Header.Set("X-User-Role", "merchant")
+	c.Request.Header.Set("X-User-ID", "1001")
+
+	h.GetUserStatistics(context.Background(), c)
+
+	assert.Equal(t, 403, c.Response.StatusCode())
+}
