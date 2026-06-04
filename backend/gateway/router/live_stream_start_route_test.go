@@ -15,20 +15,105 @@ import (
 	"gateway-service/middleware"
 )
 
-func TestStartLiveRouteRequiresAdminAndForwardsInternalToken(t *testing.T) {
+func TestStartLiveRouteAllowsMerchantAndForwardsInternalHeaders(t *testing.T) {
 	var called atomic.Int32
 	var capturedPath atomic.Value
 	var capturedToken atomic.Value
+	var capturedUserID atomic.Value
+	var capturedRole atomic.Value
 	capturedPath.Store("")
 	capturedToken.Store("")
+	capturedUserID.Store("")
+	capturedRole.Store("")
 
 	auctionMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called.Add(1)
 		capturedPath.Store(r.URL.Path)
 		capturedToken.Store(r.Header.Get("X-Internal-Token"))
+		capturedUserID.Store(r.Header.Get("X-User-ID"))
+		capturedRole.Store(r.Header.Get("X-User-Role"))
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"code":0,"message":"success","data":{"success":true}}`))
+	}))
+	defer auctionMock.Close()
+
+	cfg := &config.Config{
+		Services: config.ServicesConfig{
+			AuctionURL:    auctionMock.URL,
+			ProductURL:    "http://127.0.0.1:0",
+			TestURL:       "http://127.0.0.1:0",
+			TestWSURL:     "ws://127.0.0.1:0",
+			InternalToken: "internal-secret",
+		},
+		JWT: config.JWTConfig{Secret: "start-live-route-secret"},
+	}
+
+	h := server.Default(server.WithHostPorts("127.0.0.1:0"))
+	RegisterRoutes(h, cfg, nil)
+
+	merchantToken, err := middleware.GenerateToken(cfg.JWT.Secret, 9002, "merchant", 1, 24)
+	require.NoError(t, err)
+	w := ut.PerformRequest(
+		h.Engine,
+		http.MethodPost,
+		"/api/v1/live-streams/123/start",
+		nil,
+		ut.Header{Key: "Authorization", Value: "Bearer " + merchantToken},
+	)
+
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode())
+	assert.Equal(t, int32(1), called.Load())
+	assert.Equal(t, "/internal/live-streams/123/start", capturedPath.Load().(string))
+	assert.Equal(t, "internal-secret", capturedToken.Load().(string))
+	assert.Equal(t, "9002", capturedUserID.Load().(string))
+	assert.Equal(t, "merchant", capturedRole.Load().(string))
+}
+
+func TestStartLiveRoutePreservesAuctionForbidden(t *testing.T) {
+	var called atomic.Int32
+	auctionMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		_, _ = w.Write([]byte(`{"code":403,"message":"无权限操作直播间"}`))
+	}))
+	defer auctionMock.Close()
+
+	cfg := &config.Config{
+		Services: config.ServicesConfig{
+			AuctionURL:    auctionMock.URL,
+			ProductURL:    "http://127.0.0.1:0",
+			TestURL:       "http://127.0.0.1:0",
+			TestWSURL:     "ws://127.0.0.1:0",
+			InternalToken: "internal-secret",
+		},
+		JWT: config.JWTConfig{Secret: "start-live-route-secret"},
+	}
+
+	h := server.Default(server.WithHostPorts("127.0.0.1:0"))
+	RegisterRoutes(h, cfg, nil)
+
+	merchantToken, err := middleware.GenerateToken(cfg.JWT.Secret, 9002, "merchant", 1, 24)
+	require.NoError(t, err)
+	w := ut.PerformRequest(
+		h.Engine,
+		http.MethodPost,
+		"/api/v1/live-streams/123/start",
+		nil,
+		ut.Header{Key: "Authorization", Value: "Bearer " + merchantToken},
+	)
+
+	assert.Equal(t, http.StatusForbidden, w.Result().StatusCode())
+	assert.Contains(t, string(w.Result().Body()), "无权限操作直播间")
+	assert.Equal(t, int32(1), called.Load())
+}
+
+func TestStartLiveRouteRejectsAdminBeforeAuction(t *testing.T) {
+	var called atomic.Int32
+	auctionMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called.Add(1)
+		w.WriteHeader(http.StatusOK)
 	}))
 	defer auctionMock.Close()
 
@@ -56,13 +141,11 @@ func TestStartLiveRouteRequiresAdminAndForwardsInternalToken(t *testing.T) {
 		ut.Header{Key: "Authorization", Value: "Bearer " + adminToken},
 	)
 
-	assert.Equal(t, http.StatusOK, w.Result().StatusCode())
-	assert.Equal(t, int32(1), called.Load())
-	assert.Equal(t, "/internal/live-streams/123/start", capturedPath.Load().(string))
-	assert.Equal(t, "internal-secret", capturedToken.Load().(string))
+	assert.Equal(t, http.StatusForbidden, w.Result().StatusCode())
+	assert.Equal(t, int32(0), called.Load())
 }
 
-func TestStartLiveRouteRejectsNonAdminBeforeAuction(t *testing.T) {
+func TestStartLiveRouteRejectsUserBeforeAuction(t *testing.T) {
 	var called atomic.Int32
 	auctionMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called.Add(1)
@@ -84,14 +167,14 @@ func TestStartLiveRouteRejectsNonAdminBeforeAuction(t *testing.T) {
 	h := server.Default(server.WithHostPorts("127.0.0.1:0"))
 	RegisterRoutes(h, cfg, nil)
 
-	streamerToken, err := middleware.GenerateToken(cfg.JWT.Secret, 9002, "streamer", 1, 24)
+	userToken, err := middleware.GenerateToken(cfg.JWT.Secret, 7001, "buyer", 0, 24)
 	require.NoError(t, err)
 	w := ut.PerformRequest(
 		h.Engine,
 		http.MethodPost,
 		"/api/v1/live-streams/123/start",
 		nil,
-		ut.Header{Key: "Authorization", Value: "Bearer " + streamerToken},
+		ut.Header{Key: "Authorization", Value: "Bearer " + userToken},
 	)
 
 	assert.Equal(t, http.StatusForbidden, w.Result().StatusCode())

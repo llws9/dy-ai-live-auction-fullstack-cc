@@ -61,20 +61,38 @@ func (c *memoryReminderClaimer) Claim(ctx context.Context, userID, liveStreamID,
 	return true, nil
 }
 
+type fakeLiveStreamOwnerChecker struct {
+	owners map[int64]int64
+	err    error
+}
+
+func (f *fakeLiveStreamOwnerChecker) OwnerID(ctx context.Context, liveStreamID int64) (int64, error) {
+	if f.err != nil {
+		return 0, f.err
+	}
+	owner, ok := f.owners[liveStreamID]
+	if !ok {
+		return 0, nil
+	}
+	return owner, nil
+}
+
 func TestProductionStartLiveTransitionFeedsPendingReminderOnce(t *testing.T) {
 	ctx := context.Background()
 	_, err := dao.InitRedis("localhost:6379", "")
 	require.NoError(t, err)
 
+	ownerID := int64(10001)
 	userID := int64(991)
 	liveStreamID := time.Now().UnixNano() % 1_000_000_000
 	statsService := service.NewLiveStreamStatsService()
 
 	startHandler := NewLiveStreamStatsHandler(statsService)
+	startHandler.SetOwnerChecker(&fakeLiveStreamOwnerChecker{owners: map[int64]int64{liveStreamID: ownerID}})
 	c := app.NewContext(1)
 	c.Params = append(c.Params, param.Param{Key: "id", Value: strconv.FormatInt(liveStreamID, 10)})
-	c.Set("user_id", int64(10001))
-	c.Set("user_role", 2)
+	c.Set("user_id", ownerID)
+	c.Set("user_role", 1)
 
 	startHandler.StartLive(ctx, c)
 
@@ -104,19 +122,48 @@ func TestProductionStartLiveTransitionFeedsPendingReminderOnce(t *testing.T) {
 	require.Nil(t, second.Stream)
 }
 
-func TestStartLiveTransitionRejectsNonAdminOperator(t *testing.T) {
+func TestStartLiveTransitionAllowsMerchantOwner(t *testing.T) {
 	ctx := context.Background()
 	_, err := dao.InitRedis("localhost:6379", "")
 	require.NoError(t, err)
 
-	liveStreamID := time.Now().UnixNano()%1_000_000_000 + 1_000_000_000
+	ownerID := int64(10001)
+	liveStreamID := time.Now().UnixNano()%1_000_000_000 + 2_000_000_000
 	statsService := service.NewLiveStreamStatsService()
 	require.NoError(t, statsService.SetScheduledStartTime(ctx, liveStreamID, time.Now().Add(time.Hour), 80))
 
 	startHandler := NewLiveStreamStatsHandler(statsService)
+	startHandler.SetOwnerChecker(&fakeLiveStreamOwnerChecker{owners: map[int64]int64{liveStreamID: ownerID}})
 	c := app.NewContext(1)
 	c.Params = append(c.Params, param.Param{Key: "id", Value: strconv.FormatInt(liveStreamID, 10)})
-	c.Set("user_id", int64(10001))
+	c.Set("user_id", ownerID)
+	c.Set("user_role", 1)
+
+	startHandler.StartLive(ctx, c)
+
+	require.Equal(t, http.StatusOK, c.Response.StatusCode())
+	stats, err := statsService.GetStats(ctx, liveStreamID)
+	require.NoError(t, err)
+	require.Equal(t, "live", stats.Status)
+	require.NotNil(t, stats.StartedAt)
+}
+
+func TestStartLiveTransitionRejectsMerchantNonOwner(t *testing.T) {
+	ctx := context.Background()
+	_, err := dao.InitRedis("localhost:6379", "")
+	require.NoError(t, err)
+
+	ownerID := int64(10001)
+	otherMerchantID := int64(10002)
+	liveStreamID := time.Now().UnixNano()%1_000_000_000 + 3_000_000_000
+	statsService := service.NewLiveStreamStatsService()
+	require.NoError(t, statsService.SetScheduledStartTime(ctx, liveStreamID, time.Now().Add(time.Hour), 80))
+
+	startHandler := NewLiveStreamStatsHandler(statsService)
+	startHandler.SetOwnerChecker(&fakeLiveStreamOwnerChecker{owners: map[int64]int64{liveStreamID: ownerID}})
+	c := app.NewContext(1)
+	c.Params = append(c.Params, param.Param{Key: "id", Value: strconv.FormatInt(liveStreamID, 10)})
+	c.Set("user_id", otherMerchantID)
 	c.Set("user_role", 1)
 
 	startHandler.StartLive(ctx, c)
@@ -126,4 +173,25 @@ func TestStartLiveTransitionRejectsNonAdminOperator(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "pending", stats.Status)
 	require.Nil(t, stats.StartedAt)
+}
+
+func TestStartLiveTransitionRejectsAdminOperator(t *testing.T) {
+	ctx := context.Background()
+	_, err := dao.InitRedis("localhost:6379", "")
+	require.NoError(t, err)
+
+	liveStreamID := time.Now().UnixNano()%1_000_000_000 + 4_000_000_000
+	statsService := service.NewLiveStreamStatsService()
+	require.NoError(t, statsService.SetScheduledStartTime(ctx, liveStreamID, time.Now().Add(time.Hour), 80))
+
+	startHandler := NewLiveStreamStatsHandler(statsService)
+	startHandler.SetOwnerChecker(&fakeLiveStreamOwnerChecker{owners: map[int64]int64{liveStreamID: 10001}})
+	c := app.NewContext(1)
+	c.Params = append(c.Params, param.Param{Key: "id", Value: strconv.FormatInt(liveStreamID, 10)})
+	c.Set("user_id", int64(9001))
+	c.Set("user_role", 2)
+
+	startHandler.StartLive(ctx, c)
+
+	require.Equal(t, http.StatusForbidden, c.Response.StatusCode())
 }

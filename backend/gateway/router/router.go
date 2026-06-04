@@ -112,7 +112,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.GET("/live-streams/:id/follow-status", auctionProxy.Forward)
 	authGroup.GET("/user/followed-live-streams", auctionProxy.Forward)
 	authGroup.PUT("/live-streams/:id/notification", auctionProxy.Forward)
-	authGroup.POST("/live-streams/:id/start", middleware.RequireAdmin(), liveStartHandler.StartLive)
+	authGroup.POST("/live-streams/:id/start", middleware.RequireMerchantOnly(), liveStartHandler.StartLive)
 	v1.GET("/live-streams/:id/followers/stats", auctionProxy.Forward)
 	v1.GET("/live-streams/:id/followers/count", auctionProxy.Forward)
 

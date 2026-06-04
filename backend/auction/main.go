@@ -251,6 +251,7 @@ func main() {
 	liveReminderService := service.NewLiveReminderService(userLiveStreamFollowDAO, liveSessionResolver, liveStreamReminderReceiptDAO)
 	liveReminderHandler := handler.NewLiveReminderHandler(liveReminderService)
 	liveStreamStatsHandler := handler.NewLiveStreamStatsHandler(liveStreamStatsService)
+	liveStreamStatsHandler.SetOwnerChecker(&liveStreamStartOwnerChecker{client: liveStreamClient})
 	statsCron := cron.NewStatsCron(userLiveStreamFollowDAO, liveStreamStatsService)
 	statsCron.Start(ctx)
 	defer statsCron.Stop()
@@ -489,6 +490,22 @@ func (c *liveStreamOwnerChecker) IsOwner(ctx context.Context, liveStreamID, user
 		return false, nil
 	}
 	return s.CreatorID == userID, nil
+}
+
+type liveStreamStartOwnerChecker struct {
+	client client.LiveStreamClient
+}
+
+func (c *liveStreamStartOwnerChecker) OwnerID(ctx context.Context, liveStreamID int64) (int64, error) {
+	summaries, err := c.client.BatchGetLiveStreams(ctx, []int64{liveStreamID})
+	if err != nil {
+		return 0, err
+	}
+	s, ok := summaries[liveStreamID]
+	if !ok {
+		return 0, nil
+	}
+	return s.CreatorID, nil
 }
 
 // productExistsChecker 适配 client.ProductClient 为 service.ProductChecker：

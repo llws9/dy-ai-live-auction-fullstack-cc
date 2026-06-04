@@ -55,10 +55,11 @@ func TestLiveStreamStatsHandlerHidesInternalStartErrorDetails(t *testing.T) {
 	defer log.SetOutput(originalLogOutput)
 
 	h := NewLiveStreamStatsHandler(&failingLiveStarter{})
+	h.SetOwnerChecker(&fakeLiveStreamOwnerChecker{owners: map[int64]int64{123: 10001}})
 	c := app.NewContext(1)
 	c.Params = append(c.Params, param.Param{Key: "id", Value: "123"})
-	c.Set("user_id", int64(9001))
-	c.Set("user_role", 2)
+	c.Set("user_id", int64(10001))
+	c.Set("user_role", 1)
 
 	h.StartLive(context.Background(), c)
 

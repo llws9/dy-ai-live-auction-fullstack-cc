@@ -79,6 +79,11 @@ func (h *LiveStartHandler) forwardInternal(ctx context.Context, c *app.RequestCo
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		log.Printf("live internal upstream status %d: %s", resp.StatusCode, string(body))
+		if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+			c.Response.SetStatusCode(resp.StatusCode)
+			c.Response.SetBody(body)
+			return
+		}
 		c.JSON(http.StatusBadGateway, map[string]interface{}{"code": 502, "message": failureMessage})
 		return
 	}
