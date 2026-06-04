@@ -232,16 +232,20 @@ const HomePage: React.FC = () => {
       return;
     }
     let cancelled = false;
-    const refresh = () => {
-      notificationApi
-        .getUnreadCount()
-        .then((res) => {
-          if (cancelled) return;
-          setUnreadCount(res?.count ?? 0);
-        })
-        .catch((error) => {
-          console.warn('获取未读消息数失败:', error);
-        });
+    const refresh = async () => {
+      try {
+        await notificationApi.hotPull();
+      } catch (error) {
+        console.warn('热拉通知失败:', error);
+      }
+
+      try {
+        const res = await notificationApi.getUnreadCount();
+        if (cancelled) return;
+        setUnreadCount(res?.count ?? 0);
+      } catch (error) {
+        console.warn('获取未读消息数失败:', error);
+      }
     };
     refresh();
     const onVisibility = () => {

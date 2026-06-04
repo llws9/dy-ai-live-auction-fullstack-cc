@@ -23,6 +23,7 @@ jest.mock('../../../services/api', () => ({
 jest.mock('../../../services/notification', () => ({
   notificationApi: {
     getUnreadCount: jest.fn(),
+    hotPull: jest.fn(),
   },
 }));
 
@@ -85,6 +86,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
     ]);
     mockedFollowApi.getFollowedLiveStreams.mockResolvedValue({ list: [] });
     mockedNotificationApi.getUnreadCount.mockResolvedValue({ count: 0 });
+    mockedNotificationApi.hotPull.mockResolvedValue({ notifications: [], has_more: false });
     mockAuthAuthenticated();
   });
 
@@ -327,12 +329,20 @@ describe('HomePage 未读消息红点 (T3.6 / F-D2)', () => {
     mockedProductApi.listCategories.mockResolvedValue([]);
     mockedFollowApi.getFollowedLiveStreams.mockResolvedValue({ list: [] });
     mockedNotificationApi.getUnreadCount.mockResolvedValue({ count: 0 });
+    mockedNotificationApi.hotPull.mockResolvedValue({ notifications: [], has_more: false });
     mockAuthAuthenticated();
   });
 
-  it('登录后 mount 调用 getUnreadCount 一次', async () => {
+  it('登录后 mount 先 hot-pull 商品提醒，再刷新 getUnreadCount', async () => {
+    mockedNotificationApi.getUnreadCount.mockResolvedValue({ count: 1 });
+
     renderHome();
+    await waitFor(() => expect(mockedNotificationApi.hotPull).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(mockedNotificationApi.getUnreadCount).toHaveBeenCalledTimes(1));
+    expect(mockedNotificationApi.hotPull.mock.invocationCallOrder[0]).toBeLessThan(
+      mockedNotificationApi.getUnreadCount.mock.invocationCallOrder[0]
+    );
+    expect(await screen.findByLabelText('1 条待处理提醒')).toBeInTheDocument();
   });
 
   it('未登录时不调用 getUnreadCount，且不渲染 BadgeDot', async () => {

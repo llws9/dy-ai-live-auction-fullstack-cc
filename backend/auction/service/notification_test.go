@@ -4,11 +4,17 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
+	"auction-service/dao"
 	"auction-service/model"
 
+	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 // TestNotificationService_Interface 验证NotificationService实现了NotificationSender接口
@@ -139,6 +145,23 @@ func (f *fakeNotificationDAO) GetUnreadByUserID(ctx context.Context, userID int6
 	return nil, nil
 }
 
+type fakeProductReminderHotPullStore struct {
+	candidates []dao.ProductReminderCandidate
+	failOn     map[int64]error
+}
+
+func (f *fakeProductReminderHotPullStore) GetStartingSoonByUser(ctx context.Context, userID int64, start, end time.Time) ([]dao.ProductReminderCandidate, error) {
+	return f.candidates, nil
+}
+
+func (f *fakeProductReminderHotPullStore) ClaimAndCreateAuctionStartNotification(ctx context.Context, userID, auctionID int64, notification *model.Notification) (bool, error) {
+	if err, ok := f.failOn[auctionID]; ok {
+		return false, err
+	}
+	notification.ID = auctionID + 10000
+	return true, nil
+}
+
 func TestNotificationServiceGetSummary(t *testing.T) {
 	t.Run("aggregates total and outbid unread counts", func(t *testing.T) {
 		store := &fakeNotificationDAO{
@@ -229,4 +252,95 @@ func TestNotificationServiceMarkCategoryAsRead(t *testing.T) {
 		assert.Empty(t, store.markTypeCalls)
 		assert.Empty(t, store.markAllUserIDs)
 	})
+}
+
+func setupNotificationHotPullDB(t *testing.T) *gorm.DB {
+	t.Helper()
+
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(
+		&model.Notification{},
+		&model.Auction{},
+		&model.UserProductReminder{},
+		&model.ProductReminderReceipt{},
+	))
+
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = sqlDB.Close()
+	})
+
+	return db
+}
+
+func TestNotificationServiceHotPullProductReminder(t *testing.T) {
+	db := setupNotificationHotPullDB(t)
+	now := time.Now()
+
+	require.NoError(t, db.Create(&model.Auction{
+		ID:        7001,
+		ProductID: 8001,
+		Status:    model.AuctionStatusPending,
+		StartTime: now.Add(20 * time.Minute),
+		EndTime:   now.Add(2 * time.Hour),
+	}).Error)
+	require.NoError(t, db.Create(&model.UserProductReminder{
+		UserID:              42,
+		ProductID:           8001,
+		AuctionID:           7001,
+		NotificationEnabled: true,
+		CreatedAt:           now.Add(-time.Hour),
+	}).Error)
+
+	notificationDAO := dao.NewNotificationDAO(db, nil)
+	reminderDAO := dao.NewUserProductReminderDAO(db)
+	svc := NewNotificationService(notificationDAO, nil)
+	svc.SetProductReminderDAO(reminderDAO)
+
+	first, err := svc.HotPullNotifications(context.Background(), 42)
+	require.NoError(t, err)
+	require.Len(t, first, 1)
+	assert.Equal(t, model.NotificationTypeAuctionStarting, first[0].Type)
+	assert.Equal(t, int64(7001), first[0].Data["auction_id"])
+	assert.Equal(t, int64(8001), first[0].Data["product_id"])
+
+	var unreadCount int64
+	require.NoError(t, db.Model(&model.Notification{}).
+		Where("user_id = ? AND type = ? AND read_at IS NULL", 42, model.NotificationTypeAuctionStarting).
+		Count(&unreadCount).Error)
+	assert.Equal(t, int64(1), unreadCount)
+
+	second, err := svc.HotPullNotifications(context.Background(), 42)
+	require.NoError(t, err)
+	assert.Empty(t, second)
+	require.NoError(t, db.Model(&model.Notification{}).
+		Where("user_id = ? AND type = ? AND read_at IS NULL", 42, model.NotificationTypeAuctionStarting).
+		Count(&unreadCount).Error)
+	assert.Equal(t, int64(1), unreadCount)
+}
+
+func TestNotificationServiceHotPullProductReminderContinuesAfterCandidateFailure(t *testing.T) {
+	now := time.Now()
+	svc := &NotificationService{
+		notificationDAO: &fakeNotificationDAO{},
+		productReminder: &fakeProductReminderHotPullStore{
+			candidates: []dao.ProductReminderCandidate{
+				{UserID: 42, ProductID: 8001, AuctionID: 7001, StartTime: now.Add(10 * time.Minute)},
+				{UserID: 42, ProductID: 8002, AuctionID: 7002, StartTime: now.Add(20 * time.Minute)},
+				{UserID: 42, ProductID: 8003, AuctionID: 7003, StartTime: now.Add(25 * time.Minute)},
+			},
+			failOn: map[int64]error{7002: errors.New("temporary insert failure")},
+		},
+	}
+
+	notifications, err := svc.HotPullNotifications(context.Background(), 42)
+
+	require.NoError(t, err)
+	require.Len(t, notifications, 2)
+	assert.Equal(t, int64(7001), notifications[0].Data["auction_id"])
+	assert.Equal(t, int64(7003), notifications[1].Data["auction_id"])
 }

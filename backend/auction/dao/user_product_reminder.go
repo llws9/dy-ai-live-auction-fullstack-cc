@@ -8,6 +8,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"auction-service/model"
 )
@@ -15,6 +16,13 @@ import (
 // UserProductReminderDAO 用户订阅商品竞拍提醒DAO
 type UserProductReminderDAO struct {
 	db *gorm.DB
+}
+
+type ProductReminderCandidate struct {
+	UserID    int64
+	ProductID int64
+	AuctionID int64
+	StartTime time.Time
 }
 
 // NewUserProductReminderDAO 创建用户订阅商品竞拍提醒DAO
@@ -67,6 +75,41 @@ func (d *UserProductReminderDAO) CountByProduct(ctx context.Context, productID i
 		Where("product_id = ? AND notification_enabled = ?", productID, true).
 		Count(&count).Error
 	return count, err
+}
+
+func (d *UserProductReminderDAO) GetStartingSoonByUser(ctx context.Context, userID int64, start, end time.Time) ([]ProductReminderCandidate, error) {
+	var candidates []ProductReminderCandidate
+	err := d.db.WithContext(ctx).
+		Table("user_product_reminders AS r").
+		Select("r.user_id, r.product_id, r.auction_id, a.start_time").
+		Joins("JOIN auctions AS a ON a.id = r.auction_id").
+		Where("r.user_id = ? AND r.notification_enabled = ? AND r.auction_id > 0", userID, true).
+		Where("a.status = ? AND a.start_time >= ? AND a.start_time <= ?", model.AuctionStatusPending, start, end).
+		Order("a.start_time ASC").
+		Scan(&candidates).Error
+	return candidates, err
+}
+
+func (d *UserProductReminderDAO) ClaimAndCreateAuctionStartNotification(ctx context.Context, userID, auctionID int64, notification *model.Notification) (bool, error) {
+	err := d.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		receipt := &model.ProductReminderReceipt{
+			UserID:     userID,
+			AuctionID:  auctionID,
+			RemindedAt: time.Now(),
+		}
+		result := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(receipt)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return nil
+		}
+		return tx.Create(notification).Error
+	})
+	if err != nil {
+		return false, err
+	}
+	return notification.ID > 0, nil
 }
 
 // Redis key 常量

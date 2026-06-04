@@ -70,6 +70,7 @@ func main() {
 		&model.UserBalance{},
 		&model.UserAddress{},
 		&model.LiveStreamReminderReceipt{},
+		&model.ProductReminderReceipt{},
 		&model.FixedPriceItem{},
 		&model.FixedPricePurchase{},
 	); err != nil {
@@ -122,6 +123,7 @@ func main() {
 
 	// 通知服务指标暂未实现，跳过设置
 	notificationService.SetHub(hub)
+	notificationService.SetProductReminderDAO(userProductReminderDAO)
 
 	// 初始化 RabbitMQ 连接
 	if cfg.RabbitMQ.Host != "" && cfg.RabbitMQ.User != "" {

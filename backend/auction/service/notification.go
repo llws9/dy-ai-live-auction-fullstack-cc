@@ -46,6 +46,7 @@ type NotificationService struct {
 	hub             *websocket.Hub
 	redis           *redis.Client
 	followDAO       *dao.UserLiveStreamFollowDAO
+	productReminder productReminderHotPullStore
 }
 
 type notificationStore interface {
@@ -58,6 +59,11 @@ type notificationStore interface {
 	MarkAsRead(ctx context.Context, id int64, userID int64) error
 	MarkAllAsRead(ctx context.Context, userID int64) error
 	GetUnreadByUserID(ctx context.Context, userID int64, limit int) ([]model.Notification, error)
+}
+
+type productReminderHotPullStore interface {
+	GetStartingSoonByUser(ctx context.Context, userID int64, start, end time.Time) ([]dao.ProductReminderCandidate, error)
+	ClaimAndCreateAuctionStartNotification(ctx context.Context, userID, auctionID int64, notification *model.Notification) (bool, error)
 }
 
 var errNotificationSummaryUnavailable = errors.New("notification summary unavailable")
@@ -80,6 +86,10 @@ func (s *NotificationService) SetHub(hub *websocket.Hub) {
 // SetFollowDAO 设置关注DAO（用于热拉Redis失败时DB兜底）
 func (s *NotificationService) SetFollowDAO(followDAO *dao.UserLiveStreamFollowDAO) {
 	s.followDAO = followDAO
+}
+
+func (s *NotificationService) SetProductReminderDAO(productReminderDAO *dao.UserProductReminderDAO) {
+	s.productReminder = productReminderDAO
 }
 
 // SendNotification 发送通知
@@ -349,14 +359,32 @@ func (s *NotificationService) SyncUnreadNotifications(ctx context.Context, userI
 // 2. ZRANGEBYSCORE live_stream:hot:start_time (now, now+1hour) 获取即将开播的热门直播间
 // 3. SMEMBERS live_stream:hot:live_now 获取正在直播的热门直播间
 // 4. 过滤：只返回用户关注的热门直播间
-// 5. 生成通知（in-memory），返回结果（不入库、不推送）
+// 5. 商品开拍提醒会幂等入库，直播间热拉通知仍为 in-memory 返回
 func (s *NotificationService) HotPullNotifications(ctx context.Context, userID int64) ([]*model.Notification, error) {
+	log.Printf("HotPull: start user=%d", userID)
+	notifications, err := s.persistProductReminderNotifications(ctx, userID)
+	if err != nil {
+		log.Printf("HotPull: product reminder persistence failed user=%d err=%v", userID, err)
+		return nil, err
+	}
+	log.Printf("HotPull: product reminder persistence completed user=%d created=%d", userID, len(notifications))
+
 	if s.redis == nil {
+		log.Printf("HotPull: redis unavailable user=%d follow_dao_configured=%t", userID, s.followDAO != nil)
 		// Redis不可用，尝试使用数据库兜底
 		if s.followDAO != nil {
-			return s.hotPullFromDatabase(ctx, userID)
+			liveNotifications, err := s.hotPullFromDatabase(ctx, userID)
+			if err != nil {
+				log.Printf("HotPull: database fallback failed user=%d err=%v", userID, err)
+				return nil, err
+			}
+			combined := append(notifications, liveNotifications...)
+			log.Printf("HotPull: completed via database fallback user=%d product_notifications=%d live_notifications=%d total=%d",
+				userID, len(notifications), len(liveNotifications), len(combined))
+			return combined, nil
 		}
-		return nil, fmt.Errorf("redis client not initialized")
+		log.Printf("HotPull: completed without live reminder source user=%d total=%d", userID, len(notifications))
+		return notifications, nil
 	}
 
 	// 1. 获取用户关注的直播间集合
@@ -365,14 +393,25 @@ func (s *NotificationService) HotPullNotifications(ctx context.Context, userID i
 		log.Printf("HotPull: Redis failed, fallback to database: %v", err)
 		// Redis失败，使用数据库兜底
 		if s.followDAO != nil {
-			return s.hotPullFromDatabase(ctx, userID)
+			liveNotifications, err := s.hotPullFromDatabase(ctx, userID)
+			if err != nil {
+				log.Printf("HotPull: database fallback failed after redis error user=%d err=%v", userID, err)
+				return nil, err
+			}
+			combined := append(notifications, liveNotifications...)
+			log.Printf("HotPull: completed via database fallback after redis error user=%d product_notifications=%d live_notifications=%d total=%d",
+				userID, len(notifications), len(liveNotifications), len(combined))
+			return combined, nil
 		}
-		return nil, fmt.Errorf("failed to get user followed live streams: %w", err)
+		log.Printf("HotPull: completed with product reminders only after redis error user=%d total=%d", userID, len(notifications))
+		return notifications, nil
 	}
 
 	if len(followedLiveStreams) == 0 {
 		// 用户没有关注任何直播间，返回空列表
-		return []*model.Notification{}, nil
+		log.Printf("HotPull: user has no followed live streams user=%d product_notifications=%d total=%d",
+			userID, len(notifications), len(notifications))
+		return notifications, nil
 	}
 
 	// 创建关注直播间的Set便于快速查找
@@ -383,8 +422,6 @@ func (s *NotificationService) HotPullNotifications(ctx context.Context, userID i
 
 	now := time.Now()
 	oneHourLater := now.Add(1 * time.Hour)
-
-	notifications := make([]*model.Notification, 0)
 
 	// 2. 获取即将开播的热门直播间 (now, now+1hour)
 	startingSoon, err := dao.GetHotLiveStreamsStartingSoon(ctx, now, oneHourLater)
@@ -434,9 +471,69 @@ func (s *NotificationService) HotPullNotifications(ctx context.Context, userID i
 		}
 	}
 
-	log.Printf("HotPull: user=%d, followed=%d, starting_soon=%d, live_now=%d, notifications=%d",
+	log.Printf("HotPull: completed user=%d followed=%d starting_soon=%d live_now=%d total_notifications=%d",
 		userID, len(followedLiveStreams), len(startingSoon), len(liveNow), len(notifications))
 
+	return notifications, nil
+}
+
+func (s *NotificationService) persistProductReminderNotifications(ctx context.Context, userID int64) ([]*model.Notification, error) {
+	if s.productReminder == nil {
+		log.Printf("HotPullProductReminder: skipped user=%d reason=product_reminder_dao_not_configured", userID)
+		return []*model.Notification{}, nil
+	}
+
+	now := time.Now()
+	windowEnd := now.Add(30 * time.Minute)
+	log.Printf("HotPullProductReminder: query start user=%d window_start=%s window_end=%s",
+		userID, now.Format(time.RFC3339), windowEnd.Format(time.RFC3339))
+
+	candidates, err := s.productReminder.GetStartingSoonByUser(ctx, userID, now, windowEnd)
+	if err != nil {
+		log.Printf("HotPullProductReminder: query failed user=%d err=%v", userID, err)
+		return nil, err
+	}
+	log.Printf("HotPullProductReminder: query completed user=%d candidate_count=%d", userID, len(candidates))
+
+	notifications := make([]*model.Notification, 0, len(candidates))
+	duplicateCount := 0
+	failureCount := 0
+	for _, candidate := range candidates {
+		log.Printf("HotPullProductReminder: candidate user=%d auction_id=%d product_id=%d start_time=%s",
+			userID, candidate.AuctionID, candidate.ProductID, candidate.StartTime.Format(time.RFC3339))
+
+		notification := &model.Notification{
+			UserID:  userID,
+			Type:    model.NotificationTypeAuctionStarting,
+			Title:   "竞拍即将开始",
+			Content: "您订阅的拍品将在30分钟内开拍，请及时关注。",
+			Data: map[string]interface{}{
+				"auction_id": candidate.AuctionID,
+				"product_id": candidate.ProductID,
+				"start_time": candidate.StartTime.Format(time.RFC3339),
+			},
+			CreatedAt: now,
+		}
+		created, err := s.productReminder.ClaimAndCreateAuctionStartNotification(ctx, userID, candidate.AuctionID, notification)
+		if err != nil {
+			failureCount++
+			log.Printf("HotPullProductReminder: create failed user=%d auction_id=%d product_id=%d err=%v",
+				userID, candidate.AuctionID, candidate.ProductID, err)
+			continue
+		}
+		if !created {
+			duplicateCount++
+			log.Printf("HotPullProductReminder: duplicate skipped user=%d auction_id=%d product_id=%d",
+				userID, candidate.AuctionID, candidate.ProductID)
+			continue
+		}
+		notifications = append(notifications, notification)
+		log.Printf("HotPullProductReminder: notification created user=%d auction_id=%d product_id=%d notification_id=%d",
+			userID, candidate.AuctionID, candidate.ProductID, notification.ID)
+	}
+
+	log.Printf("HotPullProductReminder: completed user=%d candidates=%d created=%d duplicates=%d failures=%d",
+		userID, len(candidates), len(notifications), duplicateCount, failureCount)
 	return notifications, nil
 }
 
