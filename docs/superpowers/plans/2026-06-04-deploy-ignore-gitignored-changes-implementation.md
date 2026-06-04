@@ -4,7 +4,7 @@
 
 **Goal:** Allow `/dp-dev` and `/dp-prod` deployment checks to ignore local changes whose paths match `.gitignore`, including already tracked files.
 
-**Architecture:** Keep the existing `HEAD == origin/main` safety check unchanged. Replace the all-or-nothing `git status --porcelain` clean-tree check with a helper that classifies changes into ignored-local changes and blocking changes by using `git check-ignore --no-index`.
+**Architecture:** Keep the existing `HEAD == origin/main` safety check unchanged. Replace the all-or-nothing `git status --porcelain` clean-tree check with a helper that parses `git status --porcelain=v1 -z` and classifies changes into ignored-local changes and blocking changes by using `git check-ignore --no-index`.
 
 **Tech Stack:** Bash, Git CLI, Trae project skill markdown.
 
@@ -36,46 +36,58 @@ Do not stage or commit `frontend/admin/dist/index.html`; it is an existing local
 Insert these functions immediately after `assert_origin_main` and before `assert_clean_tree`:
 
 ```bash
-status_path() {
-  local line=$1
-  local path="${line:3}"
-  if [[ "$path" == *" -> "* ]]; then
-    path="${path##* -> }"
-  fi
-  echo "$path"
+paths_ignored() {
+  local path
+  for path in "$@"; do
+    [[ -z "$path" ]] && continue
+    if ! git check-ignore --no-index -q -- "$path"; then
+      return 1
+    fi
+  done
 }
 
 classify_worktree_changes() {
-  local status
-  status="$(git status --porcelain)"
-  if [[ -z "$status" ]]; then
-    return 0
-  fi
-
   local ignored=()
   local blocking=()
-  local line
+  local entry
+  local status
   local path
+  local old_path
+  local display_path
 
-  while IFS= read -r line; do
-    [[ -z "$line" ]] && continue
-    path="$(status_path "$line")"
-    if git check-ignore --no-index -q -- "$path"; then
+  while IFS= read -r -d '' entry; do
+    [[ -z "$entry" ]] && continue
+    status="${entry:0:2}"
+    path="${entry:3}"
+
+    if [[ "$status" == R* || "$status" == C* ]]; then
+      old_path=""
+      IFS= read -r -d '' old_path || true
+      display_path="$old_path -> $path"
+      if [[ -n "$old_path" ]] && paths_ignored "$path" "$old_path"; then
+        ignored+=("$display_path")
+      else
+        blocking+=("$display_path")
+      fi
+      continue
+    fi
+
+    if paths_ignored "$path"; then
       ignored+=("$path")
     else
       blocking+=("$path")
     fi
-  done <<< "$status"
-
-  if [[ "${#ignored[@]}" -gt 0 ]]; then
-    echo -e "${YELLOW}检测到仅含 .gitignore 覆盖的本地改动，部署将忽略这些文件：${NC}"
-    printf -- '- %s\n' "${ignored[@]}"
-  fi
+  done < <(git status --porcelain=v1 -z)
 
   if [[ "${#blocking[@]}" -gt 0 ]]; then
     echo -e "${RED}错误: 当前工作区存在未提交且未被 .gitignore 覆盖的改动，拒绝部署${NC}" >&2
     printf -- '- %s\n' "${blocking[@]}" >&2
     exit 1
+  fi
+
+  if [[ "${#ignored[@]}" -gt 0 ]]; then
+    echo -e "${YELLOW}检测到仅含 .gitignore 覆盖的本地改动，部署将忽略这些文件：${NC}"
+    printf -- '- %s\n' "${ignored[@]}"
   fi
 }
 ```
@@ -107,7 +119,7 @@ assert_clean_tree() {
 
 - [ ] **Step 3: Add the same helper functions to `scripts/deploy-prod.sh`**
 
-Insert the same `status_path` and `classify_worktree_changes` functions immediately after `remote_sha` and before `assert_clean_for_ref`.
+Insert the same `paths_ignored` and `classify_worktree_changes` functions immediately after `remote_sha` and before `assert_clean_for_ref`.
 
 - [ ] **Step 4: Replace clean-tree logic in `scripts/deploy-prod.sh`**
 
