@@ -146,6 +146,15 @@ INTERNAL_API_TOKEN=dev docker compose up -d mysql redis rabbitmq
 
 > 注意：`scripts/start-frontend.sh` 会检查 `5173` 和 `5175` 端口，并尝试停止占用进程；如果你不希望脚本处理端口，可手动进入 `frontend/h5` 和 `frontend/admin` 分别执行 `npm run dev`。
 
+### Agent 部署命令
+
+项目部署流程已沉淀为 agent skill：
+
+- `/dp-dev`：从 `origin/main` 强制重启本地开发环境，覆盖 H5、Admin、Gateway、Product、Auction。
+- `/dp-prod`：从 `origin/main` 部署线上 demo 环境；执行线上变更前必须先输出部署计划并等待确认。
+
+详细设计见 `docs/superpowers/specs/2026-06-04-project-deploy-skill-design.md`。
+
 #### 4. 本地测试账号
 
 ```text
