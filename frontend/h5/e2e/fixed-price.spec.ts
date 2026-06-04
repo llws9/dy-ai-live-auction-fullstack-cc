@@ -36,6 +36,18 @@ const fixedPriceItem = {
   },
 };
 
+const liveStream = {
+  id: 301,
+  name: '星河钻石腕表直播间',
+  host_name: '拍卖师',
+  viewer_count: 1288,
+  followers_count: 42,
+  is_following: false,
+  current_auction_id: 101,
+  current_auctions_count: 1,
+  auctions: [auction],
+};
+
 function json(body: unknown, status = 200) {
   return {
     status,
@@ -103,6 +115,11 @@ async function mockFixedPriceApis(page: Page, purchaseMode: 'success' | 'insuffi
       return;
     }
 
+    if (path === '/fixed-price/items/7001/my-purchase') {
+      await route.fulfill(json(success({ i_bought: false })));
+      return;
+    }
+
     if (path === '/fixed-price/items/7001/purchase' && request.method() === 'POST') {
       if (purchaseMode === 'insufficient') {
         await route.fulfill(json({ code: 'FP_INSUFFICIENT_BALANCE', message: '余额不足' }, 402));
@@ -145,8 +162,23 @@ async function mockFixedPriceApis(page: Page, purchaseMode: 'success' | 'insuffi
       return;
     }
 
-    if (path.startsWith('/live-streams')) {
-      await route.fulfill(json(success({ items: [], followed: false, follower_count: 0 })));
+    if (path === '/live-streams/301/followers/stats') {
+      await route.fulfill(json(success({ count: 42, followers_count: 42, total_count: 42 })));
+      return;
+    }
+
+    if (path === '/live-streams/301/follow-status') {
+      await route.fulfill(json(success({ is_following: false })));
+      return;
+    }
+
+    if (path === '/live-streams/301') {
+      await route.fulfill(json(success(liveStream)));
+      return;
+    }
+
+    if (path === '/live-streams') {
+      await route.fulfill(json(success({ list: [liveStream], items: [liveStream] })));
       return;
     }
 
@@ -174,7 +206,7 @@ test.describe('Fixed Price Live Smoke', () => {
     await page.getByRole('button', { name: '确认抢购' }).click();
 
     await expect(page.getByRole('status')).toContainText('抢到了！');
-    await expect(page).toHaveURL(/\/order\/9001/);
+    await expect(page.getByRole('button', { name: '已购买' })).toBeVisible();
   });
 
   test('insufficient balance shows recharge guidance', async ({ page }) => {

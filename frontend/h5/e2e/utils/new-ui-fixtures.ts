@@ -61,6 +61,32 @@ const bids = [
   { id: 2, user_id: 1002, user_name: '收藏家A', amount: 12600, created_at: new Date().toISOString() },
 ];
 
+const liveStreams = [
+  {
+    id: 301,
+    name: '星河钻石腕表直播间',
+    host_name: '拍卖师',
+    creator_name: '拍卖师',
+    viewer_count: 1288,
+    followers_count: 42,
+    is_following: false,
+    current_auction_id: 101,
+    current_auctions_count: 1,
+    auctions: [auctions[0]],
+  },
+  {
+    id: 302,
+    name: '宋代青瓷珍藏回放',
+    host_name: '拍卖师',
+    viewer_count: 256,
+    followers_count: 18,
+    is_following: false,
+    current_auction_id: null,
+    current_auctions_count: 0,
+    auctions: [auctions[1]],
+  },
+];
+
 const history = [
   {
     id: 101,
@@ -156,12 +182,14 @@ export async function mockNewUiApis(page: Page) {
 
     const auctionBidsMatch = path.match(/^\/auctions\/(\d+)\/bids$/);
     if (auctionBidsMatch) {
-      if (request.method() === 'POST') {
-        const payload = request.postDataJSON() as { amount?: number };
-        await route.fulfill(json(success({ current_price: payload.amount ?? 12900 })));
-        return;
-      }
       await route.fulfill(json(success({ bids })));
+      return;
+    }
+
+    const auctionBidMatch = path.match(/^\/auctions\/(\d+)\/bid$/);
+    if (auctionBidMatch && request.method() === 'POST') {
+      const payload = request.postDataJSON() as { amount?: number };
+      await route.fulfill(json(success({ current_price: payload.amount ?? 12900 })));
       return;
     }
 
@@ -194,8 +222,32 @@ export async function mockNewUiApis(page: Page) {
       return;
     }
 
-    if (path.startsWith('/live-streams')) {
-      await route.fulfill(json(success({ items: [], followed: false, follower_count: 0 })));
+    if (path.match(/^\/live-streams\/\d+\/fixed-price\/items$/)) {
+      await route.fulfill(json(success({ items: [] })));
+      return;
+    }
+
+    const liveStreamFollowersStatsMatch = path.match(/^\/live-streams\/(\d+)\/followers\/stats$/);
+    if (liveStreamFollowersStatsMatch) {
+      await route.fulfill(json(success({ count: 42, followers_count: 42, total_count: 42 })));
+      return;
+    }
+
+    const liveStreamFollowStatusMatch = path.match(/^\/live-streams\/(\d+)\/follow-status$/);
+    if (liveStreamFollowStatusMatch) {
+      await route.fulfill(json(success({ is_following: false })));
+      return;
+    }
+
+    const liveStreamMatch = path.match(/^\/live-streams\/(\d+)$/);
+    if (liveStreamMatch) {
+      const liveStream = liveStreams.find((item) => item.id === Number(liveStreamMatch[1])) || liveStreams[0];
+      await route.fulfill(json(success(liveStream)));
+      return;
+    }
+
+    if (path === '/live-streams') {
+      await route.fulfill(json(success({ list: liveStreams, items: liveStreams })));
       return;
     }
 

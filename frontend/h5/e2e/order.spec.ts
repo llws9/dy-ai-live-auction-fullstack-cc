@@ -20,8 +20,8 @@ test.describe('竞拍记录与个人中心 - 新版 H5 UI', () => {
     await seedAuthenticatedUser(page);
     await page.goto('/profile');
 
-    await expect(page.getByRole('link', { name: /关注/ }).first()).toBeVisible();
-    await expect(page.getByRole('link', { name: /竞拍记录|全部记录|历史/ }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /我的收藏/ }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /我的竞拍|竞拍记录|全部/ }).first()).toBeVisible();
   });
 
   test('历史记录页面展示统计与记录列表', async ({ page }) => {
