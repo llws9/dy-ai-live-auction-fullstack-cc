@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { auctionApi, productApi } from '@/services/api';
+import { auctionApi, followApi, productApi } from '@/services/api';
 import { notificationApi } from '@/services/notification';
 import { useAuth } from '@/store/authContext';
 import PageHeader from '@/components/shared/PageHeader';
@@ -46,6 +46,20 @@ interface HomeAuction {
   product?: ProductSummary;
 }
 
+interface LiveStream {
+  id: number | string;
+  name?: string;
+  title?: string;
+  creator_name?: string;
+  host_name?: string;
+  status?: string | number;
+  current_auctions_count?: number | string;
+  followers_count?: number | string;
+  viewer_count?: number | string;
+  cover_image?: string;
+  image?: string;
+}
+
 const SPECIAL_TABS: SpecialTab[] = ['全部', '收藏'];
 
 const SearchIcon = () => (
@@ -75,7 +89,7 @@ const BellIcon = () => (
   </svg>
 );
 
-const extractList = (response: any): RawAuction[] => {
+const extractList = <T,>(response: any): T[] => {
   if (Array.isArray(response)) return response;
   if (Array.isArray(response?.list)) return response.list;
   if (Array.isArray(response?.items)) return response.items;
@@ -139,11 +153,30 @@ const normalizeAuction = (auction: RawAuction, product?: ProductSummary): HomeAu
   product: auction.product ?? product,
 });
 
+const getStreamTitle = (stream: LiveStream) =>
+  repairUtf8Mojibake(stream.title || stream.name) || `直播间 #${stream.id}`;
+
+const getStreamHostName = (stream: LiveStream) =>
+  repairUtf8Mojibake(stream.host_name || stream.creator_name) || '主播';
+
+const getStreamCoverImage = (stream: LiveStream) => stream.cover_image || stream.image || '';
+
+const isLiveStreamActive = (status: LiveStream['status']) => {
+  const normalized = String(status ?? '').toLowerCase();
+  return status === 1 || ['active', 'live', 'living', 'streaming'].includes(normalized);
+};
+
+const toNumber = (value: number | string | undefined, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
 const HomePage: React.FC = () => {
   // activeTab 用 string 既能存「全部」/「收藏」也能存动态分类 name
   const [activeTab, setActiveTab] = useState<string>('全部');
   const [categories, setCategories] = useState<CategoryTab[]>([]);
   const [auctions, setAuctions] = useState<HomeAuction[]>([]);
+  const [favoriteLiveStreams, setFavoriteLiveStreams] = useState<LiveStream[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const { isAuthenticated } = useAuth();
@@ -197,13 +230,22 @@ const HomePage: React.FC = () => {
   }, []);
 
   const fetchAuctions = useCallback(async () => {
+    setLoading(true);
+
     if (activeTab === '收藏') {
-      setAuctions([]);
-      setLoading(false);
+      try {
+        const response = await followApi.getFollowedLiveStreams(1, 20);
+        setFavoriteLiveStreams(extractList<LiveStream>(response));
+        setAuctions([]);
+      } catch (error) {
+        console.error('获取收藏直播间失败:', error);
+        setFavoriteLiveStreams([]);
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
-    setLoading(true);
     try {
       const params: { page: number; page_size: number; category_id?: number } = {
         page: 1,
@@ -217,8 +259,9 @@ const HomePage: React.FC = () => {
       }
 
       const response = await auctionApi.list(params);
-      const rawAuctions = extractList(response);
+      const rawAuctions = extractList<RawAuction>(response);
 
+      setFavoriteLiveStreams([]);
       setAuctions(rawAuctions.map((auction) => normalizeAuction(auction)));
     } catch (error) {
       console.error('获取竞拍列表失败:', error);
@@ -304,11 +347,55 @@ const HomePage: React.FC = () => {
             <span className={styles.loadingSpinner} />
             <span className={styles.loadingText}>加载竞拍中...</span>
           </div>
-        ) : auctions.length === 0 ? (
+        ) : (activeTab === '收藏' ? favoriteLiveStreams.length === 0 : auctions.length === 0) ? (
           <div className={styles.empty}>
             <span className={styles.emptyIcon}>◇</span>
-            <p className={styles.emptyText}>{activeTab === '收藏' ? '暂无收藏竞拍' : '暂无竞拍数据'}</p>
-            {activeTab === '收藏' && <p className={styles.emptyHint}>收藏接口待后端开放后接入。</p>}
+            <p className={styles.emptyText}>{activeTab === '收藏' ? '暂无收藏直播间' : '暂无竞拍数据'}</p>
+            {activeTab === '收藏' && <p className={styles.emptyHint}>浏览直播时点击收藏按钮即可添加。</p>}
+          </div>
+        ) : activeTab === '收藏' ? (
+          <div className={styles.grid}>
+            {favoriteLiveStreams.map((stream) => {
+              const title = getStreamTitle(stream);
+              const hostName = getStreamHostName(stream);
+              const active = isLiveStreamActive(stream.status);
+              const coverImage = getStreamCoverImage(stream);
+
+              return (
+                <article key={stream.id} className={styles.card}>
+                  <div className={styles.imageWrapper}>
+                    {coverImage ? (
+                      <img
+                        alt={title}
+                        className={`${styles.image} ${!active ? styles.imageMuted : ''}`}
+                        src={coverImage}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className={styles.imageFallback}>暂无直播画面</div>
+                    )}
+                    <div className={`${styles.statusBadge} ${active ? styles.statusLive : ''}`}>
+                      {active && <span className={styles.liveDot} />}
+                      {active ? '直播中' : '未在直播'}
+                    </div>
+                  </div>
+
+                  <div className={styles.cardBody}>
+                    <h2 className={styles.productName}>{title}</h2>
+                    <div className={styles.metaRow}>
+                      <span>{hostName}</span>
+                      <span>{toNumber(stream.followers_count)} 人收藏</span>
+                    </div>
+                    <div className={styles.price}>{toNumber(stream.viewer_count)} 观看</div>
+                    <div className={styles.actions}>
+                      <Link to={`/live?id=${stream.id}`} className={styles.primaryButton}>
+                        进入直播
+                      </Link>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         ) : (
           <div className={styles.grid}>

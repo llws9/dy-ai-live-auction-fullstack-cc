@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import HomePage from '../index';
-import { auctionApi, productApi } from '../../../services/api';
+import { auctionApi, followApi, productApi } from '../../../services/api';
 import { notificationApi } from '../../../services/notification';
 import { useAuth } from '../../../store/authContext';
 import { trackEvent } from '../../../utils/trackEvent';
@@ -14,6 +14,9 @@ jest.mock('../../../services/api', () => ({
   productApi: {
     get: jest.fn(),
     listCategories: jest.fn(),
+  },
+  followApi: {
+    getFollowedLiveStreams: jest.fn(),
   },
 }));
 
@@ -40,6 +43,7 @@ jest.mock('../../../utils/trackEvent', () => ({
 
 const mockedAuctionApi = auctionApi as jest.Mocked<typeof auctionApi>;
 const mockedProductApi = productApi as jest.Mocked<typeof productApi>;
+const mockedFollowApi = followApi as jest.Mocked<typeof followApi>;
 const mockedNotificationApi = notificationApi as jest.Mocked<typeof notificationApi>;
 const mockedUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockTrackEvent = trackEvent as jest.MockedFunction<typeof trackEvent>;
@@ -79,6 +83,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
       { id: 1, name: '珠宝腕表' },
       { id: 2, name: '艺术品' },
     ]);
+    mockedFollowApi.getFollowedLiveStreams.mockResolvedValue({ list: [] });
     mockedNotificationApi.getUnreadCount.mockResolvedValue({ count: 0 });
     mockAuthAuthenticated();
   });
@@ -171,6 +176,31 @@ describe('HomePage 分类联动 (T2.10)', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: '老蜜蜡手串' })).toBeTruthy());
     expect(screen.queryByText('è€èœœèœ¡æ‰‹ä¸²')).toBeNull();
   });
+
+  it('点击收藏 tab 时复用我的收藏接口渲染收藏直播间', async () => {
+    mockedFollowApi.getFollowedLiveStreams.mockResolvedValue({
+      list: [
+        {
+          id: 88,
+          title: '翡翠手镯专场',
+          host_name: '主播',
+          status: 'live',
+          cover_image: 'https://example.com/cover.jpg',
+          viewer_count: 12,
+          followers_count: 1,
+        },
+      ],
+      total: 1,
+    });
+
+    renderHome();
+
+    fireEvent.click(screen.getByRole('button', { name: '收藏' }));
+
+    await waitFor(() => expect(mockedFollowApi.getFollowedLiveStreams).toHaveBeenCalledWith(1, 20));
+    expect(await screen.findByRole('heading', { name: '翡翠手镯专场' })).toBeInTheDocument();
+    expect(screen.queryByText('收藏接口待后端开放后接入。')).not.toBeInTheDocument();
+  });
 });
 
 describe('HomePage 未读消息红点 (T3.6 / F-D2)', () => {
@@ -178,6 +208,7 @@ describe('HomePage 未读消息红点 (T3.6 / F-D2)', () => {
     jest.clearAllMocks();
     mockedAuctionApi.list.mockResolvedValue({ list: [], total: 0 });
     mockedProductApi.listCategories.mockResolvedValue([]);
+    mockedFollowApi.getFollowedLiveStreams.mockResolvedValue({ list: [] });
     mockedNotificationApi.getUnreadCount.mockResolvedValue({ count: 0 });
     mockAuthAuthenticated();
   });
