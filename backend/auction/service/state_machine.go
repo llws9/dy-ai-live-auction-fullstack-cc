@@ -62,7 +62,7 @@ func (sm *StateMachine) Transition(targetStatus model.AuctionStatus) error {
 
 // CanBid 检查是否可以出价
 func (sm *StateMachine) CanBid() bool {
-	return sm.auction.Status == model.AuctionStatusOngoing || sm.auction.Status == model.AuctionStatusDelayed
+	return sm.auction.CanBid()
 }
 
 // CanCancel 检查是否可以取消

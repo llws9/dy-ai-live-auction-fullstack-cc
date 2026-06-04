@@ -34,6 +34,7 @@ interface RawAuction {
   current_price?: number;
   bid_count?: number;
   bidder_count?: number;
+  end_time?: string;
 }
 
 interface HomeAuction {
@@ -43,17 +44,21 @@ interface HomeAuction {
   status: number;
   currentPrice: number;
   bidCount: number;
+  endTime?: string;
   product?: ProductSummary;
 }
 
 interface LiveStream {
-  id: number | string;
+  id?: number | string;
+  live_stream_id?: number | string;
   name?: string;
   title?: string;
+  live_stream_name?: string;
   creator_name?: string;
   host_name?: string;
   status?: string | number;
   current_auctions_count?: number | string;
+  auction_count?: number | string;
   followers_count?: number | string;
   viewer_count?: number | string;
   cover_image?: string;
@@ -126,7 +131,17 @@ const getFirstImage = (product?: ProductSummary) => {
   return product.images;
 };
 
-const getStatusInfo = (status: number) => {
+const isPastEndTime = (endTime?: string) => {
+  if (!endTime) return false;
+  const parsed = new Date(endTime).getTime();
+  return Number.isFinite(parsed) && parsed <= Date.now();
+};
+
+const getStatusInfo = (status: number, endTime?: string) => {
+  if ((status === 1 || status === 2) && isPastEndTime(endTime)) {
+    return { label: '已结束', live: false, ended: true };
+  }
+
   switch (status) {
     case 0:
       return { label: '即将开始', live: false, ended: false };
@@ -150,11 +165,18 @@ const normalizeAuction = (auction: RawAuction, product?: ProductSummary): HomeAu
   status: auction.status ?? 0,
   currentPrice: auction.current_price ?? 0,
   bidCount: auction.bid_count ?? auction.bidder_count ?? 0,
+  endTime: auction.end_time,
   product: auction.product ?? product,
 });
 
-const getStreamTitle = (stream: LiveStream) =>
-  repairUtf8Mojibake(stream.title || stream.name) || `直播间 #${stream.id}`;
+const getStreamId = (stream: LiveStream) => stream.id ?? stream.live_stream_id;
+
+const getStreamTitle = (stream: LiveStream) => {
+  const title = repairUtf8Mojibake(stream.title || stream.name || stream.live_stream_name);
+  if (title) return title;
+  const streamId = getStreamId(stream);
+  return streamId === undefined || streamId === null ? '直播间' : `直播间 #${streamId}`;
+};
 
 const getStreamHostName = (stream: LiveStream) =>
   repairUtf8Mojibake(stream.host_name || stream.creator_name) || '主播';
@@ -169,6 +191,11 @@ const isLiveStreamActive = (status: LiveStream['status']) => {
 const toNumber = (value: number | string | undefined, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const hasActiveAuction = (stream: LiveStream) => {
+  const count = stream.current_auctions_count ?? stream.auction_count;
+  return count === undefined ? true : toNumber(count) > 0;
 };
 
 const HomePage: React.FC = () => {
@@ -358,11 +385,12 @@ const HomePage: React.FC = () => {
             {favoriteLiveStreams.map((stream) => {
               const title = getStreamTitle(stream);
               const hostName = getStreamHostName(stream);
-              const active = isLiveStreamActive(stream.status);
+              const active = isLiveStreamActive(stream.status) && hasActiveAuction(stream);
               const coverImage = getStreamCoverImage(stream);
+              const streamId = getStreamId(stream);
 
               return (
-                <article key={stream.id} className={styles.card}>
+                <article key={streamId ?? title} className={styles.card}>
                   <div className={styles.imageWrapper}>
                     {coverImage ? (
                       <img
@@ -376,7 +404,7 @@ const HomePage: React.FC = () => {
                     )}
                     <div className={`${styles.statusBadge} ${active ? styles.statusLive : ''}`}>
                       {active && <span className={styles.liveDot} />}
-                      {active ? '直播中' : '未在直播'}
+                      {active ? '直播中' : '已结束'}
                     </div>
                   </div>
 
@@ -388,9 +416,11 @@ const HomePage: React.FC = () => {
                     </div>
                     <div className={styles.price}>{toNumber(stream.viewer_count)} 观看</div>
                     <div className={styles.actions}>
-                      <Link to={`/live?id=${stream.id}`} className={styles.primaryButton}>
-                        进入直播
-                      </Link>
+                      {active && streamId !== undefined && (
+                        <Link to={`/live?id=${streamId}`} className={styles.primaryButton}>
+                          进入直播
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </article>
@@ -400,7 +430,7 @@ const HomePage: React.FC = () => {
         ) : (
           <div className={styles.grid}>
             {auctions.map((auction) => {
-              const statusInfo = getStatusInfo(auction.status);
+              const statusInfo = getStatusInfo(auction.status, auction.endTime);
               const productImage = getFirstImage(auction.product);
               const productName = repairUtf8Mojibake(auction.product?.name) || `竞拍场次 #${auction.id}`;
               const livePath = `/live?id=${auction.liveStreamId ?? ''}&auction_id=${auction.id}`;

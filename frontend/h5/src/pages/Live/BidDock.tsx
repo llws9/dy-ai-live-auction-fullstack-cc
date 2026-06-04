@@ -9,6 +9,8 @@ interface BidDockProps {
   currentPrice: number;
   sheet: 'bid' | 'info' | null;
   isAuthenticated: boolean;
+  bidDisabled?: boolean;
+  bidDisabledText?: string;
   onOpen: (sheet: 'bid' | 'info') => void;
   onClose: () => void;
   onRequireLogin: () => void;
@@ -27,6 +29,8 @@ const BidDock: React.FC<BidDockProps> = ({
   currentPrice,
   sheet,
   isAuthenticated,
+  bidDisabled = false,
+  bidDisabledText = '已结束',
   onOpen,
   onClose,
   onRequireLogin,
@@ -37,6 +41,7 @@ const BidDock: React.FC<BidDockProps> = ({
 
   const handleBidClick = (event: React.MouseEvent) => {
     event.stopPropagation();
+    if (bidDisabled) return;
     if (!isAuthenticated) {
       onRequireLogin();
       return;
@@ -59,8 +64,8 @@ const BidDock: React.FC<BidDockProps> = ({
             <span className={styles.dockPrice}>当前最高价 ¥{formatMoney(currentPrice)}</span>
           </div>
         </div>
-        <button className={styles.dockButton} type="button" onClick={handleBidClick}>
-          出价
+        <button className={styles.dockButton} type="button" onClick={handleBidClick} disabled={bidDisabled}>
+          {bidDisabled ? bidDisabledText : '出价'}
         </button>
       </div>
 

@@ -177,6 +177,33 @@ describe('HomePage 分类联动 (T2.10)', () => {
     expect(screen.queryByText('è€èœœèœ¡æ‰‹ä¸²')).toBeNull();
   });
 
+  it('首页将已过 end_time 的 active 竞拍展示为已结束并隐藏进入直播', async () => {
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [
+        {
+          id: 9,
+          product_id: 13,
+          live_stream_id: 5,
+          status: 1,
+          end_time: new Date(Date.now() - 1000).toISOString(),
+          current_price: 3400,
+          product: {
+            id: 13,
+            name: '青花瓷摆件',
+          },
+        },
+      ],
+      total: 1,
+    });
+
+    renderHome();
+
+    await screen.findByRole('heading', { name: '青花瓷摆件' });
+    expect(await screen.findByText('已结束')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '查看结果' })).toHaveAttribute('href', '/result?id=9');
+    expect(screen.queryByRole('link', { name: '进入直播' })).not.toBeInTheDocument();
+  });
+
   it('点击收藏 tab 时复用我的收藏接口渲染收藏直播间', async () => {
     mockedFollowApi.getFollowedLiveStreams.mockResolvedValue({
       list: [
@@ -201,6 +228,57 @@ describe('HomePage 分类联动 (T2.10)', () => {
     await waitFor(() => expect(mockedFollowApi.getFollowedLiveStreams).toHaveBeenCalledWith(1, 20));
     expect(await screen.findByRole('heading', { name: '翡翠手镯专场' })).toBeInTheDocument();
     expect(screen.queryByText('收藏接口待后端开放后接入。')).not.toBeInTheDocument();
+  });
+
+  it('收藏 tab 将没有有效竞拍的直播间展示为已结束并禁止进入直播', async () => {
+    mockedFollowApi.getFollowedLiveStreams.mockResolvedValue({
+      list: [
+        {
+          live_stream_id: 88,
+          live_stream_name: '翡翠手镯专场',
+          host_name: '主播',
+          status: 'live',
+          auction_count: 0,
+          cover_image: 'https://example.com/cover.jpg',
+          viewer_count: 12,
+          followers_count: 1,
+        },
+      ],
+      total: 1,
+    });
+
+    renderHome();
+
+    await waitFor(() => expect(mockedAuctionApi.list).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole('button', { name: '收藏' }));
+
+    expect(await screen.findByText('已结束')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '进入直播' })).not.toBeInTheDocument();
+  });
+
+  it('收藏 tab 使用后端 live_stream_id/live_stream_name 渲染并进入直播', async () => {
+    mockedFollowApi.getFollowedLiveStreams.mockResolvedValue({
+      list: [
+        {
+          live_stream_id: 89,
+          live_stream_name: '沉香手串专场',
+          host_name: '主播',
+          status: 'live',
+          auction_count: 1,
+          viewer_count: 8,
+          followers_count: 2,
+        },
+      ],
+      total: 1,
+    });
+
+    renderHome();
+
+    await waitFor(() => expect(mockedAuctionApi.list).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole('button', { name: '收藏' }));
+
+    expect(await screen.findByRole('heading', { name: '沉香手串专场' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '进入直播' })).toHaveAttribute('href', '/live?id=89');
   });
 });
 

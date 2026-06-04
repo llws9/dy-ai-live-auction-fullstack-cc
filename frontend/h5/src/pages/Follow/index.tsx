@@ -44,6 +44,11 @@ function isLive(status: LiveStream['status']) {
   return status === 1 || ['active', 'live', 'living', 'streaming'].includes(normalized);
 }
 
+function hasActiveAuction(stream: LiveStream) {
+  const count = stream.current_auctions_count ?? stream.auction_count;
+  return count === undefined ? true : toNumber(count) > 0;
+}
+
 function getStreamId(stream: LiveStream) {
   return stream.id ?? stream.live_stream_id;
 }
@@ -107,7 +112,7 @@ const FollowPage: React.FC = () => {
   }, []);
 
   const liveCount = useMemo(
-    () => liveStreams.filter((stream) => isLive(stream.status)).length,
+    () => liveStreams.filter((stream) => isLive(stream.status) && hasActiveAuction(stream)).length,
     [liveStreams]
   );
 
@@ -180,7 +185,7 @@ const FollowPage: React.FC = () => {
               const streamId = getStreamId(stream);
               const title = getTitle(stream);
               const hostName = getHostName(stream);
-              const active = isLive(stream.status);
+              const active = isLive(stream.status) && hasActiveAuction(stream);
               const expanded = expandedId === streamId;
               const pending = streamId !== undefined && pendingUnfollowIds.includes(streamId);
               const coverImage = getCoverImage(stream);
@@ -197,7 +202,7 @@ const FollowPage: React.FC = () => {
                     <div className={styles.coverFrame}>
                       {coverImage ? <img src={coverImage} alt={title} /> : <span>暂无直播画面</span>}
                       <span className={active ? styles.liveBadge : styles.offlineBadge}>
-                        {active ? '直播中' : '未在直播'}
+                        {active ? '直播中' : '已结束'}
                       </span>
                     </div>
 
@@ -226,8 +231,8 @@ const FollowPage: React.FC = () => {
                         className={styles.primaryButton}
                         type="button"
                         aria-label={`进入直播间 ${title}`}
-                        disabled={streamId === undefined}
-                        onClick={() => streamId !== undefined && handleEnterLiveStream(streamId)}
+                        disabled={!active || streamId === undefined}
+                        onClick={() => active && streamId !== undefined && handleEnterLiveStream(streamId)}
                       >
                         进入直播间
                       </button>

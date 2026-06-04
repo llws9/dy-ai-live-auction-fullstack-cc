@@ -45,7 +45,10 @@ func (a *Auction) IsEnded() bool {
 
 // CanBid 检查是否可以出价
 func (a *Auction) CanBid() bool {
-	return a.Status == AuctionStatusOngoing || a.Status == AuctionStatusDelayed
+	if !(a.Status == AuctionStatusOngoing || a.Status == AuctionStatusDelayed) {
+		return false
+	}
+	return time.Now().Before(a.EndTime)
 }
 
 // IsInDelayWindow 检查是否在延时窗口内（结束前30秒）

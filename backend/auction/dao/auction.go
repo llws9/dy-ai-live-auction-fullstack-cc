@@ -3,6 +3,7 @@ package dao
 import (
 	"context"
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -248,6 +249,7 @@ func (d *AuctionDAO) CountActiveByLiveStreamIDs(ctx context.Context, liveStreamI
 		Select("live_stream_id, COUNT(*) AS cnt").
 		Where("live_stream_id IN ?", liveStreamIDs).
 		Where("status IN ?", []model.AuctionStatus{model.AuctionStatusOngoing, model.AuctionStatusDelayed}).
+		Where("end_time > ?", time.Now()).
 		Group("live_stream_id").
 		Scan(&rows).Error
 	if err != nil {
@@ -305,6 +307,7 @@ func (d *AuctionDAO) GetCurrentByLiveStreamIDs(ctx context.Context, liveStreamID
 	err := d.db.WithContext(ctx).
 		Where("live_stream_id IN ?", liveStreamIDs).
 		Where("status IN ?", []model.AuctionStatus{model.AuctionStatusOngoing, model.AuctionStatusDelayed}).
+		Where("end_time > ?", time.Now()).
 		Order("live_stream_id ASC, start_time DESC, id DESC").
 		Find(&rows).Error
 	if err != nil {

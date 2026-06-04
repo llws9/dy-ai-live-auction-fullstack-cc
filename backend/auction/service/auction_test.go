@@ -25,7 +25,7 @@ func TestStateMachine_CanBid(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			auction := &model.Auction{Status: tt.status}
+			auction := &model.Auction{Status: tt.status, EndTime: time.Now().Add(time.Hour)}
 			sm := NewStateMachine(auction)
 			assert.Equal(t, tt.expected, sm.CanBid())
 		})
@@ -212,7 +212,7 @@ func TestAuction_CanBid_Method(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			auction := &model.Auction{Status: tt.status}
+			auction := &model.Auction{Status: tt.status, EndTime: time.Now().Add(time.Hour)}
 			assert.Equal(t, tt.expected, auction.CanBid())
 		})
 	}
