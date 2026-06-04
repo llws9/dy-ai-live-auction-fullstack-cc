@@ -5,7 +5,7 @@ import FixedPriceCard from '@/components/FixedPriceCard';
 import FixedPriceFlair from '@/components/FixedPriceFlair';
 import FixedPricePurchaseModal from '@/components/FixedPricePurchaseModal';
 import { useFixedPriceItems } from '@/hooks/useFixedPriceItems';
-import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '@/services/api';
+import { auctionApi, bidApi, followApi, liveStreamApi, productApi, skyLampApi } from '@/services/api';
 import WebSocketService from '@/services/websocket';
 import { useAuth } from '@/store/authContext';
 import { useToast } from '../../components/Toast';
@@ -124,6 +124,12 @@ const getEffectiveStatusText = (status: number | undefined, expired: boolean) =>
   return getStatusText(status);
 };
 
+const isAlreadyActiveSkyLampError = (error: any) =>
+  typeof error?.message === 'string' && error.message.includes('已有活跃的点天灯订阅');
+
+const extractSkyLampSubscriptions = (response: any) =>
+  (response?.subscriptions || response?.data?.subscriptions || []) as Array<{ auction_id?: number | string; status?: number | string }>;
+
 function toastPayloadFromNotification(notification: any) {
   switch (notification.type) {
     case 'bid_outbid':
@@ -171,6 +177,10 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const sheet: 'bid' | 'info' | null = sheetParam === 'bid' || sheetParam === 'info' ? sheetParam : null;
   const [bidAmount, setBidAmount] = useState('');
   const [bidding, setBidding] = useState(false);
+  const [skyLampConfirmOpen, setSkyLampConfirmOpen] = useState(false);
+  const [skyLampPending, setSkyLampPending] = useState(false);
+  const [skyLampActive, setSkyLampActive] = useState(false);
+  const [skyLampNoticeVisible, setSkyLampNoticeVisible] = useState(false);
   const [following, setFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingPending, setFollowingPending] = useState(false);
@@ -254,6 +264,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   // 程序关闭 sheet（onClose / 出价成功）：去除 sheet 参数并 replace，避免再点返回多退一步。
   const closeSheet = useCallback(() => {
     if (!active) return;
+    setSkyLampConfirmOpen(false);
     const params = new URLSearchParams(searchParams);
     if (!params.has('sheet')) return;
     params.delete('sheet');
@@ -518,6 +529,72 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     }
   };
 
+  const activateSkyLampUi = () => {
+    setSkyLampActive(true);
+    setSkyLampNoticeVisible(true);
+    setSkyLampConfirmOpen(false);
+    closeSheet();
+  };
+
+  useEffect(() => {
+    if (!active || !isAuthenticated || !auctionId) return;
+
+    let cancelled = false;
+    skyLampApi.listSubscriptions(1)
+      .then((response) => {
+        if (cancelled) return;
+        const matched = extractSkyLampSubscriptions(response).find((subscription) =>
+          Number(subscription.auction_id) === auctionId && Number(subscription.status) === 1
+        );
+        setSkyLampActive(Boolean(matched));
+      })
+      .catch(() => {
+        // 点天灯状态是体验增强，查询失败不应影响直播间主流程。
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [active, auctionId, isAuthenticated]);
+
+  const handleStartSkyLamp = async () => {
+    if (!isAuthenticated) {
+      showToast('请先登录后点天灯');
+      return;
+    }
+    if (!isActive) {
+      showToast('当前竞拍不可点天灯');
+      return;
+    }
+
+    setSkyLampPending(true);
+    onBidPendingChange?.(true);
+    try {
+      await skyLampApi.startSubscription(auctionId);
+      activateSkyLampUi();
+      showGlobalToast({
+        type: 'success',
+        title: '点天灯已开启',
+        message: '系统将自动为你守住领先出价',
+      });
+      await loadRanking(auctionId);
+    } catch (error: any) {
+      if (isAlreadyActiveSkyLampError(error)) {
+        activateSkyLampUi();
+        showGlobalToast({
+          type: 'success',
+          title: '点天灯已开启',
+          message: '你已有活跃点天灯订阅，系统将继续自动守住领先',
+        });
+      } else {
+        showToast(error?.message || '点天灯开启失败，请稍后重试');
+      }
+    } finally {
+      setSkyLampPending(false);
+      onBidPendingChange?.(false);
+    }
+  };
+
   const handleFollow = async () => {
     if (!effectiveLiveStreamId) {
       showToast('直播间信息缺失，暂不能收藏');
@@ -643,6 +720,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         isAuthenticated={isAuthenticated}
         bidDisabled={!isActive}
         bidDisabledText={hasReachedEndTime ? '已结束' : '不可出价'}
+        skyLampActive={skyLampActive}
         onOpen={openSheet}
         onClose={closeSheet}
         onRequireLogin={() => showToast('请先登录后出价')}
@@ -704,7 +782,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
               step="0.01"
               value={bidAmount}
               onChange={(event) => setBidAmount(event.target.value)}
-              disabled={!isActive || bidding}
+              disabled={!isActive || bidding || skyLampPending}
             />
           </div>
           <div className={styles.quickBids}>
@@ -713,15 +791,56 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
                 key={multiplier}
                 type="button"
                 onClick={() => setBidAmount(String(minBid + increment * multiplier))}
-                disabled={!isActive || bidding}
+                disabled={!isActive || bidding || skyLampPending}
               >
                 {multiplier === 0 ? '最低价' : `+${formatMoney(increment * multiplier)}`}
               </button>
             ))}
           </div>
-          <button className={styles.bidButton} disabled={!isActive || bidding} onClick={handleBid} type="button">
-            {bidding ? '出价中...' : isActive ? '立即出价' : '竞拍已结束'}
-          </button>
+          <div className={styles.bidActionBar}>
+            <button
+              className={styles.skyLampButton}
+              disabled={!isActive || bidding || skyLampPending || skyLampActive}
+              onClick={() => setSkyLampConfirmOpen(true)}
+              type="button"
+            >
+              <i
+                className={`${styles.skyLampIcon} ${skyLampActive ? styles.skyLampIconFloating : ''}`}
+                data-testid={skyLampActive ? 'sky-lamp-floating-icon' : undefined}
+                aria-hidden="true"
+              >
+                <span />
+              </i>
+              {skyLampActive ? '守护中' : skyLampPending ? '开启中' : '点天灯'}
+            </button>
+            <button className={styles.bidButton} disabled={!isActive || bidding || skyLampPending} onClick={handleBid} type="button">
+              {bidding ? '出价中...' : isActive ? '立即出价' : '竞拍已结束'}
+            </button>
+          </div>
+          {skyLampConfirmOpen && (
+            <div className={styles.skyLampConfirm} role="dialog" aria-modal="false" aria-labelledby="sky-lamp-confirm-title">
+              <h3 id="sky-lamp-confirm-title">确认开启点天灯？</h3>
+              <p>系统将先出价 ¥{formatMoney(minBid)}，并在别人超过你时自动跟价。你可在订阅中停止。</p>
+              <div className={styles.skyLampConfirmActions}>
+                <button
+                  className={styles.skyLampCancelButton}
+                  disabled={skyLampPending}
+                  onClick={() => setSkyLampConfirmOpen(false)}
+                  type="button"
+                >
+                  取消
+                </button>
+                <button
+                  className={styles.skyLampConfirmButton}
+                  disabled={skyLampPending}
+                  onClick={handleStartSkyLamp}
+                  type="button"
+                >
+                  {skyLampPending ? '开启中...' : '确认开启'}
+                </button>
+              </div>
+            </div>
+          )}
           {!isAuthenticated && <p className={styles.authHint}>请先登录后出价</p>}
           {!isActive && <p className={styles.authHint}>当前竞拍不可出价</p>}
         </section>
@@ -735,6 +854,12 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         </section>
       </BidDock>
 
+      {skyLampNoticeVisible && (
+        <div className={styles.skyLampNotice} role="status">
+          <i className={styles.skyLampNoticeIcon} aria-hidden="true"><span /></i>
+          <strong>{user?.name || '当前用户'} 开启点天灯，自动守住领先</strong>
+        </div>
+      )}
       {toast && <div className={styles.toast} role="status">{toast}</div>}
       {fixedPriceModalItem && (
         <FixedPricePurchaseModal

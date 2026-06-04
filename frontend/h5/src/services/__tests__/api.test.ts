@@ -3,7 +3,7 @@ jest.mock('../../utils/errorMessages', () => ({
   logError: jest.fn(),
 }));
 
-import { auctionApi, buildLoginRedirectPath, orderApi, userApi } from '../api';
+import { auctionApi, buildLoginRedirectPath, orderApi, setToastFunction, skyLampApi, userApi } from '../api';
 
 describe('api service auth header', () => {
   beforeEach(() => {
@@ -127,5 +127,80 @@ describe('api service auth header', () => {
 
     const calledUrl = fetchMock.mock.calls[0][0] as string;
     expect(calledUrl).not.toContain('category_id');
+  });
+
+  it('starts a sky lamp subscription through the gateway endpoint', async () => {
+    localStorage.setItem('auth_token', 'auth-token-1');
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({
+        code: 200,
+        message: '点天灯订阅已开启',
+        subscription: { id: 18, auction_id: 5 },
+      }),
+    } as Response);
+    global.fetch = fetchMock;
+
+    await skyLampApi.startSubscription(5);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/sky-lamp/subscriptions',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer auth-token-1',
+          'Content-Type': 'application/json',
+        }),
+        body: JSON.stringify({ auction_id: 5 }),
+      })
+    );
+  });
+
+  it('does not show a global request-layer error toast for sky lamp subscription conflicts', async () => {
+    localStorage.setItem('auth_token', 'auth-token-1');
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      url: '/api/v1/sky-lamp/subscriptions',
+      headers: { get: () => 'application/json' },
+      json: async () => ({
+        code: 400,
+        message: '已有活跃的点天灯订阅',
+      }),
+    } as Response);
+    global.fetch = fetchMock;
+    const toastSpy = jest.fn();
+    setToastFunction(toastSpy);
+
+    await expect(skyLampApi.startSubscription(5)).rejects.toThrow('已有活跃的点天灯订阅');
+
+    expect(toastSpy).not.toHaveBeenCalled();
+  });
+
+  it('lists active sky lamp subscriptions through the gateway endpoint', async () => {
+    localStorage.setItem('auth_token', 'auth-token-1');
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({
+        code: 200,
+        subscriptions: [{ id: 18, auction_id: 5, status: 1 }],
+      }),
+    } as Response);
+    global.fetch = fetchMock;
+
+    await skyLampApi.listSubscriptions(1);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/sky-lamp/subscriptions?status=1',
+      expect.objectContaining({
+        method: 'GET',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer auth-token-1',
+          'Content-Type': 'application/json',
+        }),
+      })
+    );
   });
 });
