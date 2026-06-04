@@ -140,24 +140,24 @@ func (d *AuctionDAO) ListByStatus(ctx context.Context, status model.AuctionStatu
 }
 
 // GetExpiredAuctions 获取已过期但未结束的竞拍
-func (d *AuctionDAO) GetExpiredAuctions(ctx context.Context) ([]model.Auction, error) {
+func (d *AuctionDAO) GetExpiredAuctions(ctx context.Context, now time.Time) ([]model.Auction, error) {
 	var auctions []model.Auction
 	err := d.db.WithContext(ctx).
 		Where("status IN ?", []model.AuctionStatus{
 			model.AuctionStatusOngoing,
 			model.AuctionStatusDelayed,
 		}).
-		Where("end_time <= NOW()").
+		Where("end_time <= ?", now).
 		Find(&auctions).Error
 	return auctions, err
 }
 
 // GetPendingAuctionsToStart 获取待开始且已到开始时间的竞拍
-func (d *AuctionDAO) GetPendingAuctionsToStart(ctx context.Context) ([]model.Auction, error) {
+func (d *AuctionDAO) GetPendingAuctionsToStart(ctx context.Context, now time.Time) ([]model.Auction, error) {
 	var auctions []model.Auction
 	err := d.db.WithContext(ctx).
 		Where("status = ?", model.AuctionStatusPending).
-		Where("start_time <= NOW()").
+		Where("start_time <= ?", now).
 		Find(&auctions).Error
 	return auctions, err
 }

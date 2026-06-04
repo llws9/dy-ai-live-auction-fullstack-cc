@@ -102,3 +102,46 @@ func TestListOrdersByLiveUpcomingEndedPriority(t *testing.T) {
 	require.Equal(t, int64(103), got[2].ID, "已过 end_time 的 active 状态应按已结束处理")
 	require.Equal(t, int64(100), got[3].ID)
 }
+
+func TestGetPendingAuctionsToStartUsesApplicationClock(t *testing.T) {
+	db := newCurrentTestDB(t)
+	dao := NewAuctionDAO(db)
+	ctx := context.Background()
+
+	appNow := time.Date(2026, 6, 5, 3, 35, 0, 0, time.FixedZone("CST", 8*60*60))
+	rows := []model.Auction{
+		{ID: 201, ProductID: 201, Status: model.AuctionStatusPending, StartTime: appNow.Add(-2 * time.Hour), EndTime: appNow.Add(time.Hour)},
+		{ID: 202, ProductID: 202, Status: model.AuctionStatusPending, StartTime: appNow.Add(time.Hour), EndTime: appNow.Add(2 * time.Hour)},
+		{ID: 203, ProductID: 203, Status: model.AuctionStatusOngoing, StartTime: appNow.Add(-2 * time.Hour), EndTime: appNow.Add(time.Hour)},
+	}
+	for i := range rows {
+		require.NoError(t, db.Create(&rows[i]).Error)
+	}
+
+	got, err := dao.GetPendingAuctionsToStart(ctx, appNow)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	require.Equal(t, int64(201), got[0].ID)
+}
+
+func TestGetExpiredAuctionsUsesApplicationClock(t *testing.T) {
+	db := newCurrentTestDB(t)
+	dao := NewAuctionDAO(db)
+	ctx := context.Background()
+
+	appNow := time.Date(2026, 6, 5, 3, 35, 0, 0, time.FixedZone("CST", 8*60*60))
+	rows := []model.Auction{
+		{ID: 301, ProductID: 301, Status: model.AuctionStatusOngoing, StartTime: appNow.Add(-3 * time.Hour), EndTime: appNow.Add(-time.Minute)},
+		{ID: 302, ProductID: 302, Status: model.AuctionStatusDelayed, StartTime: appNow.Add(-3 * time.Hour), EndTime: appNow.Add(-time.Minute)},
+		{ID: 303, ProductID: 303, Status: model.AuctionStatusOngoing, StartTime: appNow.Add(-time.Hour), EndTime: appNow.Add(time.Hour)},
+		{ID: 304, ProductID: 304, Status: model.AuctionStatusPending, StartTime: appNow.Add(-3 * time.Hour), EndTime: appNow.Add(-time.Minute)},
+	}
+	for i := range rows {
+		require.NoError(t, db.Create(&rows[i]).Error)
+	}
+
+	got, err := dao.GetExpiredAuctions(ctx, appNow)
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	require.ElementsMatch(t, []int64{301, 302}, []int64{got[0].ID, got[1].ID})
+}
