@@ -44,20 +44,21 @@ Use this when the user enters `/dp-dev`.
 scripts/deploy-dev.sh status
 ```
 
-3. If status shows `HEAD != origin/main`, stop; if status shows non-ignored local changes, stop; if status shows only ignored-local changes, continue and report them.
-4. If safe, run:
+3. Treat `scripts/deploy-dev.sh status` as read-only display only. If status shows `HEAD != origin/main`, stop and ask the user to sync or use an isolated worktree.
+4. Otherwise run:
 
 ```bash
 scripts/deploy-dev.sh restart
 ```
 
-5. Verify with:
+5. Let the restart script precheck report ignored-local changes or block non-ignored local changes. Do not duplicate worktree classification in the skill.
+6. Verify with:
 
 ```bash
 scripts/deploy-dev.sh verify
 ```
 
-6. Report exact URLs:
+7. Report exact URLs:
 
 - H5: `http://localhost:5173`
 - Admin: `http://localhost:5175`
@@ -115,8 +116,9 @@ scripts/deploy-prod.sh verify
 - `/dp-dev` must not change source config to work around localhost, IPv6, or port conflicts.
 - Do not use `git reset --hard`, `git checkout --`, or destructive cleanup unless the user explicitly approves.
 - Do not silently discard local changes.
-- Local changes whose paths match `.gitignore` are allowed for `/dp-dev` and `/dp-prod`; report them as ignored-local changes and do not delete, reset, stash, or overwrite them.
-- Local changes that do not match `.gitignore` must still block deployment.
+- Local changes whose paths match `.gitignore` are allowed for `/dp-dev` and `/dp-prod`; deploy scripts must report them as ignored-local changes, and the skill must not delete, reset, stash, or overwrite them.
+- Local changes that do not match `.gitignore` must still block deployment in deploy script prechecks.
+- `/dp-prod` backend source sync follows `.gitignore` filters so ignored-local files are not rsynced to the remote app; frontend `dist/` is synchronized only through explicit frontend sync steps.
 
 ## Failure Handling
 

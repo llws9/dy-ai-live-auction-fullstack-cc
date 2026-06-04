@@ -239,6 +239,7 @@ sync_frontend() {
 
 sync_backend() {
   rsync_base \
+    --filter=':- .gitignore' \
     --exclude '.git/' \
     --exclude 'node_modules/' \
     --exclude 'frontend/h5/dist/' \

@@ -4,7 +4,7 @@
 
 **Goal:** Allow `/dp-dev` and `/dp-prod` deployment checks to ignore local changes whose paths match `.gitignore`, including already tracked files.
 
-**Architecture:** Keep the existing `HEAD == origin/main` safety check unchanged. Replace the all-or-nothing `git status --porcelain` clean-tree check with a helper that parses `git status --porcelain=v1 -z` and classifies changes into ignored-local changes and blocking changes by using `git check-ignore --no-index`.
+**Architecture:** Keep the existing `HEAD == origin/main` safety check unchanged. Replace the all-or-nothing `git status --porcelain` clean-tree check with a helper that parses `git status --porcelain=v1 -z` and classifies changes into ignored-local changes and blocking changes by using `git check-ignore --no-index`. For `/dp-prod`, apply `.gitignore` filtering to backend source rsync so allowed ignored-local files are reported but not copied to the remote app.
 
 **Tech Stack:** Bash, Git CLI, Trae project skill markdown.
 
@@ -16,6 +16,7 @@
   - Replace `assert_clean_tree` with a check that blocks only non-ignored local changes.
 - Modify: `scripts/deploy-prod.sh`
   - Replace the worktree-clean portion of `assert_clean_for_ref` with the same ignored-change rule.
+  - Add `.gitignore` rsync filtering to `sync_backend` only; do not change explicit frontend `dist/` sync.
 - Modify: `.trae/skills/project-deploy/SKILL.md`
   - Document that `.gitignore`-matched local changes do not block `/dp-dev` or `/dp-prod`.
 - Modify: `/Users/bytedance/.trae-cn/skills/project-deploy/SKILL.md`
@@ -139,7 +140,27 @@ with:
   classify_worktree_changes
 ```
 
-- [ ] **Step 5: Validate script syntax**
+- [ ] **Step 5: Filter ignored-local files from prod backend source sync**
+
+In `scripts/deploy-prod.sh`, update `sync_backend`:
+
+```bash
+sync_backend() {
+  rsync_base \
+    --filter=':- .gitignore' \
+    --exclude '.git/' \
+    --exclude 'node_modules/' \
+    --exclude 'frontend/h5/dist/' \
+    --exclude 'frontend/admin/dist/' \
+    --exclude '.tmp/' \
+    "$PROJECT_ROOT/" "$DEPLOY_USER@$DEPLOY_HOST:$REMOTE_APP_DIR/"
+  ssh_base "cd '$REMOTE_APP_DIR' && echo '$(local_sha)' > .deploy-ref"
+}
+```
+
+Expected: backend source sync follows `.gitignore`; `sync_frontend` still explicitly syncs `frontend/h5/dist/` and `frontend/admin/dist/`.
+
+- [ ] **Step 6: Validate script syntax**
 
 Run:
 
@@ -150,7 +171,7 @@ bash -n scripts/deploy-prod.sh
 
 Expected: both commands exit with code `0`.
 
-- [ ] **Step 6: Verify ignored tracked change is allowed**
+- [ ] **Step 7: Verify ignored tracked change is allowed**
 
 Run:
 
@@ -168,7 +189,7 @@ Expected:
 
 Expected: `scripts/deploy-dev.sh restart` does not fail because of `frontend/admin/dist/index.html`.
 
-- [ ] **Step 7: Verify non-ignored change is blocked**
+- [ ] **Step 8: Verify non-ignored change is blocked**
 
 Create a temporary non-ignored change:
 
@@ -198,18 +219,19 @@ PY
 
 Expected: `git diff -- README.md` prints no diff.
 
-- [ ] **Step 8: Verify prod apply precheck path without remote mutation**
+- [ ] **Step 9: Verify prod apply precheck path without remote mutation**
 
 Do not run `scripts/deploy-prod.sh apply` because it performs online deployment. Instead verify the helper is present and syntax-safe:
 
 ```bash
 grep -n "classify_worktree_changes" scripts/deploy-prod.sh
+grep -n -- "--filter=':- .gitignore'" scripts/deploy-prod.sh
 bash -n scripts/deploy-prod.sh
 ```
 
-Expected: `grep` shows the helper definition and call inside `assert_clean_for_ref`.
+Expected: `grep` shows the helper definition, call inside `assert_clean_for_ref`, and backend rsync `.gitignore` filter.
 
-- [ ] **Step 9: Commit script changes**
+- [ ] **Step 10: Commit script changes**
 
 Stage only the scripts:
 
@@ -234,7 +256,24 @@ scripts/deploy-prod.sh
 - Modify: `.trae/skills/project-deploy/SKILL.md`
 - Modify outside repo: `/Users/bytedance/.trae-cn/skills/project-deploy/SKILL.md`
 
-- [ ] **Step 1: Update project skill safety rules**
+- [ ] **Step 1: Update project skill `/dp-dev` workflow**
+
+In `.trae/skills/project-deploy/SKILL.md`, replace `/dp-dev Workflow` step 3 with:
+
+```markdown
+3. Treat `scripts/deploy-dev.sh status` as read-only display only. If status shows `HEAD != origin/main`, stop and ask the user to sync or use an isolated worktree.
+4. Otherwise run:
+```
+
+Then add after the restart command:
+
+```markdown
+5. Let the restart script precheck report ignored-local changes or block non-ignored local changes. Do not duplicate worktree classification in the skill.
+```
+
+Renumber later steps accordingly.
+
+- [ ] **Step 2: Update project skill safety rules**
 
 In `.trae/skills/project-deploy/SKILL.md`, replace:
 
@@ -246,26 +285,27 @@ with:
 
 ```markdown
 - Do not silently discard local changes.
-- Local changes whose paths match `.gitignore` are allowed for `/dp-dev` and `/dp-prod`; report them as ignored-local changes and do not delete, reset, stash, or overwrite them.
-- Local changes that do not match `.gitignore` must still block deployment.
+- Local changes whose paths match `.gitignore` are allowed for `/dp-dev` and `/dp-prod`; deploy scripts must report them as ignored-local changes, and the skill must not delete, reset, stash, or overwrite them.
+- Local changes that do not match `.gitignore` must still block deployment in deploy script prechecks.
+- `/dp-prod` backend source sync follows `.gitignore` filters so ignored-local files are not rsynced to the remote app; frontend `dist/` is synchronized only through explicit frontend sync steps.
 ```
 
-- [ ] **Step 2: Update global skill safety rules**
+- [ ] **Step 3: Update global skill safety rules**
 
 Apply the exact same text replacement to `/Users/bytedance/.trae-cn/skills/project-deploy/SKILL.md`.
 
-- [ ] **Step 3: Verify skill text**
+- [ ] **Step 4: Verify skill text**
 
 Run:
 
 ```bash
-grep -n "ignored-local\\|gitignore\\|must still block" .trae/skills/project-deploy/SKILL.md
-grep -n "ignored-local\\|gitignore\\|must still block" /Users/bytedance/.trae-cn/skills/project-deploy/SKILL.md
+grep -n "read-only display\\|script precheck\\|ignored-local\\|backend source sync" .trae/skills/project-deploy/SKILL.md
+grep -n "read-only display\\|script precheck\\|ignored-local\\|backend source sync" /Users/bytedance/.trae-cn/skills/project-deploy/SKILL.md
 ```
 
 Expected: both files contain the new safety rules.
 
-- [ ] **Step 4: Commit project skill doc**
+- [ ] **Step 5: Commit project skill doc**
 
 Stage only the project skill file:
 
