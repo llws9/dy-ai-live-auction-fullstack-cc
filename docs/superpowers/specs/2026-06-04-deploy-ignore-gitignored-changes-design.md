@@ -2,7 +2,7 @@
 
 ## 目标
 
-调整 `/dp-dev` 和 `/dp-prod` 的部署安全检查：当本地存在未提交改动时，如果这些改动的路径命中 `.gitignore` 规则，则部署可以继续；脚本不得删除、还原、stash 或覆盖这些改动。
+调整 `/dp-dev` 和 `/dp-prod` 的部署安全检查：当本地存在未提交改动时，如果这些改动的路径命中 `.gitignore` 规则，则部署可以继续；脚本不得删除、还原、stash、覆盖这些改动，也不得在 `/dp-prod` 后端源码同步时把这类 ignored-local 文件带到远端应用目录。
 
 核心目标是区分两类本地状态：
 
@@ -34,6 +34,7 @@
 - `HEAD` 仍必须等于 `origin/main`。
 - 不命中 `.gitignore` 的本地改动仍必须阻断部署。
 - 脚本不得自动丢弃用户本地改动。
+- `/dp-prod` 的前端静态产物仍通过 `sync_frontend` 显式同步，不受后端源码 `.gitignore` 过滤影响。
 
 ## 判定规则
 
@@ -41,7 +42,7 @@
 
 函数逻辑：
 
-1. 执行 `git status --porcelain` 获取本地改动列表。
+1. 执行 `git status --porcelain=v1 -z` 获取 NUL 分隔的本地改动列表。
 2. 如果没有改动，检查通过。
 3. 对每条改动解析出路径。
 4. 对路径执行 `git check-ignore --no-index -q -- <path>`。
@@ -54,19 +55,24 @@
 
 ## 路径解析
 
-`git status --porcelain` 可能输出：
+`git status --porcelain=v1 -z` 使用 NUL 分隔路径，避免空格、引号和转义字符导致路径解析错误。普通改动记录格式为：
 
 - ` M path`
 - `M  path`
 - `?? path`
 - `A  path`
-- `R  old -> new`
-- `C  old -> new`
 
-脚本只需要覆盖部署风险相关路径提取：
+rename/copy 在 `-z` 下不是 `old -> new` 文本，而是两个连续 NUL 字段：
+
+- `R  new-path\0old-path\0`
+- `C  new-path\0old-path\0`
+
+脚本必须覆盖部署风险相关路径提取：
 
 - 普通改动取状态字段之后的路径。
-- rename/copy 取 `->` 右侧的新路径。
+- rename/copy 同时检查 new 和 old 两端路径。
+- rename/copy 只有 new 和 old 都命中 `.gitignore` 才加入 ignored-local changes。
+- rename/copy 任一端不命中 `.gitignore` 必须加入 blocking changes。
 - 路径传给 `git check-ignore` 时必须使用 `--` 防止特殊路径被误解析为参数。
 
 ## 输出行为
@@ -85,12 +91,21 @@
 - <path>
 ```
 
+## 后端源码同步过滤
+
+`/dp-prod` 在 `sync_backend` 中同步仓库源码到 `/srv/auction/app`。该同步必须使用 rsync `.gitignore` 规则过滤，例如 `--filter=':- .gitignore'`：
+
+- 目的：部署前置检查允许 ignored-local changes 继续，但这些文件不应被同步到远端后端源码目录。
+- 范围：只作用于 `sync_backend` 的仓库源码同步。
+- 不作用于：`sync_frontend` 对 `frontend/h5/dist/` 和 `frontend/admin/dist/` 的显式静态资源同步。
+
 ## 修改文件
 
 - `scripts/deploy-dev.sh`
   - 将 `assert_clean_tree` 改为“阻断非 ignored 改动”的检查。
 - `scripts/deploy-prod.sh`
   - 将 `assert_clean_for_ref` 中的工作区检查改为同样规则。
+  - 在 `sync_backend` 中应用 `.gitignore` rsync filter，避免 ignored-local files 被同步到远端应用目录。
 - `.trae/skills/project-deploy/SKILL.md`
   - 更新 `/dp-dev` 和 `/dp-prod` 的安全规则说明。
 - `/Users/bytedance/.trae-cn/skills/project-deploy/SKILL.md`
@@ -105,6 +120,7 @@
 - `scripts/deploy-dev.sh restart` 不因该文件阻断。
 - `scripts/deploy-prod.sh apply` 不因该文件阻断。
 - 脚本输出 ignored-local changes 提示。
+- `/dp-prod` 后端源码同步不会把该 ignored-local 文件同步到 `/srv/auction/app`。
 
 ### 非 ignored 改动
 
