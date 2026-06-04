@@ -5,7 +5,7 @@
 - **关联文档**：
   - [B1 弹幕+飘屏 spec](./2026-05-31-live-chat-and-price-flair-design.md)
   - [C3 AI 一键文案 spec](./2026-06-01-ai-copywriting-mvp-design.md)（仅作背景参考；本 spec 与 C3 解耦，不约束 C3）
-- **状态**：待实施（待 writing-plans 拆任务）
+- **状态**：待实施（plan 已生成并复审，待 SDD/TDD 执行）
 
 ---
 
@@ -133,8 +133,8 @@ type BidEvent struct {
     UserID    int64
     AuctionID int64
     Amount    decimal.Decimal
-    IP        string // 从 ctx 取（gateway 注入 X-Real-IP）
-    UA        string // 同上
+    IP        string // 可选：MVP 可为空；如后续启用，需由 handler 从 RequestContext 显式透传
+    UA        string // 可选：MVP 可为空；如后续启用，需由 handler 从 RequestContext 显式透传
     Timestamp time.Time
     Confirmed bool   // 用户在 R4 challenge 后二次确认；为 true 时 R4 自动放行
 }
@@ -294,9 +294,9 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
             UserID:    req.UserID,
             AuctionID: req.AuctionID,
             Amount:    req.Amount,
-            IP:        ctxutil.GetIP(ctx),
-            UA:        ctxutil.GetUA(ctx),
             Timestamp: time.Now(),
+            // IP/UA 为可选辅助特征；当前 auction-service 无统一上下文 helper，MVP 不依赖。
+            // 如后续启用，需由 handler 从 RequestContext 显式读取并透传到 service。
         }
         // R4 challenge 跳过：req.Confirmed == true
         evt.Confirmed = req.Confirmed
@@ -353,6 +353,8 @@ R4 challenge 的本质是"挑战"而非"拒绝"——直接拦截会误杀正常
 - [api.ts](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/src/services/api.ts) `bidApi.placeBid`：签名扩展为 `placeBid(auctionId, amount, confirmed?)`，`confirmed=true` 时请求体带 `{ amount, confirmed: true }`。
 - [LiveRoomSlide.tsx](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/src/pages/Live/LiveRoomSlide.tsx) `handleBid`：catch 分支判断 `error instanceof ApiError && error.data?.risk_code === 'risk_confirm_required'`，弹出确认框（如「出价金额远高于当前价，确认提交？」），用户确认后以 `confirmed=true` 重试一次；`risk_rapid_fire` / `risk_kyc_required` 仅 toast 提示，不重试。
 
+**MVP 边界**：F1 验收只覆盖 H5 直播间主出价入口 `LiveRoomSlide`。当前仓库还存在 `ProductDetail`、`BidButton`、`BidInput` 等历史/组件级出价入口；它们在 MVP 阶段不承诺 R4 二次确认体验，但 `bidApi.placeBid` 的第三参数必须保持向后兼容，未传 `confirmed` 时行为不变。若这些入口仍作为正式用户路径保留，后续应将 challenge 处理下沉为统一 helper/hook，再替换各入口调用。
+
 > 契约依赖：后端必须把 `risk_code` 放进响应体 `data`（见 §4.3），否则前端 `ApiError.data` 读不到。
 
 ---
@@ -404,7 +406,7 @@ R4 challenge 的本质是"挑战"而非"拒绝"——直接拦截会误杀正常
 | I3 | SkipAntifraud=true（点天灯路径）跳过判定 | service | 0 调用 engine |
 | F1 | 前端 R4 challenge → 确认重试带 confirmed=true | H5（Task 14） | placeBid 调用 2 次，第 2 次 confirmed=true |
 
-> I1/I2/I3 在 antifraud / service 层用 `miniredis` + `sqlmock` 验证；I1b 在 handler 层验证状态码与响应体契约；F1 在前端用 vitest mock 验证。不依赖端到端真实部署。
+> I1/I2/I3 在 antifraud / service 层用 `miniredis` + `sqlmock` 验证；I1b 在 handler 层验证状态码与响应体契约；F1 在前端用 vitest mock 验证。不依赖真实部署环境。
 
 ---
 
