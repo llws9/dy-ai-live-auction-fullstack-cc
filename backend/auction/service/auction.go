@@ -205,7 +205,8 @@ func (s *AuctionService) sendAuctionResultNotifications(ctx context.Context, auc
 
 // CheckAndStartAuctions 检查并开始应该开始的竞拍
 func (s *AuctionService) CheckAndStartAuctions(ctx context.Context) error {
-	auctions, err := s.auctionDAO.GetPendingAuctionsToStart(ctx)
+	now := auctionBusinessNow()
+	auctions, err := s.auctionDAO.GetPendingAuctionsToStart(ctx, now)
 	if err != nil {
 		return err
 	}
@@ -222,7 +223,8 @@ func (s *AuctionService) CheckAndStartAuctions(ctx context.Context) error {
 
 // CheckAndEndAuctions 检查并结束应该结束的竞拍
 func (s *AuctionService) CheckAndEndAuctions(ctx context.Context) error {
-	auctions, err := s.auctionDAO.GetExpiredAuctions(ctx)
+	now := auctionBusinessNow()
+	auctions, err := s.auctionDAO.GetExpiredAuctions(ctx, now)
 	if err != nil {
 		return err
 	}
