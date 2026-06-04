@@ -25,7 +25,7 @@ type InternalServiceTestSuite struct {
 func (s *InternalServiceTestSuite) SetupSuite() {
 	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
 	s.NoError(err)
-	s.NoError(db.AutoMigrate(&model.Product{}, &model.AuctionRule{}, &model.LiveStream{}))
+	s.NoError(db.AutoMigrate(&model.Product{}, &model.Category{}, &model.AuctionRule{}, &model.LiveStream{}))
 	s.db = db
 	s.service = NewProductService(dao.NewProductDAO(db), dao.NewAuctionRuleDAO(db), dao.NewLiveStreamDAO(db))
 }
@@ -37,6 +37,7 @@ func (s *InternalServiceTestSuite) TearDownSuite() {
 
 func (s *InternalServiceTestSuite) SetupTest() {
 	s.db.Exec("DELETE FROM products")
+	s.db.Exec("DELETE FROM categories")
 }
 
 // helper: insert a product with the given category id (nil -> NULL)

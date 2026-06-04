@@ -1,6 +1,6 @@
 import { repairUtf8Mojibake } from '../../utils/textEncoding';
 
-const PRODUCT_TEXT_FIELDS = ['name', 'description', 'category', 'brand'] as const;
+const PRODUCT_TEXT_FIELDS = ['name', 'description', 'category', 'category_name', 'brand'] as const;
 
 type ProductTextField = (typeof PRODUCT_TEXT_FIELDS)[number];
 type ProductLike = object & Partial<Record<ProductTextField, string | null>>;

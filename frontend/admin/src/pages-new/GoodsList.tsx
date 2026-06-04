@@ -200,7 +200,7 @@ export default function GoodsList() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="font-normal border-slate-200">
-                          {item.category || '未分类'}
+                          {item.category_name || '未分类'}
                         </Badge>
                       </TableCell>
                       <TableCell>

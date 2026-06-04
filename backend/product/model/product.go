@@ -18,13 +18,14 @@ const (
 
 // Product 商品信息模型
 type Product struct {
-	ID          int64         `json:"id" gorm:"primaryKey;autoIncrement"`
-	Name        string        `json:"name" gorm:"type:varchar(128);not null"`
-	Description string        `json:"description" gorm:"type:text"`
-	Images      JSONArray     `json:"images" gorm:"type:json"`
-	CategoryID  *int64        `json:"category_id" gorm:"index"` // 逻辑外键关联Category
-	Status      ProductStatus `json:"status" gorm:"type:tinyint;default:0"`
-	CreatedAt   time.Time     `json:"created_at" gorm:"autoCreateTime"`
+	ID           int64         `json:"id" gorm:"primaryKey;autoIncrement"`
+	Name         string        `json:"name" gorm:"type:varchar(128);not null"`
+	Description  string        `json:"description" gorm:"type:text"`
+	Images       JSONArray     `json:"images" gorm:"type:json"`
+	CategoryID   *int64        `json:"category_id" gorm:"index"` // 逻辑外键关联Category
+	CategoryName string        `json:"category_name,omitempty" gorm:"column:category_name;->;-:migration"`
+	Status       ProductStatus `json:"status" gorm:"type:tinyint;default:0"`
+	CreatedAt    time.Time     `json:"created_at" gorm:"autoCreateTime"`
 }
 
 // TableName 指定表名

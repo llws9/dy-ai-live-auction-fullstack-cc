@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { productApi } from "@/shared/api"
+import { Category, productApi } from "@/shared/api"
 import {
   buildCopywritingKeywords,
   formatAiDescription,
@@ -22,6 +22,8 @@ export default function GoodsEdit() {
   const [loading, setLoading] = React.useState(false)
   const [saving, setSaving] = React.useState(false)
   const [aiGenerating, setAiGenerating] = React.useState(false)
+  const [categories, setCategories] = React.useState<Category[]>([])
+  const [categoryNameFallback, setCategoryNameFallback] = React.useState('')
   const [aiDraft, setAiDraft] = React.useState<{
     sellingPoints: string[]
     suggestedStartPrice: string
@@ -29,12 +31,23 @@ export default function GoodsEdit() {
   } | null>(null)
   const [formData, setFormData] = React.useState({
     name: '',
-    category: '艺术收藏',
+    category_id: null as number | null,
     brand: '',
     description: '',
     images: [] as string[],
   })
   const [imageUrlInput, setImageUrlInput] = React.useState('')
+
+  React.useEffect(() => {
+    productApi.listCategories()
+      .then((data) => {
+        setCategories(data)
+      })
+      .catch((e) => {
+        console.error('获取商品分类失败:', e)
+        alert('获取商品分类失败')
+      })
+  }, [])
 
   // 编辑模式：获取商品详情
   React.useEffect(() => {
@@ -44,11 +57,12 @@ export default function GoodsEdit() {
         .then((data) => {
           setFormData({
             name: data.name || '',
-            category: data.category || '艺术收藏',
+            category_id: data.category_id ?? null,
             brand: '',
             description: data.description || '',
             images: data.images || [],
           })
+          setCategoryNameFallback(data.category_name || '')
         })
         .catch((e) => {
           console.error('获取商品详情失败:', e)
@@ -60,9 +74,14 @@ export default function GoodsEdit() {
   }, [isEditMode, productId, navigate])
 
   // 更新表单字段
-  const updateField = (field: string, value: string) => {
+  const updateField = <K extends keyof typeof formData>(field: K, value: (typeof formData)[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
+
+  const selectedCategoryName = React.useMemo(() => {
+    const selectedCategory = categories.find((item) => item.id === formData.category_id)
+    return selectedCategory?.name || categoryNameFallback
+  }, [categories, categoryNameFallback, formData.category_id])
 
   // 添加图片URL
   const addImage = () => {
@@ -108,7 +127,10 @@ export default function GoodsEdit() {
     try {
       const draft = await productApi.generateCopywriting({
         images,
-        keywords: buildCopywritingKeywords(formData),
+        keywords: buildCopywritingKeywords({
+          ...formData,
+          category: selectedCategoryName,
+        }),
       })
 
       setFormData(prev => ({
@@ -139,17 +161,28 @@ export default function GoodsEdit() {
       alert('请输入商品描述')
       return
     }
+    if (!formData.category_id) {
+      alert('请选择商品分类')
+      return
+    }
 
     setSaving(true)
     try {
+      const payload = {
+        name: formData.name,
+        description: formData.description,
+        images: formData.images,
+        category_id: formData.category_id,
+      }
+
       if (isEditMode && productId) {
-        await productApi.update(Number(productId), formData)
+        await productApi.update(Number(productId), payload)
         if (publish) {
           await productApi.publish(Number(productId))
         }
         alert('商品更新成功')
       } else {
-        const result = await productApi.create(formData)
+        const result = await productApi.create(payload)
         if (publish && result.id) {
           await productApi.publish(result.id)
         }
@@ -223,14 +256,18 @@ export default function GoodsEdit() {
                   <label className="text-sm font-medium text-slate-700">商品类别</label>
                   <select
                     className="flex h-10 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
-                    value={formData.category}
-                    onChange={(e) => updateField('category', e.target.value)}
+                    value={formData.category_id?.toString() || ''}
+                    onChange={(e) => {
+                      const nextValue = e.target.value ? Number(e.target.value) : null
+                      updateField('category_id', nextValue)
+                    }}
                   >
-                    <option>艺术收藏</option>
-                    <option>珠宝名表</option>
-                    <option>数码电子</option>
-                    <option>奢侈品</option>
-                    <option>其他</option>
+                    <option value="">请选择分类</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="space-y-2">

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/route/param"
 	"product-service/model"
 	"product-service/service"
 
@@ -17,6 +18,35 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func int64Ptr(v int64) *int64 { return &v }
+
+func newProductHandlerWithSeed(t *testing.T, seed func(db *gorm.DB)) (*ProductHandler, *gorm.DB) {
+	t.Helper()
+	db, err := gorm.Open(sqlite.Open("file::memory:?mode=memory&cache=shared"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Product{}, &model.Category{}, &model.AuctionRule{}, &model.LiveStream{}))
+	require.NoError(t, db.Exec("DELETE FROM auction_rules").Error)
+	require.NoError(t, db.Exec("DELETE FROM live_streams").Error)
+	require.NoError(t, db.Exec("DELETE FROM products").Error)
+	require.NoError(t, db.Exec("DELETE FROM categories").Error)
+	if seed != nil {
+		seed(db)
+	}
+	productSvc := service.NewProductService(dao.NewProductDAO(db), dao.NewAuctionRuleDAO(db), dao.NewLiveStreamDAO(db))
+	return NewProductHandler(productSvc), db
+}
+
+func newProductRequestContext(method, uri string, body []byte) *app.RequestContext {
+	c := app.NewContext(0)
+	c.Request.SetMethod(method)
+	c.Request.SetRequestURI(uri)
+	if body != nil {
+		c.Request.SetBody(body)
+		c.Request.Header.SetContentTypeBytes([]byte("application/json"))
+	}
+	return c
+}
 
 func TestProductHandler_Create_RequestValidation(t *testing.T) {
 	t.Run("should validate create request fields", func(t *testing.T) {
@@ -242,17 +272,21 @@ func TestProductHandler_ResponseFormat(t *testing.T) {
 }
 
 func TestProductHandler_List_ReturnsWrappedData(t *testing.T) {
-	db, err := gorm.Open(sqlite.Open("file::memory:?mode=memory&cache=shared"), &gorm.Config{})
-	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&model.Product{}))
-	require.NoError(t, db.Exec("DELETE FROM products").Error)
-	require.NoError(t, db.Create(&model.Product{ID: 1, Name: "茶杯", Status: model.ProductStatusPublished}).Error)
-
-	productSvc := service.NewProductService(dao.NewProductDAO(db), nil, dao.NewLiveStreamDAO(db))
-	h := NewProductHandler(productSvc)
-	c := app.NewContext(0)
-	c.Request.SetMethod("GET")
-	c.Request.SetRequestURI("/api/v1/products?page=1&page_size=20")
+	h, db := newProductHandlerWithSeed(t, func(db *gorm.DB) {
+		require.NoError(t, db.Create(&model.Category{
+			ID:     11,
+			Name:   "珠宝名表",
+			Code:   "jewelry",
+			Status: model.CategoryStatusActive,
+		}).Error)
+		require.NoError(t, db.Create(&model.Product{
+			ID:         1,
+			Name:       "茶杯",
+			CategoryID: int64Ptr(11),
+			Status:     model.ProductStatusPublished,
+		}).Error)
+	})
+	c := newProductRequestContext("GET", "/api/v1/products?page=1&page_size=20", nil)
 
 	h.List(context.Background(), c)
 
@@ -274,6 +308,119 @@ func TestProductHandler_List_ReturnsWrappedData(t *testing.T) {
 	assert.Len(t, body.Data.List, 1)
 	assert.Equal(t, 1, body.Data.Page)
 	assert.Equal(t, 20, body.Data.PageSize)
+	assert.Equal(t, "珠宝名表", body.Data.List[0]["category_name"])
+
+	var stored model.Product
+	require.NoError(t, db.First(&stored, 1).Error)
+	require.NotNil(t, stored.CategoryID)
+	assert.EqualValues(t, 11, *stored.CategoryID)
+}
+
+func TestProductHandler_Create_PersistsCategoryID(t *testing.T) {
+	h, db := newProductHandlerWithSeed(t, func(db *gorm.DB) {
+		require.NoError(t, db.Create(&model.Category{
+			ID:     7,
+			Name:   "艺术收藏",
+			Code:   "art",
+			Status: model.CategoryStatusActive,
+		}).Error)
+	})
+
+	c := newProductRequestContext("POST", "/api/v1/products", []byte(`{
+		"name":"青花瓷",
+		"description":"元青花",
+		"images":["a.jpg"],
+		"category_id":7
+	}`))
+
+	h.Create(context.Background(), c)
+
+	assert.Equal(t, 201, c.Response.StatusCode())
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.EqualValues(t, 7, body["category_id"])
+
+	var stored model.Product
+	require.NoError(t, db.Where("name = ?", "青花瓷").First(&stored).Error)
+	require.NotNil(t, stored.CategoryID)
+	assert.EqualValues(t, 7, *stored.CategoryID)
+}
+
+func TestProductHandler_Create_InvalidCategory_Returns400(t *testing.T) {
+	h, _ := newProductHandlerWithSeed(t, nil)
+	c := newProductRequestContext("POST", "/api/v1/products", []byte(`{
+		"name":"青花瓷",
+		"category_id":999
+	}`))
+
+	h.Create(context.Background(), c)
+
+	assert.Equal(t, 400, c.Response.StatusCode())
+	assert.Contains(t, string(c.Response.Body()), "category")
+}
+
+func TestProductHandler_Update_ChangesCategoryID(t *testing.T) {
+	h, db := newProductHandlerWithSeed(t, func(db *gorm.DB) {
+		require.NoError(t, db.Create(&model.Category{
+			ID:     1,
+			Name:   "艺术收藏",
+			Code:   "art",
+			Status: model.CategoryStatusActive,
+		}).Error)
+		require.NoError(t, db.Create(&model.Category{
+			ID:     2,
+			Name:   "珠宝名表",
+			Code:   "watch",
+			Status: model.CategoryStatusActive,
+		}).Error)
+		require.NoError(t, db.Create(&model.Product{
+			ID:         101,
+			Name:       "旧商品",
+			CategoryID: int64Ptr(1),
+			Status:     model.ProductStatusDraft,
+		}).Error)
+	})
+	c := newProductRequestContext("PUT", "/api/v1/products/101", []byte(`{"category_id":2}`))
+	c.Params = append(c.Params, param.Param{Key: "id", Value: "101"})
+
+	h.Update(context.Background(), c)
+
+	assert.Equal(t, 200, c.Response.StatusCode())
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.EqualValues(t, 2, body["category_id"])
+
+	var stored model.Product
+	require.NoError(t, db.First(&stored, 101).Error)
+	require.NotNil(t, stored.CategoryID)
+	assert.EqualValues(t, 2, *stored.CategoryID)
+}
+
+func TestProductHandler_Get_ReturnsCategoryName(t *testing.T) {
+	h, _ := newProductHandlerWithSeed(t, func(db *gorm.DB) {
+		require.NoError(t, db.Create(&model.Category{
+			ID:     9,
+			Name:   "潮流文玩",
+			Code:   "trend",
+			Status: model.CategoryStatusActive,
+		}).Error)
+		require.NoError(t, db.Create(&model.Product{
+			ID:         102,
+			Name:       "手串",
+			CategoryID: int64Ptr(9),
+			Status:     model.ProductStatusPublished,
+		}).Error)
+	})
+	c := newProductRequestContext("GET", "/api/v1/products/102", nil)
+	c.Params = append(c.Params, param.Param{Key: "id", Value: "102"})
+
+	h.Get(context.Background(), c)
+
+	assert.Equal(t, 200, c.Response.StatusCode())
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.EqualValues(t, 9, body["category_id"])
+	assert.Equal(t, "潮流文玩", body["category_name"])
 }
 
 func TestProductHandler_ErrorHandling(t *testing.T) {

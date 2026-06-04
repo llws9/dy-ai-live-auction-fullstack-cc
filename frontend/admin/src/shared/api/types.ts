@@ -25,11 +25,20 @@ export interface Product {
   name: string;
   description: string;
   images: string[];
-  category?: string;
+  category_id?: number | null;
+  category_name?: string;
   status: number; // 0=未发布, 1=已发布, 2=已下架
   created_at: string;
   updated_at: string;
   rules?: AuctionRule;
+}
+
+// 商品分类
+export interface Category {
+  id: number;
+  name: string;
+  code: string;
+  status?: number;
 }
 
 // 竞拍规则

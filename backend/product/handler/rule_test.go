@@ -24,9 +24,10 @@ func newRuleHandlerWithSeed(t *testing.T, seed func(db *gorm.DB)) *RuleHandler {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open("file::memory:?mode=memory&cache=shared"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&model.Product{}, &model.AuctionRule{}, &model.LiveStream{}))
+	require.NoError(t, db.AutoMigrate(&model.Product{}, &model.Category{}, &model.AuctionRule{}, &model.LiveStream{}))
 	// 共享 :memory:，需逐表清空
 	db.Exec("DELETE FROM auction_rules")
+	db.Exec("DELETE FROM categories")
 	if seed != nil {
 		seed(db)
 	}
@@ -49,12 +50,12 @@ func TestRuleHandler_Create_OK_PathIDIsProductID(t *testing.T) {
 	h := newRuleHandlerWithSeed(t, nil)
 
 	body := map[string]interface{}{
-		"start_price":           100.0,
-		"increment":             10.0,
-		"duration":              60,
-		"delay_duration":        30,
-		"max_delay_time":        180,
-		"trigger_delay_before":  30,
+		"start_price":          100.0,
+		"increment":            10.0,
+		"duration":             60,
+		"delay_duration":       30,
+		"max_delay_time":       180,
+		"trigger_delay_before": 30,
 	}
 	bodyBytes, _ := json.Marshal(body)
 
@@ -104,10 +105,10 @@ func TestRuleHandler_Create_BodyProductIDOverriddenByPath(t *testing.T) {
 	h := newRuleHandlerWithSeed(t, nil)
 
 	body := map[string]interface{}{
-		"product_id":    9999,
-		"start_price":   100.0,
-		"increment":     10.0,
-		"duration":      60,
+		"product_id":  9999,
+		"start_price": 100.0,
+		"increment":   10.0,
+		"duration":    60,
 	}
 	bodyBytes, _ := json.Marshal(body)
 

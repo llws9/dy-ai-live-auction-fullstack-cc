@@ -1,151 +1,146 @@
-import { productApi } from '../index';
+import { productApi as sharedProductApi } from '..';
+import { get, post, put } from '../request';
+import { productApi } from '../product';
+import { Category, Product } from '../types';
 
-describe('productApi.generateCopywriting', () => {
+jest.mock('../request', () => ({
+  get: jest.fn(),
+  post: jest.fn(),
+  put: jest.fn(),
+  del: jest.fn(),
+  buildQuery: (params: Record<string, string | number | undefined>) =>
+    new URLSearchParams(
+      Object.entries(params)
+        .filter(([, value]) => value !== undefined)
+        .map(([key, value]) => [key, String(value)])
+    ).toString(),
+}));
+
+describe('productApi category contract', () => {
   beforeEach(() => {
-    localStorage.clear();
     jest.clearAllMocks();
   });
 
-  it('posts to the Gateway AI copywriting route and accepts the backend raw response shape', async () => {
-    const fetchMock = jest.fn().mockResolvedValue({
-      ok: true,
-      headers: {
-        get: (name: string) => (name.toLowerCase() === 'content-type' ? 'application/json' : null),
-      },
-      json: async () => ({
-        name: 'AI 标题',
-        description: 'AI 描述',
-        selling_points: ['卖点一'],
-        suggested_start_price: '199.00',
-      }),
-    });
-    global.fetch = fetchMock;
-
-    const payload = {
+  it('uses category_id/category_name types instead of legacy category strings', () => {
+    const category: Category = {
+      id: 9,
+      name: '艺术收藏',
+      code: 'art-collection',
+      status: 1,
+    };
+    const productRecord: Product = {
+      id: 101,
+      name: '明代瓷器',
+      description: '馆藏级藏品',
       images: ['https://cdn.example.com/product.jpg'],
-      keywords: '类目：艺术收藏',
+      category_id: category.id,
+      category_name: category.name,
+      status: 1,
+      created_at: '2026-06-04T00:00:00Z',
+      updated_at: '2026-06-04T00:00:00Z',
+    };
+    const createPayload: Parameters<typeof productApi.create>[0] = {
+      name: productRecord.name,
+      description: productRecord.description,
+      images: productRecord.images,
+      category_id: category.id,
+    };
+    const updatePayload: Parameters<typeof sharedProductApi.update>[1] = {
+      category_id: category.id,
     };
 
-    const result = await productApi.generateCopywriting(payload);
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/products/ai/copywriting',
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify(payload),
-      })
-    );
-    expect(result.name).toBe('AI 标题');
+    expect(createPayload.category_id).toBe(category.id);
+    expect(updatePayload.category_id).toBe(category.id);
+    expect(productRecord.category_name).toBe(category.name);
   });
 
-  it('uses admin_auth_token as the Authorization bearer token', async () => {
-    localStorage.setItem('admin_auth_token', 'admin-token');
-    const fetchMock = jest.fn().mockResolvedValue({
-      ok: true,
-      headers: {
-        get: (name: string) => (name.toLowerCase() === 'content-type' ? 'application/json' : null),
-      },
-      json: async () => ({ name: 'AI 标题', description: 'AI 描述' }),
-    });
-    global.fetch = fetchMock;
-
-    await productApi.generateCopywriting({
+  it('module productApi creates and updates products with category_id payloads', async () => {
+    const createPayload: Parameters<typeof productApi.create>[0] = {
+      name: '明代瓷器',
+      description: '馆藏级藏品',
       images: ['https://cdn.example.com/product.jpg'],
-    });
+      category_id: 9,
+    };
+    const updatePayload: Parameters<typeof productApi.update>[1] = {
+      category_id: 12,
+    };
+    (post as jest.Mock).mockResolvedValue(createPayload);
+    (put as jest.Mock).mockResolvedValue(updatePayload);
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/products/ai/copywriting',
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: 'Bearer admin-token',
-        }),
-      })
-    );
+    await productApi.create(createPayload);
+    await productApi.update(101, updatePayload);
+
+    expect(post).toHaveBeenCalledWith('/products', createPayload);
+    expect(put).toHaveBeenCalledWith('/products/101', updatePayload);
   });
 
-  it('does not use the legacy token key as the Authorization bearer token', async () => {
-    localStorage.setItem('token', 'legacy-token');
-    const fetchMock = jest.fn().mockResolvedValue({
-      ok: true,
-      headers: {
-        get: (name: string) => (name.toLowerCase() === 'content-type' ? 'application/json' : null),
-      },
-      json: async () => ({ name: 'AI 标题', description: 'AI 描述' }),
-    });
-    global.fetch = fetchMock;
-
-    await productApi.generateCopywriting({
+  it('shared productApi creates and updates products with category_id payloads', async () => {
+    const createPayload: Parameters<typeof sharedProductApi.create>[0] = {
+      name: '明代瓷器',
+      description: '馆藏级藏品',
       images: ['https://cdn.example.com/product.jpg'],
-    });
+      category_id: 9,
+    };
+    const updatePayload: Parameters<typeof sharedProductApi.update>[1] = {
+      category_id: 12,
+    };
+    (post as jest.Mock).mockResolvedValue(createPayload);
+    (put as jest.Mock).mockResolvedValue(updatePayload);
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/products/ai/copywriting',
-      expect.objectContaining({
-        headers: expect.not.objectContaining({
-          Authorization: 'Bearer legacy-token',
-        }),
-      })
-    );
+    await sharedProductApi.create(createPayload);
+    await sharedProductApi.update(101, updatePayload);
+
+    expect(post).toHaveBeenCalledWith('/products', createPayload);
+    expect(put).toHaveBeenCalledWith('/products/101', updatePayload);
   });
 
-  it('clears the admin auth keys when the API returns 401', async () => {
-    localStorage.setItem('admin_auth_token', 'expired-admin-token');
-    localStorage.setItem('admin_auth_user', JSON.stringify({ id: 999 }));
-    localStorage.setItem('token', 'legacy-token');
-    localStorage.setItem('userInfo', JSON.stringify({ id: 1 }));
+  it('module productApi adds listCategories and calls GET /categories', async () => {
+    const categories: Category[] = [
+      { id: 9, name: '艺术收藏', code: 'art-collection', status: 1 },
+    ];
+    (get as jest.Mock).mockResolvedValue(categories);
 
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: false,
-      status: 401,
-      headers: {
-        get: (name: string) => (name.toLowerCase() === 'content-type' ? 'application/json' : null),
-      },
-      json: async () => ({ code: 401, message: '未授权' }),
-    });
+    const result = await productApi.listCategories();
 
-    await expect(productApi.generateCopywriting({
-      images: ['https://cdn.example.com/product.jpg'],
-    })).rejects.toMatchObject({ status: 401 });
+    expect(get).toHaveBeenCalledWith('/categories');
+    expect(result).toEqual(categories);
+  });
 
-    expect(localStorage.getItem('admin_auth_token')).toBeNull();
-    expect(localStorage.getItem('admin_auth_user')).toBeNull();
-    expect(localStorage.getItem('token')).toBeNull();
-    expect(localStorage.getItem('userInfo')).toBeNull();
+  it('shared productApi adds listCategories and calls GET /categories', async () => {
+    const categories: Category[] = [
+      { id: 11, name: '珠宝名表', code: 'jewelry-watch', status: 1 },
+    ];
+    (get as jest.Mock).mockResolvedValue(categories);
+
+    const result = await sharedProductApi.listCategories();
+
+    expect(get).toHaveBeenCalledWith('/categories');
+    expect(result).toEqual(categories);
   });
 });
 
 describe('productApi.list', () => {
   beforeEach(() => {
-    localStorage.clear();
     jest.clearAllMocks();
   });
 
   it('repairs mojibake product text fields before returning the list', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      headers: {
-        get: (name: string) => (name.toLowerCase() === 'content-type' ? 'application/json' : null),
-      },
-      json: async () => ({
-        code: 0,
-        data: {
-          list: [
-            {
-              id: 1,
-              name: 'ç¨€æœ‰ç å®',
-              description: 'ç²¾é€‰æ‹å“',
-              category: 'ç¿¡ç¿ ',
-              images: [],
-              status: 1,
-              created_at: '2026-06-02T00:00:00Z',
-              updated_at: '2026-06-02T00:00:00Z',
-            },
-          ],
-          total: 1,
-          page: 1,
-          page_size: 10,
+    (get as jest.Mock).mockResolvedValue({
+      list: [
+        {
+          id: 1,
+          name: 'ç¨€æœ‰ç å®',
+          description: 'ç²¾é€‰æ‹å“',
+          category_name: 'ç¿¡ç¿ ',
+          images: [],
+          status: 1,
+          created_at: '2026-06-02T00:00:00Z',
+          updated_at: '2026-06-02T00:00:00Z',
         },
-      }),
+      ],
+      total: 1,
+      page: 1,
+      page_size: 10,
     });
 
     const result = await productApi.list({ page: 1, page_size: 10 });
@@ -153,7 +148,7 @@ describe('productApi.list', () => {
     expect(result.list[0]).toMatchObject({
       name: '稀有珠宝',
       description: '精选拍品',
-      category: '翡翠',
+      category_name: '翡翠',
     });
   });
 });
