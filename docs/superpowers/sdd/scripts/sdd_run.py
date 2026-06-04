@@ -80,6 +80,18 @@ def extract_labeled(raw: str, labels: Iterable[str]) -> str | None:
     return normalize_path(match.group(1))
 
 
+def has_resume_intent(raw: str) -> bool:
+    resume_match = re.search(r"\bcontinue\b|\bresume\b|继续|续跑|恢复", raw, re.IGNORECASE)
+    if not resume_match:
+        return False
+    negated_resume = re.search(
+        r"(?:不要|别|不|无需|不用|do\s+not|don't|dont|not)\s*(?:继续|续跑|恢复|continue|resume)",
+        raw,
+        re.IGNORECASE,
+    )
+    return negated_resume is None
+
+
 def parse_user_input(raw: str) -> dict[str, str | None | bool]:
     return {
         "plan": extract_labeled(raw, LABELS["plan"]),
@@ -87,7 +99,7 @@ def parse_user_input(raw: str) -> dict[str, str | None | bool]:
         "state": extract_labeled(raw, LABELS["state"]),
         "scope": extract_labeled(raw, LABELS["scope"]),
         "mode": "subagent-driven",
-        "resume": bool(re.search(r"\bcontinue\b|\bresume\b|继续|续跑|恢复", raw, re.IGNORECASE)),
+        "resume": has_resume_intent(raw),
     }
 
 
@@ -200,8 +212,10 @@ def state_is_active(path: Path) -> bool:
     except OSError:
         return False
     has_active_status = re.search(r"\|\s*Status\s*\|\s*`?active`?\s*\|", text) is not None
-    has_pending_work = re.search(r"\|\s*Pending\s*\|\s*`?0`?\s*\|", text) is None
-    return has_active_status and has_pending_work
+    pending_match = re.search(r"\|\s*Pending\s*\|\s*`?(\d+)`?\s*\|", text)
+    if not has_active_status or not pending_match:
+        return False
+    return int(pending_match.group(1)) > 0
 
 
 def recover_inputs_from_state(path: Path) -> dict[str, str | None]:
@@ -222,17 +236,39 @@ def recover_inputs_from_state(path: Path) -> dict[str, str | None]:
     }
 
 
-def infer_context(repo_root: Path, scope: str | None, mode: str | None) -> dict[str, object]:
+def infer_context(
+    repo_root: Path,
+    scope: str | None,
+    mode: str | None,
+    *,
+    allow_active_state_resume: bool,
+) -> dict[str, object]:
     state_candidates = [
         path for path in sorted_existing_files(repo_root, ["docs/superpowers/sdd/runs/*state.md"]) if state_is_active(path)
     ]
-    if len(state_candidates) == 1:
-        state_rel = str(state_candidates[0].resolve().relative_to(repo_root.resolve()))
-        return {
-            "kind": "state",
-            "state": state_rel,
-            "inference_source": "active_state",
-        }
+    if state_candidates:
+        if allow_active_state_resume and len(state_candidates) == 1:
+            state_rel = str(state_candidates[0].resolve().relative_to(repo_root.resolve()))
+            return {
+                "kind": "state",
+                "state": state_rel,
+                "inference_source": "active_state",
+            }
+        reason = (
+            "multiple_active_states_require_selection"
+            if allow_active_state_resume and len(state_candidates) > 1
+            else "active_state_requires_resume_intent"
+        )
+        raise NeedsSelection(
+            {
+                "needs_selection": True,
+                "reason": reason,
+                "state_candidates": relative_candidates(repo_root, state_candidates),
+                "plan_candidates": [],
+                "task_candidates": [],
+                "hint": "Run /sdd-run with state:<path> or continue/resume to resume; use plan:<path> tasks:<path> for a new run.",
+            }
+        )
 
     plan_candidates = sorted_existing_files(repo_root, ["docs/superpowers/plans/*.md"])
     task_candidates = sorted_existing_files(
@@ -243,7 +279,7 @@ def infer_context(repo_root: Path, scope: str | None, mode: str | None) -> dict[
         ],
     )
 
-    if len(plan_candidates) == 1 and len(task_candidates) == 1:
+    if not state_candidates and len(plan_candidates) == 1 and len(task_candidates) == 1:
         return {
             "kind": "plan_tasks",
             "plan": str(plan_candidates[0].resolve().relative_to(repo_root.resolve())),
@@ -260,7 +296,7 @@ def infer_context(repo_root: Path, scope: str | None, mode: str | None) -> dict[
             "state_candidates": relative_candidates(repo_root, state_candidates),
             "plan_candidates": relative_candidates(repo_root, plan_candidates),
             "task_candidates": relative_candidates(repo_root, task_candidates),
-            "hint": "Run /sdd-run with state:<path>, or plan:<path> tasks:<path>.",
+            "hint": "Run /sdd-run with state:<path> or continue/resume to resume; use plan:<path> tasks:<path> for a new run.",
         }
     )
 
@@ -408,6 +444,7 @@ def ensure_state(args: argparse.Namespace) -> dict[str, object]:
     repo_root = Path(args.repo_root).resolve()
     parsed = parse_user_input(args.input or "")
 
+    explicit_state = bool(normalize_path(args.state) or parsed["state"])
     plan = normalize_path(args.plan) or parsed["plan"]
     tasks = normalize_path(args.tasks) or parsed["tasks"]
     state = normalize_path(args.state) or parsed["state"]
@@ -418,7 +455,7 @@ def ensure_state(args: argparse.Namespace) -> dict[str, object]:
     inference_source = None
 
     if not state and (not plan or not tasks):
-        context = infer_context(repo_root, scope, str(mode))
+        context = infer_context(repo_root, scope, str(mode), allow_active_state_resume=resume)
         inferred = True
         inference_source = str(context["inference_source"])
         if context["kind"] == "state":
@@ -476,6 +513,20 @@ def ensure_state(args: argparse.Namespace) -> dict[str, object]:
     worktree = run_git(repo_root, ["rev-parse", "--show-toplevel"], str(repo_root))
     absolute_state.parent.mkdir(parents=True, exist_ok=True)
     if absolute_state.exists() and not args.force:
+        if not explicit_state:
+            raise NeedsSelection(
+                {
+                    "needs_selection": True,
+                    "reason": "existing_state_path_collision",
+                    "state_path": relative_or_original(repo_root, str(absolute_state)),
+                    "created": False,
+                    "plan": plan_rel,
+                    "tasks": tasks_rel,
+                    "scope": scope,
+                    "mode": mode,
+                    "hint": "Pass state:<path> to resume intentionally, choose another topic/state path, or rerun with --force.",
+                }
+            )
         return {
             "created": False,
             "state_path": relative_or_original(repo_root, str(absolute_state)),

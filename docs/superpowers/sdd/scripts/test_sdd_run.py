@@ -3,6 +3,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import datetime as dt
 from pathlib import Path
 
 
@@ -179,7 +180,7 @@ class SddRunBootstrapTest(unittest.TestCase):
         self.assertEqual(payload["tasks"], ".trae/specs/example/tasks.md")
         self.assertEqual(payload["scope"], "T1")
 
-    def test_empty_sdd_run_reuses_single_active_state(self):
+    def test_empty_sdd_run_does_not_reuse_single_active_state_without_resume_intent(self):
         repo = self.make_repo()
         existing = repo / "docs/superpowers/sdd/runs/active-state.md"
         existing.parent.mkdir(parents=True, exist_ok=True)
@@ -190,12 +191,69 @@ class SddRunBootstrapTest(unittest.TestCase):
 
         result = self.run_script(repo, "/sdd-run")
 
+        self.assertEqual(result.returncode, 3)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["needs_selection"])
+        self.assertEqual(payload["reason"], "active_state_requires_resume_intent")
+        self.assertIn(str(existing.relative_to(repo)), payload["state_candidates"])
+
+    def test_resume_intent_reuses_single_active_state(self):
+        repo = self.make_repo()
+        existing = repo / "docs/superpowers/sdd/runs/active-state.md"
+        existing.parent.mkdir(parents=True, exist_ok=True)
+        existing.write_text(
+            "# Active State\n\n| Status | `active` |\n| Pending | `1` |\n",
+            encoding="utf-8",
+        )
+
+        result = self.run_script(repo, "/sdd-run 继续")
+
         self.assertEqual(result.returncode, 0, result.stderr)
         payload = json.loads(result.stdout)
         self.assertFalse(payload["created"])
         self.assertTrue(payload["inferred"])
         self.assertEqual(payload["inference_source"], "active_state")
         self.assertEqual(payload["state_path"], str(existing.relative_to(repo)))
+
+    def test_negated_resume_words_do_not_enable_active_state_resume(self):
+        repo = self.make_repo()
+        existing = repo / "docs/superpowers/sdd/runs/active-state.md"
+        existing.parent.mkdir(parents=True, exist_ok=True)
+        existing.write_text(
+            "# Active State\n\n| Status | `active` |\n| Pending | `1` |\n",
+            encoding="utf-8",
+        )
+
+        result = self.run_script(repo, "/sdd-run 不要恢复旧 state")
+
+        self.assertEqual(result.returncode, 3)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["needs_selection"])
+        self.assertEqual(payload["reason"], "active_state_requires_resume_intent")
+        self.assertIn(str(existing.relative_to(repo)), payload["state_candidates"])
+
+    def test_resume_intent_with_multiple_active_states_requires_selection(self):
+        repo = self.make_repo()
+        first = repo / "docs/superpowers/sdd/runs/active-a-state.md"
+        second = repo / "docs/superpowers/sdd/runs/active-b-state.md"
+        first.parent.mkdir(parents=True, exist_ok=True)
+        first.write_text(
+            "# Active A\n\n| Status | `active` |\n| Pending | `1` |\n",
+            encoding="utf-8",
+        )
+        second.write_text(
+            "# Active B\n\n| Status | `active` |\n| Pending | `2` |\n",
+            encoding="utf-8",
+        )
+
+        result = self.run_script(repo, "/sdd-run 继续")
+
+        self.assertEqual(result.returncode, 3)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["needs_selection"])
+        self.assertEqual(payload["reason"], "multiple_active_states_require_selection")
+        self.assertIn(str(first.relative_to(repo)), payload["state_candidates"])
+        self.assertIn(str(second.relative_to(repo)), payload["state_candidates"])
 
     def test_empty_sdd_run_creates_state_from_single_plan_and_tasks_pair(self):
         repo = self.make_repo_with_single_context()
@@ -281,6 +339,44 @@ class SddRunBootstrapTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         payload = json.loads(result.stdout)
         self.assertEqual(payload["inference_source"], "single_plan_tasks_pair")
+
+    def test_state_missing_pending_metric_is_not_treated_as_active(self):
+        repo = self.make_repo_with_single_context()
+        legacy = repo / "docs/superpowers/sdd/runs/legacy-active-state.md"
+        legacy.parent.mkdir(parents=True, exist_ok=True)
+        legacy.write_text(
+            "# Legacy Active State\n\n| Status | `active` |\n",
+            encoding="utf-8",
+        )
+
+        result = self.run_script(repo, "/sdd-run")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["inference_source"], "single_plan_tasks_pair")
+        self.assertNotEqual(payload["state_path"], str(legacy.relative_to(repo)))
+
+    def test_explicit_plan_tasks_does_not_silently_reuse_existing_default_state(self):
+        repo = self.make_repo()
+        existing = repo / (
+            "docs/superpowers/sdd/runs/"
+            f"{dt.date.today().isoformat()}-example-state.md"
+        )
+        existing.parent.mkdir(parents=True, exist_ok=True)
+        existing.write_text("# Existing default topic state\n", encoding="utf-8")
+
+        result = self.run_script(
+            repo,
+            "/sdd-run plan: docs/superpowers/plans/example-plan.md "
+            "tasks: .trae/specs/example/tasks.md",
+        )
+
+        self.assertEqual(result.returncode, 3)
+        payload = json.loads(result.stdout)
+        self.assertTrue(payload["needs_selection"])
+        self.assertEqual(payload["reason"], "existing_state_path_collision")
+        self.assertEqual(payload["state_path"], str(existing.relative_to(repo)))
+        self.assertFalse(payload["created"])
 
     def test_label_trailing_imperative_does_not_swallow_action_words(self):
         repo = self.make_repo()

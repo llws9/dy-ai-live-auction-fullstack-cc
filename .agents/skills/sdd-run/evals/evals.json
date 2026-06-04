@@ -34,7 +34,7 @@
     {
       "id": 6,
       "prompt": "/sdd-run",
-      "expected_output": "Runs the bootstrap script with empty input. If exactly one active state has pending work, resumes it. Otherwise, if exactly one plan/tasks pair exists, creates a state file. If multiple candidates exist, stops with needs_selection and shows candidate states/plans/tasks instead of guessing.",
+      "expected_output": "Runs the bootstrap script with empty input. It must not resume an active state unless the user explicitly says continue/resume. If active state candidates exist, it stops with needs_selection and shows candidate states/plans/tasks. If no active state exists and exactly one plan/tasks pair exists, it creates a state file. If multiple candidates exist, it stops with needs_selection instead of guessing.",
       "files": []
     },
     {

@@ -51,16 +51,18 @@ Also support variants:
 - `scope: T001-T003`
 - `state: docs/superpowers/sdd/runs/...-state.md`
 - `继续执行 state: ...`
+- `继续` / `continue` / `resume` when the user explicitly wants to resume the only active state
 
 Input validation:
 
 - New run: explicit `plan` and `tasks` are preferred but not required when safe inference succeeds.
 - New run without `state`: automatically create a new state file before any implementation or subagent dispatch.
 - Resume run: providing `state:<path>` is sufficient to resume; the script will load the state file and recover plan/tasks/scope from it. Words like `继续`/`continue`/`resume` are accepted but not required.
-- Empty `/sdd-run`: infer in this order:
-  - exactly one active state with pending work -> resume it
-  - otherwise exactly one plan/tasks candidate pair -> create a new state
+- Empty `/sdd-run`: do not automatically resume an active state. Active state means "resume context", not "new task context".
+  - if any active state with pending work exists and the user did not say `继续`/`continue`/`resume`, stop with `needs_selection` and show candidates
+  - if no active state exists and exactly one plan/tasks candidate pair exists, create a new state
   - otherwise stop with `needs_selection` and show candidates
+- Resume intent without explicit `state`: exactly one active state with pending work may be resumed; multiple active states still require selection.
 - If required inputs are still missing after inference, ask for only the missing inputs and stop.
 
 ## Execution Steps
@@ -178,13 +180,14 @@ Use the script's JSON output as authoritative:
 - `scope`: parsed scope
 - `mode`: execution mode
 - `inferred`: whether context was inferred
-- `inference_source`: `active_state` or `single_plan_tasks_pair`
+- `inference_source`: `active_state` only for explicit resume intent, or `single_plan_tasks_pair` for safe new-run inference
 - `needs_selection`: safe inference failed because context was ambiguous
 
 Script fail-fast behavior:
 
 - If a new run omits `plan` or `tasks`, the script first tries safe inference.
-- If empty `/sdd-run` has multiple plausible active states or plan/tasks candidates, the script exits with candidate JSON and the agent must ask for selection.
+- Empty `/sdd-run` must not silently resume stale active state. If active state candidates exist, the script exits with candidate JSON and the agent must ask whether to resume a state or start with explicit plan/tasks.
+- If empty `/sdd-run` has multiple plausible plan/tasks candidates, the script exits with candidate JSON and the agent must ask for selection.
 - If `plan` or `tasks` looks like a file path but does not exist, the script exits non-zero.
 - If the script exits with code `3`, parse stdout candidate JSON. For other non-zero codes, report stderr and do not dispatch subagents.
 
