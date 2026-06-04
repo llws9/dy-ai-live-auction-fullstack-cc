@@ -2,6 +2,7 @@
 
 import { get, post, put, del, buildQuery } from './request';
 import { Product, AuctionRule, PaginatedResponse } from './types';
+import { normalizeProductListResponse, normalizeProductText } from './productEncoding';
 
 export interface ProductListParams {
   status?: number;
@@ -43,30 +44,31 @@ export const productApi = {
   // 获取商品列表
   list: (params?: ProductListParams) => {
     const query = buildQuery(params || {});
-    return get<PaginatedResponse<Product>>(`/products?${query}`);
+    return get<PaginatedResponse<Product>>(`/products?${query}`)
+      .then(normalizeProductListResponse);
   },
 
   // 获取商品详情
-  get: (id: number) => get<Product>(`/products/${id}`),
+  get: (id: number) => get<Product>(`/products/${id}`).then(normalizeProductText),
 
   // 创建商品
-  create: (data: ProductCreateData) => post<Product>('/products', data),
+  create: (data: ProductCreateData) => post<Product>('/products', data).then(normalizeProductText),
 
   // AI 一键文案
   generateCopywriting: (data: CopywritingGenerateData) =>
     post<CopywritingDraft>('/products/ai/copywriting', data, { timeout: 70000 }),
 
   // 更新商品
-  update: (id: number, data: Partial<ProductCreateData>) => put<Product>(`/products/${id}`, data),
+  update: (id: number, data: Partial<ProductCreateData>) => put<Product>(`/products/${id}`, data).then(normalizeProductText),
 
   // 删除商品
   delete: (id: number) => del<void>(`/products/${id}`),
 
   // 发布商品
-  publish: (id: number) => post<Product>(`/products/${id}/publish`),
+  publish: (id: number) => post<Product>(`/products/${id}/publish`).then(normalizeProductText),
 
   // 下架商品
-  unpublish: (id: number, reason?: string) => post<Product>(`/products/${id}/unpublish`, { reason }),
+  unpublish: (id: number, reason?: string) => post<Product>(`/products/${id}/unpublish`, { reason }).then(normalizeProductText),
 
   // 获取竞拍规则
   getRules: (productId: number) => get<AuctionRule>(`/products/${productId}/rules`),

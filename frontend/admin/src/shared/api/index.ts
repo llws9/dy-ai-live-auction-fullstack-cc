@@ -1,6 +1,8 @@
 // API统一封装入口
 
 import { get, post, put, del, buildQuery, ApiError, setToastFunction } from './request';
+import { normalizeProductListResponse, normalizeProductText } from './productEncoding';
+import { normalizeAuctionListResponse, normalizeAuctionText } from './auctionEncoding';
 
 // 重新导出类型
 export * from './types';
@@ -33,25 +35,26 @@ export interface CopywritingDraft {
 export const productApi = {
   list: (params?: { status?: number; page?: number; page_size?: number }) => {
     const query = buildQuery(params || {});
-    return get<{ list: any[]; total: number; page: number; page_size: number }>(`/products?${query}`);
+    return get<{ list: any[]; total: number; page: number; page_size: number }>(`/products?${query}`)
+      .then(normalizeProductListResponse);
   },
 
-  get: (id: number) => get<any>(`/products/${id}`),
+  get: (id: number) => get<any>(`/products/${id}`).then(normalizeProductText),
 
   create: (data: { name: string; description: string; images: string[]; category?: string }) =>
-    post<any>('/products', data),
+    post<any>('/products', data).then(normalizeProductText),
 
   generateCopywriting: (data: CopywritingGenerateData) =>
     post<CopywritingDraft>('/products/ai/copywriting', data, { timeout: 70000 }),
 
   update: (id: number, data: Partial<{ name: string; description: string; images: string[]; category?: string }>) =>
-    put<any>(`/products/${id}`, data),
+    put<any>(`/products/${id}`, data).then(normalizeProductText),
 
   delete: (id: number) => del<void>(`/products/${id}`),
 
-  publish: (id: number) => post<any>(`/products/${id}/publish`),
+  publish: (id: number) => post<any>(`/products/${id}/publish`).then(normalizeProductText),
 
-  unpublish: (id: number, reason?: string) => post<any>(`/products/${id}/unpublish`, { reason }),
+  unpublish: (id: number, reason?: string) => post<any>(`/products/${id}/unpublish`, { reason }).then(normalizeProductText),
 
   getRules: (productId: number) => get<any>(`/products/${productId}/rules`),
 
@@ -70,12 +73,13 @@ export const productApi = {
 export const auctionApi = {
   list: (params?: { status?: number; live_stream_id?: number; live_stream_name?: string; search?: string; page?: number; page_size?: number }) => {
     const query = buildQuery(params || {});
-    return get<{ list: any[]; total: number }>(`/auctions?${query}`);
+    return get<{ list: any[]; total: number }>(`/auctions?${query}`)
+      .then(normalizeAuctionListResponse);
   },
 
-  get: (id: number) => get<any>(`/auctions/${id}`),
+  get: (id: number) => get<any>(`/auctions/${id}`).then(normalizeAuctionText),
 
-  create: (data: { product_id: number; live_stream_id: number }) => post<any>('/auctions', data),
+  create: (data: { product_id: number; live_stream_id: number }) => post<any>('/auctions', data).then(normalizeAuctionText),
 
   getBids: (id: number) => get<any[]>(`/auctions/${id}/bids`),
 
