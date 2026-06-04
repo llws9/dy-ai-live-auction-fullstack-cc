@@ -37,7 +37,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-04 18:58` |
+| Last Updated | `2026-06-04 21:50 (T004 复验完成；原 fix-product-category-contract worktree 已清理)` |
 
 ## Task Matrix
 
@@ -229,6 +229,8 @@
 | --- | --- | --- | --- |
 | `cd frontend/admin && npm test -- --runInBand src/pages-new/__tests__/GoodsList.test.tsx` | `先出现 category_name 相关失败，再恢复为通过` | `RED: FAIL Unable to find text '艺术收藏' because GoodsList still reads old category field; GREEN: PASS 1 suite, 1 test passed after switching to category_name` | `pass` |
 | `cd frontend/admin && npm run build` | `TypeScript build 恢复通过` | `PASS: tsc && vite build completed successfully` | `pass` |
+| `2026-06-04 21:50 cd frontend/admin && npm test -- --runInBand src/pages-new/__tests__/GoodsList.test.tsx` | `复验 T004 页面契约仍通过` | `PASS src/pages-new/__tests__/GoodsList.test.tsx; 1 suite / 1 test passed` | `pass` |
+| `2026-06-04 21:50 cd frontend/admin && npm run build` | `复验 Admin build 仍通过` | `PASS: tsc && vite build completed successfully; vite built 2544 modules` | `pass` |
 
 **Allowed Files**
 
@@ -239,12 +241,13 @@
 
 - 这是当前 `frontend/admin` build 的唯一剩余阻塞点；若修复后仍失败，说明存在未识别的额外漂移，需要立即回溯并补 state。
 - 现有页面无现成测试，允许新建一个最小页面契约测试文件，但不得顺手扩展到搜索、分页或操作按钮行为。
+- 本次复验发生在 `main @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc`；state 记录的原执行 worktree `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/fix-product-category-contract` 当前已不存在，未重新创建，避免在已有脏 `main` 上改业务代码。
 
 **Handoff**
 
 - Completion summary: `GoodsList 已切到 category_name 展示并保留未分类兜底；新增最小页面契约测试覆盖该行为，定向 Jest 与 frontend/admin build 均通过。`
 - Remaining work: `none`
-- First response line used: `assigned`
+- First response line used: `当前分支/worktree：main @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc`
 
 ### T005 - `联调验证 H5 首页分类 tab 闭环`
 

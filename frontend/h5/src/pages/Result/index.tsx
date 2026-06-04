@@ -257,10 +257,10 @@ const ResultPage: React.FC = () => {
           )}
         </section>
 
-        <div className={styles.actions}>
-          <Link to="/" className={styles.secondaryLink}>返回首页</Link>
+        <div className={`${styles.actions} ${isWinner ? '' : styles.actionsSingle}`}>
           {isWinner ? (
             <>
+              <Link to="/" className={styles.secondaryLink}>返回首页</Link>
               <button
                 className={styles.primaryButton}
                 type="button"
@@ -279,7 +279,7 @@ const ResultPage: React.FC = () => {
               </button>
             </>
           ) : (
-            <Link to="/" className={styles.primaryLink}>继续竞拍</Link>
+            <Link to="/" className={styles.primaryLink}>返回首页</Link>
           )}
         </div>
       </main>

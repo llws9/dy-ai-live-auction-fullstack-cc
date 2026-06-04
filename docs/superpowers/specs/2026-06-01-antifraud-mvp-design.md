@@ -5,7 +5,7 @@
 - **关联文档**：
   - [B1 弹幕+飘屏 spec](./2026-05-31-live-chat-and-price-flair-design.md)
   - [C3 AI 一键文案 spec](./2026-06-01-ai-copywriting-mvp-design.md)（仅作背景参考；本 spec 与 C3 解耦，不约束 C3）
-- **状态**：待实施（plan 已生成并复审，待 SDD/TDD 执行）
+- **状态**：待实施（当前 `main` 尚未实现；plan 已生成并复审，待 SDD/TDD 执行）
 
 ---
 
@@ -24,12 +24,12 @@
 - 在出价主链路前置**实时风控引擎**（毫秒级），落地 3 条核心规则（R1/R4/R5）
 - 命中后按风险等级执行 4 类动作：`pass / mark / challenge / block`
 - 风控事件持久化到 `risk_event` 表，供运营审核与离线特征工程
-- 预留 **LLM 解释器接口**（`RiskExplainer`），后续接入 LLM 模块时**零侵入**
+- 预留 **LLM 解释器接口**（`RiskExplainer`）；MVP 不实现解释生成与回写，v1.1 接入时需补持久化适配
 - **不做**：实时调用 LLM 阻断出价；ML 模型训练/推理；R2/R3（多账号同源 / 自抬价）—— 这两条留 v1.1
 
 ### 1.3 非目标
 - 不做设备指纹采集（前端埋点 SDK 是另一个项目）
-- 不做用户实名认证（KYC 流程由独立项目承接，本 spec 仅返回 `kyc_required` 错误码占位）
+- 不做用户实名认证或 KYC 解锁流程（MVP 只做“新账号高额出价限制”，不返回用户无法履约的 KYC 文案）
 - 不做风控规则的运营后台 CRUD（MVP 用配置文件 + 代码常量；运营后台留 v1.2）
 
 ---
@@ -40,12 +40,12 @@
 |---|---|---|
 | 风控引擎位置 | `backend/auction/service/antifraud/` | hook 在出价主链路前置，无跨服务调用 |
 | `RiskExplainer` 接口位置 | `backend/auction/service/antifraud/`（包内自定义） | 与 C3 解耦；不锁定 LLM 抽象层位置，v1.1 接入时由实施任务自行决定 import 来源 |
-| LLM 接入策略 | 接口 `RiskExplainer` 预留；MVP 不注入实现 | 主路径纯规则引擎，LLM 仅作可选解释器，异步调用 |
-| MVP 规则集 | R1（高频）+ R4（异常加价）+ R5（新账号秒拍） | 实时、可解释、零误杀风险 |
+| LLM 接入策略 | 接口 `RiskExplainer` 预留；MVP 不注入实现 | 主路径纯规则引擎；LLM 仅作可选解释器，v1.1 接入时补解释生成与持久化回写 |
+| MVP 规则集 | R1（高频）+ R4（异常加价）+ R5（新账号高额限制） | 实时、可解释、可回滚、低误杀；不承诺零误杀 |
 | 阈值来源 | 拍脑袋初值，上线后监控调优 | 当前无生产数据分布可参考 |
 | 风控数据存储 | 新增 `risk_event` 表（MySQL） | 持久化用于审核 + 离线特征工程 |
 | Redis 计数 | 复用 `auction-service` 现有 Redis | 已有客户端，零新依赖 |
-| 失败策略 | fail-open（风控引擎自身错误时放行 + 告警） | 风控故障不应阻断主业务；fail-fast 不适用于"非核心增强"层 |
+| 失败策略 | fail-open（风控引擎自身错误时放行 + 结构化日志 + 错误指标） | 风控故障不应阻断主业务；fail-fast 不适用于"非核心增强"层 |
 | 出价拦截位置 | `BidService.PlaceBid` 第 0 步（用户校验之后、状态校验之前） | 早拦截早返回，省下游开销 |
 
 ---
@@ -74,8 +74,7 @@ BidService.PlaceBid
   │              ├── decision.Action == "mark"       ─► 写 risk_event（异步），继续放行
   │              └── decision.Action == "pass"       ─► 直接进入主链路
   │
-  │              decision.Level ∈ {medium, high, critical} && explainer != nil
-  │              └─ goroutine: explainer.Explain(...) → 更新 risk_event.explanation
+  │              MVP: 不调用 LLM；v1.1 才异步 Explain 并回写 explanation
   │
   ├── 1. 状态校验
   ├── 2-9. 现有出价主链路（不变）
@@ -136,7 +135,8 @@ type BidEvent struct {
     IP        string // 可选：MVP 可为空；如后续启用，需由 handler 从 RequestContext 显式透传
     UA        string // 可选：MVP 可为空；如后续启用，需由 handler 从 RequestContext 显式透传
     Timestamp time.Time
-    Confirmed bool   // 用户在 R4 challenge 后二次确认；为 true 时 R4 自动放行
+    ChallengeToken string // R4 challenge 后端签发的一次性 token；绑定 userID/auctionID/amount/TTL
+    AntifraudMode string // normal | skip_rapid_fire | skip_all
 }
 
 type RiskDecision struct {
@@ -161,7 +161,7 @@ type RiskExplainer interface {
 |---|---|---|---|
 | 429 | `risk_rapid_fire` | 出价过于频繁，请稍后再试 | R1 命中且 action=block，或封禁 fast-path |
 | 400 | `risk_confirm_required` | 出价金额异常，请确认后再次提交 | R4 命中且 action=challenge |
-| 403 | `risk_kyc_required` | 新账号需完成实名认证后才能高额出价 | R5 命中且 action=block |
+| 403 | `risk_new_account_limit` | 新账号暂不支持高额出价，请 24 小时后再试 | R5 命中且 action=block |
 | 200 | normal | （正常成功响应） | action=pass 或 action=mark |
 
 响应体示例（challenge）：
@@ -172,7 +172,10 @@ type RiskExplainer interface {
   "success": false,
   "message": "出价金额异常，请确认后再次提交",
   "risk_code": "risk_confirm_required",
-  "data": { "risk_code": "risk_confirm_required" }
+  "data": {
+    "risk_code": "risk_confirm_required",
+    "challenge_token": "opaque-token"
+  }
 }
 ```
 
@@ -183,6 +186,7 @@ type RiskExplainer interface {
 ### 5.1 R1：高频出价（RapidFireRule）
 
 - **信号源**：Redis ZSET `antifraud:bid:rate:{userID}`，score = unix milli
+- **统计口径**：统计“出价尝试”，不是“成功出价”。由于风控在业务状态/金额校验前执行，金额不足、竞拍已结束等失败请求也会计入 R1；这是 MVP 对脚本刷请求的主动防护。
 - **算法**：
   1. `ZADD` 当前时间戳
   2. `ZREMRANGEBYSCORE` 清理 5 秒前的记录
@@ -190,7 +194,7 @@ type RiskExplainer interface {
   4. 计数 ≥ 8 → 命中
 - **TTL**：key 设 60s 自动过期，避免内存泄漏
 - **决策**：`{Level: high, Action: block, Rules: ["R1_rapid_fire"]}`
-- **加固**：连续命中 3 次 → 在 Redis 写 `antifraud:ban:{userID}` TTL 600s，期间所有出价直接被规则引擎前置拦截
+- **加固**：10 分钟内累计触发 R1 block 3 次 → 在 Redis 写 `antifraud:ban:{userID}` TTL 600s，期间所有出价直接被规则引擎前置拦截
 
 ### 5.2 R4：异常加价（AbnormalJumpRule）
 
@@ -200,17 +204,18 @@ type RiskExplainer interface {
   - 命中条件：单笔加价幅度 ≥ `CurrentPrice × 10`（即出价超过当前价 11 倍）
   - **特殊**：当 `CurrentPrice == 0`（起拍前），改用 `Amount ≥ rule.Increment × 100` 兜底
 - **决策**：`{Level: medium, Action: challenge, Rules: ["R4_abnormal_jump"]}`
-- **前端契约**：用户收到 `risk_confirm_required` 后，在请求体加 `confirmed: true` 字段重试。规则引擎检测到 `confirmed=true` 时**跳过 R4**
+- **前端契约**：用户收到 `risk_confirm_required` 后，后端返回一次性 `challenge_token`；前端确认后带 `challenge_token` 重试。规则引擎只在 token 匹配 `userID + auctionID + amount` 且未过期时跳过 R4。不得接受裸布尔确认字段直接跳过 R4。
 
-### 5.3 R5：新账号秒拍（FreshAccountRule）
+### 5.3 R5：新账号高额出价限制（FreshAccountRule）
 
 - **信号源**：
   - `user.created_at`（DAO 查询，可缓存 5 分钟）
-  - Redis 累计：`antifraud:bid:total:{userID}`，存累计出价金额（INCRBYFLOAT），TTL 24h
+  - Redis 累计：`antifraud:bid:total_cents:{userID}`，存 24h 内**成功落库出价金额的最小货币单位整数**（如 cents/fen），TTL 24h；被 block 或业务失败的尝试不计入累计
 - **算法**：
-  - 账号注册时长 < 24h **AND** 累计出价金额 + 当前 Amount > 10000
-- **决策**：`{Level: high, Action: block, Rules: ["R5_fresh_account_sniping"], Reason: "新账号需完成实名认证"}`
-- **绕过**：当 `user.kyc_verified == true` 时跳过本规则（KYC 字段当前不存在，本 spec 引入 `IsKYCVerified()` 接口方法，MVP 默认返回 false）
+  - 账号注册时长 < 24h **AND** 成功出价累计金额 + 当前 Amount > 10000
+  - R5 rule 只读取累计并做判定，不在 `Check()` 内写累计；累计必须在 `PlaceBid` 成功落库后更新，避免失败出价污染额度。
+- **决策**：`{Level: high, Action: block, Rules: ["R5_fresh_account_limit"], Reason: "新账号暂不支持高额出价，请 24 小时后再试"}`
+- **绕过**：MVP 不接 KYC 字段，不提供自助解锁；v1.1 如接入真实 KYC，再通过 `IsKYCVerified()` 跳过本规则
 
 ### 5.4 规则引擎执行顺序
 
@@ -275,7 +280,7 @@ func (e *LLMExplainer) Explain(ctx, evt, dec) (string, error) {
 }
 ```
 
-调用时机：在 `Engine.Evaluate` 返回前，对 `Level ∈ {medium, high, critical}` 的事件**异步**调用，结果回写 `risk_event.explanation`。**不阻塞出价主链路**。
+调用时机（v1.1）：对 `Level ∈ {medium, high, critical}` 的事件**异步**调用，结果回写 `risk_event.explanation`。MVP 只保留接口，不实现 `RiskEventLog.Explanation`、DAO update 或异步解释 goroutine，避免为未接入的 LLM 扩大本期交付范围。
 
 ---
 
@@ -289,27 +294,27 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
     // ...
 
     // 0.2 反作弊判定（新增）
-    if s.antifraudEngine != nil && !req.SkipAntifraud {
+    if s.antifraudEngine != nil && req.AntifraudMode != antifraud.AntifraudModeSkipAll {
         evt := &antifraud.BidEvent{
-            UserID:    req.UserID,
-            AuctionID: req.AuctionID,
-            Amount:    req.Amount,
-            Timestamp: time.Now(),
+            UserID:         req.UserID,
+            AuctionID:      req.AuctionID,
+            Amount:         req.Amount,
+            Timestamp:      time.Now(),
+            ChallengeToken: req.ChallengeToken,
+            AntifraudMode:  req.AntifraudMode,
             // IP/UA 为可选辅助特征；当前 auction-service 无统一上下文 helper，MVP 不依赖。
             // 如后续启用，需由 handler 从 RequestContext 显式读取并透传到 service。
         }
-        // R4 challenge 跳过：req.Confirmed == true
-        evt.Confirmed = req.Confirmed
-
         decision, err := s.antifraudEngine.Evaluate(ctx, evt)
         if err != nil {
             // fail-open: 风控引擎错误不阻断业务
-            log.Warnf("antifraud engine error: %v", err)
+            log.Warnf("antifraud engine error user_id=%d auction_id=%d err=%v", req.UserID, req.AuctionID, err)
         } else if decision.Action == "block" || decision.Action == "challenge" {
             return &PlaceBidResult{
                 Success: false,
                 Message: decision.Reason,
-                RiskCode: mapRiskCode(decision), // risk_rapid_fire / risk_confirm_required / risk_kyc_required
+                RiskCode: mapRiskCode(decision), // risk_rapid_fire / risk_confirm_required / risk_new_account_limit
+                ChallengeToken: challengeTokenFromDecision(decision), // 仅 R4 challenge 有值
             }, nil
         }
         // mark / pass 都继续走主链路
@@ -323,8 +328,8 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 ```go
 type PlaceBidRequest struct {
     // ... 现有字段
-    Confirmed     bool // 用户在 challenge 后二次确认
-    SkipAntifraud bool // 内部场景（点天灯自动跟价）跳过
+    ChallengeToken string // 用户确认 R4 challenge 后回传的一次性 token
+    AntifraudMode  string // normal | skip_rapid_fire | skip_all；点天灯边界见 §7.5
 }
 ```
 
@@ -333,6 +338,7 @@ type PlaceBidRequest struct {
 type PlaceBidResult struct {
     // ... 现有字段
     RiskCode string `json:"risk_code,omitempty"`
+    ChallengeToken string `json:"challenge_token,omitempty"`
 }
 ```
 
@@ -350,12 +356,18 @@ type PlaceBidResult struct {
 
 R4 challenge 的本质是"挑战"而非"拒绝"——直接拦截会误杀正常的大额出价用户，因此必须由前端配合二次确认。涉及文件：
 
-- [api.ts](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/src/services/api.ts) `bidApi.placeBid`：签名扩展为 `placeBid(auctionId, amount, confirmed?)`，`confirmed=true` 时请求体带 `{ amount, confirmed: true }`。
-- [LiveRoomSlide.tsx](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/src/pages/Live/LiveRoomSlide.tsx) `handleBid`：catch 分支判断 `error instanceof ApiError && error.data?.risk_code === 'risk_confirm_required'`，弹出确认框（如「出价金额远高于当前价，确认提交？」），用户确认后以 `confirmed=true` 重试一次；`risk_rapid_fire` / `risk_kyc_required` 仅 toast 提示，不重试。
+- [api.ts](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/src/services/api.ts) `bidApi.placeBid`：签名扩展为 `placeBid(auctionId, amount, challengeToken?)`，token 存在时请求体带 `{ amount, challenge_token }`。
+- [LiveRoomSlide.tsx](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/src/pages/Live/LiveRoomSlide.tsx) `handleBid`：catch 分支判断 `error instanceof ApiError && error.data?.risk_code === 'risk_confirm_required'`，弹出确认框（如「出价金额远高于当前价，确认提交？」），用户确认后以 `error.data.challenge_token` 重试一次；`risk_rapid_fire` / `risk_new_account_limit` 仅 toast 提示，不重试。
 
-**MVP 边界**：F1 验收只覆盖 H5 直播间主出价入口 `LiveRoomSlide`。当前仓库还存在 `ProductDetail`、`BidButton`、`BidInput` 等历史/组件级出价入口；它们在 MVP 阶段不承诺 R4 二次确认体验，但 `bidApi.placeBid` 的第三参数必须保持向后兼容，未传 `confirmed` 时行为不变。若这些入口仍作为正式用户路径保留，后续应将 challenge 处理下沉为统一 helper/hook，再替换各入口调用。
+**MVP 边界**：F1 验收只覆盖 H5 直播间主出价入口 `LiveRoomSlide`。当前仓库还存在 `ProductDetail`、`BidButton`、`BidInput` 等历史/组件级出价入口；它们在 MVP 阶段不承诺 R4 二次确认体验，但 `bidApi.placeBid` 的第三参数必须保持向后兼容，未传 token 时行为不变。若这些入口仍作为正式用户路径保留，后续应将 challenge 处理下沉为统一 helper/hook，再替换各入口调用。
 
 > 契约依赖：后端必须把 `risk_code` 放进响应体 `data`（见 §4.3），否则前端 `ApiError.data` 读不到。
+
+### 7.5 点天灯与风控边界
+
+- **首次点天灯出价**：用户主动行为，设置 `AntifraudMode=skip_rapid_fire`，跳过 R1 但仍执行 R4/R5；避免高意向用户在激烈竞价后开启点天灯时被“出价尝试频控”误伤。
+- **点天灯自动跟价**：系统代出价，设置 `AntifraudMode=skip_all`，跳过 R1/R4/R5；仍保留 `SkipSkyLampTrigger=true` 防止递归。
+- **默认用户出价**：`AntifraudMode=normal`，执行 R1/R4/R5。
 
 ---
 
@@ -374,7 +386,7 @@ R4 challenge 的本质是"挑战"而非"拒绝"——直接拦截会误杀正常
 - `antifraud_engine_errors_total` 5 分钟增量 > 10 → 立即告警
 - `antifraud_rule_hits_total{rule_id="R1"}` 突增 5x → 可能遭受机器人攻击
 
-> 本仓库验收口径：4 个指标已通过 `prometheus.DefaultRegisterer` 注册，可在 `/metrics` 端点抓取到。Grafana dashboard / Alert 属运维环境配置，不作为本 spec 代码交付的验收门槛。
+> 本仓库验收口径：4 个指标已通过 `prometheus.DefaultRegisterer` 注册，可在 `/metrics` 端点抓取到；fail-open 路径必须写结构化日志（至少含 `stage/rule/user_id/auction_id/error`）并增加 `antifraud_engine_errors_total`。Grafana dashboard / Alert 属运维环境配置，不作为本 spec 代码交付的验收门槛，但上线 checklist 必须确认告警已接入。
 
 ---
 
@@ -389,24 +401,26 @@ R4 challenge 的本质是"挑战"而非"拒绝"——直接拦截会误杀正常
 | U3 | R1: 跨越 5s 窗口的第 8 次 | pass |
 | U4 | R1: 命中 3 次后第 4 次 | banned fast-path |
 | U5 | R4: 当前价 100，出价 1100 | challenge |
-| U6 | R4: 当前价 100，出价 1100 + Confirmed=true | pass |
+| U6 | R4: 当前价 100，出价 1100 + 有效 challenge_token | pass |
 | U7 | R4: 起拍前（CurrentPrice=0），出价 = Increment × 100 | challenge |
 | U8 | R5: 注册 23h59m + 累计 + 本次 = 10001 | block |
 | U9 | R5: 注册 24h01m + 累计 = 50000 | pass |
-| U10 | R5: kyc_verified=true | pass |
+| U10 | R5: 注册 23h59m + 累计未超阈值 | pass 且不写累计 |
 | U11 | Engine: Redis 错误 | fail-open（pass + 错误指标 +1） |
 
 ### 9.2 集成测试
 
 | # | 用例 | 层级 | 期望 |
 |---|---|---|---|
-| I1 | engine：R4 challenge → confirmed=true 重试 → pass | antifraud engine | 第 1 次 challenge，第 2 次 pass |
-| I1b | handler：R4 challenge 返回 400 + `data.risk_code=risk_confirm_required`；带 `confirmed:true` 重试返回 200 | handler | 状态码与 risk_code 正确 |
+| I1 | engine：R4 challenge → challenge_token 重试 → pass | antifraud engine | 第 1 次 challenge，第 2 次 pass |
+| I1b | handler：R4 challenge 返回 400 + `data.risk_code=risk_confirm_required` + `data.challenge_token`；带 token 重试返回 200 | handler | 状态码与 token 契约正确 |
 | I2 | R1 block → 检查 risk_event 落库 | antifraud engine | 1 条 high/block 记录 |
-| I3 | SkipAntifraud=true（点天灯路径）跳过判定 | service | 0 调用 engine |
-| F1 | 前端 R4 challenge → 确认重试带 confirmed=true | H5（Task 14） | placeBid 调用 2 次，第 2 次 confirmed=true |
+| I3a | 点天灯首次出价设置 `AntifraudMode=skip_rapid_fire` | service | 不调用 R1，仍可触发 R4/R5 |
+| I3b | 点天灯自动跟价设置 `AntifraudMode=skip_all` | service | 0 调用 engine |
+| I4 | R5 成功落库后才累计金额 | service | 业务失败不写累计；成功后 INCRBY 整数金额 |
+| F1 | 前端 R4 challenge → 确认重试带 challenge_token | H5（Task 14） | placeBid 调用 2 次，第 2 次带 token |
 
-> I1/I2/I3 在 antifraud / service 层用 `miniredis` + `sqlmock` 验证；I1b 在 handler 层验证状态码与响应体契约；F1 在前端用 vitest mock 验证。不依赖真实部署环境。
+> I1/I2/I3a/I3b/I4 在 antifraud / service 层用 `miniredis` + `sqlmock` 验证；I1b 在 handler 层验证状态码与响应体契约；F1 在前端用 vitest mock 验证。不依赖真实部署环境。
 
 ---
 
@@ -417,8 +431,8 @@ R4 challenge 的本质是"挑战"而非"拒绝"——直接拦截会误杀正常
 | **M1** | `antifraud` 包骨架 + types + Engine + 单测 | 单元测试 U1-U11 通过 |
 | **M2** | 3 条规则实现 + DefaultRules 装配 | 11 个单元用例全过 |
 | **M3** | `risk_event` 表 + DAO + Engine 持久化 | I2 集成测试通过 |
-| **M4** | `bid.go` 接入 + handler 错误码映射 + main.go 装配 + 前端 R4 二次确认 | I1/I1b/I3/F1 通过 |
-| **M5** | Prometheus 指标注册 | 4 个指标在 `/metrics` 端点可抓取（Grafana 配置属运维侧，不作代码验收门槛） |
+| **M4** | `bid.go` 接入 + handler 错误码映射 + main.go 装配 + 点天灯边界 + R5 成功后累计 + 前端 R4 token 二次确认 | I1/I1b/I3a/I3b/I4/F1 通过 |
+| **M5** | Prometheus 指标注册 | 通过 registry gather 或 `/metrics` 端点确认 4 个指标可抓取（Grafana 配置属运维侧，不作代码验收门槛） |
 
 ---
 
@@ -426,8 +440,8 @@ R4 challenge 的本质是"挑战"而非"拒绝"——直接拦截会误杀正常
 
 | 风险 | 应对 |
 |---|---|
-| 阈值拍脑袋导致误杀 | M5 上线后 1 周内每日复盘 risk_event 表，调整阈值；保留 `SkipAntifraud` 后门 |
-| Redis 故障导致风控失效 | fail-open + 错误指标告警；不影响主业务可用性 |
+| 阈值拍脑袋导致误杀 | M5 上线后 1 周内每日复盘 risk_event 表，调整阈值；内部代出价用显式 mode 跳过对应规则 |
+| Redis 故障导致风控失效 | fail-open + 结构化日志 + 错误指标；上线 checklist 确认 Grafana 告警已接入 |
 | `risk_event` 表暴涨 | 仅 mark/challenge/block 落库；按 `created_at` 月份分区（v1.2 加） |
 | v1.1 接入 LLM 解释器的扩展位被搁置 | C2 MVP 不依赖任何 LLM 模块；接口定义先行，实现可独立排期 |
 

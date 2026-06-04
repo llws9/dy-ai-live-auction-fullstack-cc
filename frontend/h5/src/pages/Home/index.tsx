@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { auctionApi, followApi, productApi } from '@/services/api';
+import { Link, useNavigate } from 'react-router-dom';
+import { auctionApi, followApi, productApi, productReminderApi } from '@/services/api';
 import { notificationApi } from '@/services/notification';
 import { useAuth } from '@/store/authContext';
 import PageHeader from '@/components/shared/PageHeader';
@@ -34,6 +34,7 @@ interface RawAuction {
   current_price?: number;
   bid_count?: number;
   bidder_count?: number;
+  start_time?: string;
   end_time?: string;
 }
 
@@ -44,6 +45,7 @@ interface HomeAuction {
   status: number;
   currentPrice: number;
   bidCount: number;
+  startTime?: string;
   endTime?: string;
   product?: ProductSummary;
 }
@@ -105,6 +107,13 @@ const extractList = <T,>(response: any): T[] => {
   return [];
 };
 
+const extractReminderProductIds = (response: any) =>
+  new Set(
+    extractList<{ product_id?: number; productId?: number }>(response)
+      .map((item) => item.product_id ?? item.productId)
+      .filter((id): id is number => typeof id === 'number')
+  );
+
 const extractCategories = (response: any): CategoryTab[] => {
   const candidates = [
     response,
@@ -158,6 +167,31 @@ const getStatusInfo = (status: number, endTime?: string) => {
   }
 };
 
+const formatDateTime = (value?: string) => {
+  if (!value) return '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return parsed.toLocaleString('zh-CN', { hour12: false });
+};
+
+const getAuctionMetaText = (auction: HomeAuction, statusInfo: ReturnType<typeof getStatusInfo>) => {
+  if (auction.status === 0) {
+    const startTime = formatDateTime(auction.startTime);
+    return startTime ? `开拍 ${startTime}` : '即将开拍';
+  }
+
+  if (statusInfo.ended) {
+    const dealTime = formatDateTime(auction.endTime);
+    return dealTime ? `成交时间 ${dealTime}` : '已结束';
+  }
+
+  if (auction.bidCount > 0) {
+    return `${auction.bidCount}次出价`;
+  }
+
+  return '暂无出价';
+};
+
 const normalizeAuction = (auction: RawAuction, product?: ProductSummary): HomeAuction => ({
   id: auction.id,
   productId: auction.product_id ?? auction.product?.id,
@@ -165,6 +199,7 @@ const normalizeAuction = (auction: RawAuction, product?: ProductSummary): HomeAu
   status: auction.status ?? 0,
   currentPrice: auction.current_price ?? 0,
   bidCount: auction.bid_count ?? auction.bidder_count ?? 0,
+  startTime: auction.start_time,
   endTime: auction.end_time,
   product: auction.product ?? product,
 });
@@ -216,6 +251,7 @@ const hasActiveAuction = (stream: LiveStream) => {
 };
 
 const HomePage: React.FC = () => {
+  const navigate = useNavigate();
   // activeTab 用 string 既能存「全部」/「收藏」也能存动态分类 name
   const [activeTab, setActiveTab] = useState<string>('全部');
   const [categories, setCategories] = useState<CategoryTab[]>([]);
@@ -223,12 +259,15 @@ const HomePage: React.FC = () => {
   const [favoriteLiveStreams, setFavoriteLiveStreams] = useState<LiveStream[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [subscribedProductIds, setSubscribedProductIds] = useState<Set<number>>(() => new Set());
+  const [reminderPendingProductId, setReminderPendingProductId] = useState<number | null>(null);
   const { isAuthenticated } = useAuth();
 
   // F-D2：登录后拉取未读消息数（mount + 回到前台），失败时降级为 0
   useEffect(() => {
     if (!isAuthenticated) {
       setUnreadCount(0);
+      setSubscribedProductIds(new Set());
       return;
     }
     let cancelled = false;
@@ -257,6 +296,28 @@ const HomePage: React.FC = () => {
     return () => {
       cancelled = true;
       document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setSubscribedProductIds(new Set());
+      return;
+    }
+
+    let cancelled = false;
+    productReminderApi
+      .list()
+      .then((response) => {
+        if (cancelled) return;
+        setSubscribedProductIds(extractReminderProductIds(response));
+      })
+      .catch((error) => {
+        console.warn('获取商品订阅列表失败:', error);
+      });
+
+    return () => {
+      cancelled = true;
     };
   }, [isAuthenticated]);
 
@@ -330,6 +391,36 @@ const HomePage: React.FC = () => {
       cancelled = true;
     };
   }, [fetchAuctions]);
+
+  const handleSubscribeReminder = async (productId?: number) => {
+    if (!productId) return;
+    if (!isAuthenticated) {
+      navigate(`/login?redirect=${encodeURIComponent('/')}`);
+      return;
+    }
+
+    setReminderPendingProductId(productId);
+    try {
+      await productReminderApi.subscribe(productId);
+      setSubscribedProductIds((current) => {
+        const next = new Set(current);
+        next.add(productId);
+        return next;
+      });
+    } catch (error: any) {
+      if (typeof error?.message === 'string' && error.message.includes('已经订阅')) {
+        setSubscribedProductIds((current) => {
+          const next = new Set(current);
+          next.add(productId);
+          return next;
+        });
+      } else {
+        console.error('订阅开拍提醒失败:', error);
+      }
+    } finally {
+      setReminderPendingProductId(null);
+    }
+  };
 
   return (
     <section className={styles.page}>
@@ -455,6 +546,10 @@ const HomePage: React.FC = () => {
               const productImage = getFirstImage(auction.product);
               const productName = repairUtf8Mojibake(auction.product?.name) || `竞拍场次 #${auction.id}`;
               const livePath = `/live?id=${auction.liveStreamId ?? ''}&auction_id=${auction.id}`;
+              const upcoming = auction.status === 0;
+              const subscribed = auction.productId ? subscribedProductIds.has(auction.productId) : false;
+              const reminderPending = auction.productId === reminderPendingProductId;
+              const metaText = getAuctionMetaText(auction, statusInfo);
 
               return (
                 <article key={auction.id} className={styles.card}>
@@ -478,7 +573,7 @@ const HomePage: React.FC = () => {
                   <div className={styles.cardBody}>
                     <h2 className={styles.productName}>{productName}</h2>
                     <div className={styles.metaRow}>
-                      <span>{auction.bidCount}次出价</span>
+                      <span>{metaText}</span>
                       {statusInfo.ended && <span className={styles.dealText}>成交</span>}
                     </div>
                     <div className={styles.price}>¥{auction.currentPrice.toLocaleString()}</div>
@@ -490,6 +585,15 @@ const HomePage: React.FC = () => {
                         <Link to={`/result?id=${auction.id}`} className={styles.secondaryButton}>
                           查看结果
                         </Link>
+                      ) : upcoming ? (
+                        <button
+                          type="button"
+                          className={styles.primaryButton}
+                          disabled={!auction.productId || subscribed || reminderPending}
+                          onClick={() => handleSubscribeReminder(auction.productId)}
+                        >
+                          {reminderPending ? '订阅中...' : subscribed ? '已订阅' : '订阅'}
+                        </button>
                       ) : (
                         <Link to={livePath} className={styles.primaryButton}>
                           进入直播

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { auctionApi, bidApi, productApi } from '@/services/api';
+import { auctionApi, productApi, productReminderApi } from '@/services/api';
 import { useAuth } from '@/store/authContext';
 import PageHeader from '@/components/shared/PageHeader';
 import { repairUtf8Mojibake } from '@/utils/textEncoding';
@@ -63,24 +63,46 @@ const getFirstImage = (product?: ProductDetailData | null) => {
   return product.images;
 };
 
-const getStatusInfo = (status?: number) => {
+const isPastEndTime = (endTime?: string) => {
+  if (!endTime) return false;
+  const parsed = new Date(endTime).getTime();
+  return Number.isFinite(parsed) && parsed <= Date.now();
+};
+
+const getStatusInfo = (status?: number, endTime?: string) => {
+  if ((status === 1 || status === 2) && isPastEndTime(endTime)) {
+    return { label: '已结束', active: false, upcoming: false, ended: true };
+  }
+
   switch (status) {
     case 1:
-      return { label: '进行中', active: true };
+      return { label: '进行中', active: true, upcoming: false, ended: false };
     case 2:
-      return { label: '延时中', active: true };
+      return { label: '延时中', active: true, upcoming: false, ended: false };
     case 3:
-      return { label: '已结束', active: false };
+      return { label: '已结束', active: false, upcoming: false, ended: true };
     case 4:
-      return { label: '已取消', active: false };
+      return { label: '已取消', active: false, upcoming: false, ended: true };
     case 0:
-      return { label: '待开始', active: false };
+      return { label: '待开始', active: false, upcoming: true, ended: false };
     default:
-      return { label: '未知状态', active: false };
+      return { label: '未知状态', active: false, upcoming: false, ended: false };
   }
 };
 
 const formatPrice = (value?: number) => `¥${Number(value ?? 0).toLocaleString()}`;
+
+const formatDateTime = (value?: string) => {
+  if (!value) return '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return parsed.toLocaleString('zh-CN', { hour12: false });
+};
+
+const isProductReminderSubscribed = (response: any, productId: number) =>
+  extractList(response)
+    .map((item: any) => item.product_id ?? item.productId)
+    .some((id) => id === productId);
 
 const ProductDetail: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -91,9 +113,9 @@ const ProductDetail: React.FC = () => {
   const [auction, setAuction] = useState<AuctionDetail | null>(null);
   const [product, setProduct] = useState<ProductDetailData | null>(null);
   const [bids, setBids] = useState<BidRecord[]>([]);
-  const [bidAmount, setBidAmount] = useState('');
   const [loading, setLoading] = useState(true);
-  const [bidding, setBidding] = useState(false);
+  const [reminderPending, setReminderPending] = useState(false);
+  const [reminderSubscribed, setReminderSubscribed] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
   const rules = useMemo<AuctionRules>(() => {
@@ -106,11 +128,19 @@ const ProductDetail: React.FC = () => {
     };
   }, [auction, product]);
 
-  const currentPrice = auction?.current_price ?? rules.start_price ?? 0;
-  const statusInfo = getStatusInfo(auction?.status);
+  const statusInfo = getStatusInfo(auction?.status, auction?.end_time);
+  const displayPrice = statusInfo.upcoming ? rules.start_price ?? 0 : auction?.current_price ?? rules.start_price ?? 0;
+  const priceLabel = statusInfo.upcoming ? '起拍价' : statusInfo.ended ? '成交价' : '当前出价';
+  const timelineLabel = statusInfo.upcoming
+    ? '开拍'
+    : statusInfo.ended
+      ? '成交时间'
+      : '截止';
+  const timelineTime = formatDateTime(statusInfo.upcoming ? auction?.start_time : auction?.end_time);
   const productImage = getFirstImage(product);
   const productName = repairUtf8Mojibake(product?.name) || (auction ? `竞拍场次 #${auction.id}` : '商品详情');
   const productDescription = repairUtf8Mojibake(product?.description) || '暂无描述';
+  const livePath = auction ? `/live?id=${auction.live_stream_id ?? ''}&auction_id=${auction.id}` : '/';
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -136,6 +166,13 @@ const ProductDetail: React.FC = () => {
 
       setBids(extractList(bidsData));
       setProduct(productData);
+
+      if (isAuthenticated && productId) {
+        const reminders = await productReminderApi.list().catch(() => null);
+        setReminderSubscribed(reminders ? isProductReminderSubscribed(reminders, productId) : false);
+      } else {
+        setReminderSubscribed(false);
+      }
     } catch (error) {
       console.error('获取商品详情失败:', error);
       setAuction(null);
@@ -144,47 +181,35 @@ const ProductDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [auctionId]);
+  }, [auctionId, isAuthenticated]);
 
   useEffect(() => {
     loadDetail();
   }, [loadDetail]);
 
-  const quickBid = (incrementMultiplier: number) => {
-    const increment = rules.increment ?? 100;
-    setBidAmount(String(currentPrice + increment * incrementMultiplier));
-  };
-
-  const handleBid = async () => {
-    if (!auction) return;
+  const handleSubscribeReminder = async () => {
+    const productId = product?.id ?? auction?.product_id;
+    if (!auction || !productId) return;
 
     if (!isAuthenticated || !user) {
       navigate(`/login?redirect=${encodeURIComponent(`/detail?id=${auction.id}`)}`);
       return;
     }
 
-    const amount = Number(bidAmount);
-    const minBid = currentPrice + (rules.increment ?? 100);
-    if (!amount) {
-      showToast('请输入出价金额');
-      return;
-    }
-    if (amount < minBid) {
-      showToast(`最低出价 ${formatPrice(minBid)}`);
-      return;
-    }
-
-    setBidding(true);
+    setReminderPending(true);
     try {
-      const result = await bidApi.placeBid(auction.id, amount);
-      setAuction((current) => current ? { ...current, current_price: result?.current_price ?? amount } : current);
-      await loadDetail();
-      setBidAmount('');
-      showToast(`出价成功！${formatPrice(amount)}`);
+      await productReminderApi.subscribe(productId);
+      setReminderSubscribed(true);
+      showToast('订阅成功，开拍前将提醒你');
     } catch (error: any) {
-      showToast(error?.message || '出价失败');
+      if (typeof error?.message === 'string' && error.message.includes('已经订阅')) {
+        setReminderSubscribed(true);
+        showToast('你已订阅该商品');
+      } else {
+        showToast(error?.message || '订阅失败');
+      }
     } finally {
-      setBidding(false);
+      setReminderPending(false);
     }
   };
 
@@ -244,12 +269,12 @@ const ProductDetail: React.FC = () => {
           <h2 className={styles.productName}>{productName}</h2>
           <div className={styles.priceRow}>
             <div>
-              <p className={styles.label}>当前出价</p>
-              <strong className={styles.currentPrice}>{formatPrice(currentPrice)}</strong>
+              <p className={styles.label}>{priceLabel}</p>
+              <strong className={styles.currentPrice}>{formatPrice(displayPrice)}</strong>
             </div>
             <div className={styles.priceMeta}>
               <span>起拍价 {formatPrice(rules.start_price)}</span>
-              {auction.end_time && <span>截止 {new Date(auction.end_time).toLocaleString()}</span>}
+              {timelineTime && <span>{timelineLabel} {timelineTime}</span>}
             </div>
           </div>
         </section>
@@ -287,36 +312,30 @@ const ProductDetail: React.FC = () => {
             <div><span>延时规则</span><strong>最后 {rules.trigger_delay_before ?? 30} 秒自动延长</strong></div>
           </div>
         </section>
-      </main>
 
-      <footer className={styles.bidBar}>
-        {statusInfo.active ? (
-          <>
-            <div className={styles.quickBids}>
-              <button type="button" onClick={() => quickBid(1)}>+{formatPrice(rules.increment)}</button>
-              <button type="button" onClick={() => quickBid(5)}>+{formatPrice((rules.increment ?? 100) * 5)}</button>
-              <button type="button" onClick={() => quickBid(10)}>+{formatPrice((rules.increment ?? 100) * 10)}</button>
-            </div>
-            <div className={styles.bidInputRow}>
-              <label className={styles.srOnly} htmlFor="product-detail-bid">出价金额</label>
-              <input
-                id="product-detail-bid"
-                inputMode="decimal"
-                type="number"
-                min={currentPrice + (rules.increment ?? 100)}
-                value={bidAmount}
-                onChange={(event) => setBidAmount(event.target.value)}
-                placeholder="输入出价金额"
-              />
-              <button type="button" disabled={bidding} onClick={handleBid}>
-                {bidding ? '出价中...' : '出价'}
-              </button>
-            </div>
-          </>
-        ) : (
-          <Link className={styles.resultButton} to={`/result?id=${auction.id}`}>查看竞拍结果</Link>
+        {statusInfo.upcoming && (
+          <button
+            type="button"
+            className={styles.reminderCta}
+            disabled={reminderPending || reminderSubscribed}
+            onClick={handleSubscribeReminder}
+          >
+            {reminderPending ? '订阅中...' : reminderSubscribed ? '已订阅' : '订阅开拍提醒'}
+          </button>
         )}
-      </footer>
+
+        {statusInfo.active && (
+          <Link className={styles.reminderCta} to={livePath}>
+            参与竞拍
+          </Link>
+        )}
+
+        {statusInfo.ended && (
+          <Link className={styles.resultButton} to={`/result?id=${auction.id}`}>
+            查看竞拍结果
+          </Link>
+        )}
+      </main>
 
       {toastMessage && <div className={styles.toast} role="status">{toastMessage}</div>}
     </section>

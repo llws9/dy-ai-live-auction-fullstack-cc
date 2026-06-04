@@ -159,4 +159,40 @@ describe('AuctionResult migration', () => {
     const fallbackBtn = await screen.findByRole('button', { name: '订单生成中' });
     expect(fallbackBtn).toBeDisabled();
   });
+
+  it('shows a single primary 返回首页 action instead of 继续竞拍 for ended non-winner result', async () => {
+    mockedAuctionApi.getResult.mockResolvedValueOnce({
+      auction_id: 12,
+      id: 12,
+      product_id: 34,
+      status: 3,
+      final_price: 6800,
+      winner_id: 18,
+      ended_at: new Date().toISOString(),
+      won_bid: {
+        id: 7,
+        user_id: 18,
+        user_name: '其他用户',
+        amount: 6800,
+        created_at: new Date().toISOString(),
+      },
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={['/result?id=12']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <ResultPage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('竞拍已结束')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '继续竞拍' })).not.toBeInTheDocument();
+
+    const homeLinks = screen.getAllByRole('link', { name: '返回首页' });
+    expect(homeLinks).toHaveLength(1);
+    expect(homeLinks[0]).toHaveAttribute('href', '/');
+    expect(homeLinks[0]).toHaveClass('primaryLink');
+  });
 });

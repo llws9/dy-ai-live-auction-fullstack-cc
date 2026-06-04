@@ -35,7 +35,7 @@ func (s *ProductReminderService) Subscribe(ctx context.Context, userID, productI
 		return err
 	}
 	if existing != nil {
-		return errors.New("已经订阅了该商品的提醒")
+		return nil
 	}
 
 	// 获取商品关联的竞拍信息

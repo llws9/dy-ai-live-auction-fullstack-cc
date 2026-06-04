@@ -325,6 +325,13 @@ export const productApi = {
   listCategories: () => get<any>(`/categories`),
 };
 
+// 商品开拍提醒 API
+export const productReminderApi = {
+  subscribe: (productId: number) => post<any>(`/products/${productId}/remind`),
+  unsubscribe: (productId: number) => del<any>(`/products/${productId}/remind`),
+  list: () => get<any>('/users/me/reminders'),
+};
+
 // 竞拍 API
 export const auctionApi = {
   // 获取竞拍列表

@@ -1,6 +1,11 @@
 .ttadk/
 .superpowers/brainstorm/
 
+# Local workspace/runtime artifacts
+.tmp/
+.vscode/
+*.log
+
 # Dependencies
 node_modules/
 

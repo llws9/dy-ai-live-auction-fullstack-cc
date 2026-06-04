@@ -262,6 +262,7 @@
 .primaryButton {
   flex: 1;
   padding: 7px 6px;
+  border: none;
   border-radius: var(--radius-md);
   font-size: 10px;
   font-weight: var(--font-weight-semibold);
@@ -283,6 +284,12 @@
 .primaryButton {
   background: linear-gradient(135deg, #c9a96e, #d4af37);
   color: white;
+  cursor: pointer;
+}
+
+.primaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 @media (max-width: 360px) {

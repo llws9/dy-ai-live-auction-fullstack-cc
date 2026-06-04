@@ -9,6 +9,23 @@ import (
 	"auction-service/service"
 )
 
+func getProductReminderUserID(c *app.RequestContext) (int64, bool) {
+	userID := c.GetInt64("user_id")
+	if userID > 0 {
+		return userID, true
+	}
+
+	userIDStr := c.GetString("user_id")
+	if userIDStr == "" {
+		return 0, false
+	}
+	parsed, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil || parsed <= 0 {
+		return 0, false
+	}
+	return parsed, true
+}
+
 // ProductReminderHandler 商品提醒订阅Handler
 type ProductReminderHandler struct {
 	reminderService *service.ProductReminderService
@@ -44,20 +61,12 @@ func (h *ProductReminderHandler) SubscribeProductReminder(ctx context.Context, c
 		return
 	}
 
-	// 获取用户ID（从JWT token中获取）
-	userIDStr := c.GetString("user_id")
-	if userIDStr == "" {
+	// 获取用户ID（由 gateway 通过 X-User-ID 注入到上下文）
+	userID, ok := getProductReminderUserID(c)
+	if !ok {
 		c.JSON(401, map[string]interface{}{
 			"code":    401,
 			"message": "未登录",
-		})
-		return
-	}
-	userID, err := strconv.ParseInt(userIDStr, 10, 64)
-	if err != nil {
-		c.JSON(400, map[string]interface{}{
-			"code":    400,
-			"message": "无效的用户ID",
 		})
 		return
 	}
@@ -104,20 +113,12 @@ func (h *ProductReminderHandler) UnsubscribeProductReminder(ctx context.Context,
 		return
 	}
 
-	// 获取用户ID（从JWT token中获取）
-	userIDStr := c.GetString("user_id")
-	if userIDStr == "" {
+	// 获取用户ID（由 gateway 通过 X-User-ID 注入到上下文）
+	userID, ok := getProductReminderUserID(c)
+	if !ok {
 		c.JSON(401, map[string]interface{}{
 			"code":    401,
 			"message": "未登录",
-		})
-		return
-	}
-	userID, err := strconv.ParseInt(userIDStr, 10, 64)
-	if err != nil {
-		c.JSON(400, map[string]interface{}{
-			"code":    400,
-			"message": "无效的用户ID",
 		})
 		return
 	}
@@ -152,20 +153,12 @@ func (h *ProductReminderHandler) UnsubscribeProductReminder(ctx context.Context,
 // @Failure 500 {object} map[string]interface{}
 // @Router /users/me/reminders [get]
 func (h *ProductReminderHandler) GetUserReminders(ctx context.Context, c *app.RequestContext) {
-	// 获取用户ID（从JWT token中获取）
-	userIDStr := c.GetString("user_id")
-	if userIDStr == "" {
+	// 获取用户ID（由 gateway 通过 X-User-ID 注入到上下文）
+	userID, ok := getProductReminderUserID(c)
+	if !ok {
 		c.JSON(401, map[string]interface{}{
 			"code":    401,
 			"message": "未登录",
-		})
-		return
-	}
-	userID, err := strconv.ParseInt(userIDStr, 10, 64)
-	if err != nil {
-		c.JSON(400, map[string]interface{}{
-			"code":    400,
-			"message": "无效的用户ID",
 		})
 		return
 	}

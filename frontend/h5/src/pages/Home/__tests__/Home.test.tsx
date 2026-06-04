@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import HomePage from '../index';
-import { auctionApi, followApi, productApi } from '../../../services/api';
+import { auctionApi, followApi, productApi, productReminderApi } from '../../../services/api';
 import { notificationApi } from '../../../services/notification';
 import { useAuth } from '../../../store/authContext';
 import { trackEvent } from '../../../utils/trackEvent';
@@ -17,6 +17,10 @@ jest.mock('../../../services/api', () => ({
   },
   followApi: {
     getFollowedLiveStreams: jest.fn(),
+  },
+  productReminderApi: {
+    subscribe: jest.fn(),
+    list: jest.fn(),
   },
 }));
 
@@ -45,6 +49,7 @@ jest.mock('../../../utils/trackEvent', () => ({
 const mockedAuctionApi = auctionApi as jest.Mocked<typeof auctionApi>;
 const mockedProductApi = productApi as jest.Mocked<typeof productApi>;
 const mockedFollowApi = followApi as jest.Mocked<typeof followApi>;
+const mockedProductReminderApi = productReminderApi as jest.Mocked<typeof productReminderApi>;
 const mockedNotificationApi = notificationApi as jest.Mocked<typeof notificationApi>;
 const mockedUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockTrackEvent = trackEvent as jest.MockedFunction<typeof trackEvent>;
@@ -87,6 +92,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
     mockedFollowApi.getFollowedLiveStreams.mockResolvedValue({ list: [] });
     mockedNotificationApi.getUnreadCount.mockResolvedValue({ count: 0 });
     mockedNotificationApi.hotPull.mockResolvedValue({ notifications: [], has_more: false });
+    mockedProductReminderApi.list.mockResolvedValue({ items: [] });
     mockAuthAuthenticated();
   });
 
@@ -242,6 +248,94 @@ describe('HomePage 分类联动 (T2.10)', () => {
       '即将开始拍品',
       '已结束拍品',
     ]);
+  });
+
+  it('即将开始竞拍展示详情和订阅，不展示进入直播', async () => {
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [
+        {
+          id: 8,
+          product_id: 88,
+          live_stream_id: 5,
+          status: 0,
+          current_price: 399,
+          start_time: '2026-06-04T18:39:00+08:00',
+          product: { id: 88, name: '手作陶瓷茶具套装' },
+        },
+      ],
+      total: 1,
+    });
+    mockedProductReminderApi.subscribe.mockResolvedValue({ product_id: 88 });
+
+    renderHome();
+
+    await screen.findByRole('heading', { name: '手作陶瓷茶具套装' });
+    expect(await screen.findByText(/^开拍/)).toBeInTheDocument();
+    expect(screen.queryByText('0次出价')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '详情' })).toHaveAttribute('href', '/detail?id=8');
+    expect(screen.queryByRole('link', { name: '进入直播' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '订阅' }));
+
+    await waitFor(() => expect(mockedProductReminderApi.subscribe).toHaveBeenCalledWith(88));
+    expect(screen.getByRole('button', { name: '已订阅' })).toBeDisabled();
+  });
+
+  it('刷新后根据我的商品提醒列表回填已订阅状态', async () => {
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [
+        {
+          id: 8,
+          product_id: 88,
+          live_stream_id: 5,
+          status: 0,
+          current_price: 399,
+          start_time: '2026-06-05T01:40:00+08:00',
+          product: { id: 88, name: '手作陶瓷茶具套装' },
+        },
+      ],
+      total: 1,
+    });
+    mockedProductReminderApi.list.mockResolvedValueOnce({
+      items: [{ product_id: 88 }],
+      total: 1,
+    });
+
+    renderHome();
+
+    await screen.findByRole('heading', { name: '手作陶瓷茶具套装' });
+    expect(await screen.findByRole('button', { name: '已订阅' })).toBeDisabled();
+    expect(mockedProductReminderApi.subscribe).not.toHaveBeenCalled();
+  });
+
+  it('进行中竞拍继续展示出价次数，已结束竞拍展示成交时间', async () => {
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [
+        {
+          id: 7,
+          status: 1,
+          current_price: 300,
+          bid_count: 2,
+          end_time: new Date(Date.now() + 3_600_000).toISOString(),
+          product: { id: 7, name: '直播中拍品' },
+        },
+        {
+          id: 9,
+          status: 3,
+          current_price: 100,
+          end_time: '2026-06-04T18:39:00+08:00',
+          product: { id: 9, name: '已结束拍品' },
+        },
+      ],
+      total: 2,
+    });
+
+    renderHome();
+
+    await screen.findByRole('heading', { name: '直播中拍品' });
+    expect(await screen.findByText('2次出价')).toBeInTheDocument();
+    expect(screen.getByText(/成交时间/)).toBeInTheDocument();
+    expect(screen.queryByText('0次成交')).not.toBeInTheDocument();
   });
 
   it('点击收藏 tab 时复用我的收藏接口渲染收藏直播间', async () => {

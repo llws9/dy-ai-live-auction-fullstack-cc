@@ -70,6 +70,9 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	v1.DELETE("/products/:id", productProxy.Forward)
 	v1.POST("/products/:id/rules", productProxy.Forward)
 	v1.GET("/products/:id/rules", productProxy.Forward)
+	authGroup.POST("/products/:id/remind", auctionProxy.Forward)
+	authGroup.DELETE("/products/:id/remind", auctionProxy.Forward)
+	authGroup.GET("/users/me/reminders", auctionProxy.Forward)
 
 	// 商品经营动作仅商家可执行，平台管理员不具备代运营权限。
 	authGroup.POST("/products/ai/copywriting", middleware.RequireMerchantOnly(), productProxy.Forward)

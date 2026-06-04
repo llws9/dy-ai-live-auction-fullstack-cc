@@ -49,6 +49,10 @@
 }
 
 .content {
+  padding-bottom: var(--spacing-5);
+}
+
+.contentWithBidBar {
   padding-bottom: calc(132px + env(safe-area-inset-bottom, 0px));
 }
 
@@ -79,12 +83,14 @@
   position: absolute;
   bottom: var(--spacing-4);
   left: var(--spacing-5);
-  padding: 5px var(--spacing-3);
+  padding: 6px var(--spacing-4);
   border-radius: var(--radius-full);
-  background: rgba(0, 0, 0, 0.58);
-  color: var(--text-secondary);
-  font-size: 11px;
+  background: rgba(36, 31, 24, 0.84);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  color: #fff4dc;
+  font-size: 12px;
   font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
   backdrop-filter: blur(12px);
 }
 
@@ -231,6 +237,29 @@
   text-align: right;
 }
 
+.reminderCta {
+  display: flex;
+  width: calc(100% - var(--spacing-5) * 2);
+  height: 52px;
+  align-items: center;
+  justify-content: center;
+  margin: 0 var(--spacing-5) var(--spacing-6);
+  border: none;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #c9a96e, #d4af37);
+  color: white;
+  cursor: pointer;
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+  text-decoration: none;
+  box-shadow: 0 12px 26px rgba(201, 169, 110, 0.28);
+}
+
+.reminderCta:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
 .bidBar {
   position: fixed;
   right: 0;
@@ -296,7 +325,8 @@
   width: 92px;
 }
 
-.bidInputRow button:disabled {
+.bidInputRow button:disabled,
+.resultButton:disabled {
   cursor: not-allowed;
   opacity: 0.62;
 }
