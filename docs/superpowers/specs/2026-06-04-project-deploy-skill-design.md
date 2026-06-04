@@ -68,7 +68,7 @@
 
 - 当前仓库是否能访问 `origin/main`。
 - `origin/main` 最新提交 ID。
-- 当前工作区是否存在未提交改动。
+- 当前工作区是否存在未提交且未被 `.gitignore` 覆盖的阻断改动。
 - 本地是否已同步远程 main。
 - SSH 是否可连接 `root@14.103.53.55`。
 - 远端部署目录是否存在：
@@ -115,7 +115,7 @@
 - 使用 `rsync` 同步静态产物到：
   - `/var/www/auction-h5`
   - `/var/www/auction-admin`
-- 同步后端源码到 `/srv/auction/app`。
+- 同步后端源码到 `/srv/auction/app`，该 rsync 必须遵循 `.gitignore` 过滤，避免 ignored-local files 被同步到远端应用目录。
 - 在服务器执行：
   - `docker compose --env-file /srv/auction/env/.env.demo -f docker-compose.demo.yml up -d --build`
   - `nginx -t`
@@ -172,10 +172,11 @@
 
 `/dp-dev` 默认部署 `origin/main`。
 
-如果当前工作区存在未提交改动，不应直接覆盖。推荐策略：
+`/dp-dev` 的 `status` 只做只读展示，不负责最终工作区分类。推荐策略：
 
-- 若工作区干净：执行 `git pull --ff-only` 或等价同步。
-- 若工作区不干净：提示用户当前有本地改动，并建议使用隔离 worktree 从 `origin/main` 启动本地服务。
+- 若 `HEAD != origin/main`：停止，提示用户同步或使用隔离 worktree。
+- 若 `HEAD == origin/main`：执行 `scripts/deploy-dev.sh restart`。
+- ignored-local changes 与 blocking changes 由 `restart` 的脚本前置检查统一报告；skill 不重复分类。
 
 ### 3. 强制重启本地服务
 
@@ -285,6 +286,8 @@ scripts/deploy-dev.sh stop
 - 前端流量必须经 Gateway `/api/v1`。
 - 不允许前端直连后端子服务。
 - 部署前不得自动丢弃用户本地未提交改动。
+- 命中 `.gitignore` 的 ignored-local changes 由部署脚本前置检查报告；不删除、不 reset、不 stash、不覆盖。
+- `/dp-prod` 后端源码同步必须遵循 `.gitignore` 过滤；前端 `dist/` 只能通过显式静态资源同步步骤发布。
 - 所有验证必须基于新鲜命令输出，不能只凭之前的运行结果。
 
 ## 错误处理
@@ -292,7 +295,7 @@ scripts/deploy-dev.sh stop
 ### Git 不同步
 
 - `/dp-prod`：停止，提示先同步或确认部署指定远程提交。
-- `/dp-dev`：如果工作区不干净，建议使用隔离 worktree 或请求用户确认处理方式。
+- `/dp-dev`：如果 `HEAD != origin/main`，停止并建议同步或使用隔离 worktree；如果存在 non-ignored local changes，由 `scripts/deploy-dev.sh restart` 前置检查阻断并输出路径。
 
 ### SSH 不可达
 
