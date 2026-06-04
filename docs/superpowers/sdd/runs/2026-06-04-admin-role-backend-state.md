@@ -33,11 +33,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `10` |
-| Done | `3` |
+| Done | `4` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `7` |
-| Last Updated | `2026-06-04 21:48` |
+| Pending | `6` |
+| Last Updated | `2026-06-04 22:02` |
 
 ## Task Matrix
 
@@ -46,7 +46,7 @@
 | `T001` | `Gateway exact role middleware` | `done` | `main-agent` | `W1` | `-` | `Gateway role middleware only` | `backend/gateway/middleware/rbac.go; backend/gateway/middleware/rbac_test.go` |
 | `T002` | `Product service auth context helpers` | `done` | `main-agent` | `W1` | `-` | `Product handler auth helper only` | `backend/product/handler/auth_context.go; backend/product/handler/auth_context_test.go` |
 | `T003` | `Product ownership schema and scoped product APIs` | `done` | `main-agent` | `W2` | `T001,T002` | `Product owner schema and admin product APIs` | `backend/migrations/*admin_role_scope*; backend/product/model/product.go; backend/product/dao/product.go; backend/product/service/product.go; backend/product/handler/product.go; backend/product/main.go; backend/gateway/router/router.go` |
-| `T004` | `Merchant auction rule templates` | `assigned` | `subagent-rule-templates` | `W3` | `T001,T002` | `Merchant auction rule templates` | `backend/product/model/auction_rule_template.go; backend/product/dao/auction_rule_template.go; backend/product/service/auction_rule_template.go; backend/product/handler/auction_rule_template.go; backend/product/main.go; backend/gateway/router/router.go` |
+| `T004` | `Merchant auction rule templates` | `done` | `main-agent` | `W3` | `T001,T002` | `Merchant auction rule templates` | `backend/product/model/auction_rule_template.go; backend/product/dao/auction_rule_template.go; backend/product/service/auction_rule_template.go; backend/product/handler/auction_rule_template.go; backend/product/main.go; backend/gateway/router/router.go` |
 | `T005` | `Role-aware live stream management` | `pending` | `unassigned` | `W3` | `T001,T002` | `Product live stream admin scope` | `backend/product/handler/live_stream.go; backend/product/service/live_stream.go; backend/product/dao/live_stream.go; backend/product/main.go; backend/gateway/router/router.go` |
 | `T006` | `Seller-scoped orders` | `pending` | `unassigned` | `W4` | `T001,T002,T003` | `Order seller scope` | `backend/product/model/order.go; backend/product/dao/order*.go; backend/product/service/order*.go; backend/product/handler/order*.go; backend/gateway/router/router.go` |
 | `T007` | `Role-aware statistics` | `pending` | `unassigned` | `W4` | `T001,T002,T006` | `Product statistics role scope` | `backend/product/handler/statistics.go; backend/product/service/statistics.go; backend/product/dao/statistics.go; backend/gateway/router/router.go` |
@@ -215,10 +215,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `assigned` |
-| Owner | `subagent-rule-templates` |
+| Status | `done` |
+| Owner | `main-agent` |
 | Started At | `2026-06-04 21:48` |
-| Completed At | `-` |
+| Completed At | `2026-06-04 22:02` |
 | Branch | `feat/admin-role-backend` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-role-backend` |
 | Depends On | `-` |
@@ -234,11 +234,33 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `TDD Red -> Green -> Verify evidence` | `not_run` | `pending` |
+| `cd backend/product && go test ./service -run 'TestAuctionRuleTemplate' -count=1` | Contract: amount precision and owner scope service tests pass | `ok product-service/service 0.719s` | `passed` |
+| `cd backend/product && go test ./handler -run 'TestAuctionRuleTemplate' -count=1` | Contract: merchant-only handler and owner-scoped list tests pass | `ok product-service/handler 1.533s` | `passed` |
+| `cd backend/gateway && go test ./router -run 'TestAdminRuleTemplateRoutesMerchantOnly' -count=1` | Contract: Gateway rule template routes are merchant-only and carry internal token | `ok gateway-service/router 0.486s` | `passed` |
+| `cd backend/product && go test ./... -count=1` | Verify: Product full suite passes | `ok product-service/...` | `passed` |
+| `cd backend/gateway && go test ./... -count=1` | Verify: Gateway full suite passes | `ok gateway-service/...` | `passed` |
+| `git diff --check` | Verify: no whitespace errors | `no output` | `passed` |
+
+**Modified Files**
+
+- `backend/product/model/auction_rule_template.go`
+- `backend/product/dao/auction_rule_template.go`
+- `backend/product/service/auction_rule_template.go`
+- `backend/product/service/auction_rule_template_test.go`
+- `backend/product/handler/auction_rule_template.go`
+- `backend/product/handler/auction_rule_template_test.go`
+- `backend/product/main.go`
+- `backend/product/admin_route_test.go`
+- `backend/gateway/router/router.go`
+- `backend/gateway/router/admin_rule_template_route_test.go`
+
+**Risks / Blockers**
+
+- No blocker. Strict TDD Red evidence is partial because implementation skeleton was written before the new contract tests were executed; subsequent contract tests now guard amount precision, merchant-only access, owner scope, route registration, and internal-token forwarding.
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `当前分支/worktree：feat/admin-role-backend @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-role-backend`
 
 
 ### T005 - `Role-aware live stream management`
@@ -430,6 +452,7 @@
 | `2026-06-04 21:30` | `Dispatch T003` | `W1 complete; T003 dependencies satisfied` | `Product ownership schema/API in progress` | `main-agent` |
 | `2026-06-04 21:50` | `T003 completed` | `Product/Gateway focused and full regression tests passed` | `T004/T005/T008/T009 can start where dependencies allow; T006 can start after T003` | `main-agent` |
 | `2026-06-04 21:48` | `Dispatch T004` | `T001/T002 done; merchant template dependencies satisfied` | `Avoid router conflicts by running W3 sequentially` | `main-agent` |
+| `2026-06-04 22:02` | `T004 completed` | `Merchant auction rule template APIs implemented and verified` | `T005/T008/T009 can continue; T006/T007 remain pending` | `main-agent` |
 
 ## Final Review Checklist
 

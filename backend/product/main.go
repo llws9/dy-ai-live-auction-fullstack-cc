@@ -65,6 +65,7 @@ func main() {
 		&model.Product{},
 		&model.Category{},
 		&model.AuctionRule{},
+		&model.AuctionRuleTemplate{},
 		&model.Order{},
 		&model.LiveStream{},
 	); err != nil {
@@ -74,6 +75,7 @@ func main() {
 	// 初始化 DAO 层
 	productDAO := dao.NewProductDAO(db)
 	ruleDAO := dao.NewAuctionRuleDAO(db)
+	ruleTemplateDAO := dao.NewAuctionRuleTemplateDAO(db)
 	orderDAO := dao.NewOrderDAO(db)
 	historyDAO := dao.NewHistoryDAO(db)
 	orderAdminDAO := dao.NewOrderAdminDAO(db)
@@ -83,6 +85,7 @@ func main() {
 
 	// 初始化 Service 层
 	productService := service.NewProductService(productDAO, ruleDAO, liveStreamDAO)
+	ruleTemplateService := service.NewAuctionRuleTemplateService(ruleTemplateDAO)
 	orderService := service.NewOrderService(orderDAO, historyDAO)
 	orderService.SetAdminOrderDAO(orderAdminDAO)
 	statisticsService := service.NewStatisticsService(statisticsDAO)
@@ -116,6 +119,7 @@ func main() {
 	// 初始化 Handler 层
 	productHandler := handler.NewProductHandler(productService)
 	ruleHandler := handler.NewRuleHandler(productService)
+	ruleTemplateHandler := handler.NewAuctionRuleTemplateHandler(ruleTemplateService)
 	orderHandler := handler.NewOrderHandler(orderService)
 	statisticsHandler := handler.NewStatisticsHandler(statisticsService)
 	productPublishHandler := handler.NewProductHandler(productService)
@@ -146,7 +150,7 @@ func main() {
 	)
 
 	// 注册路由
-	registerRoutes(h, productHandler, ruleHandler, orderHandler, statisticsHandler, productPublishHandler, liveStreamHandler, categoryHandler, copywritingHandler, internalHandler)
+	registerRoutes(h, productHandler, ruleHandler, ruleTemplateHandler, orderHandler, statisticsHandler, productPublishHandler, liveStreamHandler, categoryHandler, copywritingHandler, internalHandler)
 
 	// 启动服务
 	log.Printf("Product service starting on %s", cfg.Server.Port)
@@ -154,7 +158,7 @@ func main() {
 }
 
 // registerRoutes 注册路由
-func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, ruleHandler *handler.RuleHandler, orderHandler *handler.OrderHandler, statisticsHandler *handler.StatisticsHandler, productPublishHandler *handler.ProductHandler, liveStreamHandler *handler.LiveStreamHandler, categoryHandler *handler.CategoryHandler, copywritingHandler *handler.CopywritingHandler, internalHandler *handler.InternalHandler) {
+func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, ruleHandler *handler.RuleHandler, ruleTemplateHandler *handler.AuctionRuleTemplateHandler, orderHandler *handler.OrderHandler, statisticsHandler *handler.StatisticsHandler, productPublishHandler *handler.ProductHandler, liveStreamHandler *handler.LiveStreamHandler, categoryHandler *handler.CategoryHandler, copywritingHandler *handler.CopywritingHandler, internalHandler *handler.InternalHandler) {
 	v1 := h.Group("/api/v1")
 
 	// 商品相关路由
@@ -196,6 +200,11 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	v1.POST("/admin/products", internalAuth, productHandler.AdminCreate)
 	v1.PUT("/admin/products/:id", internalAuth, productHandler.AdminUpdate)
 	v1.DELETE("/admin/products/:id", internalAuth, productHandler.AdminDelete)
+	v1.GET("/admin/auction-rule-templates", internalAuth, ruleTemplateHandler.List)
+	v1.GET("/admin/auction-rule-templates/:id", internalAuth, ruleTemplateHandler.Get)
+	v1.POST("/admin/auction-rule-templates", internalAuth, ruleTemplateHandler.Create)
+	v1.PUT("/admin/auction-rule-templates/:id", internalAuth, ruleTemplateHandler.Update)
+	v1.DELETE("/admin/auction-rule-templates/:id", internalAuth, ruleTemplateHandler.Delete)
 	v1.GET("/admin/orders", internalAuth, orderHandler.AdminList)
 	v1.GET("/admin/orders/:id", internalAuth, orderHandler.AdminGet)
 

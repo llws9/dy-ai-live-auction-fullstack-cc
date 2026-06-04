@@ -144,6 +144,11 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.POST("/admin/products", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
 	authGroup.PUT("/admin/products/:id", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
 	authGroup.DELETE("/admin/products/:id", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
+	authGroup.GET("/admin/auction-rule-templates", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
+	authGroup.GET("/admin/auction-rule-templates/:id", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
+	authGroup.POST("/admin/auction-rule-templates", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
+	authGroup.PUT("/admin/auction-rule-templates/:id", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
+	authGroup.DELETE("/admin/auction-rule-templates/:id", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
 	authGroup.GET("/admin/orders", middleware.RequireAdmin(), adminProductProxy.Forward)
 	authGroup.GET("/admin/orders/:id", middleware.RequireAdmin(), adminProductProxy.Forward)
 
