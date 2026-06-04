@@ -195,6 +195,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
 
     renderHome();
 
+    await waitFor(() => expect(mockedAuctionApi.list).toHaveBeenCalled());
     fireEvent.click(screen.getByRole('button', { name: '收藏' }));
 
     await waitFor(() => expect(mockedFollowApi.getFollowedLiveStreams).toHaveBeenCalledWith(1, 20));
