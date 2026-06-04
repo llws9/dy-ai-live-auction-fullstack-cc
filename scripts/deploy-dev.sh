@@ -59,14 +59,64 @@ assert_origin_main() {
   fi
 }
 
-assert_clean_tree() {
-  cd "$PROJECT_ROOT"
-  if [[ -n "$(git status --porcelain)" ]]; then
-    echo -e "${RED}错误: 当前工作区存在未提交改动，拒绝从本目录强制部署${NC}" >&2
-    git status --short
-    echo "建议先提交/暂存改动，或创建干净 worktree 后执行 /dp-dev。"
+paths_ignored() {
+  local path
+  for path in "$@"; do
+    [[ -z "$path" ]] && continue
+    if ! git check-ignore --no-index -q -- "$path"; then
+      return 1
+    fi
+  done
+}
+
+classify_worktree_changes() {
+  local ignored=()
+  local blocking=()
+  local entry
+  local status
+  local path
+  local old_path
+  local display_path
+
+  while IFS= read -r -d '' entry; do
+    [[ -z "$entry" ]] && continue
+    status="${entry:0:2}"
+    path="${entry:3}"
+
+    if [[ "$status" == R* || "$status" == C* ]]; then
+      old_path=""
+      IFS= read -r -d '' old_path || true
+      display_path="$old_path -> $path"
+      if [[ -n "$old_path" ]] && paths_ignored "$path" "$old_path"; then
+        ignored+=("$display_path")
+      else
+        blocking+=("$display_path")
+      fi
+      continue
+    fi
+
+    if paths_ignored "$path"; then
+      ignored+=("$path")
+    else
+      blocking+=("$path")
+    fi
+  done < <(git status --porcelain=v1 -z)
+
+  if [[ "${#blocking[@]}" -gt 0 ]]; then
+    echo -e "${RED}错误: 当前工作区存在未提交且未被 .gitignore 覆盖的改动，拒绝部署${NC}" >&2
+    printf -- '- %s\n' "${blocking[@]}" >&2
     exit 1
   fi
+
+  if [[ "${#ignored[@]}" -gt 0 ]]; then
+    echo -e "${YELLOW}检测到仅含 .gitignore 覆盖的本地改动，部署将忽略这些文件：${NC}"
+    printf -- '- %s\n' "${ignored[@]}"
+  fi
+}
+
+assert_clean_tree() {
+  cd "$PROJECT_ROOT"
+  classify_worktree_changes
 }
 
 stop_frontend_ports() {

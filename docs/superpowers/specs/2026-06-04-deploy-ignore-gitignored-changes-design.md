@@ -41,7 +41,7 @@
 
 函数逻辑：
 
-1. 执行 `git status --porcelain` 获取本地改动列表。
+1. 执行 `git status --porcelain=v1 -z` 获取 NUL 分隔的本地改动列表。
 2. 如果没有改动，检查通过。
 3. 对每条改动解析出路径。
 4. 对路径执行 `git check-ignore --no-index -q -- <path>`。
@@ -54,19 +54,24 @@
 
 ## 路径解析
 
-`git status --porcelain` 可能输出：
+`git status --porcelain=v1 -z` 使用 NUL 分隔路径，避免空格、引号和转义字符导致路径解析错误。普通改动记录格式为：
 
 - ` M path`
 - `M  path`
 - `?? path`
 - `A  path`
-- `R  old -> new`
-- `C  old -> new`
 
-脚本只需要覆盖部署风险相关路径提取：
+rename/copy 在 `-z` 下不是 `old -> new` 文本，而是两个连续 NUL 字段：
+
+- `R  new-path\0old-path\0`
+- `C  new-path\0old-path\0`
+
+脚本必须覆盖部署风险相关路径提取：
 
 - 普通改动取状态字段之后的路径。
-- rename/copy 取 `->` 右侧的新路径。
+- rename/copy 同时检查 new 和 old 两端路径。
+- rename/copy 只有 new 和 old 都命中 `.gitignore` 才加入 ignored-local changes。
+- rename/copy 任一端不命中 `.gitignore` 必须加入 blocking changes。
 - 路径传给 `git check-ignore` 时必须使用 `--` 防止特殊路径被误解析为参数。
 
 ## 输出行为
