@@ -33,6 +33,10 @@ function getProductTitle(item: FixedPriceItem): string {
   return item.product_brief?.title ?? item.product?.title ?? '一口价商品';
 }
 
+function getProductCoverImage(item: FixedPriceItem): string | undefined {
+  return item.product_brief?.cover_image ?? item.product?.cover_image;
+}
+
 function getErrorStatus(error: PurchaseErrorLike): number | undefined {
   return error.status ?? error.response?.status;
 }
@@ -56,7 +60,6 @@ function getConflictMessage(code?: string): string {
 
 export default function FixedPricePurchaseModal({
   item,
-  liveStreamId,
   open,
   onClose,
   onSuccess,
@@ -71,6 +74,9 @@ export default function FixedPricePurchaseModal({
   if (!open) {
     return null;
   }
+
+  const productTitle = getProductTitle(item);
+  const productCoverImage = getProductCoverImage(item);
 
   const handlePurchase = async () => {
     if (submitting) {
@@ -139,11 +145,22 @@ export default function FixedPricePurchaseModal({
           ×
         </button>
 
-        <div className={styles.badge}>直播间 {liveStreamId} 限时一口价</div>
-        <h2 id="fixed-price-purchase-title" className={styles.title}>
-          确认抢购
-        </h2>
-        <p className={styles.productName}>{getProductTitle(item)}</p>
+        <div className={styles.badge}>直播间限时一口价</div>
+        <div className={styles.productPreview}>
+          {productCoverImage ? (
+            <img className={styles.productImage} src={productCoverImage} alt={productTitle} />
+          ) : (
+            <div className={styles.productImageFallback} role="img" aria-label={productTitle}>
+              无图
+            </div>
+          )}
+          <div className={styles.productCopy}>
+            <h2 id="fixed-price-purchase-title" className={styles.title}>
+              确认抢购
+            </h2>
+            <p className={styles.productName}>{productTitle}</p>
+          </div>
+        </div>
 
         <div className={styles.pricePanel}>
           <span className={styles.priceLabel}>一口价</span>

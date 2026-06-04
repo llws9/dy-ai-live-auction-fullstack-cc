@@ -84,6 +84,7 @@ export function purchase(params: {
   idempotencyKey: string;
 }): Promise<PurchaseResult> {
   return post<PurchaseResponse>(`/fixed-price/items/${params.itemId}/purchase`, undefined, {
+    showError: false,
     headers: {
       'X-Idempotency-Key': params.idempotencyKey,
     },

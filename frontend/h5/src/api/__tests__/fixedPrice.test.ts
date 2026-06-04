@@ -1,4 +1,5 @@
 import { fetchItems, fetchMyPurchase, generateIdempotencyKey, purchase } from '../fixedPrice';
+import { setToastFunction } from '../../services/api';
 
 const jsonResponse = (data: unknown): Response => ({
   ok: true,
@@ -60,6 +61,32 @@ describe('fixedPrice API', () => {
         }),
       })
     );
+  });
+
+  it('purchase lets the modal handle insufficient balance without request-layer error toast', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 402,
+      url: '/api/v1/fixed-price/items/7001/purchase',
+      headers: { get: () => 'application/json' },
+      json: async () => ({
+        code: 'INSUFFICIENT_BALANCE',
+        message: '余额不足',
+      }),
+    } as Response);
+    global.fetch = fetchMock;
+    const toastSpy = jest.fn();
+    setToastFunction(toastSpy);
+
+    await expect(purchase({
+      itemId: 7001,
+      idempotencyKey: '550e8400-e29b-41d4-a716-446655440000',
+    })).rejects.toMatchObject({
+      status: 402,
+      code: 'INSUFFICIENT_BALANCE',
+    });
+
+    expect(toastSpy).not.toHaveBeenCalled();
   });
 
   it('fetchMyPurchase normalizes backend i_bought and voucher id', async () => {
