@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { Link, MemoryRouter } from 'react-router-dom';
 import MobileContainer from '../../components/MobileShell/MobileContainer';
 import BottomNav from '../../components/MobileShell/BottomNav';
 import { notificationApi } from '../../services/notification';
@@ -308,6 +308,41 @@ describe('MobileShell', () => {
         result: 'success',
       }),
     );
+  });
+
+  it('refetches pending live reminder when re-entering pages after login', async () => {
+    mockGetPendingLiveReminder
+      .mockResolvedValueOnce({ hasReminder: false, stream: null })
+      .mockResolvedValueOnce({
+        hasReminder: true,
+        stream: {
+          id: 1,
+          name: '云端珍藏直播间',
+          avatarUrl: '',
+          statusText: '正在直播',
+          liveRoomId: 1,
+          startedAt: 1717000000000,
+        },
+      });
+
+    render(
+      <MemoryRouter initialEntries={['/']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>
+              <Link to="/following">我的收藏</Link>
+            </main>
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(mockGetPendingLiveReminder).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('link', { name: '我的收藏' }));
+
+    await waitFor(() => expect(mockGetPendingLiveReminder).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('云端珍藏直播间')).toBeInTheDocument();
   });
 
   it('tracks live reminder click action', async () => {

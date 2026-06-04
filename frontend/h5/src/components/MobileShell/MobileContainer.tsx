@@ -62,7 +62,7 @@ function MobileContainer({ children }: MobileContainerProps) {
     return () => {
       alive = false;
     };
-  }, [authLoading, isAuthenticated, token, userId]);
+  }, [authLoading, isAuthenticated, token, userId, pathname]);
 
   return (
     <div className={styles.shell} data-testid="mobile-shell">
