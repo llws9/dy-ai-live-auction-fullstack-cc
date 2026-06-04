@@ -37,7 +37,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `8` |
-| Last Updated | `2026-06-04 21:28` |
+| Last Updated | `2026-06-04 21:30` |
 
 ## Task Matrix
 
@@ -45,7 +45,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `Gateway exact role middleware` | `done` | `main-agent` | `W1` | `-` | `Gateway role middleware only` | `backend/gateway/middleware/rbac.go; backend/gateway/middleware/rbac_test.go` |
 | `T002` | `Product service auth context helpers` | `done` | `main-agent` | `W1` | `-` | `Product handler auth helper only` | `backend/product/handler/auth_context.go; backend/product/handler/auth_context_test.go` |
-| `T003` | `Product ownership schema and scoped product APIs` | `pending` | `unassigned` | `W2` | `T001,T002` | `Product owner schema and admin product APIs` | `backend/migrations/*admin_role_scope*; backend/product/model/product.go; backend/product/dao/product.go; backend/product/service/product.go; backend/product/handler/product.go; backend/product/main.go; backend/gateway/router/router.go` |
+| `T003` | `Product ownership schema and scoped product APIs` | `assigned` | `subagent-product-scope` | `W2` | `T001,T002` | `Product owner schema and admin product APIs` | `backend/migrations/*admin_role_scope*; backend/product/model/product.go; backend/product/dao/product.go; backend/product/service/product.go; backend/product/handler/product.go; backend/product/main.go; backend/gateway/router/router.go` |
 | `T004` | `Merchant auction rule templates` | `pending` | `unassigned` | `W3` | `T001,T002` | `Merchant auction rule templates` | `backend/product/model/auction_rule_template.go; backend/product/dao/auction_rule_template.go; backend/product/service/auction_rule_template.go; backend/product/handler/auction_rule_template.go; backend/product/main.go; backend/gateway/router/router.go` |
 | `T005` | `Role-aware live stream management` | `pending` | `unassigned` | `W3` | `T001,T002` | `Product live stream admin scope` | `backend/product/handler/live_stream.go; backend/product/service/live_stream.go; backend/product/dao/live_stream.go; backend/product/main.go; backend/gateway/router/router.go` |
 | `T006` | `Seller-scoped orders` | `pending` | `unassigned` | `W4` | `T001,T002,T003` | `Order seller scope` | `backend/product/model/order.go; backend/product/dao/order*.go; backend/product/service/order*.go; backend/product/handler/order*.go; backend/gateway/router/router.go` |
@@ -152,9 +152,9 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
+| Status | `assigned` |
+| Owner | `subagent-product-scope` |
+| Started At | `2026-06-04 21:30` |
 | Completed At | `-` |
 | Branch | `feat/admin-role-backend` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-role-backend` |
@@ -394,6 +394,7 @@
 | --- | --- | --- | --- | --- |
 | `2026-06-04 17:31` | `Dispatch W1: T001 and T002` | `Separate Gateway/Product files; no shared write set` | `Can run in parallel; T003+ waits for both` | `main-agent` |
 | `2026-06-04 21:28` | `W1 completed` | `T001 and T002 passed focused and package regression tests` | `T003 can start` | `main-agent` |
+| `2026-06-04 21:30` | `Dispatch T003` | `W1 complete; T003 dependencies satisfied` | `Product ownership schema/API in progress` | `main-agent` |
 
 ## Final Review Checklist
 
