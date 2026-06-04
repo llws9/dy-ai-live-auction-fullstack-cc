@@ -210,6 +210,9 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 
 	// 直播间 admin 路由：必须经 Gateway 透传内部 token，且由 Gateway 校验管理员身份。
 	v1.GET("/admin/live-streams", internalAuth, liveStreamHandler.ListAdmin)
+	v1.GET("/admin/live-streams/:id", internalAuth, liveStreamHandler.AdminGet)
+	v1.POST("/admin/live-streams", internalAuth, liveStreamHandler.AdminCreate)
+	v1.PUT("/admin/live-streams/:id", internalAuth, liveStreamHandler.AdminUpdate)
 	v1.PUT("/admin/live-streams/:id/end", internalAuth, liveStreamHandler.EndAdmin)
 	v1.PUT("/admin/live-streams/:id/ban", internalAuth, liveStreamHandler.BanAdmin)
 	v1.GET("/live-streams", liveStreamHandler.ListPublic)

@@ -33,11 +33,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `10` |
-| Done | `4` |
+| Done | `5` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `6` |
-| Last Updated | `2026-06-04 22:02` |
+| Pending | `5` |
+| Last Updated | `2026-06-04 22:14` |
 
 ## Task Matrix
 
@@ -47,7 +47,7 @@
 | `T002` | `Product service auth context helpers` | `done` | `main-agent` | `W1` | `-` | `Product handler auth helper only` | `backend/product/handler/auth_context.go; backend/product/handler/auth_context_test.go` |
 | `T003` | `Product ownership schema and scoped product APIs` | `done` | `main-agent` | `W2` | `T001,T002` | `Product owner schema and admin product APIs` | `backend/migrations/*admin_role_scope*; backend/product/model/product.go; backend/product/dao/product.go; backend/product/service/product.go; backend/product/handler/product.go; backend/product/main.go; backend/gateway/router/router.go` |
 | `T004` | `Merchant auction rule templates` | `done` | `main-agent` | `W3` | `T001,T002` | `Merchant auction rule templates` | `backend/product/model/auction_rule_template.go; backend/product/dao/auction_rule_template.go; backend/product/service/auction_rule_template.go; backend/product/handler/auction_rule_template.go; backend/product/main.go; backend/gateway/router/router.go` |
-| `T005` | `Role-aware live stream management` | `pending` | `unassigned` | `W3` | `T001,T002` | `Product live stream admin scope` | `backend/product/handler/live_stream.go; backend/product/service/live_stream.go; backend/product/dao/live_stream.go; backend/product/main.go; backend/gateway/router/router.go` |
+| `T005` | `Role-aware live stream management` | `done` | `main-agent` | `W3` | `T001,T002` | `Product live stream admin scope` | `backend/product/handler/live_stream.go; backend/product/service/live_stream.go; backend/product/dao/live_stream.go; backend/product/main.go; backend/gateway/router/router.go` |
 | `T006` | `Seller-scoped orders` | `pending` | `unassigned` | `W4` | `T001,T002,T003` | `Order seller scope` | `backend/product/model/order.go; backend/product/dao/order*.go; backend/product/service/order*.go; backend/product/handler/order*.go; backend/gateway/router/router.go` |
 | `T007` | `Role-aware statistics` | `pending` | `unassigned` | `W4` | `T001,T002,T006` | `Product statistics role scope` | `backend/product/handler/statistics.go; backend/product/service/statistics.go; backend/product/dao/statistics.go; backend/gateway/router/router.go` |
 | `T008` | `Auction service admin frontend scope` | `pending` | `unassigned` | `W3` | `T001` | `Auction admin endpoints and creator scope` | `backend/auction/handler/auction.go; backend/auction/service/auction.go; backend/auction/dao/auction.go; backend/gateway/router/router.go` |
@@ -267,10 +267,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-04 22:04` |
+| Completed At | `2026-06-04 22:14` |
 | Branch | `feat/admin-role-backend` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-role-backend` |
 | Depends On | `-` |
@@ -286,11 +286,33 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `TDD Red -> Green -> Verify evidence` | `not_run` | `pending` |
+| `cd backend/product && go test ./dao -run 'TestLiveStreamDAOListAdminScoped|TestLiveStreamDAOGetByIDAndCreatorID' -count=1` | Red: failed before implementation because scoped DAO methods were undefined; Green: passed after implementation | `ok product-service/dao 0.388s` | `passed` |
+| `cd backend/product && go test ./handler -run 'TestListAdminLiveStreamMerchantOnlyOwnStreams|TestAdminCreateLiveStream|TestListAdmin_T4FieldsAndStatusFilter|TestListAdminLiveStreamRejectsInvalidStatus|TestListAdminLiveStreamClampsPageSize' -count=1` | Red: failed before implementation because `AdminCreate` was undefined; Green: passed after handler implementation | `ok product-service/handler 0.529s` | `passed` |
+| `cd backend/gateway && go test ./router -run 'TestAdminLiveStreamRoutesRoleScope' -count=1` | Red: failed before route implementation because POST admin live streams returned 404; Green: passed after route guards | `ok gateway-service/router 0.490s` | `passed` |
+| `cd backend/product && go test ./service -run 'TestLiveStreamServiceListAdminScoped|TestLiveStreamServiceGetAdminDetail' -count=1` | Service owner-scope contract tests pass | `ok product-service/service 0.623s` | `passed` |
+| `cd backend/product && go test ./... -count=1` | Verify: Product full suite passes | `ok product-service/...` | `passed` |
+| `cd backend/gateway && go test ./... -count=1` | Verify: Gateway full suite passes | `ok gateway-service/...` | `passed` |
+| `git diff --check` | Verify: no whitespace errors | `no output` | `passed` |
+
+**Modified Files**
+
+- `backend/product/dao/live_stream.go`
+- `backend/product/dao/live_stream_test.go`
+- `backend/product/service/live_stream.go`
+- `backend/product/service/live_stream_test.go`
+- `backend/product/handler/live_stream.go`
+- `backend/product/handler/live_stream_test.go`
+- `backend/product/main.go`
+- `backend/gateway/router/router.go`
+- `backend/gateway/router/admin_live_stream_role_route_test.go`
+
+**Risks / Blockers**
+
+- No blocker. Existing admin governance actions `end/ban` remain admin-only; merchant create/update/list/detail routes are owner-scoped.
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `当前分支/worktree：feat/admin-role-backend @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-role-backend`
 
 
 ### T006 - `Seller-scoped orders`
@@ -453,6 +475,8 @@
 | `2026-06-04 21:50` | `T003 completed` | `Product/Gateway focused and full regression tests passed` | `T004/T005/T008/T009 can start where dependencies allow; T006 can start after T003` | `main-agent` |
 | `2026-06-04 21:48` | `Dispatch T004` | `T001/T002 done; merchant template dependencies satisfied` | `Avoid router conflicts by running W3 sequentially` | `main-agent` |
 | `2026-06-04 22:02` | `T004 completed` | `Merchant auction rule template APIs implemented and verified` | `T005/T008/T009 can continue; T006/T007 remain pending` | `main-agent` |
+| `2026-06-04 22:04` | `Dispatch T005` | `T001/T002 done; live stream role-aware management can start` | `Run sequentially to avoid gateway router conflicts` | `main-agent` |
+| `2026-06-04 22:14` | `T005 completed` | `Role-aware live stream management implemented and verified` | `T008/T009 can continue; T006/T007 remain pending` | `main-agent` |
 
 ## Final Review Checklist
 

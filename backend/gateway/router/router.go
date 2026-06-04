@@ -153,7 +153,10 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.GET("/admin/orders/:id", middleware.RequireAdmin(), adminProductProxy.Forward)
 
 	// ========== 直播间路由 ==========
-	authGroup.GET("/admin/live-streams", middleware.RequireAdmin(), adminProductProxy.Forward) // T009/T4: 管理端直播间列表
+	authGroup.GET("/admin/live-streams", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward) // T009/T4: 管理端直播间列表
+	authGroup.GET("/admin/live-streams/:id", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
+	authGroup.POST("/admin/live-streams", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
+	authGroup.PUT("/admin/live-streams/:id", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
 	authGroup.PUT("/admin/live-streams/:id/end", middleware.RequireAdmin(), adminProductProxy.Forward)
 	authGroup.PUT("/admin/live-streams/:id/ban", middleware.RequireAdmin(), adminProductProxy.Forward)
 	// T010: 直播间详情。公开访问，但若客户端带合法 Bearer token，

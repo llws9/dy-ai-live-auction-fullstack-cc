@@ -12,6 +12,15 @@ type LiveStreamService struct {
 	viewerCounter LiveViewerCounter
 }
 
+type AdminLiveStreamRequest struct {
+	Name           string `json:"name"`
+	Description    string `json:"description"`
+	CoverImage     string `json:"cover_image"`
+	VideoURL       string `json:"video_url"`
+	StreamerName   string `json:"streamer_name"`
+	StreamerAvatar string `json:"streamer_avatar"`
+}
+
 // NewLiveStreamService 创建直播间服务
 func NewLiveStreamService(liveStreamDAO *dao.LiveStreamDAO) *LiveStreamService {
 	return NewLiveStreamServiceWithMetrics(liveStreamDAO, ZeroLiveViewerCounter{})
@@ -98,6 +107,64 @@ func (s *LiveStreamService) List(ctx context.Context, page, pageSize int) ([]mod
 func (s *LiveStreamService) ListAdmin(ctx context.Context, page, pageSize int, statusFilter *int) ([]model.LiveStream, int64, error) {
 	offset := (page - 1) * pageSize
 	return s.liveStreamDAO.ListAdmin(ctx, offset, pageSize, statusFilter)
+}
+
+func (s *LiveStreamService) ListAdminScoped(ctx context.Context, page, pageSize int, statusFilter *int, creatorID *int64) ([]model.LiveStream, int64, error) {
+	offset := (page - 1) * pageSize
+	return s.liveStreamDAO.ListAdminScoped(ctx, offset, pageSize, statusFilter, creatorID)
+}
+
+func (s *LiveStreamService) GetAdminDetail(ctx context.Context, role string, userID, id int64) (*model.LiveStream, error) {
+	if role == "merchant" {
+		return s.liveStreamDAO.GetByIDAndCreatorID(ctx, id, userID)
+	}
+	return s.liveStreamDAO.GetByID(ctx, id)
+}
+
+func (s *LiveStreamService) CreateForCreator(ctx context.Context, creatorID int64, req AdminLiveStreamRequest) (*model.LiveStream, error) {
+	liveStream := &model.LiveStream{
+		CreatorID:      creatorID,
+		Name:           req.Name,
+		Description:    req.Description,
+		CoverImage:     req.CoverImage,
+		VideoURL:       req.VideoURL,
+		Status:         model.LiveStreamStatusLive,
+		StreamerName:   req.StreamerName,
+		StreamerAvatar: req.StreamerAvatar,
+	}
+	if err := s.liveStreamDAO.Create(ctx, liveStream); err != nil {
+		return nil, err
+	}
+	return liveStream, nil
+}
+
+func (s *LiveStreamService) UpdateForCreator(ctx context.Context, creatorID, id int64, req AdminLiveStreamRequest) (*model.LiveStream, error) {
+	liveStream, err := s.liveStreamDAO.GetByIDAndCreatorID(ctx, id, creatorID)
+	if err != nil {
+		return nil, err
+	}
+	if req.Name != "" {
+		liveStream.Name = req.Name
+	}
+	if req.Description != "" {
+		liveStream.Description = req.Description
+	}
+	if req.CoverImage != "" {
+		liveStream.CoverImage = req.CoverImage
+	}
+	if req.VideoURL != "" {
+		liveStream.VideoURL = req.VideoURL
+	}
+	if req.StreamerName != "" {
+		liveStream.StreamerName = req.StreamerName
+	}
+	if req.StreamerAvatar != "" {
+		liveStream.StreamerAvatar = req.StreamerAvatar
+	}
+	if err := s.liveStreamDAO.Update(ctx, liveStream); err != nil {
+		return nil, err
+	}
+	return liveStream, nil
 }
 
 // GetDetail 直播间详情 (T012)
