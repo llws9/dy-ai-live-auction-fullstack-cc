@@ -614,3 +614,13 @@
 **结论**
 
 - Admin role backend implementation is complete in `feat/admin-role-backend`.
+
+## Post-Review Fixes
+
+| Time | Action | Evidence | Owner |
+| --- | --- | --- | --- |
+| `2026-06-05 01:20` | Fixed 5 P1 final Code Review findings: product statistics internal auth, auction admin internal auth, order seller_id derivation, merchant-only legacy write routes, auction cancel creator scope | `cd backend/product && go test ./... -count=1`; `cd backend/gateway && go test ./... -count=1`; `cd backend/auction && go test ./... -count=1`; `cd backend/test && go test ./... -count=1`; `git diff --check` | `main-agent` |
+
+**Residual Notes**
+
+- VS Code diagnostics cannot access the isolated worktree path in this environment; Go test suites and `git diff --check` are the verification source.

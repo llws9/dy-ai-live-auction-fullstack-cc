@@ -97,6 +97,25 @@ func (s *AuctionService) CancelAuction(ctx context.Context, id int64) error {
 	return s.auctionDAO.Update(ctx, auction)
 }
 
+// CancelAuctionByCreator cancels an auction only when it belongs to creatorID.
+func (s *AuctionService) CancelAuctionByCreator(ctx context.Context, id, creatorID int64) error {
+	auction, err := s.auctionDAO.GetByIDAndCreatorID(ctx, id, creatorID)
+	if err != nil {
+		return err
+	}
+
+	sm := NewStateMachine(auction)
+	if !sm.CanCancel() {
+		return errors.New("当前状态无法取消")
+	}
+
+	if err := sm.Transition(model.AuctionStatusCancelled); err != nil {
+		return err
+	}
+
+	return s.auctionDAO.Update(ctx, auction)
+}
+
 // StartAuction 开始竞拍
 func (s *AuctionService) StartAuction(ctx context.Context, id int64) error {
 	auction, err := s.auctionDAO.GetByID(ctx, id)

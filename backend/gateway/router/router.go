@@ -71,18 +71,17 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	v1.POST("/products/:id/rules", productProxy.Forward)
 	v1.GET("/products/:id/rules", productProxy.Forward)
 
-	// 商品发布/下架需要商家或管理员权限
-	authGroup.POST("/products/ai/copywriting", middleware.RequireMerchant(), productProxy.Forward)
-	authGroup.POST("/products/:id/publish", middleware.RequireMerchant(), productProxy.Forward)
-	authGroup.POST("/products/:id/unpublish", middleware.RequireMerchant(), productProxy.Forward)
+	// 商品经营动作仅商家可执行，平台管理员不具备代运营权限。
+	authGroup.POST("/products/ai/copywriting", middleware.RequireMerchantOnly(), productProxy.Forward)
+	authGroup.POST("/products/:id/publish", middleware.RequireMerchantOnly(), productProxy.Forward)
+	authGroup.POST("/products/:id/unpublish", middleware.RequireMerchantOnly(), productProxy.Forward)
 
 	// ========== 竞拍服务路由 ==========
 	v1.GET("/auctions", auctionProxy.Forward)
 	v1.GET("/auctions/:id", auctionProxy.Forward)
-	// 创建竞拍需要主播或管理员权限
-	authGroup.POST("/auctions", middleware.RequireStreamer(), auctionProxy.Forward)
-	// 取消竞拍需要主播或管理员权限
-	authGroup.PUT("/auctions/:id/cancel", middleware.RequireStreamer(), auctionProxy.Forward)
+	// 竞拍经营动作仅商家可执行，平台管理员不具备代运营权限。
+	authGroup.POST("/auctions", middleware.RequireMerchantOnly(), auctionProxy.Forward)
+	authGroup.PUT("/auctions/:id/cancel", middleware.RequireMerchantOnly(), auctionProxy.Forward)
 	v1.GET("/auctions/:id/result", auctionProxy.Forward)
 
 	// 出价需要认证
@@ -185,10 +184,10 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.GET("/sky-lamp/subscriptions/:id", auctionProxy.Forward)
 
 	// ========== 统计服务路由 ==========
-	authGroup.GET("/statistics/overview", middleware.RequireMerchantOrAdmin(), productProxy.Forward)
-	authGroup.GET("/statistics/auctions", middleware.RequireMerchantOrAdmin(), productProxy.Forward)
-	authGroup.GET("/statistics/revenue", middleware.RequireMerchantOrAdmin(), productProxy.Forward)
-	authGroup.GET("/statistics/users", middleware.RequireAdmin(), productProxy.Forward)
+	authGroup.GET("/statistics/overview", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
+	authGroup.GET("/statistics/auctions", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
+	authGroup.GET("/statistics/revenue", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
+	authGroup.GET("/statistics/users", middleware.RequireAdmin(), adminProductProxy.Forward)
 
 	// ========== 类别服务路由 ==========
 	v1.GET("/categories", productProxy.Forward)                                          // T018: 类别列表（公开）

@@ -88,6 +88,7 @@ func main() {
 	ruleTemplateService := service.NewAuctionRuleTemplateService(ruleTemplateDAO)
 	orderService := service.NewOrderService(orderDAO, historyDAO)
 	orderService.SetAdminOrderDAO(orderAdminDAO)
+	orderService.SetProductDAO(productDAO)
 	statisticsService := service.NewStatisticsService(statisticsDAO)
 	var viewerCounter service.LiveViewerCounter = service.ZeroLiveViewerCounter{}
 	var redisClient *redis.Client
@@ -218,11 +219,11 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	v1.GET("/live-streams", liveStreamHandler.ListPublic)
 	v1.GET("/live-streams/:id", liveStreamHandler.GetDetail)
 
-	// 统计相关路由
-	v1.GET("/statistics/overview", statisticsHandler.GetOverview)
-	v1.GET("/statistics/auctions", statisticsHandler.GetAuctionStatistics)
-	v1.GET("/statistics/revenue", statisticsHandler.GetRevenueStatistics)
-	v1.GET("/statistics/users", statisticsHandler.GetUserStatistics)
+	// 统计相关路由：经 Gateway 注入 internal token，下游再按 X-User-Role/X-User-ID 做范围校验。
+	v1.GET("/statistics/overview", internalAuth, statisticsHandler.GetOverview)
+	v1.GET("/statistics/auctions", internalAuth, statisticsHandler.GetAuctionStatistics)
+	v1.GET("/statistics/revenue", internalAuth, statisticsHandler.GetRevenueStatistics)
+	v1.GET("/statistics/users", internalAuth, statisticsHandler.GetUserStatistics)
 
 	// 类别相关路由
 	v1.GET("/categories", categoryHandler.List)

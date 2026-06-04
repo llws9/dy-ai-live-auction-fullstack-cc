@@ -26,6 +26,7 @@ func TestPendingReminderPublicRouteDoesNotTrustForgedUserHeader(t *testing.T) {
 
 	registerRoutes(
 		h,
+		"internal-secret",
 		&handler.AuctionHandler{},
 		&handler.BidHandler{},
 		&handler.WSHandler{},

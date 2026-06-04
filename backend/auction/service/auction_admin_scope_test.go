@@ -54,3 +54,24 @@ func TestAuctionServiceListAdminScopedMerchantOnlyOwnAuctions(t *testing.T) {
 	require.Len(t, items, 1)
 	require.Equal(t, int64(1), items[0].ProductID)
 }
+
+func TestAuctionServiceCancelAuctionByCreatorRejectsOtherOwner(t *testing.T) {
+	svc := setupAuctionAdminScopeService(t)
+	ctx := context.Background()
+	ownerA := int64(1001)
+	ownerB := int64(1002)
+	auction, err := svc.CreateAuction(ctx, &CreateAuctionRequest{
+		ProductID: 1,
+		CreatorID: &ownerA,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(time.Hour),
+	})
+	require.NoError(t, err)
+
+	err = svc.CancelAuctionByCreator(ctx, auction.ID, ownerB)
+
+	require.Error(t, err)
+	reloaded, err := svc.GetAuction(ctx, auction.ID)
+	require.NoError(t, err)
+	require.Equal(t, model.AuctionStatusPending, reloaded.Status)
+}

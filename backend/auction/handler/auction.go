@@ -174,6 +174,22 @@ func (h *AuctionHandler) AdminGet(ctx context.Context, c *app.RequestContext) {
 // @Failure 500 {object} map[string]interface{}
 // @Router /auctions/{id}/cancel [put]
 func (h *AuctionHandler) Cancel(ctx context.Context, c *app.RequestContext) {
+	creatorID, ok := userIDFromHeader(c)
+	if !ok {
+		c.JSON(401, map[string]interface{}{
+			"code":    401,
+			"message": "未认证，请先登录",
+		})
+		return
+	}
+	role := string(c.GetHeader("X-User-Role"))
+	if role != merchantRole {
+		c.JSON(403, map[string]interface{}{
+			"code":    403,
+			"message": "权限不足",
+		})
+		return
+	}
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -184,9 +200,9 @@ func (h *AuctionHandler) Cancel(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	if err := h.auctionService.CancelAuction(ctx, id); err != nil {
-		c.JSON(500, map[string]interface{}{
-			"code":    500,
+	if err := h.auctionService.CancelAuctionByCreator(ctx, id, creatorID); err != nil {
+		c.JSON(404, map[string]interface{}{
+			"code":    404,
 			"message": "取消竞拍失败: " + err.Error(),
 		})
 		return

@@ -273,7 +273,7 @@ func main() {
 	h.Use(gatewayIdentityMiddleware())
 
 	// 注册路由
-	registerRoutes(h, auctionHandler, bidHandler, wsHandler, userHandler, authHandler, notificationHandler, followHandler, productReminderHandler, skyLampHandler, userBalanceHandler, userAddressHandler, liveReminderHandler, liveStreamStatsHandler)
+	registerRoutes(h, internalAPIToken, auctionHandler, bidHandler, wsHandler, userHandler, authHandler, notificationHandler, followHandler, productReminderHandler, skyLampHandler, userBalanceHandler, userAddressHandler, liveReminderHandler, liveStreamStatsHandler)
 
 	// 一口价秒杀路由（A5 M1）：挂在 /api/v1/fixed-price 下。
 	handler.RegisterFixedPriceRoutes(h.Group("/api/v1"), fixedPriceHandler)
@@ -391,7 +391,7 @@ func parseGatewayRole(role string) int {
 }
 
 // registerRoutes 注册路由
-func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bidHandler *handler.BidHandler, wsHandler *handler.WSHandler, userHandler *handler.UserHandler, authHandler *handler.AuthHandler, notificationHandler *handler.NotificationHandler, followHandler *handler.FollowHandler, productReminderHandler *handler.ProductReminderHandler, skyLampHandler *handler.SkyLampHandler, userBalanceHandler *handler.UserBalanceHandler, userAddressHandler *handler.UserAddressHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler) {
+func registerRoutes(h *server.Hertz, internalAPIToken string, auctionHandler *handler.AuctionHandler, bidHandler *handler.BidHandler, wsHandler *handler.WSHandler, userHandler *handler.UserHandler, authHandler *handler.AuthHandler, notificationHandler *handler.NotificationHandler, followHandler *handler.FollowHandler, productReminderHandler *handler.ProductReminderHandler, skyLampHandler *handler.SkyLampHandler, userBalanceHandler *handler.UserBalanceHandler, userAddressHandler *handler.UserAddressHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler) {
 
 	v1 := h.Group("/api/v1")
 
@@ -410,8 +410,9 @@ func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bid
 	v1.GET("/auctions/:id", auctionHandler.Get)
 	v1.PUT("/auctions/:id/cancel", auctionHandler.Cancel)
 	v1.GET("/auctions/:id/result", auctionHandler.GetResult)
-	v1.GET("/admin/auctions", auctionHandler.AdminList)
-	v1.GET("/admin/auctions/:id", auctionHandler.AdminGet)
+	internalAuth := middleware.InternalAuthMiddleware(internalAPIToken)
+	v1.GET("/admin/auctions", internalAuth, auctionHandler.AdminList)
+	v1.GET("/admin/auctions/:id", internalAuth, auctionHandler.AdminGet)
 
 	// 出价相关路由
 	v1.POST("/auctions/:id/bids", bidHandler.PlaceBid)

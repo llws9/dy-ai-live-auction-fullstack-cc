@@ -70,3 +70,24 @@ func TestAuctionHandlerAdminGetMerchantRejectsOtherOwner(t *testing.T) {
 
 	require.Equal(t, 404, c.Response.StatusCode(), "auction id %d must not be visible to other merchant", auction.ID)
 }
+
+func TestAuctionHandlerCancelMerchantRejectsOtherOwner(t *testing.T) {
+	h := setupAuctionAdminScopeHandler(t)
+	ctx := context.Background()
+	owner := int64(1001)
+	auction, err := h.auctionService.CreateAuction(ctx, &service.CreateAuctionRequest{ProductID: 1, CreatorID: &owner, StartTime: time.Now(), EndTime: time.Now().Add(time.Hour)})
+	require.NoError(t, err)
+
+	c := app.NewContext(0)
+	c.Request.SetRequestURI("/api/v1/auctions/1/cancel")
+	c.Request.Header.Set("X-User-ID", "1002")
+	c.Request.Header.Set("X-User-Role", "merchant")
+	c.Params = append(c.Params, param.Param{Key: "id", Value: "1"})
+
+	h.Cancel(ctx, c)
+
+	require.Equal(t, 404, c.Response.StatusCode(), "auction id %d must not be cancellable by other merchant", auction.ID)
+	reloaded, err := h.auctionService.GetAuction(ctx, auction.ID)
+	require.NoError(t, err)
+	require.Equal(t, model.AuctionStatusPending, reloaded.Status)
+}

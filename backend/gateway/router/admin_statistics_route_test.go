@@ -18,13 +18,16 @@ func TestStatisticsRoutesRoleScope(t *testing.T) {
 	var calls atomic.Int64
 	var lastPath atomic.Value
 	var lastRole atomic.Value
+	var lastInternalToken atomic.Value
 	lastPath.Store("")
 	lastRole.Store("")
+	lastInternalToken.Store("")
 
 	productMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls.Add(1)
 		lastPath.Store(r.URL.Path)
 		lastRole.Store(r.Header.Get("X-User-Role"))
+		lastInternalToken.Store(r.Header.Get("X-Internal-Token"))
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer productMock.Close()
@@ -35,10 +38,11 @@ func TestStatisticsRoutesRoleScope(t *testing.T) {
 
 	cfg := &config.Config{
 		Services: config.ServicesConfig{
-			ProductURL: productMock.URL,
-			AuctionURL: auctionMock.URL,
-			TestURL:    "http://127.0.0.1:0",
-			TestWSURL:  "ws://127.0.0.1:0",
+			ProductURL:    productMock.URL,
+			AuctionURL:    auctionMock.URL,
+			TestURL:       "http://127.0.0.1:0",
+			TestWSURL:     "ws://127.0.0.1:0",
+			InternalToken: "internal-secret",
 		},
 		JWT: config.JWTConfig{Secret: "statistics-route-secret"},
 	}
@@ -56,6 +60,7 @@ func TestStatisticsRoutesRoleScope(t *testing.T) {
 	assert.Equal(t, int64(1), calls.Load())
 	assert.Equal(t, "/api/v1/statistics/overview", lastPath.Load().(string))
 	assert.Equal(t, "merchant", lastRole.Load().(string))
+	assert.Equal(t, "internal-secret", lastInternalToken.Load().(string))
 
 	calls.Store(0)
 	w = ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/statistics/users", nil,

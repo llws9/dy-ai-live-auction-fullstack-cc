@@ -8,6 +8,11 @@ ALTER TABLE orders
   ADD INDEX idx_orders_seller_id (seller_id),
   ADD INDEX idx_orders_seller_status_created (seller_id, status, created_at);
 
+ALTER TABLE auctions
+  ADD COLUMN creator_id BIGINT NULL COMMENT 'merchant user id creating this auction' AFTER live_stream_id,
+  ADD INDEX idx_auctions_creator_id (creator_id),
+  ADD INDEX idx_auctions_creator_status_created (creator_id, status, created_at);
+
 UPDATE orders o
 JOIN products p ON p.id = o.product_id
 SET o.seller_id = p.owner_id

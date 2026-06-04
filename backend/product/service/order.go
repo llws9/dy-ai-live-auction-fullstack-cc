@@ -28,6 +28,7 @@ type OrderService struct {
 	orderDAO             *dao.OrderDAO
 	historyDAO           *dao.HistoryDAO
 	adminDAO             *dao.OrderAdminDAO
+	productDAO           *dao.ProductDAO
 	notificationCallback NotificationCallback // 通知回调（Mock触发）
 	logger               *logger.Logger
 }
@@ -46,6 +47,11 @@ func (s *OrderService) SetAdminOrderDAO(adminDAO *dao.OrderAdminDAO) {
 	s.adminDAO = adminDAO
 }
 
+// SetProductDAO 注入商品 DAO，用于在订单创建时固化 seller_id。
+func (s *OrderService) SetProductDAO(productDAO *dao.ProductDAO) {
+	s.productDAO = productDAO
+}
+
 // SetNotificationCallback 设置通知回调
 func (s *OrderService) SetNotificationCallback(callback NotificationCallback) {
 	s.notificationCallback = callback
@@ -53,9 +59,16 @@ func (s *OrderService) SetNotificationCallback(callback NotificationCallback) {
 
 // CreateOrder 创建订单
 func (s *OrderService) CreateOrder(ctx context.Context, auctionID, productID, winnerID int64, finalPrice decimal.Decimal) (*model.Order, error) {
+	var sellerID *int64
+	if s.productDAO != nil {
+		if product, err := s.productDAO.GetByID(ctx, productID); err == nil {
+			sellerID = product.OwnerID
+		}
+	}
 	order := &model.Order{
 		AuctionID:  auctionID,
 		ProductID:  productID,
+		SellerID:   sellerID,
 		WinnerID:   winnerID,
 		FinalPrice: finalPrice,
 		Status:     model.OrderStatusPending,
