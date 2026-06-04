@@ -2,12 +2,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { followApi } from '../../services/api';
 import PageHeader from '@/components/shared/PageHeader';
+import { repairUtf8Mojibake } from '@/utils/textEncoding';
 import styles from './Following.module.css';
 
 interface LiveStream {
-  id: number | string;
+  id?: number | string;
+  live_stream_id?: number | string;
   name?: string;
   title?: string;
+  live_stream_name?: string;
   description?: string;
   creator_name?: string;
   host_name?: string;
@@ -15,6 +18,7 @@ interface LiveStream {
   avatar?: string;
   status?: string | number;
   current_auctions_count?: number | string;
+  auction_count?: number | string;
   followers_count?: number | string;
   viewer_count?: number | string;
   cover_image?: string;
@@ -40,12 +44,20 @@ function isLive(status: LiveStream['status']) {
   return status === 1 || ['active', 'live', 'living', 'streaming'].includes(normalized);
 }
 
+function getStreamId(stream: LiveStream) {
+  return stream.id ?? stream.live_stream_id;
+}
+
 function getTitle(stream: LiveStream) {
-  return stream.title || stream.name || `直播间 #${stream.id}`;
+  const title = repairUtf8Mojibake(stream.title || stream.name || stream.live_stream_name);
+  if (title) return title;
+
+  const streamId = getStreamId(stream);
+  return streamId === undefined || streamId === null ? '直播间' : `直播间 #${streamId}`;
 }
 
 function getHostName(stream: LiveStream) {
-  return stream.host_name || stream.creator_name || '主播';
+  return repairUtf8Mojibake(stream.host_name || stream.creator_name) || '主播';
 }
 
 function getCoverImage(stream: LiveStream) {
@@ -103,7 +115,7 @@ const FollowPage: React.FC = () => {
     setPendingUnfollowIds((ids) => [...ids, liveStreamId]);
     try {
       await followApi.unfollowLiveStream(Number(liveStreamId));
-      setLiveStreams((streams) => streams.filter((stream) => stream.id !== liveStreamId));
+      setLiveStreams((streams) => streams.filter((stream) => getStreamId(stream) !== liveStreamId));
       if (expandedId === liveStreamId) setExpandedId(null);
     } catch (error) {
       console.error('取消收藏失败:', error);
@@ -141,7 +153,12 @@ const FollowPage: React.FC = () => {
           <span>直播中</span>
         </div>
         <div className={styles.summaryCard}>
-          <strong>{liveStreams.reduce((sum, stream) => sum + toNumber(stream.current_auctions_count), 0)}</strong>
+          <strong>
+            {liveStreams.reduce(
+              (sum, stream) => sum + toNumber(stream.current_auctions_count ?? stream.auction_count),
+              0
+            )}
+          </strong>
           <span>竞拍场</span>
         </div>
       </section>
@@ -160,20 +177,21 @@ const FollowPage: React.FC = () => {
         ) : (
           <div className={styles.streamList}>
             {liveStreams.map((stream) => {
+              const streamId = getStreamId(stream);
               const title = getTitle(stream);
               const hostName = getHostName(stream);
               const active = isLive(stream.status);
-              const expanded = expandedId === stream.id;
-              const pending = pendingUnfollowIds.includes(stream.id);
+              const expanded = expandedId === streamId;
+              const pending = streamId !== undefined && pendingUnfollowIds.includes(streamId);
               const coverImage = getCoverImage(stream);
               const avatar = getAvatar(stream);
 
               return (
-                <article key={stream.id} className={styles.streamCard}>
+                <article key={streamId ?? title} className={styles.streamCard}>
                   <button
                     className={styles.cardToggle}
                     type="button"
-                    onClick={() => setExpandedId(expanded ? null : stream.id)}
+                    onClick={() => setExpandedId(expanded ? null : streamId ?? null)}
                     aria-expanded={expanded}
                   >
                     <div className={styles.coverFrame}>
@@ -207,17 +225,20 @@ const FollowPage: React.FC = () => {
                       <button
                         className={styles.primaryButton}
                         type="button"
-                        onClick={() => handleEnterLiveStream(stream.id)}
+                        aria-label={`进入直播间 ${title}`}
+                        disabled={streamId === undefined}
+                        onClick={() => streamId !== undefined && handleEnterLiveStream(streamId)}
                       >
-                        进入直播间 {title}
+                        进入直播间
                       </button>
                       <button
                         className={styles.secondaryButton}
                         type="button"
-                        disabled={pending}
-                        onClick={() => handleUnfollow(stream.id)}
+                        aria-label={`取消收藏 ${title}`}
+                        disabled={pending || streamId === undefined}
+                        onClick={() => streamId !== undefined && handleUnfollow(streamId)}
                       >
-                        {pending ? '取消中...' : `取消收藏 ${title}`}
+                        {pending ? '取消中...' : '取消收藏'}
                       </button>
                     </div>
                   </div>

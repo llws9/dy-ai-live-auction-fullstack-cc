@@ -102,4 +102,33 @@ describe('Following migration', () => {
 
     expect(mockNavigate).toHaveBeenCalledWith('/live?id=32');
   });
+
+  it('renders backend followed stream fields without visible undefined suffixes', async () => {
+    mockedFollowApi.getFollowedLiveStreams.mockResolvedValueOnce({
+      items: [
+        {
+          live_stream_id: 880301,
+          live_stream_name: '主播直播间',
+          status: 1,
+          viewer_count: 0,
+          auction_count: 0,
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <FollowPage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('主播直播间')).toBeInTheDocument();
+    expect(screen.queryByText(/#undefined/)).not.toBeInTheDocument();
+
+    expect(screen.getByRole('button', { name: '进入直播间 主播直播间' })).toHaveTextContent(/^进入直播间$/);
+    expect(screen.getByRole('button', { name: '取消收藏 主播直播间' })).toHaveTextContent(/^取消收藏$/);
+
+    fireEvent.click(screen.getByRole('button', { name: '进入直播间 主播直播间' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/live?id=880301');
+  });
 });
