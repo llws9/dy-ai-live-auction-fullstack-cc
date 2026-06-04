@@ -164,7 +164,7 @@ func toRoleString(v interface{}) string {
 	case 2:
 		return "admin"
 	case 1:
-		return "streamer"
+		return "merchant"
 	default:
 		return "user"
 	}

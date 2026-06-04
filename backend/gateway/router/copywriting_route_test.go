@@ -90,7 +90,7 @@ func TestCopywritingRoute_RequireMerchantAndForwardIdentity(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode())
 		assert.Equal(t, int64(1), calls.Load())
 		assert.Equal(t, "77", lastUserID.Load().(string))
-		assert.Equal(t, "streamer", lastUserRole.Load().(string))
+		assert.Equal(t, "merchant", lastUserRole.Load().(string))
 	})
 
 	t.Run("admin request forwards admin role", func(t *testing.T) {
