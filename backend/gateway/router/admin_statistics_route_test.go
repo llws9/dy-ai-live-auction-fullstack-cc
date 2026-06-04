@@ -53,24 +53,29 @@ func TestStatisticsRoutesRoleScope(t *testing.T) {
 	merchantToken, err := middleware.GenerateToken(cfg.JWT.Secret, 9, "merchant", 1, 24)
 	assert.NoError(t, err)
 
-	calls.Store(0)
-	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/statistics/overview", nil,
-		ut.Header{Key: "Authorization", Value: "Bearer " + merchantToken})
-	assert.Equal(t, http.StatusOK, w.Result().StatusCode())
-	assert.Equal(t, int64(1), calls.Load())
-	assert.Equal(t, "/api/v1/statistics/overview", lastPath.Load().(string))
-	assert.Equal(t, "merchant", lastRole.Load().(string))
-	assert.Equal(t, "internal-secret", lastInternalToken.Load().(string))
+	for _, path := range []string{"/api/v1/statistics/overview", "/api/v1/statistics/auctions", "/api/v1/statistics/revenue"} {
+		calls.Store(0)
+		w := ut.PerformRequest(h.Engine, http.MethodGet, path, nil,
+			ut.Header{Key: "Authorization", Value: "Bearer " + merchantToken})
+		assert.Equal(t, http.StatusOK, w.Result().StatusCode(), path)
+		assert.Equal(t, int64(1), calls.Load(), path)
+		assert.Equal(t, path, lastPath.Load().(string))
+		assert.Equal(t, "merchant", lastRole.Load().(string), path)
+		assert.Equal(t, "internal-secret", lastInternalToken.Load().(string), path)
+	}
 
 	calls.Store(0)
-	w = ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/statistics/users", nil,
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/statistics/users", nil,
 		ut.Header{Key: "Authorization", Value: "Bearer " + merchantToken})
 	assert.Equal(t, http.StatusForbidden, w.Result().StatusCode())
 	assert.Equal(t, int64(0), calls.Load())
 
+	calls.Store(0)
 	w = ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/statistics/users", nil,
 		ut.Header{Key: "Authorization", Value: "Bearer " + adminToken})
 	assert.Equal(t, http.StatusOK, w.Result().StatusCode())
 	assert.Equal(t, int64(1), calls.Load())
+	assert.Equal(t, "/api/v1/statistics/users", lastPath.Load().(string))
 	assert.Equal(t, "admin", lastRole.Load().(string))
+	assert.Equal(t, "internal-secret", lastInternalToken.Load().(string))
 }

@@ -2,10 +2,12 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"gorm.io/gorm"
 
 	"auction-service/client"
 	"auction-service/dao"
@@ -201,6 +203,13 @@ func (h *AuctionHandler) Cancel(ctx context.Context, c *app.RequestContext) {
 	}
 
 	if err := h.auctionService.CancelAuctionByCreator(ctx, id, creatorID); err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(409, map[string]interface{}{
+				"code":    409,
+				"message": "取消竞拍失败: " + err.Error(),
+			})
+			return
+		}
 		c.JSON(404, map[string]interface{}{
 			"code":    404,
 			"message": "取消竞拍失败: " + err.Error(),

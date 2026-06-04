@@ -19,11 +19,17 @@ import (
 
 func setupAuctionAdminScopeHandler(t *testing.T) *AuctionHandler {
 	t.Helper()
+	h, _ := setupAuctionAdminScopeHandlerWithDB(t)
+	return h
+}
+
+func setupAuctionAdminScopeHandlerWithDB(t *testing.T) (*AuctionHandler, *gorm.DB) {
+	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 	require.NoError(t, db.AutoMigrate(&model.Auction{}))
 	svc := service.NewAuctionService(dao.NewAuctionDAO(db))
-	return NewAuctionHandler(svc)
+	return NewAuctionHandler(svc), db
 }
 
 func TestAuctionHandlerAdminListMerchantOnlyOwnAuctions(t *testing.T) {
@@ -90,4 +96,23 @@ func TestAuctionHandlerCancelMerchantRejectsOtherOwner(t *testing.T) {
 	reloaded, err := h.auctionService.GetAuction(ctx, auction.ID)
 	require.NoError(t, err)
 	require.Equal(t, model.AuctionStatusPending, reloaded.Status)
+}
+
+func TestAuctionHandlerCancelEndedAuctionReturnsConflict(t *testing.T) {
+	h, db := setupAuctionAdminScopeHandlerWithDB(t)
+	ctx := context.Background()
+	owner := int64(1001)
+	auction, err := h.auctionService.CreateAuction(ctx, &service.CreateAuctionRequest{ProductID: 1, CreatorID: &owner, StartTime: time.Now().Add(-2 * time.Hour), EndTime: time.Now().Add(-time.Hour)})
+	require.NoError(t, err)
+	require.NoError(t, db.Model(&model.Auction{}).Where("id = ?", auction.ID).Update("status", model.AuctionStatusEnded).Error)
+
+	c := app.NewContext(0)
+	c.Request.SetRequestURI("/api/v1/auctions/1/cancel")
+	c.Request.Header.Set("X-User-ID", "1001")
+	c.Request.Header.Set("X-User-Role", "merchant")
+	c.Params = append(c.Params, param.Param{Key: "id", Value: "1"})
+
+	h.Cancel(ctx, c)
+
+	require.Equal(t, 409, c.Response.StatusCode(), "auction id %d exists but cannot be cancelled in ended state", auction.ID)
 }

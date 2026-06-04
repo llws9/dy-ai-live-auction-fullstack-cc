@@ -11,6 +11,7 @@ import (
 	"product-service/pkg/logger"
 
 	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
 )
 
 // NotificationCallback 通知回调接口（用于Mock触发通知）
@@ -61,9 +62,20 @@ func (s *OrderService) SetNotificationCallback(callback NotificationCallback) {
 func (s *OrderService) CreateOrder(ctx context.Context, auctionID, productID, winnerID int64, finalPrice decimal.Decimal) (*model.Order, error) {
 	var sellerID *int64
 	if s.productDAO != nil {
-		if product, err := s.productDAO.GetByID(ctx, productID); err == nil {
-			sellerID = product.OwnerID
+		product, err := s.productDAO.GetByID(ctx, productID)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, fmt.Errorf("商品不存在: %d", productID)
+			}
+			s.logger.LogOperation(ctx, logger.OperationCreate, logger.ObjectOrder, fmt.Sprintf("%d", productID), false, err)
+			return nil, err
 		}
+		if product.OwnerID == nil {
+			err := fmt.Errorf("商品缺少商家归属: %d", productID)
+			s.logger.LogOperation(ctx, logger.OperationCreate, logger.ObjectOrder, fmt.Sprintf("%d", productID), false, err)
+			return nil, err
+		}
+		sellerID = product.OwnerID
 	}
 	order := &model.Order{
 		AuctionID:  auctionID,

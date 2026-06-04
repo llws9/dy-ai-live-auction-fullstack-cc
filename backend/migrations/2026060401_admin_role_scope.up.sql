@@ -10,7 +10,6 @@ ALTER TABLE orders
 
 ALTER TABLE auctions
   ADD COLUMN creator_id BIGINT NULL COMMENT 'merchant user id creating this auction' AFTER live_stream_id,
-  ADD INDEX idx_auctions_creator_id (creator_id),
   ADD INDEX idx_auctions_creator_status_created (creator_id, status, created_at);
 
 UPDATE orders o

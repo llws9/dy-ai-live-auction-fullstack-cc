@@ -17,23 +17,36 @@ import (
 func TestBusinessWriteRoutesRejectAdminDelegatedOperations(t *testing.T) {
 	var productCalls atomic.Int64
 	var auctionCalls atomic.Int64
-	productMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	var lastUserID atomic.Value
+	var lastRole atomic.Value
+	var lastInternalToken atomic.Value
+	lastUserID.Store("")
+	lastRole.Store("")
+	lastInternalToken.Store("")
+	productMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		productCalls.Add(1)
+		lastUserID.Store(r.Header.Get("X-User-ID"))
+		lastRole.Store(r.Header.Get("X-User-Role"))
+		lastInternalToken.Store(r.Header.Get("X-Internal-Token"))
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer productMock.Close()
-	auctionMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	auctionMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auctionCalls.Add(1)
+		lastUserID.Store(r.Header.Get("X-User-ID"))
+		lastRole.Store(r.Header.Get("X-User-Role"))
+		lastInternalToken.Store(r.Header.Get("X-Internal-Token"))
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer auctionMock.Close()
 
 	cfg := &config.Config{
 		Services: config.ServicesConfig{
-			ProductURL: productMock.URL,
-			AuctionURL: auctionMock.URL,
-			TestURL:    "http://127.0.0.1:0",
-			TestWSURL:  "ws://127.0.0.1:0",
+			ProductURL:    productMock.URL,
+			AuctionURL:    auctionMock.URL,
+			TestURL:       "http://127.0.0.1:0",
+			TestWSURL:     "ws://127.0.0.1:0",
+			InternalToken: "internal-secret",
 		},
 		JWT: config.JWTConfig{Secret: "business-write-secret"},
 	}
@@ -64,5 +77,8 @@ func TestBusinessWriteRoutesRejectAdminDelegatedOperations(t *testing.T) {
 		w = ut.PerformRequest(h.Engine, tc.method, tc.path, nil,
 			ut.Header{Key: "Authorization", Value: "Bearer " + merchantToken})
 		require.Equal(t, http.StatusOK, w.Result().StatusCode(), tc.path)
+		require.Equal(t, "9", lastUserID.Load().(string), tc.path)
+		require.Equal(t, "merchant", lastRole.Load().(string), tc.path)
+		require.Equal(t, "", lastInternalToken.Load().(string), tc.path)
 	}
 }

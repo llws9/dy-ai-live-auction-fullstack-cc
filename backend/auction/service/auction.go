@@ -78,25 +78,6 @@ func (s *AuctionService) GetAuction(ctx context.Context, id int64) (*model.Aucti
 	return s.auctionDAO.GetByID(ctx, id)
 }
 
-// CancelAuction 取消竞拍
-func (s *AuctionService) CancelAuction(ctx context.Context, id int64) error {
-	auction, err := s.auctionDAO.GetByID(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	sm := NewStateMachine(auction)
-	if !sm.CanCancel() {
-		return errors.New("当前状态无法取消")
-	}
-
-	if err := sm.Transition(model.AuctionStatusCancelled); err != nil {
-		return err
-	}
-
-	return s.auctionDAO.Update(ctx, auction)
-}
-
 // CancelAuctionByCreator cancels an auction only when it belongs to creatorID.
 func (s *AuctionService) CancelAuctionByCreator(ctx context.Context, id, creatorID int64) error {
 	auction, err := s.auctionDAO.GetByIDAndCreatorID(ctx, id, creatorID)
