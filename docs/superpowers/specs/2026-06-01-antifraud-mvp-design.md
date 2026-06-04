@@ -4,7 +4,7 @@
 - **作者**：Brainstorming session（用户 + Assistant）
 - **关联文档**：
   - [B1 弹幕+飘屏 spec](./2026-05-31-live-chat-and-price-flair-design.md)
-  - [C3 AI 一键文案 spec](./2026-06-01-ai-copywriting-mvp-design.md)（本 spec 要求 C3 返工，把 `pkg/llm` 提到 `backend/shared/llm`）
+  - [C3 AI 一键文案 spec](./2026-06-01-ai-copywriting-mvp-design.md)（仅作背景参考；本 spec 与 C3 解耦，不约束 C3）
 - **状态**：待实施（待 writing-plans 拆任务）
 
 ---
@@ -24,7 +24,7 @@
 - 在出价主链路前置**实时风控引擎**（毫秒级），落地 3 条核心规则（R1/R4/R5）
 - 命中后按风险等级执行 4 类动作：`pass / mark / challenge / block`
 - 风控事件持久化到 `risk_event` 表，供运营审核与离线特征工程
-- 预留 **LLM 解释器接口**（`RiskExplainer`），后续接入 C3 共享的 `backend/shared/llm` 模块时**零侵入**
+- 预留 **LLM 解释器接口**（`RiskExplainer`），后续接入 LLM 模块时**零侵入**
 - **不做**：实时调用 LLM 阻断出价；ML 模型训练/推理；R2/R3（多账号同源 / 自抬价）—— 这两条留 v1.1
 
 ### 1.3 非目标
@@ -39,7 +39,7 @@
 | 项 | 决策 | 理由 |
 |---|---|---|
 | 风控引擎位置 | `backend/auction/service/antifraud/` | hook 在出价主链路前置，无跨服务调用 |
-| LLM 抽象层位置 | `backend/shared/llm/`（要求 C3 返工迁移） | C2/C3/C4 共用，避免代码复制 |
+| `RiskExplainer` 接口位置 | `backend/auction/service/antifraud/`（包内自定义） | 与 C3 解耦；不锁定 LLM 抽象层位置，v1.1 接入时由实施任务自行决定 import 来源 |
 | LLM 接入策略 | 接口 `RiskExplainer` 预留；MVP 不注入实现 | 主路径纯规则引擎，LLM 仅作可选解释器，异步调用 |
 | MVP 规则集 | R1（高频）+ R4（异常加价）+ R5（新账号秒拍） | 实时、可解释、零误杀风险 |
 | 阈值来源 | 拍脑袋初值，上线后监控调优 | 当前无生产数据分布可参考 |
@@ -97,11 +97,9 @@ backend/auction/
   ├── dao/risk_event.go         # 新增：RiskEventDAO
   ├── model/risk_event.go       # 新增：RiskEvent struct + 表 DDL（gorm tag）
   └── service/bid.go            # 修改：注入 antifraudEngine，第 0.2 步调用
-
-backend/shared/llm/             # （由 C3 任务返工迁移建立）
-  ├── provider.go               # Provider 接口 + ChatRequest/Response
-  └── doubao.go                 # Doubao 实现
 ```
+
+> `RiskExplainer` 实现（v1.1）落在 `antifraud` 包内，import 来源由实施任务届时决定，本 spec 不锁定 LLM 抽象层位置。
 
 ---
 
@@ -157,12 +155,26 @@ type RiskExplainer interface {
 
 ### 4.3 错误码
 
-| HTTP | code | message | 触发 |
+风控命中时 handler 返回非 200 状态码；`risk_code` 同时放在响应体顶层与 `data.risk_code`（前端 `ApiError.data` 解析 `data` 字段，故必须放入 `data` 才能被前端读取）。
+
+| HTTP | risk_code | message | 触发 |
 |---|---|---|---|
-| 429 | `risk_rapid_fire` | 出价过于频繁，请稍后再试 | R1 命中且 action=block |
+| 429 | `risk_rapid_fire` | 出价过于频繁，请稍后再试 | R1 命中且 action=block，或封禁 fast-path |
 | 400 | `risk_confirm_required` | 出价金额异常，请确认后再次提交 | R4 命中且 action=challenge |
 | 403 | `risk_kyc_required` | 新账号需完成实名认证后才能高额出价 | R5 命中且 action=block |
 | 200 | normal | （正常成功响应） | action=pass 或 action=mark |
+
+响应体示例（challenge）：
+
+```json
+{
+  "code": 400,
+  "success": false,
+  "message": "出价金额异常，请确认后再次提交",
+  "risk_code": "risk_confirm_required",
+  "data": { "risk_code": "risk_confirm_required" }
+}
+```
 
 ---
 
@@ -247,7 +259,8 @@ bidService.SetAntifraudEngine(engine)
 
 ```go
 // backend/auction/service/antifraud/llm_explainer.go（v1.1 新增）
-import "shared/llm"
+// import 来源由 v1.1 实施任务届时决定（本 spec 不锁定 LLM 抽象层位置）
+import "<llm-provider-package>"
 
 type LLMExplainer struct {
     provider llm.Provider
@@ -263,13 +276,6 @@ func (e *LLMExplainer) Explain(ctx, evt, dec) (string, error) {
 ```
 
 调用时机：在 `Engine.Evaluate` 返回前，对 `Level ∈ {medium, high, critical}` 的事件**异步**调用，结果回写 `risk_event.explanation`。**不阻塞出价主链路**。
-
-### 6.4 对 C3 任务的硬约束（必须返工）
-
-C3 当前 spec [2026-06-01-ai-copywriting-mvp-design.md](./2026-06-01-ai-copywriting-mvp-design.md) 把 `pkg/llm` 放在 `backend/product/pkg/llm/`。**本 spec 要求 C3 plan 调整**：
-- `backend/product/pkg/llm/` → `backend/shared/llm/`
-- C3 业务编排层（`product/service/copywriting.go`）import `shared/llm`
-- 后续 C2 v1.1 / C4 同样 import `shared/llm`
 
 ---
 
@@ -340,6 +346,15 @@ type PlaceBidResult struct {
 - `mark` → 异步 goroutine 写
 - `challenge` / `block` → **同步写**（保证用户复诉时可查）
 
+### 7.4 前端 R4 二次确认链路（H5）
+
+R4 challenge 的本质是"挑战"而非"拒绝"——直接拦截会误杀正常的大额出价用户，因此必须由前端配合二次确认。涉及文件：
+
+- [api.ts](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/src/services/api.ts) `bidApi.placeBid`：签名扩展为 `placeBid(auctionId, amount, confirmed?)`，`confirmed=true` 时请求体带 `{ amount, confirmed: true }`。
+- [LiveRoomSlide.tsx](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/src/pages/Live/LiveRoomSlide.tsx) `handleBid`：catch 分支判断 `error instanceof ApiError && error.data?.risk_code === 'risk_confirm_required'`，弹出确认框（如「出价金额远高于当前价，确认提交？」），用户确认后以 `confirmed=true` 重试一次；`risk_rapid_fire` / `risk_kyc_required` 仅 toast 提示，不重试。
+
+> 契约依赖：后端必须把 `risk_code` 放进响应体 `data`（见 §4.3），否则前端 `ApiError.data` 读不到。
+
 ---
 
 ## 8. 监控指标（Prometheus）
@@ -353,9 +368,11 @@ type PlaceBidResult struct {
 | `antifraud_eval_duration_seconds` | Histogram | - | 风控判定耗时分布 |
 | `antifraud_engine_errors_total` | Counter | `stage`(redis/db/rule) | 引擎自身错误（fail-open 触发） |
 
-告警规则（写入 Grafana Alert）：
+告警规则（Grafana Alert，运维侧配置，**不在本仓库代码验收范围**）：
 - `antifraud_engine_errors_total` 5 分钟增量 > 10 → 立即告警
 - `antifraud_rule_hits_total{rule_id="R1"}` 突增 5x → 可能遭受机器人攻击
+
+> 本仓库验收口径：4 个指标已通过 `prometheus.DefaultRegisterer` 注册，可在 `/metrics` 端点抓取到。Grafana dashboard / Alert 属运维环境配置，不作为本 spec 代码交付的验收门槛。
 
 ---
 
@@ -379,13 +396,15 @@ type PlaceBidResult struct {
 
 ### 9.2 集成测试
 
-| # | 用例 | 期望 |
-|---|---|---|
-| I1 | 端到端 R4 challenge → confirmed=true 重试 → 成功出价 | 200 + bid 落库 |
-| I2 | R1 block → 检查 risk_event 落库 | 1 条 critical/block 记录 |
-| I3 | SkipAntifraud=true（点天灯路径）跳过判定 | 0 调用 engine |
+| # | 用例 | 层级 | 期望 |
+|---|---|---|---|
+| I1 | engine：R4 challenge → confirmed=true 重试 → pass | antifraud engine | 第 1 次 challenge，第 2 次 pass |
+| I1b | handler：R4 challenge 返回 400 + `data.risk_code=risk_confirm_required`；带 `confirmed:true` 重试返回 200 | handler | 状态码与 risk_code 正确 |
+| I2 | R1 block → 检查 risk_event 落库 | antifraud engine | 1 条 high/block 记录 |
+| I3 | SkipAntifraud=true（点天灯路径）跳过判定 | service | 0 调用 engine |
+| F1 | 前端 R4 challenge → 确认重试带 confirmed=true | H5（Task 14） | placeBid 调用 2 次，第 2 次 confirmed=true |
 
-测试基础设施：`miniredis` + `sqlmock`（已在项目中使用）。
+> I1/I2/I3 在 antifraud / service 层用 `miniredis` + `sqlmock` 验证；I1b 在 handler 层验证状态码与响应体契约；F1 在前端用 vitest mock 验证。不依赖端到端真实部署。
 
 ---
 
@@ -396,8 +415,8 @@ type PlaceBidResult struct {
 | **M1** | `antifraud` 包骨架 + types + Engine + 单测 | 单元测试 U1-U11 通过 |
 | **M2** | 3 条规则实现 + DefaultRules 装配 | 11 个单元用例全过 |
 | **M3** | `risk_event` 表 + DAO + Engine 持久化 | I2 集成测试通过 |
-| **M4** | `bid.go` 接入 + handler 错误码映射 + main.go 装配 | I1/I3 集成测试通过 |
-| **M5** | Prometheus 指标 + Grafana 告警 | 指标在 dashboard 可见 |
+| **M4** | `bid.go` 接入 + handler 错误码映射 + main.go 装配 + 前端 R4 二次确认 | I1/I1b/I3/F1 通过 |
+| **M5** | Prometheus 指标注册 | 4 个指标在 `/metrics` 端点可抓取（Grafana 配置属运维侧，不作代码验收门槛） |
 
 ---
 
@@ -408,7 +427,7 @@ type PlaceBidResult struct {
 | 阈值拍脑袋导致误杀 | M5 上线后 1 周内每日复盘 risk_event 表，调整阈值；保留 `SkipAntifraud` 后门 |
 | Redis 故障导致风控失效 | fail-open + 错误指标告警；不影响主业务可用性 |
 | `risk_event` 表暴涨 | 仅 mark/challenge/block 落库；按 `created_at` 月份分区（v1.2 加） |
-| C3 返工延期，C2 接入 LLM 的扩展位被搁置 | C2 MVP 不依赖 C3；接口定义先行，实现可独立排期 |
+| v1.1 接入 LLM 解释器的扩展位被搁置 | C2 MVP 不依赖任何 LLM 模块；接口定义先行，实现可独立排期 |
 
 ---
 
