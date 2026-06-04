@@ -4,6 +4,21 @@
 
 > 部署入口：当前 `main` 分支对应的精简部署操作文档见 [deploy/demo/MAIN_DEPLOY_QUICKSTART.md](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/deploy/demo/MAIN_DEPLOY_QUICKSTART.md)
 
+## Demo 服务器部署信息
+
+- 公网 IP：`14.103.53.55`
+- 登录用户：`root`
+- SSH 私钥路径：`/Users/bytedance/Downloads/dy-auction.pem`
+- 域名：无，当前通过公网 IP 访问
+- 部署文件：允许修改仓库生成 demo 部署文件
+- 暂不部署：`test-service`、`grafana`、`prometheus`、`growthbook`
+
+## 线上账号信息
+
+- 普通用户：手机号 `13800138001`，密码 `Demo@123456`
+- 商家账号：手机号 `13800138002`，密码 `Demo@123456`
+- 管理员账号：手机号 `13800138003`，密码 `Demo@123456`
+
 ## 技术栈
 
 ### 后端

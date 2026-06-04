@@ -12,7 +12,12 @@
   - WebSocket：`ws://<PUBLIC_IP>/api/v1/ws`
 - 前端：本地构建静态产物，Nginx 托管
 - 后端：`docker-compose.demo.yml`
-- 当前 demo 服务器示例：`14.103.53.55`
+- 当前 demo 服务器：`14.103.53.55`
+- 登录用户：`root`
+- SSH 私钥路径：`/Users/bytedance/Downloads/dy-auction.pem`
+- 域名：无，当前通过公网 IP 访问
+- 部署文件：允许修改仓库生成 demo 部署文件
+- 暂不部署：`test-service`、`grafana`、`prometheus`、`growthbook`
 
 ## 2. 仓库内关键文件
 

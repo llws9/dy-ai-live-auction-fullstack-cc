@@ -9,6 +9,15 @@ Deploy the MVP to a single Volcengine ECS instance using one public IP.
 - API stays behind `http://<PUBLIC_IP>/api/v1`
 - WebSocket stays behind `ws://<PUBLIC_IP>/api/v1/ws`
 
+## Server Info
+
+- Public IP: `14.103.53.55`
+- SSH user: `root`
+- SSH private key: `/Users/bytedance/Downloads/dy-auction.pem`
+- Domain: none; access the demo through the public IP.
+- Repository changes: allowed to generate or update demo deployment files.
+- Not deployed for now: `test-service`, `grafana`, `prometheus`, `growthbook`.
+
 ## Why This Layout
 
 - `frontend/h5` and `frontend/admin` do not have production Dockerfiles in the repository.
