@@ -11,37 +11,39 @@ import (
 
 // CreateProductRequest 创建商品请求
 type CreateProductRequest struct {
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
-	Images      []string       `json:"images"`
+	Name        string              `json:"name"`
+	Description string              `json:"description"`
+	Images      []string            `json:"images"`
+	CategoryID  *int64              `json:"category_id,omitempty"`
 	Status      model.ProductStatus `json:"status,omitempty"`
 }
 
 // UpdateProductRequest 更新商品请求
 type UpdateProductRequest struct {
-	Name        string         `json:"name,omitempty"`
-	Description string         `json:"description,omitempty"`
-	Images      []string       `json:"images,omitempty"`
+	Name        string              `json:"name,omitempty"`
+	Description string              `json:"description,omitempty"`
+	Images      []string            `json:"images,omitempty"`
+	CategoryID  *int64              `json:"category_id,omitempty"`
 	Status      model.ProductStatus `json:"status,omitempty"`
 }
 
 // CreateAuctionRuleRequest 创建竞拍规则请求
 type CreateAuctionRuleRequest struct {
-	ProductID         int64   `json:"product_id"`
-	StartPrice        float64 `json:"start_price"`
-	Increment         float64 `json:"increment"`
-	CapPrice          float64 `json:"cap_price,omitempty"`
-	Duration          int     `json:"duration"`
-	DelayDuration     int     `json:"delay_duration,omitempty"`
-	MaxDelayTime      int     `json:"max_delay_time,omitempty"`
-	TriggerDelayBefore int    `json:"trigger_delay_before,omitempty"`
+	ProductID          int64   `json:"product_id"`
+	StartPrice         float64 `json:"start_price"`
+	Increment          float64 `json:"increment"`
+	CapPrice           float64 `json:"cap_price,omitempty"`
+	Duration           int     `json:"duration"`
+	DelayDuration      int     `json:"delay_duration,omitempty"`
+	MaxDelayTime       int     `json:"max_delay_time,omitempty"`
+	TriggerDelayBefore int     `json:"trigger_delay_before,omitempty"`
 }
 
 // ProductService 商品服务
 type ProductService struct {
-	productDAO       *dao.ProductDAO
-	ruleDAO          *dao.AuctionRuleDAO
-	liveStreamDAO    *dao.LiveStreamDAO
+	productDAO        *dao.ProductDAO
+	ruleDAO           *dao.AuctionRuleDAO
+	liveStreamDAO     *dao.LiveStreamDAO
 	liveStreamService *LiveStreamService
 }
 
@@ -49,9 +51,9 @@ type ProductService struct {
 func NewProductService(productDAO *dao.ProductDAO, ruleDAO *dao.AuctionRuleDAO, liveStreamDAO *dao.LiveStreamDAO) *ProductService {
 	liveStreamService := NewLiveStreamService(liveStreamDAO)
 	return &ProductService{
-		productDAO:       productDAO,
-		ruleDAO:          ruleDAO,
-		liveStreamDAO:    liveStreamDAO,
+		productDAO:        productDAO,
+		ruleDAO:           ruleDAO,
+		liveStreamDAO:     liveStreamDAO,
 		liveStreamService: liveStreamService,
 	}
 }
@@ -143,12 +145,49 @@ func (s *ProductService) ListProducts(ctx context.Context, status *model.Product
 	return s.productDAO.List(ctx, status, page, pageSize)
 }
 
+func (s *ProductService) ListAdminProducts(ctx context.Context, actorRole string, actorUserID int64, status *model.ProductStatus, page, pageSize int) ([]model.Product, int64, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 20
+	}
+	var ownerID *int64
+	if actorRole == "merchant" {
+		ownerID = &actorUserID
+	}
+	return s.productDAO.ListAdminScoped(ctx, ownerID, status, page, pageSize)
+}
+
+func (s *ProductService) GetAdminProduct(ctx context.Context, actorRole string, actorUserID, id int64) (*model.Product, error) {
+	if actorRole == "merchant" {
+		return s.productDAO.GetByIDAndOwnerID(ctx, id, actorUserID)
+	}
+	return s.productDAO.GetByID(ctx, id)
+}
+
 // CreateProduct 创建商品
 func (s *ProductService) CreateProduct(ctx context.Context, req *CreateProductRequest) (*model.Product, error) {
 	product := &model.Product{
 		Name:        req.Name,
 		Description: req.Description,
 		Images:      req.Images,
+		CategoryID:  req.CategoryID,
+		Status:      model.ProductStatusDraft,
+	}
+	if err := s.productDAO.Create(ctx, product); err != nil {
+		return nil, err
+	}
+	return product, nil
+}
+
+func (s *ProductService) CreateProductForOwner(ctx context.Context, ownerID int64, req *CreateProductRequest) (*model.Product, error) {
+	product := &model.Product{
+		OwnerID:     &ownerID,
+		Name:        req.Name,
+		Description: req.Description,
+		Images:      req.Images,
+		CategoryID:  req.CategoryID,
 		Status:      model.ProductStatusDraft,
 	}
 	if err := s.productDAO.Create(ctx, product); err != nil {
@@ -172,6 +211,35 @@ func (s *ProductService) UpdateProduct(ctx context.Context, id int64, req *Updat
 	if len(req.Images) > 0 {
 		product.Images = req.Images
 	}
+	if req.CategoryID != nil {
+		product.CategoryID = req.CategoryID
+	}
+	if req.Status != 0 {
+		product.Status = req.Status
+	}
+	if err := s.productDAO.Update(ctx, product); err != nil {
+		return nil, err
+	}
+	return product, nil
+}
+
+func (s *ProductService) UpdateAdminProduct(ctx context.Context, ownerID, id int64, req *UpdateProductRequest) (*model.Product, error) {
+	product, err := s.productDAO.GetByIDAndOwnerID(ctx, id, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	if req.Name != "" {
+		product.Name = req.Name
+	}
+	if req.Description != "" {
+		product.Description = req.Description
+	}
+	if len(req.Images) > 0 {
+		product.Images = req.Images
+	}
+	if req.CategoryID != nil {
+		product.CategoryID = req.CategoryID
+	}
 	if req.Status != 0 {
 		product.Status = req.Status
 	}
@@ -186,15 +254,26 @@ func (s *ProductService) DeleteProduct(ctx context.Context, id int64) error {
 	return s.productDAO.Delete(ctx, id)
 }
 
+func (s *ProductService) DeleteAdminProduct(ctx context.Context, ownerID, id int64) error {
+	product, err := s.productDAO.GetByIDAndOwnerID(ctx, id, ownerID)
+	if err != nil {
+		return err
+	}
+	if product.Status != model.ProductStatusDraft {
+		return errors.New("只有草稿商品可以删除")
+	}
+	return s.productDAO.DeleteByIDAndOwnerID(ctx, id, ownerID)
+}
+
 // CreateAuctionRule 创建竞拍规则
 func (s *ProductService) CreateAuctionRule(ctx context.Context, req *CreateAuctionRuleRequest) (*model.AuctionRule, error) {
 	rule := &model.AuctionRule{
-		ProductID:         req.ProductID,
-		StartPrice:        req.StartPrice,
-		Increment:         req.Increment,
-		Duration:          req.Duration,
-		DelayDuration:     req.DelayDuration,
-		MaxDelayTime:      req.MaxDelayTime,
+		ProductID:          req.ProductID,
+		StartPrice:         req.StartPrice,
+		Increment:          req.Increment,
+		Duration:           req.Duration,
+		DelayDuration:      req.DelayDuration,
+		MaxDelayTime:       req.MaxDelayTime,
 		TriggerDelayBefore: req.TriggerDelayBefore,
 	}
 	if req.CapPrice > 0 {

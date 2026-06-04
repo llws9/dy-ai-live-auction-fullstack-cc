@@ -139,6 +139,11 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 
 	// 订单 admin 路由：管理员查看全量订单，不再被 X-User-ID 强过滤；
 	// product-service 侧 /admin/orders 不读 X-User-ID，鉴权由这里的 RequireAdmin 中间件保证。
+	authGroup.GET("/admin/products", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
+	authGroup.GET("/admin/products/:id", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
+	authGroup.POST("/admin/products", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
+	authGroup.PUT("/admin/products/:id", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
+	authGroup.DELETE("/admin/products/:id", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
 	authGroup.GET("/admin/orders", middleware.RequireAdmin(), adminProductProxy.Forward)
 	authGroup.GET("/admin/orders/:id", middleware.RequireAdmin(), adminProductProxy.Forward)
 

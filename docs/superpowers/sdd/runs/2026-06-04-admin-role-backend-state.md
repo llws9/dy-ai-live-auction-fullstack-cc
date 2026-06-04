@@ -33,11 +33,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `10` |
-| Done | `2` |
+| Done | `3` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `8` |
-| Last Updated | `2026-06-04 21:30` |
+| Pending | `7` |
+| Last Updated | `2026-06-04 21:50` |
 
 ## Task Matrix
 
@@ -45,7 +45,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `Gateway exact role middleware` | `done` | `main-agent` | `W1` | `-` | `Gateway role middleware only` | `backend/gateway/middleware/rbac.go; backend/gateway/middleware/rbac_test.go` |
 | `T002` | `Product service auth context helpers` | `done` | `main-agent` | `W1` | `-` | `Product handler auth helper only` | `backend/product/handler/auth_context.go; backend/product/handler/auth_context_test.go` |
-| `T003` | `Product ownership schema and scoped product APIs` | `assigned` | `subagent-product-scope` | `W2` | `T001,T002` | `Product owner schema and admin product APIs` | `backend/migrations/*admin_role_scope*; backend/product/model/product.go; backend/product/dao/product.go; backend/product/service/product.go; backend/product/handler/product.go; backend/product/main.go; backend/gateway/router/router.go` |
+| `T003` | `Product ownership schema and scoped product APIs` | `done` | `main-agent` | `W2` | `T001,T002` | `Product owner schema and admin product APIs` | `backend/migrations/*admin_role_scope*; backend/product/model/product.go; backend/product/dao/product.go; backend/product/service/product.go; backend/product/handler/product.go; backend/product/main.go; backend/gateway/router/router.go` |
 | `T004` | `Merchant auction rule templates` | `pending` | `unassigned` | `W3` | `T001,T002` | `Merchant auction rule templates` | `backend/product/model/auction_rule_template.go; backend/product/dao/auction_rule_template.go; backend/product/service/auction_rule_template.go; backend/product/handler/auction_rule_template.go; backend/product/main.go; backend/gateway/router/router.go` |
 | `T005` | `Role-aware live stream management` | `pending` | `unassigned` | `W3` | `T001,T002` | `Product live stream admin scope` | `backend/product/handler/live_stream.go; backend/product/service/live_stream.go; backend/product/dao/live_stream.go; backend/product/main.go; backend/gateway/router/router.go` |
 | `T006` | `Seller-scoped orders` | `pending` | `unassigned` | `W4` | `T001,T002,T003` | `Order seller scope` | `backend/product/model/order.go; backend/product/dao/order*.go; backend/product/service/order*.go; backend/product/handler/order*.go; backend/gateway/router/router.go` |
@@ -152,14 +152,14 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `assigned` |
-| Owner | `subagent-product-scope` |
+| Status | `done` |
+| Owner | `main-agent` |
 | Started At | `2026-06-04 21:30` |
-| Completed At | `-` |
+| Completed At | `2026-06-04 21:50` |
 | Branch | `feat/admin-role-backend` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-role-backend` |
-| Depends On | `-` |
-| Parallel Group | `W1` |
+| Depends On | `T001,T002` |
+| Parallel Group | `W2` |
 
 **TDD Plan**
 
@@ -171,11 +171,44 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `TDD Red -> Green -> Verify evidence` | `not_run` | `pending` |
+| `cd backend/product && go test ./dao -run 'TestProductDAOListAdminScopedMerchantOnlyOwnProducts|TestProductDAOGetByIDAndOwnerIDRejectsOtherOwner' -count=1` | Red: compile failure before implementation because `OwnerID`, `ListAdminScoped`, and `GetByIDAndOwnerID` do not exist | `unknown field OwnerID`; `dao.ListAdminScoped undefined`; `dao.GetByIDAndOwnerID undefined` | `red_passed` |
+| `cd backend/product && go test ./service -run 'TestProductTestSuite/Test(CreateProductForOwnerSetsOwnerID|ListAdminProductsMerchantOnlyOwnProducts|GetAdminProductMerchantRejectsOtherOwner)' -count=1` | Red: compile failure before implementation because admin-scoped service methods do not exist | `CreateProductForOwner undefined`; `ListAdminProducts undefined`; `GetAdminProduct undefined` | `red_passed` |
+| `cd backend/product && go test ./handler -run 'TestProductHandler_AdminCreateRejectsAdminActor|TestProductHandler_AdminCreateMerchantSetsOwnerID|TestProductHandler_AdminListMerchantOnlyOwnProducts' -count=1` | Red: compile failure before implementation because admin product handlers and `OwnerID` do not exist | `h.AdminCreate undefined`; `h.AdminList undefined`; `OwnerID undefined` | `red_passed` |
+| `cd backend/gateway && go test ./router -run TestAdminProductRoutes_RoleScopeAndInternalToken -count=1` | Red: `/admin/products` routes missing | `expected 200/403, actual 404; calls=0` | `red_passed` |
+| `cd backend/product && go test ./dao -run 'TestProductDAOListAdminScopedMerchantOnlyOwnProducts|TestProductDAOGetByIDAndOwnerIDRejectsOtherOwner' -count=1` | Green: DAO owner-scope tests pass after implementation | `ok product-service/dao 0.472s` | `passed` |
+| `cd backend/product && go test ./service -run 'TestRunSuite/Test(CreateProductForOwnerSetsOwnerID|ListAdminProductsMerchantOnlyOwnProducts|GetAdminProductMerchantRejectsOtherOwner)' -count=1` | Green: focused service owner-scope tests pass after implementation | `ok product-service/service 0.447s` | `passed` |
+| `cd backend/product && go test ./handler -run 'TestProductHandler_AdminCreateRejectsAdminActor|TestProductHandler_AdminCreateMerchantSetsOwnerID|TestProductHandler_AdminListMerchantOnlyOwnProducts' -count=1` | Green: focused handler role/scope tests pass after implementation | `ok product-service/handler 0.673s` | `passed` |
+| `cd backend/product && go test ./... -run TestProductAdminRoutesRequireInternalToken -count=1` | Green: Product admin routes require internal token | `ok product-service ...` | `passed` |
+| `cd backend/gateway && go test ./router -run TestAdminProductRoutes_RoleScopeAndInternalToken -count=1` | Green: Gateway admin product routes enforce role scope and forward internal token | `ok gateway-service/router 0.451s` | `passed` |
+| `cd backend/product && go test ./dao ./service ./handler -count=1` | Verify: affected Product packages pass regression tests | `ok product-service/dao`; `ok product-service/service`; `ok product-service/handler` | `passed` |
+| `cd backend/gateway && go test ./middleware ./router -count=1` | Verify: affected Gateway packages pass regression tests | `ok gateway-service/middleware`; `ok gateway-service/router` | `passed` |
+| `cd backend/product && go test ./... -count=1` | Verify: Product service full test suite passes | `ok product-service`, `ok product-service/client`, `ok product-service/config`, `ok product-service/dao`, `ok product-service/handler`, `ok product-service/middleware`, `ok product-service/model`, `ok product-service/pkg/nacos`, `ok product-service/service` | `passed` |
+| `cd backend/gateway && go test ./... -count=1` | Verify: Gateway service full test suite passes | `ok gateway-service`, `ok gateway-service/config`, `ok gateway-service/handler`, `ok gateway-service/middleware`, `ok gateway-service/pkg/metrics`, `ok gateway-service/router` | `passed` |
+
+**Modified Files**
+
+- `backend/migrations/2026060401_admin_role_scope.up.sql`
+- `backend/migrations/2026060401_admin_role_scope.down.sql`
+- `backend/product/model/product.go`
+- `backend/product/dao/product.go`
+- `backend/product/dao/product_test.go`
+- `backend/product/service/product.go`
+- `backend/product/service/product_test.go`
+- `backend/product/handler/product.go`
+- `backend/product/handler/product_test.go`
+- `backend/product/main.go`
+- `backend/product/admin_route_test.go`
+- `backend/gateway/router/router.go`
+- `backend/gateway/router/admin_product_route_test.go`
+
+**Risks / Blockers**
+
+- No blocker. Existing rows with `products.owner_id IS NULL` remain visible to admin only until a deliberate backfill assigns merchant ownership.
+- T003 migration file also includes `orders.seller_id` and `auction_rule_templates` per plan section 2; T006/T004 will implement their runtime behavior in later tasks.
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `当前分支/worktree：feat/admin-role-backend @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-role-backend`
 
 
 ### T004 - `Merchant auction rule templates`
@@ -395,6 +428,7 @@
 | `2026-06-04 17:31` | `Dispatch W1: T001 and T002` | `Separate Gateway/Product files; no shared write set` | `Can run in parallel; T003+ waits for both` | `main-agent` |
 | `2026-06-04 21:28` | `W1 completed` | `T001 and T002 passed focused and package regression tests` | `T003 can start` | `main-agent` |
 | `2026-06-04 21:30` | `Dispatch T003` | `W1 complete; T003 dependencies satisfied` | `Product ownership schema/API in progress` | `main-agent` |
+| `2026-06-04 21:50` | `T003 completed` | `Product/Gateway focused and full regression tests passed` | `T004/T005/T008/T009 can start where dependencies allow; T006 can start after T003` | `main-agent` |
 
 ## Final Review Checklist
 

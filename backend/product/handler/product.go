@@ -2,10 +2,12 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"gorm.io/gorm"
 
 	"product-service/model"
 	"product-service/service"
@@ -135,6 +137,144 @@ func (h *ProductHandler) List(ctx context.Context, c *app.RequestContext) {
 			"page_size": pageSize,
 		},
 	})
+}
+
+func (h *ProductHandler) AdminList(ctx context.Context, c *app.RequestContext) {
+	actor, ok := readAdminActor(c)
+	if !ok {
+		return
+	}
+	status := parseProductStatusQuery(c)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	products, total, err := h.productService.ListAdminProducts(ctx, actor.Role, actor.UserID, status, page, pageSize)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "获取商品列表失败: " + err.Error()})
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{
+		"code":    200,
+		"message": "success",
+		"data": map[string]interface{}{
+			"list":      products,
+			"total":     total,
+			"page":      page,
+			"page_size": pageSize,
+		},
+	})
+}
+
+func (h *ProductHandler) AdminGet(ctx context.Context, c *app.RequestContext) {
+	actor, ok := readAdminActor(c)
+	if !ok {
+		return
+	}
+	id, ok := parseProductIDParam(c)
+	if !ok {
+		return
+	}
+
+	product, err := h.productService.GetAdminProduct(ctx, actor.Role, actor.UserID, id)
+	if err != nil {
+		writeProductError(c, err, "商品不存在")
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{"code": 200, "message": "success", "data": product})
+}
+
+func (h *ProductHandler) AdminCreate(ctx context.Context, c *app.RequestContext) {
+	actor, ok := requireMerchantActor(c)
+	if !ok {
+		return
+	}
+	var req service.CreateProductRequest
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "请求参数错误: " + err.Error()})
+		return
+	}
+
+	product, err := h.productService.CreateProductForOwner(ctx, actor.UserID, &req)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "创建商品失败: " + err.Error()})
+		return
+	}
+
+	c.JSON(201, map[string]interface{}{"code": 201, "message": "success", "data": product})
+}
+
+func (h *ProductHandler) AdminUpdate(ctx context.Context, c *app.RequestContext) {
+	actor, ok := requireMerchantActor(c)
+	if !ok {
+		return
+	}
+	id, ok := parseProductIDParam(c)
+	if !ok {
+		return
+	}
+	var req service.UpdateProductRequest
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "请求参数错误: " + err.Error()})
+		return
+	}
+
+	product, err := h.productService.UpdateAdminProduct(ctx, actor.UserID, id, &req)
+	if err != nil {
+		writeProductError(c, err, "更新商品失败")
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{"code": 200, "message": "success", "data": product})
+}
+
+func (h *ProductHandler) AdminDelete(ctx context.Context, c *app.RequestContext) {
+	actor, ok := requireMerchantActor(c)
+	if !ok {
+		return
+	}
+	id, ok := parseProductIDParam(c)
+	if !ok {
+		return
+	}
+
+	if err := h.productService.DeleteAdminProduct(ctx, actor.UserID, id); err != nil {
+		writeProductError(c, err, "删除商品失败")
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{"code": 200, "message": "删除成功"})
+}
+
+func parseProductStatusQuery(c *app.RequestContext) *model.ProductStatus {
+	statusStr := c.Query("status")
+	if statusStr == "" {
+		return nil
+	}
+	s, err := strconv.Atoi(statusStr)
+	if err != nil {
+		return nil
+	}
+	status := model.ProductStatus(s)
+	return &status
+}
+
+func parseProductIDParam(c *app.RequestContext) (int64, bool) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "无效的商品ID"})
+		return 0, false
+	}
+	return id, true
+}
+
+func writeProductError(c *app.RequestContext, err error, fallback string) {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		c.JSON(404, map[string]interface{}{"code": 404, "message": "商品不存在"})
+		return
+	}
+	c.JSON(500, map[string]interface{}{"code": 500, "message": fallback + ": " + err.Error()})
 }
 
 // Update 更新商品

@@ -55,6 +55,41 @@ func (d *ProductDAO) List(ctx context.Context, status *model.ProductStatus, page
 	return products, total, nil
 }
 
+// ListAdminScoped returns all products for admins, or only owner products for merchants.
+func (d *ProductDAO) ListAdminScoped(ctx context.Context, ownerID *int64, status *model.ProductStatus, page, pageSize int) ([]model.Product, int64, error) {
+	var products []model.Product
+	var total int64
+
+	query := d.db.WithContext(ctx).Model(&model.Product{})
+	if ownerID != nil {
+		query = query.Where("owner_id = ?", *ownerID)
+	}
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&products).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return products, total, nil
+}
+
+// GetByIDAndOwnerID returns a product only when it belongs to ownerID.
+func (d *ProductDAO) GetByIDAndOwnerID(ctx context.Context, id, ownerID int64) (*model.Product, error) {
+	var product model.Product
+	err := d.db.WithContext(ctx).Where("id = ? AND owner_id = ?", id, ownerID).First(&product).Error
+	if err != nil {
+		return nil, err
+	}
+	return &product, nil
+}
+
 // Update 更新商品
 func (d *ProductDAO) Update(ctx context.Context, product *model.Product) error {
 	return d.db.WithContext(ctx).Save(product).Error
@@ -63,6 +98,11 @@ func (d *ProductDAO) Update(ctx context.Context, product *model.Product) error {
 // Delete 删除商品
 func (d *ProductDAO) Delete(ctx context.Context, id int64) error {
 	return d.db.WithContext(ctx).Delete(&model.Product{}, id).Error
+}
+
+// DeleteByIDAndOwnerID deletes a product only when it belongs to ownerID.
+func (d *ProductDAO) DeleteByIDAndOwnerID(ctx context.Context, id, ownerID int64) error {
+	return d.db.WithContext(ctx).Where("id = ? AND owner_id = ?", id, ownerID).Delete(&model.Product{}).Error
 }
 
 // UpdateStatus 更新商品状态

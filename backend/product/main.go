@@ -191,6 +191,11 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	v1.GET("/orders/history", orderHandler.GetUserHistory)
 
 	// 订单 admin 路由：必须经 Gateway 透传内部 token，且下游二次校验 X-User-Role=admin。
+	v1.GET("/admin/products", internalAuth, productHandler.AdminList)
+	v1.GET("/admin/products/:id", internalAuth, productHandler.AdminGet)
+	v1.POST("/admin/products", internalAuth, productHandler.AdminCreate)
+	v1.PUT("/admin/products/:id", internalAuth, productHandler.AdminUpdate)
+	v1.DELETE("/admin/products/:id", internalAuth, productHandler.AdminDelete)
 	v1.GET("/admin/orders", internalAuth, orderHandler.AdminList)
 	v1.GET("/admin/orders/:id", internalAuth, orderHandler.AdminGet)
 

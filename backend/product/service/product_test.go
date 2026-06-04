@@ -16,7 +16,7 @@ import (
 // ProductTestSuite 测试套件
 type ProductTestSuite struct {
 	suite.Suite
-	db      *gorm.DB
+	db         *gorm.DB
 	productDAO *dao.ProductDAO
 	ruleDAO    *dao.AuctionRuleDAO
 	service    *ProductService
@@ -69,6 +69,52 @@ func (suite *ProductTestSuite) TestCreateProduct() {
 	suite.Equal(req.Name, product.Name)
 	suite.Equal(req.Description, product.Description)
 	suite.Equal(model.ProductStatusDraft, product.Status)
+}
+
+func (suite *ProductTestSuite) TestCreateProductForOwnerSetsOwnerID() {
+	ctx := context.Background()
+	ownerID := int64(1001)
+
+	product, err := suite.service.CreateProductForOwner(ctx, ownerID, &CreateProductRequest{
+		Name:        "Merchant Product",
+		Description: "owned by merchant",
+	})
+
+	suite.NoError(err)
+	suite.NotNil(product)
+	suite.NotNil(product.OwnerID)
+	suite.Equal(ownerID, *product.OwnerID)
+	suite.Equal(model.ProductStatusDraft, product.Status)
+}
+
+func (suite *ProductTestSuite) TestListAdminProductsMerchantOnlyOwnProducts() {
+	ctx := context.Background()
+	ownerA := int64(1001)
+	ownerB := int64(1002)
+	_, err := suite.service.CreateProductForOwner(ctx, ownerA, &CreateProductRequest{Name: "A"})
+	suite.NoError(err)
+	_, err = suite.service.CreateProductForOwner(ctx, ownerB, &CreateProductRequest{Name: "B"})
+	suite.NoError(err)
+
+	products, total, err := suite.service.ListAdminProducts(ctx, "merchant", ownerA, nil, 1, 20)
+
+	suite.NoError(err)
+	suite.Equal(int64(1), total)
+	suite.Len(products, 1)
+	suite.Equal("A", products[0].Name)
+}
+
+func (suite *ProductTestSuite) TestGetAdminProductMerchantRejectsOtherOwner() {
+	ctx := context.Background()
+	ownerA := int64(1001)
+	ownerB := int64(1002)
+	product, err := suite.service.CreateProductForOwner(ctx, ownerA, &CreateProductRequest{Name: "A"})
+	suite.NoError(err)
+
+	got, err := suite.service.GetAdminProduct(ctx, "merchant", ownerB, product.ID)
+
+	suite.Error(err)
+	suite.Nil(got)
 }
 
 // TestCreateProduct_EmptyName 测试空名称
@@ -279,9 +325,9 @@ func (suite *ProductTestSuite) TestCreateAuctionRule() {
 	ctx := context.Background()
 
 	req := &CreateAuctionRuleRequest{
-		ProductID:  1,
-		Increment:  10.0,
-		Duration:   3600,
+		ProductID: 1,
+		Increment: 10.0,
+		Duration:  3600,
 	}
 
 	rule, err := suite.service.CreateAuctionRule(ctx, req)

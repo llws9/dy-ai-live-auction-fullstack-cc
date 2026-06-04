@@ -19,6 +19,7 @@ const (
 // Product 商品信息模型
 type Product struct {
 	ID          int64         `json:"id" gorm:"primaryKey;autoIncrement"`
+	OwnerID     *int64        `json:"owner_id,omitempty" gorm:"index"`
 	Name        string        `json:"name" gorm:"type:varchar(128);not null"`
 	Description string        `json:"description" gorm:"type:text"`
 	Images      JSONArray     `json:"images" gorm:"type:json"`
