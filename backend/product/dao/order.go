@@ -45,6 +45,17 @@ func (d *OrderDAO) GetByIDAndWinnerID(ctx context.Context, id, winnerID int64) (
 	return &order, nil
 }
 
+func (d *OrderDAO) GetByIDAndSellerID(ctx context.Context, id, sellerID int64) (*model.Order, error) {
+	var order model.Order
+	err := d.db.WithContext(ctx).
+		Where("id = ? AND seller_id = ?", id, sellerID).
+		First(&order).Error
+	if err != nil {
+		return nil, err
+	}
+	return &order, nil
+}
+
 // List 获取订单列表
 func (d *OrderDAO) List(ctx context.Context, userID *int64, page, pageSize int) ([]model.Order, int64, error) {
 	var orders []model.Order
@@ -139,6 +150,17 @@ func (d *OrderDAO) ShipOrder(ctx context.Context, id int64) error {
 	return d.db.WithContext(ctx).
 		Model(&model.Order{}).
 		Where("id = ?", id).
+		Updates(map[string]interface{}{
+			"status":     model.OrderStatusShipped,
+			"shipped_at": now,
+		}).Error
+}
+
+func (d *OrderDAO) ShipOrderForSeller(ctx context.Context, id, sellerID int64) error {
+	now := time.Now()
+	return d.db.WithContext(ctx).
+		Model(&model.Order{}).
+		Where("id = ? AND seller_id = ?", id, sellerID).
 		Updates(map[string]interface{}{
 			"status":     model.OrderStatusShipped,
 			"shipped_at": now,

@@ -25,6 +25,7 @@ type OrderAdminVO struct {
 	ProductID    int64             `json:"product_id"`
 	ProductName  string            `json:"product_name"`
 	ProductImage string            `json:"product_image"`
+	SellerID     *int64            `json:"seller_id,omitempty"`
 	WinnerID     int64             `json:"winner_id"`
 	UserID       int64             `json:"user_id"`
 	FinalPrice   decimal.Decimal   `json:"final_price"`
@@ -42,6 +43,7 @@ func toAdminVO(row dao.OrderAdminRow) OrderAdminVO {
 		ProductID:    row.ProductID,
 		ProductName:  row.ProductName,
 		ProductImage: firstProductImage(row.ProductImagesJSON),
+		SellerID:     row.SellerID,
 		WinnerID:     row.WinnerID,
 		UserID:       row.WinnerID,
 		FinalPrice:   row.FinalPrice,
@@ -72,10 +74,14 @@ func firstProductImage(raw string) string {
 //   - 入参 status 与 userID 均为可选过滤条件；userID 等价于 winner_id 过滤（admin 想查某用户）；
 //   - adminDAO 未注入时返回错误，避免 admin 接口静默降级成空列表。
 func (s *OrderService) ListAdminOrders(ctx context.Context, status *model.OrderStatus, userID *int64, page, pageSize int) ([]OrderAdminVO, int64, error) {
+	return s.ListAdminOrdersScoped(ctx, status, userID, nil, page, pageSize)
+}
+
+func (s *OrderService) ListAdminOrdersScoped(ctx context.Context, status *model.OrderStatus, userID *int64, sellerID *int64, page, pageSize int) ([]OrderAdminVO, int64, error) {
 	if s.adminDAO == nil {
 		return nil, 0, ErrAdminDAOMissing
 	}
-	rows, total, err := s.adminDAO.ListAdminOrders(ctx, status, userID, page, pageSize)
+	rows, total, err := s.adminDAO.ListAdminOrdersScoped(ctx, status, userID, sellerID, page, pageSize)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -88,10 +94,14 @@ func (s *OrderService) ListAdminOrders(ctx context.Context, status *model.OrderS
 
 // GetAdminOrder admin 端订单详情。
 func (s *OrderService) GetAdminOrder(ctx context.Context, id int64) (*OrderAdminVO, error) {
+	return s.GetAdminOrderScoped(ctx, id, nil)
+}
+
+func (s *OrderService) GetAdminOrderScoped(ctx context.Context, id int64, sellerID *int64) (*OrderAdminVO, error) {
 	if s.adminDAO == nil {
 		return nil, ErrAdminDAOMissing
 	}
-	row, err := s.adminDAO.GetAdminOrder(ctx, id)
+	row, err := s.adminDAO.GetAdminOrderScoped(ctx, id, sellerID)
 	if err != nil {
 		return nil, err
 	}

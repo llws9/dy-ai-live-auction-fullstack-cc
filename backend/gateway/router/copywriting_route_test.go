@@ -93,7 +93,7 @@ func TestCopywritingRoute_RequireMerchantAndForwardIdentity(t *testing.T) {
 		assert.Equal(t, "merchant", lastUserRole.Load().(string))
 	})
 
-	t.Run("admin request forwards admin role", func(t *testing.T) {
+	t.Run("admin request is rejected before product service", func(t *testing.T) {
 		calls.Store(0)
 		token, err := middleware.GenerateToken(cfg.JWT.Secret, 7, "admin", 2, 24)
 		assert.NoError(t, err)
@@ -106,9 +106,7 @@ func TestCopywritingRoute_RequireMerchantAndForwardIdentity(t *testing.T) {
 			ut.Header{Key: "Authorization", Value: "Bearer " + token},
 		)
 
-		assert.Equal(t, http.StatusOK, w.Result().StatusCode())
-		assert.Equal(t, int64(1), calls.Load())
-		assert.Equal(t, "7", lastUserID.Load().(string))
-		assert.Equal(t, "admin", lastUserRole.Load().(string))
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode())
+		assert.Equal(t, int64(0), calls.Load())
 	})
 }

@@ -25,6 +25,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	productProxy := handler.NewProxyHandler(cfg.Services.ProductURL)
 	adminProductProxy := handler.NewProxyHandlerWithInternalToken(cfg.Services.ProductURL, cfg.Services.InternalToken)
 	auctionProxy := handler.NewProxyHandler(cfg.Services.AuctionURL)
+	adminAuctionProxy := handler.NewProxyHandlerWithInternalToken(cfg.Services.AuctionURL, cfg.Services.InternalToken)
 	testProxy := handler.NewProxyHandler(cfg.Services.TestURL)
 	touchpointHandler := handler.NewTouchpointHandler(cfg.Services.AuctionURL, cfg.Services.ProductURL)
 	liveStartHandler := handler.NewLiveStartHandler(cfg.Services.AuctionURL, cfg.Services.InternalToken)
@@ -70,18 +71,17 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	v1.POST("/products/:id/rules", productProxy.Forward)
 	v1.GET("/products/:id/rules", productProxy.Forward)
 
-	// 商品发布/下架需要商家或管理员权限
-	authGroup.POST("/products/ai/copywriting", middleware.RequireMerchant(), productProxy.Forward)
-	authGroup.POST("/products/:id/publish", middleware.RequireMerchant(), productProxy.Forward)
-	authGroup.POST("/products/:id/unpublish", middleware.RequireMerchant(), productProxy.Forward)
+	// 商品经营动作仅商家可执行，平台管理员不具备代运营权限。
+	authGroup.POST("/products/ai/copywriting", middleware.RequireMerchantOnly(), productProxy.Forward)
+	authGroup.POST("/products/:id/publish", middleware.RequireMerchantOnly(), productProxy.Forward)
+	authGroup.POST("/products/:id/unpublish", middleware.RequireMerchantOnly(), productProxy.Forward)
 
 	// ========== 竞拍服务路由 ==========
 	v1.GET("/auctions", auctionProxy.Forward)
 	v1.GET("/auctions/:id", auctionProxy.Forward)
-	// 创建竞拍需要主播或管理员权限
-	authGroup.POST("/auctions", middleware.RequireStreamer(), auctionProxy.Forward)
-	// 取消竞拍需要主播或管理员权限
-	authGroup.PUT("/auctions/:id/cancel", middleware.RequireStreamer(), auctionProxy.Forward)
+	// 竞拍经营动作仅商家可执行，平台管理员不具备代运营权限。
+	authGroup.POST("/auctions", middleware.RequireMerchantOnly(), auctionProxy.Forward)
+	authGroup.PUT("/auctions/:id/cancel", middleware.RequireMerchantOnly(), auctionProxy.Forward)
 	v1.GET("/auctions/:id/result", auctionProxy.Forward)
 
 	// 出价需要认证
@@ -90,9 +90,9 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	v1.GET("/auctions/:id/ranking", auctionProxy.Forward)
 
 	// ========== 一口价秒杀路由（A5 M1 / spec §4.1） ==========
-	// 上架 / 下架需要主播或管理员权限。
-	authGroup.POST("/fixed-price/items", middleware.RequireStreamer(), auctionProxy.Forward)
-	authGroup.POST("/fixed-price/items/:id/offline", middleware.RequireStreamer(), auctionProxy.Forward)
+	// 上架 / 下架是商家经营动作，平台管理员不具备代运营权限。
+	authGroup.POST("/fixed-price/items", middleware.RequireMerchantOnly(), auctionProxy.Forward)
+	authGroup.POST("/fixed-price/items/:id/offline", middleware.RequireMerchantOnly(), auctionProxy.Forward)
 	// 商品详情公开访问。
 	v1.GET("/fixed-price/items/:id", auctionProxy.Forward)
 	// 抢购 / 查询我是否已购需要登录；X-Idempotency-Key 由 proxy 透传给下游。
@@ -133,19 +133,34 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.GET("/orders", productProxy.Forward)
 	authGroup.GET("/orders/:id", productProxy.Forward)
 	authGroup.POST("/orders/:id/pay", productProxy.Forward)
-	authGroup.PUT("/orders/:id/ship", middleware.RequireMerchant(), productProxy.Forward) // T007: 订单发货
+	authGroup.PUT("/orders/:id/ship", middleware.RequireMerchantOnly(), productProxy.Forward) // 商家发货，平台不代运营
 	// 订单列表 & 历史均需 JWT 认证；下游通过 X-User-ID header 识别本人，禁止接受 query user_id。
 	authGroup.GET("/orders/history", productProxy.Forward)
 
 	// 订单 admin 路由：管理员查看全量订单，不再被 X-User-ID 强过滤；
 	// product-service 侧 /admin/orders 不读 X-User-ID，鉴权由这里的 RequireAdmin 中间件保证。
-	authGroup.GET("/admin/orders", middleware.RequireAdmin(), adminProductProxy.Forward)
-	authGroup.GET("/admin/orders/:id", middleware.RequireAdmin(), adminProductProxy.Forward)
+	authGroup.GET("/admin/products", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
+	authGroup.GET("/admin/products/:id", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
+	authGroup.POST("/admin/products", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
+	authGroup.PUT("/admin/products/:id", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
+	authGroup.DELETE("/admin/products/:id", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
+	authGroup.GET("/admin/auction-rule-templates", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
+	authGroup.GET("/admin/auction-rule-templates/:id", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
+	authGroup.POST("/admin/auction-rule-templates", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
+	authGroup.PUT("/admin/auction-rule-templates/:id", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
+	authGroup.DELETE("/admin/auction-rule-templates/:id", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
+	authGroup.GET("/admin/orders", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
+	authGroup.GET("/admin/orders/:id", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
 
 	// ========== 直播间路由 ==========
-	authGroup.GET("/admin/live-streams", middleware.RequireAdmin(), adminProductProxy.Forward) // T009/T4: 管理端直播间列表
+	authGroup.GET("/admin/live-streams", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward) // T009/T4: 管理端直播间列表
+	authGroup.GET("/admin/live-streams/:id", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
+	authGroup.POST("/admin/live-streams", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
+	authGroup.PUT("/admin/live-streams/:id", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
 	authGroup.PUT("/admin/live-streams/:id/end", middleware.RequireAdmin(), adminProductProxy.Forward)
 	authGroup.PUT("/admin/live-streams/:id/ban", middleware.RequireAdmin(), adminProductProxy.Forward)
+	authGroup.GET("/admin/auctions", middleware.RequireMerchantOrAdmin(), adminAuctionProxy.Forward)
+	authGroup.GET("/admin/auctions/:id", middleware.RequireMerchantOrAdmin(), adminAuctionProxy.Forward)
 	// T010: 直播间详情。公开访问，但若客户端带合法 Bearer token，
 	// OptionalJWTAuth 会注入 user_id，proxy.Forward 据此把 X-User-ID 透传给 product-service，
 	// 用于查询 is_following 等登录态字段（spec B / F-B1, T2.5）。
@@ -168,11 +183,11 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.GET("/sky-lamp/subscriptions", auctionProxy.Forward)
 	authGroup.GET("/sky-lamp/subscriptions/:id", auctionProxy.Forward)
 
-	// ========== 统计服务路由（需要管理员权限） ==========
-	authGroup.GET("/statistics/overview", middleware.RequireAdmin(), productProxy.Forward)
-	authGroup.GET("/statistics/auctions", middleware.RequireAdmin(), productProxy.Forward)
-	authGroup.GET("/statistics/revenue", middleware.RequireAdmin(), productProxy.Forward)
-	authGroup.GET("/statistics/users", middleware.RequireAdmin(), productProxy.Forward)
+	// ========== 统计服务路由 ==========
+	authGroup.GET("/statistics/overview", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
+	authGroup.GET("/statistics/auctions", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
+	authGroup.GET("/statistics/revenue", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
+	authGroup.GET("/statistics/users", middleware.RequireAdmin(), adminProductProxy.Forward)
 
 	// ========== 类别服务路由 ==========
 	v1.GET("/categories", productProxy.Forward)                                          // T018: 类别列表（公开）

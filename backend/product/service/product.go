@@ -17,7 +17,7 @@ type CreateProductRequest struct {
 	Name        string              `json:"name"`
 	Description string              `json:"description"`
 	Images      []string            `json:"images"`
-	CategoryID  *int64              `json:"category_id"`
+	CategoryID  *int64              `json:"category_id,omitempty"`
 	Status      model.ProductStatus `json:"status,omitempty"`
 }
 
@@ -148,12 +148,51 @@ func (s *ProductService) ListProducts(ctx context.Context, status *model.Product
 	return s.productDAO.List(ctx, status, page, pageSize)
 }
 
+func (s *ProductService) ListAdminProducts(ctx context.Context, actorRole string, actorUserID int64, status *model.ProductStatus, page, pageSize int) ([]model.Product, int64, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 20
+	}
+	var ownerID *int64
+	if actorRole == "merchant" {
+		ownerID = &actorUserID
+	}
+	return s.productDAO.ListAdminScoped(ctx, ownerID, status, page, pageSize)
+}
+
+func (s *ProductService) GetAdminProduct(ctx context.Context, actorRole string, actorUserID, id int64) (*model.Product, error) {
+	if actorRole == "merchant" {
+		return s.productDAO.GetByIDAndOwnerID(ctx, id, actorUserID)
+	}
+	return s.productDAO.GetByID(ctx, id)
+}
+
 // CreateProduct 创建商品
 func (s *ProductService) CreateProduct(ctx context.Context, req *CreateProductRequest) (*model.Product, error) {
 	if err := s.validateCategoryID(ctx, req.CategoryID); err != nil {
 		return nil, err
 	}
 	product := &model.Product{
+		Name:        req.Name,
+		Description: req.Description,
+		Images:      req.Images,
+		CategoryID:  req.CategoryID,
+		Status:      model.ProductStatusDraft,
+	}
+	if err := s.productDAO.Create(ctx, product); err != nil {
+		return nil, err
+	}
+	return product, nil
+}
+
+func (s *ProductService) CreateProductForOwner(ctx context.Context, ownerID int64, req *CreateProductRequest) (*model.Product, error) {
+	if err := s.validateCategoryID(ctx, req.CategoryID); err != nil {
+		return nil, err
+	}
+	product := &model.Product{
+		OwnerID:     &ownerID,
 		Name:        req.Name,
 		Description: req.Description,
 		Images:      req.Images,
@@ -196,9 +235,49 @@ func (s *ProductService) UpdateProduct(ctx context.Context, id int64, req *Updat
 	return product, nil
 }
 
+func (s *ProductService) UpdateAdminProduct(ctx context.Context, ownerID, id int64, req *UpdateProductRequest) (*model.Product, error) {
+	product, err := s.productDAO.GetByIDAndOwnerID(ctx, id, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	if req.Name != "" {
+		product.Name = req.Name
+	}
+	if req.Description != "" {
+		product.Description = req.Description
+	}
+	if len(req.Images) > 0 {
+		product.Images = req.Images
+	}
+	if req.CategoryID != nil {
+		if err := s.validateCategoryID(ctx, req.CategoryID); err != nil {
+			return nil, err
+		}
+		product.CategoryID = req.CategoryID
+	}
+	if req.Status != 0 {
+		product.Status = req.Status
+	}
+	if err := s.productDAO.Update(ctx, product); err != nil {
+		return nil, err
+	}
+	return product, nil
+}
+
 // DeleteProduct 删除商品
 func (s *ProductService) DeleteProduct(ctx context.Context, id int64) error {
 	return s.productDAO.Delete(ctx, id)
+}
+
+func (s *ProductService) DeleteAdminProduct(ctx context.Context, ownerID, id int64) error {
+	product, err := s.productDAO.GetByIDAndOwnerID(ctx, id, ownerID)
+	if err != nil {
+		return err
+	}
+	if product.Status != model.ProductStatusDraft {
+		return errors.New("只有草稿商品可以删除")
+	}
+	return s.productDAO.DeleteByIDAndOwnerID(ctx, id, ownerID)
 }
 
 // CreateAuctionRule 创建竞拍规则

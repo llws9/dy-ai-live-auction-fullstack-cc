@@ -29,9 +29,58 @@ func RequireRole(role int) app.HandlerFunc {
 	return RBACMiddleware(role)
 }
 
+// RequireExactRole requires the authenticated role to match exactly.
+func RequireExactRole(role int) app.HandlerFunc {
+	return func(ctx context.Context, c *app.RequestContext) {
+		userRole := c.GetInt("user_role")
+		if userRole != role {
+			c.JSON(403, map[string]interface{}{
+				"code":    403,
+				"message": "权限不足",
+			})
+			c.Abort()
+			return
+		}
+
+		c.Next(ctx)
+	}
+}
+
+// RequireAnyRole allows only the provided exact roles.
+func RequireAnyRole(roles ...int) app.HandlerFunc {
+	allowed := make(map[int]struct{}, len(roles))
+	for _, role := range roles {
+		allowed[role] = struct{}{}
+	}
+
+	return func(ctx context.Context, c *app.RequestContext) {
+		userRole := c.GetInt("user_role")
+		if _, ok := allowed[userRole]; !ok {
+			c.JSON(403, map[string]interface{}{
+				"code":    403,
+				"message": "权限不足",
+			})
+			c.Abort()
+			return
+		}
+
+		c.Next(ctx)
+	}
+}
+
 // RequireStreamer 要求主播权限
 func RequireStreamer() app.HandlerFunc {
 	return RBACMiddleware(1) // 1 = 主播
+}
+
+// RequireMerchantOnly requires merchant role and intentionally rejects admin.
+func RequireMerchantOnly() app.HandlerFunc {
+	return RequireExactRole(1)
+}
+
+// RequireMerchantOrAdmin allows management read routes to be shared by merchants and admins.
+func RequireMerchantOrAdmin() app.HandlerFunc {
+	return RequireAnyRole(1, 2)
 }
 
 // RequireAdmin 要求管理员权限

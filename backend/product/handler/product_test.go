@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -421,6 +422,81 @@ func TestProductHandler_Get_ReturnsCategoryName(t *testing.T) {
 	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
 	assert.EqualValues(t, 9, body["category_id"])
 	assert.Equal(t, "潮流文玩", body["category_name"])
+}
+
+func TestProductHandler_AdminCreateRejectsAdminActor(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file::memory:?mode=memory&cache=shared"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Product{}))
+	require.NoError(t, db.Exec("DELETE FROM products").Error)
+	productSvc := service.NewProductService(dao.NewProductDAO(db), nil, dao.NewLiveStreamDAO(db))
+	h := NewProductHandler(productSvc)
+	c := app.NewContext(0)
+	c.Request.SetMethod(http.MethodPost)
+	c.Request.SetRequestURI("/api/v1/admin/products")
+	c.Request.Header.Set("X-User-ID", "2001")
+	c.Request.Header.Set("X-User-Role", "admin")
+	c.Request.SetBodyString(`{"name":"Admin Should Not Create"}`)
+
+	h.AdminCreate(context.Background(), c)
+
+	assert.Equal(t, http.StatusForbidden, c.Response.StatusCode())
+}
+
+func TestProductHandler_AdminCreateMerchantSetsOwnerID(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file::memory:?mode=memory&cache=shared"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Product{}))
+	require.NoError(t, db.Exec("DELETE FROM products").Error)
+	productSvc := service.NewProductService(dao.NewProductDAO(db), nil, dao.NewLiveStreamDAO(db))
+	h := NewProductHandler(productSvc)
+	c := app.NewContext(0)
+	c.Request.SetMethod(http.MethodPost)
+	c.Request.SetRequestURI("/api/v1/admin/products")
+	c.Request.Header.Set("X-User-ID", "1001")
+	c.Request.Header.Set("X-User-Role", "merchant")
+	c.Request.SetBodyString(`{"name":"Merchant Product"}`)
+
+	h.AdminCreate(context.Background(), c)
+
+	assert.Equal(t, http.StatusCreated, c.Response.StatusCode())
+	var products []model.Product
+	require.NoError(t, db.Find(&products).Error)
+	require.Len(t, products, 1)
+	require.NotNil(t, products[0].OwnerID)
+	assert.Equal(t, int64(1001), *products[0].OwnerID)
+}
+
+func TestProductHandler_AdminListMerchantOnlyOwnProducts(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file::memory:?mode=memory&cache=shared"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Product{}))
+	require.NoError(t, db.Exec("DELETE FROM products").Error)
+	ownerA := int64(1001)
+	ownerB := int64(1002)
+	require.NoError(t, db.Create(&model.Product{Name: "A", OwnerID: &ownerA, Status: model.ProductStatusDraft}).Error)
+	require.NoError(t, db.Create(&model.Product{Name: "B", OwnerID: &ownerB, Status: model.ProductStatusDraft}).Error)
+	productSvc := service.NewProductService(dao.NewProductDAO(db), nil, dao.NewLiveStreamDAO(db))
+	h := NewProductHandler(productSvc)
+	c := app.NewContext(0)
+	c.Request.SetMethod(http.MethodGet)
+	c.Request.SetRequestURI("/api/v1/admin/products?page=1&page_size=20")
+	c.Request.Header.Set("X-User-ID", "1001")
+	c.Request.Header.Set("X-User-Role", "merchant")
+
+	h.AdminList(context.Background(), c)
+
+	assert.Equal(t, http.StatusOK, c.Response.StatusCode())
+	var body struct {
+		Data struct {
+			List  []model.Product `json:"list"`
+			Total int64           `json:"total"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.Equal(t, int64(1), body.Data.Total)
+	require.Len(t, body.Data.List, 1)
+	assert.Equal(t, "A", body.Data.List[0].Name)
 }
 
 func TestProductHandler_ErrorHandling(t *testing.T) {

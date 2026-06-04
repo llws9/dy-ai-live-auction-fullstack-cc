@@ -20,9 +20,10 @@ const maxAdminOrderPageSize = 100
 //   - 不读 X-User-ID，admin 端语义即看全量；
 //   - 入参 status / user_id / page / page_size 均可选；user_id 用作筛选某用户（=winner_id）。
 //
-// Gateway 仍是入口 SSOT；这里保留角色头校验，防止直连 product-service 读取全量订单。
+// Gateway 仍是入口 SSOT；这里保留角色头校验，防止直连 product-service 越权读取订单。
 func (h *OrderHandler) AdminList(ctx context.Context, c *app.RequestContext) {
-	if !requireAdminRole(c) {
+	actor, ok := readOrderManagementActor(c)
+	if !ok {
 		return
 	}
 
@@ -72,7 +73,11 @@ func (h *OrderHandler) AdminList(ctx context.Context, c *app.RequestContext) {
 		userIDPtr = &v
 	}
 
-	items, total, err := h.orderService.ListAdminOrders(ctx, statusPtr, userIDPtr, page, pageSize)
+	var sellerIDPtr *int64
+	if actor.Role == "merchant" {
+		sellerIDPtr = &actor.UserID
+	}
+	items, total, err := h.orderService.ListAdminOrdersScoped(ctx, statusPtr, userIDPtr, sellerIDPtr, page, pageSize)
 	if err != nil {
 		log.Printf("AdminList failed: status=%v userID=%v page=%d pageSize=%d err=%v", statusPtr, userIDPtr, page, pageSize, err)
 		c.JSON(500, map[string]interface{}{
@@ -97,7 +102,8 @@ func (h *OrderHandler) AdminList(ctx context.Context, c *app.RequestContext) {
 // AdminGet 处理 GET /api/v1/admin/orders/:id。
 // admin 视角不按 winner_id 过滤；返回 product_name 与首图便于前端直接展示。
 func (h *OrderHandler) AdminGet(ctx context.Context, c *app.RequestContext) {
-	if !requireAdminRole(c) {
+	actor, ok := readOrderManagementActor(c)
+	if !ok {
 		return
 	}
 
@@ -111,7 +117,11 @@ func (h *OrderHandler) AdminGet(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	vo, err := h.orderService.GetAdminOrder(ctx, id)
+	var sellerIDPtr *int64
+	if actor.Role == "merchant" {
+		sellerIDPtr = &actor.UserID
+	}
+	vo, err := h.orderService.GetAdminOrderScoped(ctx, id, sellerIDPtr)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(404, map[string]interface{}{
@@ -141,5 +151,25 @@ func isValidOrderStatus(status model.OrderStatus) bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func readOrderManagementActor(c *app.RequestContext) (AdminActor, bool) {
+	role := string(c.GetHeader("X-User-Role"))
+	switch role {
+	case "admin":
+		return AdminActor{Role: "admin"}, true
+	case "merchant":
+		userID, ok := readHeaderUserID(c)
+		if !ok {
+			return AdminActor{}, false
+		}
+		return AdminActor{UserID: userID, Role: "merchant"}, true
+	default:
+		c.JSON(403, map[string]interface{}{
+			"code":    403,
+			"message": "权限不足",
+		})
+		return AdminActor{}, false
 	}
 }

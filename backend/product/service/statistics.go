@@ -30,7 +30,12 @@ func NewStatisticsService(statisticsDAO *dao.StatisticsDAO) *StatisticsService {
 // @Failure 500 {object} map[string]interface{}
 // @Router /statistics/overview [get]
 func (s *StatisticsService) GetOverview(ctx context.Context) (*dao.OverviewStatistics, error) {
-	return s.statisticsDAO.GetOverview(ctx)
+	return s.GetOverviewScoped(ctx, nil)
+}
+
+// GetOverviewScoped 获取统计总览；sellerID 非空时仅统计该商家的订单数据。
+func (s *StatisticsService) GetOverviewScoped(ctx context.Context, sellerID *int64) (*dao.OverviewStatistics, error) {
+	return s.statisticsDAO.GetOverviewScoped(ctx, sellerID)
 }
 
 // GetAuctionStatistics 获取竞拍统计
@@ -46,7 +51,12 @@ func (s *StatisticsService) GetOverview(ctx context.Context) (*dao.OverviewStati
 // @Failure 500 {object} map[string]interface{}
 // @Router /statistics/auctions [get]
 func (s *StatisticsService) GetAuctionStatistics(ctx context.Context, startDate, endDate *time.Time) (*dao.AuctionStatistics, error) {
-	return s.statisticsDAO.GetAuctionStatistics(ctx, startDate, endDate)
+	return s.GetAuctionStatisticsScoped(ctx, startDate, endDate, nil)
+}
+
+// GetAuctionStatisticsScoped 获取竞拍统计；sellerID 非空时按商家订单范围统计。
+func (s *StatisticsService) GetAuctionStatisticsScoped(ctx context.Context, startDate, endDate *time.Time, sellerID *int64) (*dao.AuctionStatistics, error) {
+	return s.statisticsDAO.GetAuctionStatisticsScoped(ctx, startDate, endDate, sellerID)
 }
 
 // GetRevenueStatistics 获取收入统计
@@ -63,7 +73,12 @@ func (s *StatisticsService) GetAuctionStatistics(ctx context.Context, startDate,
 // @Failure 500 {object} map[string]interface{}
 // @Router /statistics/revenue [get]
 func (s *StatisticsService) GetRevenueStatistics(ctx context.Context, startDate, endDate *time.Time, category string) (*dao.RevenueStatistics, error) {
-	return s.statisticsDAO.GetRevenueStatistics(ctx, startDate, endDate, category)
+	return s.GetRevenueStatisticsScoped(ctx, startDate, endDate, category, nil)
+}
+
+// GetRevenueStatisticsScoped 获取收入统计；sellerID 非空时仅统计该商家的订单收入。
+func (s *StatisticsService) GetRevenueStatisticsScoped(ctx context.Context, startDate, endDate *time.Time, category string, sellerID *int64) (*dao.RevenueStatistics, error) {
+	return s.statisticsDAO.GetRevenueStatisticsScoped(ctx, startDate, endDate, category, sellerID)
 }
 
 // GetUserStatistics 获取用户统计

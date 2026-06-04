@@ -153,6 +153,7 @@ func TestListAdmin_T4FieldsAndStatusFilter(t *testing.T) {
 	c := app.NewContext(0)
 	c.Request.SetRequestURI("/api/v1/admin/live-streams?status=1")
 	c.Request.Header.Set("X-User-Role", "admin")
+	c.Request.Header.Set("X-User-ID", "2001")
 	h.ListAdmin(context.Background(), c)
 
 	assert.Equal(t, 200, c.Response.StatusCode())
@@ -171,16 +172,73 @@ func TestListAdmin_T4FieldsAndStatusFilter(t *testing.T) {
 	assert.EqualValues(t, 1, item["status"])
 }
 
-func TestListAdminLiveStreamRequiresAdminRole(t *testing.T) {
+func TestListAdminLiveStreamMerchantOnlyOwnStreams(t *testing.T) {
+	h := newLiveStreamHandlerWithSeed(t, func(db *gorm.DB) {
+		db.Create(&model.LiveStream{ID: 301, CreatorID: 1001, Name: "A", Status: model.LiveStreamStatusLive})
+		db.Create(&model.LiveStream{ID: 302, CreatorID: 1002, Name: "B", Status: model.LiveStreamStatusLive})
+	})
+
+	c := app.NewContext(0)
+	c.Request.SetRequestURI("/api/v1/admin/live-streams")
+	c.Request.Header.Set("X-User-ID", "1001")
+	c.Request.Header.Set("X-User-Role", "merchant")
+	h.ListAdmin(context.Background(), c)
+
+	assert.Equal(t, 200, c.Response.StatusCode())
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	data := body["data"].(map[string]interface{})
+	list := data["list"].([]interface{})
+	require.Len(t, list, 1)
+	item := list[0].(map[string]interface{})
+	assert.Equal(t, "A", item["name"])
+}
+
+func TestListAdminLiveStreamRequiresManagementRole(t *testing.T) {
 	h := newLiveStreamHandlerWithSeed(t, func(db *gorm.DB) {
 		db.Create(&model.LiveStream{ID: 301, CreatorID: 9001, Name: "直播中", Status: model.LiveStreamStatusLive})
 	})
 
 	c := app.NewContext(0)
 	c.Request.SetRequestURI("/api/v1/admin/live-streams")
+	c.Request.Header.Set("X-User-ID", "1001")
+	c.Request.Header.Set("X-User-Role", "user")
 	h.ListAdmin(context.Background(), c)
 
 	assert.Equal(t, 403, c.Response.StatusCode())
+}
+
+func TestAdminCreateLiveStreamRejectsAdminActor(t *testing.T) {
+	h := newLiveStreamHandlerWithSeed(t, nil)
+	c := app.NewContext(0)
+	c.Request.SetRequestURI("/api/v1/admin/live-streams")
+	c.Request.Header.Set("X-User-ID", "2001")
+	c.Request.Header.Set("X-User-Role", "admin")
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request.SetBodyString(`{"name":"平台代运营直播间"}`)
+
+	h.AdminCreate(context.Background(), c)
+
+	assert.Equal(t, 403, c.Response.StatusCode())
+}
+
+func TestAdminCreateLiveStreamMerchantSetsCreatorID(t *testing.T) {
+	h := newLiveStreamHandlerWithSeed(t, nil)
+	c := app.NewContext(0)
+	c.Request.SetRequestURI("/api/v1/admin/live-streams")
+	c.Request.Header.Set("X-User-ID", "1001")
+	c.Request.Header.Set("X-User-Role", "merchant")
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request.SetBodyString(`{"name":"商家直播间","description":"说明","cover_image":"https://cdn/cover.png","video_url":"https://cdn/live.m3u8","streamer_name":"商家主播","streamer_avatar":"https://cdn/avatar.png"}`)
+
+	h.AdminCreate(context.Background(), c)
+
+	assert.Equal(t, 201, c.Response.StatusCode())
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	data := body["data"].(map[string]interface{})
+	assert.EqualValues(t, 1001, data["creator_id"])
+	assert.Equal(t, "商家直播间", data["name"])
 }
 
 func TestListAdminLiveStreamRejectsInvalidStatus(t *testing.T) {
@@ -189,6 +247,7 @@ func TestListAdminLiveStreamRejectsInvalidStatus(t *testing.T) {
 	c := app.NewContext(0)
 	c.Request.SetRequestURI("/api/v1/admin/live-streams?status=bad")
 	c.Request.Header.Set("X-User-Role", "admin")
+	c.Request.Header.Set("X-User-ID", "2001")
 	h.ListAdmin(context.Background(), c)
 
 	assert.Equal(t, 400, c.Response.StatusCode())
@@ -200,6 +259,7 @@ func TestListAdminLiveStreamClampsPageSize(t *testing.T) {
 	c := app.NewContext(0)
 	c.Request.SetRequestURI("/api/v1/admin/live-streams?page_size=1000")
 	c.Request.Header.Set("X-User-Role", "admin")
+	c.Request.Header.Set("X-User-ID", "2001")
 	h.ListAdmin(context.Background(), c)
 
 	assert.Equal(t, 200, c.Response.StatusCode())
@@ -217,6 +277,7 @@ func TestEndAndBanAdminLiveStream(t *testing.T) {
 	endCtx := app.NewContext(0)
 	endCtx.Params = append(endCtx.Params, param.Param{Key: "id", Value: "201"})
 	endCtx.Request.Header.Set("X-User-Role", "admin")
+	endCtx.Request.Header.Set("X-User-ID", "2001")
 	h.EndAdmin(context.Background(), endCtx)
 	assert.Equal(t, 200, endCtx.Response.StatusCode())
 	var endBody map[string]interface{}
@@ -229,6 +290,7 @@ func TestEndAndBanAdminLiveStream(t *testing.T) {
 	banCtx.Request.SetBody([]byte(`{"reason":"违规内容"}`))
 	banCtx.Params = append(banCtx.Params, param.Param{Key: "id", Value: "201"})
 	banCtx.Request.Header.Set("X-User-Role", "admin")
+	banCtx.Request.Header.Set("X-User-ID", "2001")
 	h.BanAdmin(context.Background(), banCtx)
 	assert.Equal(t, 200, banCtx.Response.StatusCode())
 	var banBody map[string]interface{}
@@ -261,6 +323,7 @@ func TestEndAndBanAdminLiveStreamReturnNotFound(t *testing.T) {
 	endCtx := app.NewContext(0)
 	endCtx.Params = append(endCtx.Params, param.Param{Key: "id", Value: "404"})
 	endCtx.Request.Header.Set("X-User-Role", "admin")
+	endCtx.Request.Header.Set("X-User-ID", "2001")
 	h.EndAdmin(context.Background(), endCtx)
 	assert.Equal(t, 404, endCtx.Response.StatusCode())
 
@@ -268,6 +331,7 @@ func TestEndAndBanAdminLiveStreamReturnNotFound(t *testing.T) {
 	banCtx.Request.SetBody([]byte(`{"reason":"违规内容"}`))
 	banCtx.Params = append(banCtx.Params, param.Param{Key: "id", Value: "404"})
 	banCtx.Request.Header.Set("X-User-Role", "admin")
+	banCtx.Request.Header.Set("X-User-ID", "2001")
 	h.BanAdmin(context.Background(), banCtx)
 	assert.Equal(t, 404, banCtx.Response.StatusCode())
 }

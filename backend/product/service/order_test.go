@@ -38,6 +38,7 @@ func (suite *OrderTestSuite) SetupSuite() {
 	suite.orderDAO = dao.NewOrderDAO(db)
 	suite.historyDAO = dao.NewHistoryDAO(db)
 	suite.service = NewOrderService(suite.orderDAO, suite.historyDAO)
+	suite.service.SetProductDAO(dao.NewProductDAO(db))
 }
 
 // TearDownSuite 清理测试套件
@@ -49,6 +50,21 @@ func (suite *OrderTestSuite) TearDownSuite() {
 // SetupTest 每个测试前清理数据
 func (suite *OrderTestSuite) SetupTest() {
 	suite.db.Exec("DELETE FROM orders")
+	suite.db.Exec("DELETE FROM products")
+	for i := int64(1); i <= 5; i++ {
+		suite.createProduct(i)
+	}
+}
+
+func (suite *OrderTestSuite) createProduct(id int64) {
+	suite.T().Helper()
+	ownerID := int64(1000 + id)
+	suite.NoError(suite.db.Create(&model.Product{
+		ID:      id,
+		OwnerID: &ownerID,
+		Name:    "merchant product",
+		Status:  model.ProductStatusPublished,
+	}).Error)
 }
 
 // TestCreateOrder 测试创建订单
@@ -65,6 +81,33 @@ func (suite *OrderTestSuite) TestCreateOrder() {
 	suite.Equal(int64(100), order.WinnerID)
 	suite.Equal(decimal.NewFromInt(500), order.FinalPrice)
 	suite.Equal(model.OrderStatusPending, order.Status)
+}
+
+func (suite *OrderTestSuite) TestCreateOrderRejectsMissingProductWhenProductDAOInjected() {
+	ctx := context.Background()
+
+	order, err := suite.service.CreateOrder(ctx, 1, 404, 100, decimal.NewFromInt(500))
+
+	suite.Require().Error(err)
+	suite.Nil(order)
+	suite.Contains(err.Error(), "商品不存在")
+}
+
+func (suite *OrderTestSuite) TestCreateOrderStoresSellerIDFromProductOwner() {
+	ctx := context.Background()
+	ownerID := int64(1001)
+	suite.NoError(suite.db.Create(&model.Product{
+		ID:      10,
+		OwnerID: &ownerID,
+		Name:    "merchant product",
+		Status:  model.ProductStatusPublished,
+	}).Error)
+
+	order, err := suite.service.CreateOrder(ctx, 101, 10, 2001, decimal.NewFromInt(500))
+
+	suite.NoError(err)
+	suite.NotNil(order.SellerID)
+	suite.Equal(ownerID, *order.SellerID)
 }
 
 // TestGetOrder 测试获取订单

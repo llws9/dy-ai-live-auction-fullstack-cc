@@ -65,6 +65,7 @@ func main() {
 		&model.Product{},
 		&model.Category{},
 		&model.AuctionRule{},
+		&model.AuctionRuleTemplate{},
 		&model.Order{},
 		&model.LiveStream{},
 	); err != nil {
@@ -74,6 +75,7 @@ func main() {
 	// 初始化 DAO 层
 	productDAO := dao.NewProductDAO(db)
 	ruleDAO := dao.NewAuctionRuleDAO(db)
+	ruleTemplateDAO := dao.NewAuctionRuleTemplateDAO(db)
 	orderDAO := dao.NewOrderDAO(db)
 	historyDAO := dao.NewHistoryDAO(db)
 	orderAdminDAO := dao.NewOrderAdminDAO(db)
@@ -83,8 +85,10 @@ func main() {
 
 	// 初始化 Service 层
 	productService := service.NewProductService(productDAO, ruleDAO, liveStreamDAO)
+	ruleTemplateService := service.NewAuctionRuleTemplateService(ruleTemplateDAO)
 	orderService := service.NewOrderService(orderDAO, historyDAO)
 	orderService.SetAdminOrderDAO(orderAdminDAO)
+	orderService.SetProductDAO(productDAO)
 	statisticsService := service.NewStatisticsService(statisticsDAO)
 	var viewerCounter service.LiveViewerCounter = service.ZeroLiveViewerCounter{}
 	var redisClient *redis.Client
@@ -116,6 +120,7 @@ func main() {
 	// 初始化 Handler 层
 	productHandler := handler.NewProductHandler(productService)
 	ruleHandler := handler.NewRuleHandler(productService)
+	ruleTemplateHandler := handler.NewAuctionRuleTemplateHandler(ruleTemplateService)
 	orderHandler := handler.NewOrderHandler(orderService)
 	statisticsHandler := handler.NewStatisticsHandler(statisticsService)
 	productPublishHandler := handler.NewProductHandler(productService)
@@ -146,7 +151,7 @@ func main() {
 	)
 
 	// 注册路由
-	registerRoutes(h, productHandler, ruleHandler, orderHandler, statisticsHandler, productPublishHandler, liveStreamHandler, categoryHandler, copywritingHandler, internalHandler)
+	registerRoutes(h, productHandler, ruleHandler, ruleTemplateHandler, orderHandler, statisticsHandler, productPublishHandler, liveStreamHandler, categoryHandler, copywritingHandler, internalHandler)
 
 	// 启动服务
 	log.Printf("Product service starting on %s", cfg.Server.Port)
@@ -154,7 +159,7 @@ func main() {
 }
 
 // registerRoutes 注册路由
-func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, ruleHandler *handler.RuleHandler, orderHandler *handler.OrderHandler, statisticsHandler *handler.StatisticsHandler, productPublishHandler *handler.ProductHandler, liveStreamHandler *handler.LiveStreamHandler, categoryHandler *handler.CategoryHandler, copywritingHandler *handler.CopywritingHandler, internalHandler *handler.InternalHandler) {
+func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, ruleHandler *handler.RuleHandler, ruleTemplateHandler *handler.AuctionRuleTemplateHandler, orderHandler *handler.OrderHandler, statisticsHandler *handler.StatisticsHandler, productPublishHandler *handler.ProductHandler, liveStreamHandler *handler.LiveStreamHandler, categoryHandler *handler.CategoryHandler, copywritingHandler *handler.CopywritingHandler, internalHandler *handler.InternalHandler) {
 	v1 := h.Group("/api/v1")
 
 	// 商品相关路由
@@ -191,21 +196,34 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	v1.GET("/orders/history", orderHandler.GetUserHistory)
 
 	// 订单 admin 路由：必须经 Gateway 透传内部 token，且下游二次校验 X-User-Role=admin。
+	v1.GET("/admin/products", internalAuth, productHandler.AdminList)
+	v1.GET("/admin/products/:id", internalAuth, productHandler.AdminGet)
+	v1.POST("/admin/products", internalAuth, productHandler.AdminCreate)
+	v1.PUT("/admin/products/:id", internalAuth, productHandler.AdminUpdate)
+	v1.DELETE("/admin/products/:id", internalAuth, productHandler.AdminDelete)
+	v1.GET("/admin/auction-rule-templates", internalAuth, ruleTemplateHandler.List)
+	v1.GET("/admin/auction-rule-templates/:id", internalAuth, ruleTemplateHandler.Get)
+	v1.POST("/admin/auction-rule-templates", internalAuth, ruleTemplateHandler.Create)
+	v1.PUT("/admin/auction-rule-templates/:id", internalAuth, ruleTemplateHandler.Update)
+	v1.DELETE("/admin/auction-rule-templates/:id", internalAuth, ruleTemplateHandler.Delete)
 	v1.GET("/admin/orders", internalAuth, orderHandler.AdminList)
 	v1.GET("/admin/orders/:id", internalAuth, orderHandler.AdminGet)
 
 	// 直播间 admin 路由：必须经 Gateway 透传内部 token，且由 Gateway 校验管理员身份。
 	v1.GET("/admin/live-streams", internalAuth, liveStreamHandler.ListAdmin)
+	v1.GET("/admin/live-streams/:id", internalAuth, liveStreamHandler.AdminGet)
+	v1.POST("/admin/live-streams", internalAuth, liveStreamHandler.AdminCreate)
+	v1.PUT("/admin/live-streams/:id", internalAuth, liveStreamHandler.AdminUpdate)
 	v1.PUT("/admin/live-streams/:id/end", internalAuth, liveStreamHandler.EndAdmin)
 	v1.PUT("/admin/live-streams/:id/ban", internalAuth, liveStreamHandler.BanAdmin)
 	v1.GET("/live-streams", liveStreamHandler.ListPublic)
 	v1.GET("/live-streams/:id", liveStreamHandler.GetDetail)
 
-	// 统计相关路由
-	v1.GET("/statistics/overview", statisticsHandler.GetOverview)
-	v1.GET("/statistics/auctions", statisticsHandler.GetAuctionStatistics)
-	v1.GET("/statistics/revenue", statisticsHandler.GetRevenueStatistics)
-	v1.GET("/statistics/users", statisticsHandler.GetUserStatistics)
+	// 统计相关路由：经 Gateway 注入 internal token，下游再按 X-User-Role/X-User-ID 做范围校验。
+	v1.GET("/statistics/overview", internalAuth, statisticsHandler.GetOverview)
+	v1.GET("/statistics/auctions", internalAuth, statisticsHandler.GetAuctionStatistics)
+	v1.GET("/statistics/revenue", internalAuth, statisticsHandler.GetRevenueStatistics)
+	v1.GET("/statistics/users", internalAuth, statisticsHandler.GetUserStatistics)
 
 	// 类别相关路由
 	v1.GET("/categories", categoryHandler.List)

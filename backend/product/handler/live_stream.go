@@ -34,7 +34,8 @@ func (h *LiveStreamHandler) SetAuctionClient(ac *client.AuctionClient) {
 
 // ListAdmin 管理端直播间列表 (T011)
 func (h *LiveStreamHandler) ListAdmin(ctx context.Context, c *app.RequestContext) {
-	if !requireAdminRole(c) {
+	actor, ok := readAdminActor(c)
+	if !ok {
 		return
 	}
 
@@ -68,7 +69,11 @@ func (h *LiveStreamHandler) ListAdmin(ctx context.Context, c *app.RequestContext
 		statusFilter = &status
 	}
 
-	liveStreams, total, err := h.liveStreamService.ListAdmin(ctx, page, pageSize, statusFilter)
+	var creatorID *int64
+	if actor.IsMerchant() {
+		creatorID = &actor.UserID
+	}
+	liveStreams, total, err := h.liveStreamService.ListAdminScoped(ctx, page, pageSize, statusFilter, creatorID)
 	if err != nil {
 		log.Printf("LiveStream ListAdmin failed: status=%v page=%d pageSize=%d err=%v", statusFilter, page, pageSize, err)
 		c.JSON(500, map[string]interface{}{
@@ -87,6 +92,63 @@ func (h *LiveStreamHandler) ListAdmin(ctx context.Context, c *app.RequestContext
 			"page_size": pageSize,
 		},
 	})
+}
+
+func (h *LiveStreamHandler) AdminGet(ctx context.Context, c *app.RequestContext) {
+	actor, ok := readAdminActor(c)
+	if !ok {
+		return
+	}
+	id, ok := parseLiveStreamIDParam(c)
+	if !ok {
+		return
+	}
+	liveStream, err := h.liveStreamService.GetAdminDetail(ctx, actor.Role, actor.UserID, id)
+	if err != nil {
+		writeLiveStreamError(c, err, "直播间不存在")
+		return
+	}
+	c.JSON(200, map[string]interface{}{"code": 200, "message": "success", "data": h.buildAdminItem(ctx, *liveStream, 0)})
+}
+
+func (h *LiveStreamHandler) AdminCreate(ctx context.Context, c *app.RequestContext) {
+	actor, ok := requireMerchantActor(c)
+	if !ok {
+		return
+	}
+	var req service.AdminLiveStreamRequest
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "请求参数错误: " + err.Error()})
+		return
+	}
+	liveStream, err := h.liveStreamService.CreateForCreator(ctx, actor.UserID, req)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "创建直播间失败: " + err.Error()})
+		return
+	}
+	c.JSON(201, map[string]interface{}{"code": 201, "message": "success", "data": liveStream})
+}
+
+func (h *LiveStreamHandler) AdminUpdate(ctx context.Context, c *app.RequestContext) {
+	actor, ok := requireMerchantActor(c)
+	if !ok {
+		return
+	}
+	id, ok := parseLiveStreamIDParam(c)
+	if !ok {
+		return
+	}
+	var req service.AdminLiveStreamRequest
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "请求参数错误: " + err.Error()})
+		return
+	}
+	liveStream, err := h.liveStreamService.UpdateForCreator(ctx, actor.UserID, id, req)
+	if err != nil {
+		writeLiveStreamError(c, err, "更新直播间失败")
+		return
+	}
+	c.JSON(200, map[string]interface{}{"code": 200, "message": "success", "data": liveStream})
 }
 
 func (h *LiveStreamHandler) buildAdminList(ctx context.Context, liveStreams []model.LiveStream) []map[string]interface{} {
@@ -275,6 +337,23 @@ func parseAdminLiveStreamIntQuery(c *app.RequestContext, key string, defaultValu
 		return defaultValue, nil
 	}
 	return strconv.Atoi(raw)
+}
+
+func parseLiveStreamIDParam(c *app.RequestContext) (int64, bool) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "无效的直播间ID"})
+		return 0, false
+	}
+	return id, true
+}
+
+func writeLiveStreamError(c *app.RequestContext, err error, fallback string) {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		c.JSON(404, map[string]interface{}{"code": 404, "message": "直播间不存在"})
+		return
+	}
+	c.JSON(500, map[string]interface{}{"code": 500, "message": fallback + ": " + err.Error()})
 }
 
 func isValidLiveStreamStatus(status model.LiveStreamStatus) bool {

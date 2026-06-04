@@ -1,10 +1,47 @@
 package middleware
 
 import (
+	"context"
 	"testing"
 
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestRequireMerchantOnlyRejectsAdmin(t *testing.T) {
+	c := app.NewContext(0)
+	c.Set("user_role", 2)
+
+	handler := RequireMerchantOnly()
+	handler(context.Background(), c)
+
+	require.True(t, c.IsAborted())
+	require.Equal(t, 403, c.Response.StatusCode())
+}
+
+func TestRequireMerchantOrAdminAcceptsBoth(t *testing.T) {
+	for _, role := range []int{1, 2} {
+		c := app.NewContext(0)
+		c.Set("user_role", role)
+
+		handler := RequireMerchantOrAdmin()
+		handler(context.Background(), c)
+
+		require.False(t, c.IsAborted())
+	}
+}
+
+func TestRequireMerchantOrAdminRejectsUser(t *testing.T) {
+	c := app.NewContext(0)
+	c.Set("user_role", 0)
+
+	handler := RequireMerchantOrAdmin()
+	handler(context.Background(), c)
+
+	require.True(t, c.IsAborted())
+	require.Equal(t, 403, c.Response.StatusCode())
+}
 
 func TestRBACMiddleware_AdminRole(t *testing.T) {
 	t.Run("should allow admin access to admin resources", func(t *testing.T) {

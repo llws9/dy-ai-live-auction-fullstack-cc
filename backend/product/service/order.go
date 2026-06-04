@@ -11,6 +11,7 @@ import (
 	"product-service/pkg/logger"
 
 	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
 )
 
 // NotificationCallback 通知回调接口（用于Mock触发通知）
@@ -28,6 +29,7 @@ type OrderService struct {
 	orderDAO             *dao.OrderDAO
 	historyDAO           *dao.HistoryDAO
 	adminDAO             *dao.OrderAdminDAO
+	productDAO           *dao.ProductDAO
 	notificationCallback NotificationCallback // 通知回调（Mock触发）
 	logger               *logger.Logger
 }
@@ -46,6 +48,11 @@ func (s *OrderService) SetAdminOrderDAO(adminDAO *dao.OrderAdminDAO) {
 	s.adminDAO = adminDAO
 }
 
+// SetProductDAO 注入商品 DAO，用于在订单创建时固化 seller_id。
+func (s *OrderService) SetProductDAO(productDAO *dao.ProductDAO) {
+	s.productDAO = productDAO
+}
+
 // SetNotificationCallback 设置通知回调
 func (s *OrderService) SetNotificationCallback(callback NotificationCallback) {
 	s.notificationCallback = callback
@@ -53,9 +60,27 @@ func (s *OrderService) SetNotificationCallback(callback NotificationCallback) {
 
 // CreateOrder 创建订单
 func (s *OrderService) CreateOrder(ctx context.Context, auctionID, productID, winnerID int64, finalPrice decimal.Decimal) (*model.Order, error) {
+	var sellerID *int64
+	if s.productDAO != nil {
+		product, err := s.productDAO.GetByID(ctx, productID)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, fmt.Errorf("商品不存在: %d", productID)
+			}
+			s.logger.LogOperation(ctx, logger.OperationCreate, logger.ObjectOrder, fmt.Sprintf("%d", productID), false, err)
+			return nil, err
+		}
+		if product.OwnerID == nil {
+			err := fmt.Errorf("商品缺少商家归属: %d", productID)
+			s.logger.LogOperation(ctx, logger.OperationCreate, logger.ObjectOrder, fmt.Sprintf("%d", productID), false, err)
+			return nil, err
+		}
+		sellerID = product.OwnerID
+	}
 	order := &model.Order{
 		AuctionID:  auctionID,
 		ProductID:  productID,
+		SellerID:   sellerID,
 		WinnerID:   winnerID,
 		FinalPrice: finalPrice,
 		Status:     model.OrderStatusPending,
@@ -201,6 +226,25 @@ func (s *OrderService) ShipOrder(ctx context.Context, id int64) (*model.Order, e
 		}, nil)
 
 	return s.orderDAO.GetByID(ctx, id)
+}
+
+func (s *OrderService) ShipOrderForSeller(ctx context.Context, id, sellerID int64) (*model.Order, error) {
+	order, err := s.orderDAO.GetByIDAndSellerID(ctx, id, sellerID)
+	if err != nil {
+		return nil, err
+	}
+	if order.Status != model.OrderStatusPaid {
+		return nil, errors.New("订单状态不允许发货")
+	}
+	if err := s.orderDAO.ShipOrderForSeller(ctx, id, sellerID); err != nil {
+		return nil, err
+	}
+	if s.notificationCallback != nil {
+		go func() {
+			_ = s.notificationCallback.OnOrderShipped(ctx, order.WinnerID, id)
+		}()
+	}
+	return s.orderDAO.GetByIDAndSellerID(ctx, id, sellerID)
 }
 
 // CompleteOrder 完成订单（模拟）

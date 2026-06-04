@@ -262,6 +262,7 @@ func TestListItemHandler_Success(t *testing.T) {
 	body := `{"live_stream_id":1001,"product_id":5001,"price":"99.00","total_stock":100,"max_per_user":1}`
 	w := ut.PerformRequest(eng, http.MethodPost, "/api/v1/fixed-price/items", &ut.Body{Body: bytes.NewReader([]byte(body)), Len: len(body)},
 		ut.Header{Key: "X-User-ID", Value: "100"},
+		ut.Header{Key: "X-User-Role", Value: "merchant"},
 		ut.Header{Key: "Content-Type", Value: "application/json"})
 	resp := w.Result()
 	require.Equal(t, 200, resp.StatusCode())
@@ -281,10 +282,25 @@ func TestListItemHandler_NonOwner_403(t *testing.T) {
 	body := `{"live_stream_id":1001,"product_id":5001,"price":"99.00","total_stock":100}`
 	w := ut.PerformRequest(eng, http.MethodPost, "/api/v1/fixed-price/items", &ut.Body{Body: bytes.NewReader([]byte(body)), Len: len(body)},
 		ut.Header{Key: "X-User-ID", Value: "9999"},
+		ut.Header{Key: "X-User-Role", Value: "merchant"},
 		ut.Header{Key: "Content-Type", Value: "application/json"})
 	resp := w.Result()
 	assert.Equal(t, 403, resp.StatusCode())
 	assert.Equal(t, "FP_NOT_STREAM_OWNER", decodeFPErr(t, resp.Body()).Code)
+}
+
+func TestListItemHandler_AdminRoleRejected(t *testing.T) {
+	uc := &fakeFixedPriceUsecase{listResult: &model.FixedPriceItem{ID: 7001}}
+	eng := newFixedPriceTestServer(uc, &fakeFPBalanceProvider{})
+	body := `{"live_stream_id":1001,"product_id":5001,"price":"99.00","total_stock":100}`
+	w := ut.PerformRequest(eng, http.MethodPost, "/api/v1/fixed-price/items", &ut.Body{Body: bytes.NewReader([]byte(body)), Len: len(body)},
+		ut.Header{Key: "X-User-ID", Value: "99"},
+		ut.Header{Key: "X-User-Role", Value: "admin"},
+		ut.Header{Key: "Content-Type", Value: "application/json"})
+	resp := w.Result()
+	assert.Equal(t, 403, resp.StatusCode())
+	assert.Equal(t, "FP_FORBIDDEN_ROLE", decodeFPErr(t, resp.Body()).Code)
+	assert.Empty(t, uc.listReqs)
 }
 
 func TestListItemHandler_MissingUser_401(t *testing.T) {
@@ -300,7 +316,8 @@ func TestOfflineHandler_Success(t *testing.T) {
 	uc := &fakeFixedPriceUsecase{}
 	eng := newFixedPriceTestServer(uc, &fakeFPBalanceProvider{})
 	w := ut.PerformRequest(eng, http.MethodPost, "/api/v1/fixed-price/items/7001/offline", nil,
-		ut.Header{Key: "X-User-ID", Value: "100"})
+		ut.Header{Key: "X-User-ID", Value: "100"},
+		ut.Header{Key: "X-User-Role", Value: "merchant"})
 	resp := w.Result()
 	require.Equal(t, 200, resp.StatusCode())
 	assert.Equal(t, []int64{7001}, uc.offlineCalls)
@@ -310,10 +327,23 @@ func TestOfflineHandler_NonOwner_403(t *testing.T) {
 	uc := &fakeFixedPriceUsecase{offlineErr: service.ErrNotStreamOwner}
 	eng := newFixedPriceTestServer(uc, &fakeFPBalanceProvider{})
 	w := ut.PerformRequest(eng, http.MethodPost, "/api/v1/fixed-price/items/7001/offline", nil,
-		ut.Header{Key: "X-User-ID", Value: "9999"})
+		ut.Header{Key: "X-User-ID", Value: "9999"},
+		ut.Header{Key: "X-User-Role", Value: "merchant"})
 	resp := w.Result()
 	assert.Equal(t, 403, resp.StatusCode())
 	assert.Equal(t, "FP_NOT_STREAM_OWNER", decodeFPErr(t, resp.Body()).Code)
+}
+
+func TestOfflineHandler_AdminRoleRejected(t *testing.T) {
+	uc := &fakeFixedPriceUsecase{}
+	eng := newFixedPriceTestServer(uc, &fakeFPBalanceProvider{})
+	w := ut.PerformRequest(eng, http.MethodPost, "/api/v1/fixed-price/items/7001/offline", nil,
+		ut.Header{Key: "X-User-ID", Value: "99"},
+		ut.Header{Key: "X-User-Role", Value: "admin"})
+	resp := w.Result()
+	assert.Equal(t, 403, resp.StatusCode())
+	assert.Equal(t, "FP_FORBIDDEN_ROLE", decodeFPErr(t, resp.Body()).Code)
+	assert.Empty(t, uc.offlineCalls)
 }
 
 func TestDetailHandler_Success(t *testing.T) {
@@ -488,7 +518,8 @@ func TestListHandler_ReturnsFullFields(t *testing.T) {
 	})
 	w := ut.PerformRequest(eng, http.MethodPost, "/api/v1/fixed-price/items", &ut.Body{Body: bytes.NewReader(body), Len: len(body)},
 		ut.Header{Key: "Content-Type", Value: "application/json"},
-		ut.Header{Key: "X-User-ID", Value: "100"})
+		ut.Header{Key: "X-User-ID", Value: "100"},
+		ut.Header{Key: "X-User-Role", Value: "merchant"})
 	resp := w.Result()
 	require.Equal(t, 200, resp.StatusCode())
 	var out map[string]any

@@ -40,6 +40,18 @@ func (d *LiveStreamDAO) GetByID(ctx context.Context, id int64) (*model.LiveStrea
 	return &liveStream, nil
 }
 
+// GetByIDAndCreatorID returns a live stream only when it belongs to creatorID.
+func (d *LiveStreamDAO) GetByIDAndCreatorID(ctx context.Context, id, creatorID int64) (*model.LiveStream, error) {
+	var liveStream model.LiveStream
+	err := d.db.WithContext(ctx).
+		Where("id = ? AND creator_id = ?", id, creatorID).
+		First(&liveStream).Error
+	if err != nil {
+		return nil, err
+	}
+	return &liveStream, nil
+}
+
 // GetByIDs 批量根据 ID 获取直播间，返回 id -> *LiveStream 映射
 // （T3.3 / spec B §4.1：/internal/live-streams/batch 内部接口）。
 func (d *LiveStreamDAO) GetByIDs(ctx context.Context, ids []int64) (map[int64]*model.LiveStream, error) {
@@ -169,6 +181,31 @@ func (d *LiveStreamDAO) ListAdmin(ctx context.Context, offset, limit int, status
 	}
 
 	// 获取列表
+	err := query.Offset(offset).Limit(limit).Order("created_at DESC").Find(&liveStreams).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return liveStreams, total, nil
+}
+
+// ListAdminScoped returns all live streams for admins or only creator streams for merchants.
+func (d *LiveStreamDAO) ListAdminScoped(ctx context.Context, offset, limit int, statusFilter *int, creatorID *int64) ([]model.LiveStream, int64, error) {
+	var liveStreams []model.LiveStream
+	var total int64
+
+	query := d.db.WithContext(ctx).Model(&model.LiveStream{})
+	if creatorID != nil {
+		query = query.Where("creator_id = ?", *creatorID)
+	}
+	if statusFilter != nil {
+		query = query.Where("status = ?", *statusFilter)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
 	err := query.Offset(offset).Limit(limit).Order("created_at DESC").Find(&liveStreams).Error
 	if err != nil {
 		return nil, 0, err

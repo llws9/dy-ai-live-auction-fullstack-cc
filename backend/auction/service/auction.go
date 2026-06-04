@@ -45,6 +45,7 @@ func (s *AuctionService) SetSkyLampDAO(skyLampDAO *dao.SkyLampDAO) {
 // CreateAuctionRequest 创建竞拍请求
 type CreateAuctionRequest struct {
 	ProductID int64
+	CreatorID *int64
 	StartTime time.Time
 	EndTime   time.Time
 }
@@ -57,6 +58,7 @@ func (s *AuctionService) CreateAuction(ctx context.Context, req *CreateAuctionRe
 
 	auction := &model.Auction{
 		ProductID:    req.ProductID,
+		CreatorID:    req.CreatorID,
 		Status:       model.AuctionStatusPending,
 		CurrentPrice: decimal.Zero,
 		StartTime:    req.StartTime,
@@ -76,9 +78,9 @@ func (s *AuctionService) GetAuction(ctx context.Context, id int64) (*model.Aucti
 	return s.auctionDAO.GetByID(ctx, id)
 }
 
-// CancelAuction 取消竞拍
-func (s *AuctionService) CancelAuction(ctx context.Context, id int64) error {
-	auction, err := s.auctionDAO.GetByID(ctx, id)
+// CancelAuctionByCreator cancels an auction only when it belongs to creatorID.
+func (s *AuctionService) CancelAuctionByCreator(ctx context.Context, id, creatorID int64) error {
+	auction, err := s.auctionDAO.GetByIDAndCreatorID(ctx, id, creatorID)
 	if err != nil {
 		return err
 	}
@@ -249,6 +251,17 @@ func (s *AuctionService) IsAuctionActive(ctx context.Context, id int64) (bool, e
 // ListAuctions 获取竞拍列表
 func (s *AuctionService) ListAuctions(ctx context.Context, status *model.AuctionStatus, page, pageSize int) ([]model.Auction, int64, error) {
 	return s.auctionDAO.List(ctx, status, page, pageSize)
+}
+
+func (s *AuctionService) ListAdminAuctions(ctx context.Context, status *model.AuctionStatus, page, pageSize int, creatorID *int64) ([]model.Auction, int64, error) {
+	return s.auctionDAO.ListAdminScoped(ctx, status, page, pageSize, creatorID)
+}
+
+func (s *AuctionService) GetAdminAuction(ctx context.Context, id int64, creatorID *int64) (*model.Auction, error) {
+	if creatorID != nil {
+		return s.auctionDAO.GetByIDAndCreatorID(ctx, id, *creatorID)
+	}
+	return s.auctionDAO.GetByID(ctx, id)
 }
 
 // ListAllAuctions 获取所有竞拍（不分页）
