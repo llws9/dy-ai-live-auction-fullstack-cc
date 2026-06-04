@@ -68,6 +68,19 @@ func requireFPUser(c *app.RequestContext) (int64, bool) {
 	return uid, true
 }
 
+func requireFPMerchant(c *app.RequestContext) (int64, bool) {
+	uid, ok := requireFPUser(c)
+	if !ok {
+		return 0, false
+	}
+	role := string(c.GetHeader("X-User-Role"))
+	if role != "merchant" {
+		writeFPErr(c, 403, "FP_FORBIDDEN_ROLE", "平台管理员不具备一口价代运营权限", nil)
+		return 0, false
+	}
+	return uid, true
+}
+
 func parseFPItemID(c *app.RequestContext) (int64, bool) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil || id <= 0 {
@@ -175,7 +188,7 @@ type listItemBody struct {
 
 // List POST /fixed-price/items（spec §4.1 / T10）。CreatorID 取自登录用户，不信任请求体。
 func (h *FixedPriceHandler) List(ctx context.Context, c *app.RequestContext) {
-	userID, ok := requireFPUser(c)
+	userID, ok := requireFPMerchant(c)
 	if !ok {
 		return
 	}
@@ -228,7 +241,7 @@ func (h *FixedPriceHandler) Offline(ctx context.Context, c *app.RequestContext) 
 	if !ok {
 		return
 	}
-	userID, ok := requireFPUser(c)
+	userID, ok := requireFPMerchant(c)
 	if !ok {
 		return
 	}

@@ -33,11 +33,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `10` |
-| Done | `6` |
+| Done | `7` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `4` |
-| Last Updated | `2026-06-04 22:40` |
+| Pending | `3` |
+| Last Updated | `2026-06-04 22:46` |
 
 ## Task Matrix
 
@@ -51,7 +51,7 @@
 | `T006` | `Seller-scoped orders` | `pending` | `unassigned` | `W4` | `T001,T002,T003` | `Order seller scope` | `backend/product/model/order.go; backend/product/dao/order*.go; backend/product/service/order*.go; backend/product/handler/order*.go; backend/gateway/router/router.go` |
 | `T007` | `Role-aware statistics` | `pending` | `unassigned` | `W4` | `T001,T002,T006` | `Product statistics role scope` | `backend/product/handler/statistics.go; backend/product/service/statistics.go; backend/product/dao/statistics.go; backend/gateway/router/router.go` |
 | `T008` | `Auction service admin frontend scope` | `done` | `main-agent` | `W3` | `T001` | `Auction admin endpoints and creator scope` | `backend/auction/handler/auction.go; backend/auction/service/auction.go; backend/auction/dao/auction.go; backend/gateway/router/router.go` |
-| `T009` | `Fixed-price merchant-only write enforcement` | `pending` | `unassigned` | `W3` | `T001` | `Fixed-price merchant-only write guard` | `backend/auction/handler/fixed_price.go; backend/auction/handler/fixed_price_test.go; backend/gateway/router/router.go` |
+| `T009` | `Fixed-price merchant-only write enforcement` | `done` | `main-agent` | `W3` | `T001` | `Fixed-price merchant-only write guard` | `backend/auction/handler/fixed_price.go; backend/auction/handler/fixed_price_test.go; backend/gateway/router/router.go` |
 | `T010` | `Integration verification and API smoke tests` | `pending` | `unassigned` | `W5` | `T003,T004,T005,T006,T007,T008,T009` | `Integration verification` | `backend/test/scenarios/admin_role_visibility_test.go; service route tests as needed` |
 
 ## Wave Plan
@@ -431,10 +431,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-04 22:43` |
+| Completed At | `2026-06-04 22:46` |
 | Branch | `feat/admin-role-backend` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-role-backend` |
 | Depends On | `-` |
@@ -450,11 +450,27 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `TDD Red -> Green -> Verify evidence` | `not_run` | `pending` |
+| `cd backend/auction && go test ./handler -run 'TestListItemHandler_AdminRoleRejected|TestOfflineHandler_AdminRoleRejected' -count=1` | Red: failed before implementation because admin role still reached usecase; Green: passed after handler role guard | `ok auction-service/handler 1.060s` | `passed` |
+| `cd backend/gateway && go test ./router -run 'TestFixedPriceCreateAndOfflineRoutes_RequireMerchantOnly' -count=1` | Red: failed before route guard change because admin token was forwarded; Green: passed after `RequireMerchantOnly` | `ok gateway-service/router 0.908s` | `passed` |
+| `cd backend/auction && go test ./handler -run 'TestListItemHandler|TestOfflineHandler|TestFixedPrice|TestAdminLiveStreamFixedPriceListHandler' -count=1` | Verify: affected fixed-price handler tests pass | `ok auction-service/handler 2.092s` | `passed` |
+| `cd backend/auction && go test ./... -count=1` | Verify: Auction full suite passes after rerun; first run had unrelated WS timeout | `ok auction-service/...` | `passed` |
+| `cd backend/gateway && go test ./... -count=1` | Verify: Gateway full suite passes | `ok gateway-service/...` | `passed` |
+| `git diff --check` | Verify: no whitespace errors | `no output` | `passed` |
+
+**Modified Files**
+
+- `backend/auction/handler/fixed_price.go`
+- `backend/auction/handler/fixed_price_test.go`
+- `backend/gateway/router/router.go`
+- `backend/gateway/router/fixed_price_route_test.go`
+
+**Risks / Blockers**
+
+- No blocker. One initial `go test ./...` run in auction-service failed due unrelated WebSocket broadcast timeout; immediate rerun passed all packages.
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `当前分支/worktree：feat/admin-role-backend @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-role-backend`
 
 
 ### T010 - `Integration verification and API smoke tests`
@@ -501,6 +517,8 @@
 | `2026-06-04 22:14` | `T005 completed` | `Role-aware live stream management implemented and verified` | `T008/T009 can continue; T006/T007 remain pending` | `main-agent` |
 | `2026-06-04 22:27` | `Dispatch T008` | `T001 done; Auction admin frontend scope can start` | `Run sequentially to avoid gateway router conflicts` | `main-agent` |
 | `2026-06-04 22:40` | `T008 completed` | `Auction admin frontend scope implemented and verified` | `T009 can continue; T006/T007 remain pending` | `main-agent` |
+| `2026-06-04 22:43` | `Dispatch T009` | `T001 done; fixed-price write enforcement can start` | `Run sequentially to avoid gateway router conflicts` | `main-agent` |
+| `2026-06-04 22:46` | `T009 completed` | `Fixed-price write routes are merchant-only at Gateway and Auction handler layers` | `T006/T007/T010 remain pending` | `main-agent` |
 
 ## Final Review Checklist
 

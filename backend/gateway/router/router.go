@@ -91,9 +91,9 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	v1.GET("/auctions/:id/ranking", auctionProxy.Forward)
 
 	// ========== 一口价秒杀路由（A5 M1 / spec §4.1） ==========
-	// 上架 / 下架需要主播或管理员权限。
-	authGroup.POST("/fixed-price/items", middleware.RequireStreamer(), auctionProxy.Forward)
-	authGroup.POST("/fixed-price/items/:id/offline", middleware.RequireStreamer(), auctionProxy.Forward)
+	// 上架 / 下架是商家经营动作，平台管理员不具备代运营权限。
+	authGroup.POST("/fixed-price/items", middleware.RequireMerchantOnly(), auctionProxy.Forward)
+	authGroup.POST("/fixed-price/items/:id/offline", middleware.RequireMerchantOnly(), auctionProxy.Forward)
 	// 商品详情公开访问。
 	v1.GET("/fixed-price/items/:id", auctionProxy.Forward)
 	// 抢购 / 查询我是否已购需要登录；X-Idempotency-Key 由 proxy 透传给下游。

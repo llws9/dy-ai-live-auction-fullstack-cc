@@ -118,7 +118,7 @@ func TestFixedPriceMyPurchaseRoute_RequireJWT(t *testing.T) {
 	})
 }
 
-func TestFixedPriceCreateAndOfflineRoutes_RequireStreamer(t *testing.T) {
+func TestFixedPriceCreateAndOfflineRoutes_RequireMerchantOnly(t *testing.T) {
 	h, cfg, calls, lastMethod, _, _, _ := newFixedPriceTestGateway(t)
 
 	t.Run("create as buyer is rejected before auction service", func(t *testing.T) {
@@ -152,6 +152,21 @@ func TestFixedPriceCreateAndOfflineRoutes_RequireStreamer(t *testing.T) {
 		assert.Equal(t, http.MethodPost, lastMethod.Load().(string))
 	})
 
+	t.Run("create as admin is rejected before auction service", func(t *testing.T) {
+		calls.Store(0)
+		token, err := middleware.GenerateToken(cfg.JWT.Secret, 99, "admin", 2, 24)
+		assert.NoError(t, err)
+		w := ut.PerformRequest(
+			h.Engine,
+			http.MethodPost,
+			"/api/v1/fixed-price/items",
+			nil,
+			ut.Header{Key: "Authorization", Value: "Bearer " + token},
+		)
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode())
+		assert.Equal(t, int64(0), calls.Load())
+	})
+
 	t.Run("offline as buyer is rejected before auction service", func(t *testing.T) {
 		calls.Store(0)
 		token, err := middleware.GenerateToken(cfg.JWT.Secret, 42, "buyer", 0, 24)
@@ -180,6 +195,21 @@ func TestFixedPriceCreateAndOfflineRoutes_RequireStreamer(t *testing.T) {
 		)
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode())
 		assert.Equal(t, int64(1), calls.Load())
+	})
+
+	t.Run("offline as admin is rejected before auction service", func(t *testing.T) {
+		calls.Store(0)
+		token, err := middleware.GenerateToken(cfg.JWT.Secret, 99, "admin", 2, 24)
+		assert.NoError(t, err)
+		w := ut.PerformRequest(
+			h.Engine,
+			http.MethodPost,
+			"/api/v1/fixed-price/items/77/offline",
+			nil,
+			ut.Header{Key: "Authorization", Value: "Bearer " + token},
+		)
+		assert.Equal(t, http.StatusForbidden, w.Result().StatusCode())
+		assert.Equal(t, int64(0), calls.Load())
 	})
 }
 
