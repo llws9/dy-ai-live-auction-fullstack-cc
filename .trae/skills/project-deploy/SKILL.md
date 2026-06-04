@@ -44,7 +44,7 @@ Use this when the user enters `/dp-dev`.
 scripts/deploy-dev.sh status
 ```
 
-3. If status shows the working tree is not clean or HEAD is not `origin/main`, stop and ask whether to create an isolated worktree or sync the current tree.
+3. If status shows `HEAD != origin/main`, stop; if status shows non-ignored local changes, stop; if status shows only ignored-local changes, continue and report them.
 4. If safe, run:
 
 ```bash
@@ -115,6 +115,8 @@ scripts/deploy-prod.sh verify
 - `/dp-dev` must not change source config to work around localhost, IPv6, or port conflicts.
 - Do not use `git reset --hard`, `git checkout --`, or destructive cleanup unless the user explicitly approves.
 - Do not silently discard local changes.
+- Local changes whose paths match `.gitignore` are allowed for `/dp-dev` and `/dp-prod`; report them as ignored-local changes and do not delete, reset, stash, or overwrite them.
+- Local changes that do not match `.gitignore` must still block deployment.
 
 ## Failure Handling
 
