@@ -397,6 +397,20 @@ export const bidApi = {
   },
 };
 
+// 点天灯 API
+export const skyLampApi = {
+  // 开启点天灯订阅
+  startSubscription: (auctionId: number) => {
+    return post<any>('/sky-lamp/subscriptions', { auction_id: auctionId }, { showError: false });
+  },
+
+  // 获取当前用户点天灯订阅
+  listSubscriptions: (status?: number) => {
+    const query = status === undefined ? '' : `?status=${status}`;
+    return get<any>(`/sky-lamp/subscriptions${query}`, { showError: false });
+  },
+};
+
 // 关注 API
 export const followApi = {
   // 关注直播间

@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import LiveRoomSlide from '../LiveRoomSlide';
-import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '../../../services/api';
+import { auctionApi, bidApi, followApi, liveStreamApi, productApi, skyLampApi } from '../../../services/api';
 import WebSocketService from '../../../services/websocket';
 import { useFixedPriceItems } from '../../../hooks/useFixedPriceItems';
 
@@ -25,6 +25,10 @@ jest.mock('../../../services/api', () => ({
   bidApi: {
     getRanking: jest.fn(),
     placeBid: jest.fn(),
+  },
+  skyLampApi: {
+    startSubscription: jest.fn(),
+    listSubscriptions: jest.fn(),
   },
   followApi: {
     followLiveStream: jest.fn(),
@@ -87,6 +91,7 @@ jest.mock('../../../components/Toast', () => ({
 
 const mockedAuctionApi = auctionApi as jest.Mocked<typeof auctionApi>;
 const mockedBidApi = bidApi as jest.Mocked<typeof bidApi>;
+const mockedSkyLampApi = skyLampApi as jest.Mocked<typeof skyLampApi>;
 const mockedFollowApi = followApi as jest.Mocked<typeof followApi>;
 const mockedLiveStreamApi = liveStreamApi as jest.Mocked<typeof liveStreamApi>;
 const mockedProductApi = productApi as jest.Mocked<typeof productApi>;
@@ -153,6 +158,15 @@ describe('LiveRoomSlide', () => {
       current_price: 1300,
       ranking: [{ rank: 1, user_id: 9, user_name: '测试用户', amount: 1300 }],
     });
+    mockedSkyLampApi.startSubscription.mockResolvedValue({
+      code: 200,
+      message: '点天灯订阅已开启',
+      subscription: { id: 18, auction_id: 5 },
+    });
+    mockedSkyLampApi.listSubscriptions.mockResolvedValue({
+      code: 200,
+      subscriptions: [],
+    });
     mockedFollowApi.followLiveStream.mockResolvedValue({});
     mockedFollowApi.unfollowLiveStream.mockResolvedValue({});
     mockedFollowApi.getFollowersStats.mockResolvedValue({ count: 12 });
@@ -205,6 +219,93 @@ describe('LiveRoomSlide', () => {
     // 出价成功后 sheet 自动收起，重新展开以校验排行已刷新
     fireEvent.click(screen.getByRole('button', { name: '出价' }));
     expect(await screen.findByText('测试用户')).toBeInTheDocument();
+  });
+
+  it('starts sky lamp only after confirming the A+C bid drawer action', async () => {
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
+    const skyLampButton = screen.getByRole('button', { name: /点天灯/ });
+    expect(skyLampButton).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /立即出价/ })).toBeInTheDocument();
+
+    fireEvent.click(skyLampButton);
+
+    expect(screen.getByText('确认开启点天灯？')).toBeInTheDocument();
+    expect(mockedSkyLampApi.startSubscription).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: '确认开启' }));
+
+    await waitFor(() => expect(mockedSkyLampApi.startSubscription).toHaveBeenCalledWith(5));
+    expect(mockShowGlobalToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'success',
+        title: '点天灯已开启',
+      })
+    );
+  });
+
+  it('locks the sky lamp state, closes the drawer, and highlights the dock after confirmation', async () => {
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
+    fireEvent.click(screen.getByRole('button', { name: /点天灯/ }));
+    fireEvent.click(screen.getByRole('button', { name: '确认开启' }));
+
+    await waitFor(() => expect(mockedSkyLampApi.startSubscription).toHaveBeenCalledWith(5));
+    expect(screen.queryByText('确认开启点天灯？')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('location-search')).toBeEmptyDOMElement());
+
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
+    const lockedSkyLampButton = screen.getByRole('button', { name: /守护中/ });
+    expect(lockedSkyLampButton).toBeDisabled();
+    expect(lockedSkyLampButton.querySelector('[data-testid="sky-lamp-floating-icon"]')).toBeInTheDocument();
+    expect(screen.getByText('测试用户 开启点天灯，自动守住领先')).toBeInTheDocument();
+    expect(screen.getByTestId('bid-dock')).toHaveAttribute('data-sky-lamp-active', 'true');
+    expect(screen.getByTestId('dock-sky-lamp-icon')).toBeInTheDocument();
+  });
+
+  it('treats an already-active sky lamp subscription as active UI state', async () => {
+    mockedSkyLampApi.startSubscription.mockRejectedValueOnce(
+      Object.assign(new Error('已有活跃的点天灯订阅'), { status: 400 })
+    );
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
+    fireEvent.click(screen.getByRole('button', { name: /点天灯/ }));
+    fireEvent.click(screen.getByRole('button', { name: '确认开启' }));
+
+    await waitFor(() => expect(mockedSkyLampApi.startSubscription).toHaveBeenCalledWith(5));
+    expect(screen.queryByText('确认开启点天灯？')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('location-search')).toBeEmptyDOMElement());
+
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
+    expect(screen.getByRole('button', { name: /守护中/ })).toBeDisabled();
+    expect(screen.getByTestId('bid-dock')).toHaveAttribute('data-sky-lamp-active', 'true');
+    expect(screen.getByText('测试用户 开启点天灯，自动守住领先')).toBeInTheDocument();
+  });
+
+  it('restores active sky lamp state from existing subscriptions after refresh', async () => {
+    mockedSkyLampApi.listSubscriptions.mockResolvedValueOnce({
+      code: 200,
+      subscriptions: [{ id: 18, auction_id: 5, status: 1 }],
+    });
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    await waitFor(() => expect(mockedSkyLampApi.listSubscriptions).toHaveBeenCalledWith(1));
+    expect(screen.getByTestId('bid-dock')).toHaveAttribute('data-sky-lamp-active', 'true');
+
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
+    expect(screen.getByRole('button', { name: /守护中/ })).toBeDisabled();
+    expect(screen.getByTestId('dock-sky-lamp-icon')).toBeInTheDocument();
   });
 
   it('uses auction rule as authoritative increment when product detail has no rules', async () => {

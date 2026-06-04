@@ -11,6 +11,7 @@ interface BidDockProps {
   isAuthenticated: boolean;
   bidDisabled?: boolean;
   bidDisabledText?: string;
+  skyLampActive?: boolean;
   onOpen: (sheet: 'bid' | 'info') => void;
   onClose: () => void;
   onRequireLogin: () => void;
@@ -31,6 +32,7 @@ const BidDock: React.FC<BidDockProps> = ({
   isAuthenticated,
   bidDisabled = false,
   bidDisabledText = '已结束',
+  skyLampActive = false,
   onOpen,
   onClose,
   onRequireLogin,
@@ -51,10 +53,23 @@ const BidDock: React.FC<BidDockProps> = ({
 
   return (
     <>
-      <div className={styles.dock} role="group" onClick={() => onOpen('info')}>
+      <div
+        className={`${styles.dock} ${skyLampActive ? styles.dockSkyLampActive : ''}`}
+        role="group"
+        data-testid="bid-dock"
+        data-sky-lamp-active={skyLampActive ? 'true' : 'false'}
+        onClick={() => onOpen('info')}
+      >
         <div className={styles.dockProduct}>
           {productImage ? (
-            <img src={productImage} alt={productName} />
+            <span className={styles.dockImageWrap}>
+              <img src={productImage} alt={productName} />
+              {skyLampActive && (
+                <i className={`${styles.skyLampIcon} ${styles.dockSkyLampIcon}`} data-testid="dock-sky-lamp-icon" aria-hidden="true">
+                  <span />
+                </i>
+              )}
+            </span>
           ) : (
             <div className={styles.dockFallback}>品</div>
           )}
