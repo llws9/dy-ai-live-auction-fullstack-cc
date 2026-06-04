@@ -263,7 +263,7 @@ func GenerateLiveStreams(cfg *SeedConfig, users []model.User) []model.LiveStream
 
 // GenerateAuctionRules 生成竞拍规则数据 (T029)
 func GenerateAuctionRules(cfg *SeedConfig, products []model.Product) []model.AuctionRule {
-	auctionRules := make([]model.AuctionRule, 0, cfg.AuctionRulesCount)
+	auctionRules := make([]model.AuctionRule, 0, len(products))
 
 	now := time.Now()
 	r := rand.New(rand.NewSource(now.UnixNano() + 3))
@@ -276,9 +276,7 @@ func GenerateAuctionRules(cfg *SeedConfig, products []model.Product) []model.Auc
 		}
 	}
 
-	for i := 0; i < cfg.AuctionRulesCount; i++ {
-		product := publishedProducts[r.Intn(len(publishedProducts))]
-
+	for _, product := range publishedProducts {
 		// 起拍价：随机设定
 		startPrice := float64(50 + r.Intn(500))
 		// 加价幅度：5-50元

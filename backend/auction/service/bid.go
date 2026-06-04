@@ -131,6 +131,9 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 	if err != nil {
 		return nil, fmt.Errorf("获取竞拍规则失败: %w", err)
 	}
+	if rule == nil {
+		return nil, errors.New("竞拍规则不存在")
+	}
 
 	// 5. 校验出价金额
 	minBidAmount := auction.CurrentPrice.Add(rule.Increment)

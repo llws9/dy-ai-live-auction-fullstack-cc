@@ -85,6 +85,9 @@ func (s *SkyLampService) StartSubscription(ctx context.Context, userID, auctionI
 	if err != nil {
 		return nil, fmt.Errorf("获取竞拍规则失败: %w", err)
 	}
+	if rule == nil {
+		return nil, errors.New("竞拍规则不存在")
+	}
 
 	initialPrice := auction.CurrentPrice
 	initialBidAmount := initialPrice.Add(rule.Increment)
@@ -210,6 +213,9 @@ func (s *SkyLampService) TriggerAutoBid(ctx context.Context, auctionID int64, cu
 	rule, err := s.bidService.ruleDAO.GetByProductID(ctx, auction.ProductID)
 	if err != nil {
 		return fmt.Errorf("获取竞拍规则失败: %w", err)
+	}
+	if rule == nil {
+		return errors.New("竞拍规则不存在")
 	}
 
 	subscriptions, err := s.skyLampDAO.GetActiveByAuction(ctx, auctionID)
