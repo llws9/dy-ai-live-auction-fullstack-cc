@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { notificationApi, NotificationItem } from '../../services/notification';
 import { getCountBucket, trackEvent } from '../../utils/trackEvent';
+import { notifyTouchpointSummaryInvalidated } from '../../utils/touchpointSummaryEvents';
 import PageHeader from '@/components/shared/PageHeader';
 import styles from './Notifications.module.css';
 
@@ -189,6 +190,7 @@ const NotificationsPage: React.FC = () => {
       )
     );
     setUnreadCount((count) => Math.max(0, count - 1));
+    notifyTouchpointSummaryInvalidated();
   };
 
   const handleOpenNotification = async (notification: NotificationRecord) => {
@@ -219,6 +221,7 @@ const NotificationsPage: React.FC = () => {
       const now = new Date().toISOString();
       setNotifications((items) => items.map((item) => ({ ...item, read_at: item.read_at || now, is_read: true })));
       setUnreadCount(0);
+      notifyTouchpointSummaryInvalidated();
       trackEvent('mark_read', {
         source: 'notification_center',
         entry: 'mark_all_read',

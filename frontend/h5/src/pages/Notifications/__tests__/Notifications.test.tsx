@@ -116,6 +116,8 @@ describe('Notifications migration', () => {
   });
 
   it('tracks mark all read success', async () => {
+    const dispatchSpy = jest.spyOn(window, 'dispatchEvent');
+
     render(
       <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <NotificationsPage />
@@ -133,6 +135,9 @@ describe('Notifications migration', () => {
       type: 'all',
       result: 'success',
     });
+    expect(dispatchSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'touchpoint-summary-invalidated' })
+    );
   });
 
   it('tracks mark all read failure', async () => {

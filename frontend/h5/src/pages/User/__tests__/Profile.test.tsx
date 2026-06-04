@@ -148,4 +148,26 @@ describe('Profile migration', () => {
     await waitFor(() => expect(mockLogout).toHaveBeenCalledTimes(1));
     expect(mockNavigate).toHaveBeenCalledWith('/login');
   });
+
+  it('shows unread notification badge on the notification center entry', async () => {
+    mockedNotificationApi.getTouchpointSummary.mockResolvedValue({
+      unreadTotal: 1,
+      pendingPayment: 0,
+      wonNotPaid: 0,
+      outbid: 1,
+      endingSoon: 0,
+    });
+
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <Profile />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('林见山')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /消息通知/ })).toContainElement(
+      screen.getByLabelText('1 条待处理提醒')
+    );
+    expect(screen.queryByRole('link', { name: /我的竞拍.*1/ })).not.toBeInTheDocument();
+  });
 });

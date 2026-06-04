@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { notificationApi, TouchpointSummary } from '../services/notification';
 import { useAuth } from '../store/authContext';
+import { TOUCHPOINT_SUMMARY_INVALIDATED_EVENT } from '../utils/touchpointSummaryEvents';
 
 export interface TouchpointNotifications {
   pendingPayment: number;
@@ -19,11 +20,21 @@ const EMPTY: TouchpointSummary = {
 export function useTouchpointNotifications(): TouchpointNotifications {
   const [summary, setSummary] = useState<TouchpointSummary>(EMPTY);
   const [summaryLoaded, setSummaryLoaded] = useState(false);
+  const [refreshSignal, setRefreshSignal] = useState(0);
   const { isAuthenticated, loading: authLoading, token, user } = useAuth();
   const userId = user?.id ?? null;
   const identityRef = useRef({ token, userId });
 
   identityRef.current = { token, userId };
+
+  useEffect(() => {
+    const refresh = () => setRefreshSignal((value) => value + 1);
+
+    window.addEventListener(TOUCHPOINT_SUMMARY_INVALIDATED_EVENT, refresh);
+    return () => {
+      window.removeEventListener(TOUCHPOINT_SUMMARY_INVALIDATED_EVENT, refresh);
+    };
+  }, []);
 
   useEffect(() => {
     if (authLoading || !isAuthenticated || !token || userId === null) {
@@ -60,7 +71,7 @@ export function useTouchpointNotifications(): TouchpointNotifications {
     return () => {
       alive = false;
     };
-  }, [authLoading, isAuthenticated, token, userId]);
+  }, [authLoading, isAuthenticated, token, userId, refreshSignal]);
 
   return {
     pendingPayment: summary.pendingPayment,

@@ -149,6 +149,37 @@ describe('MobileShell', () => {
     );
   });
 
+  it('refreshes bottom nav badge when notification summary is invalidated', async () => {
+    mockGetTouchpointSummary
+      .mockResolvedValueOnce({
+        unreadTotal: 1,
+        pendingPayment: 0,
+        wonNotPaid: 0,
+        outbid: 1,
+        endingSoon: 0,
+      })
+      .mockResolvedValueOnce({
+        unreadTotal: 0,
+        pendingPayment: 0,
+        wonNotPaid: 0,
+        outbid: 0,
+        endingSoon: 0,
+      });
+
+    render(
+      <MemoryRouter initialEntries={['/profile']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <BottomNav />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByLabelText('1 条待处理提醒')).toHaveTextContent('1');
+
+    fireEvent(window, new CustomEvent('touchpoint-summary-invalidated'));
+
+    await waitFor(() => expect(mockGetTouchpointSummary).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByLabelText('1 条待处理提醒')).not.toBeInTheDocument());
+  });
+
   it('tracks profile tab entry clicks from bottom navigation', async () => {
     render(
       <MemoryRouter initialEntries={['/']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>

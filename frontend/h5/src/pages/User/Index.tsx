@@ -97,7 +97,7 @@ function orderStatusLabel(status?: number | string) {
 
 const UserCenter: React.FC = () => {
   const { user: authUser, logout } = useAuth();
-  const { pendingPayment } = useTouchpointNotifications();
+  const { pendingPayment, unreadTotal } = useTouchpointNotifications();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileUser | null>(authUser);
   const [balance, setBalance] = useState<BalanceData | null>(null);
@@ -302,7 +302,10 @@ const UserCenter: React.FC = () => {
         </Link>
         <Link to="/notifications" className={styles.menuItem} onClick={trackNotificationCenterClick}>
           <span className={styles.menuIcon}>N</span>
-          <span>消息通知</span>
+          <span className={styles.menuLabel}>
+            消息通知
+            <BadgeDot count={unreadTotal} className={styles.menuBadge} />
+          </span>
           <b>›</b>
         </Link>
         <Link to="/addresses" className={styles.menuItem}>
