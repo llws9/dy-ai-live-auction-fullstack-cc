@@ -48,6 +48,18 @@ func (d *AuctionDAO) GetByID(ctx context.Context, id int64) (*model.Auction, err
 	return &auction, nil
 }
 
+// GetByIDAndCreatorID returns an auction only when it belongs to creatorID.
+func (d *AuctionDAO) GetByIDAndCreatorID(ctx context.Context, id, creatorID int64) (*model.Auction, error) {
+	var auction model.Auction
+	err := d.db.WithContext(ctx).
+		Where("id = ? AND creator_id = ?", id, creatorID).
+		First(&auction).Error
+	if err != nil {
+		return nil, err
+	}
+	return &auction, nil
+}
+
 // GetByProductID 根据商品 ID 获取竞拍
 func (d *AuctionDAO) GetByProductID(ctx context.Context, productID int64) (*model.Auction, error) {
 	var auction model.Auction
@@ -157,6 +169,32 @@ func (d *AuctionDAO) List(ctx context.Context, status *model.AuctionStatus, page
 	}
 
 	// 分页查询
+	offset := (page - 1) * pageSize
+	err := query.Order("id DESC").
+		Offset(offset).
+		Limit(pageSize).
+		Find(&auctions).Error
+
+	return auctions, total, err
+}
+
+// ListAdminScoped returns all auctions for admins or only creator auctions for merchants.
+func (d *AuctionDAO) ListAdminScoped(ctx context.Context, status *model.AuctionStatus, page, pageSize int, creatorID *int64) ([]model.Auction, int64, error) {
+	var auctions []model.Auction
+	var total int64
+
+	query := d.db.WithContext(ctx).Model(&model.Auction{})
+	if creatorID != nil {
+		query = query.Where("creator_id = ?", *creatorID)
+	}
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
 	offset := (page - 1) * pageSize
 	err := query.Order("id DESC").
 		Offset(offset).

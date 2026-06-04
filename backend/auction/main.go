@@ -410,6 +410,8 @@ func registerRoutes(h *server.Hertz, auctionHandler *handler.AuctionHandler, bid
 	v1.GET("/auctions/:id", auctionHandler.Get)
 	v1.PUT("/auctions/:id/cancel", auctionHandler.Cancel)
 	v1.GET("/auctions/:id/result", auctionHandler.GetResult)
+	v1.GET("/admin/auctions", auctionHandler.AdminList)
+	v1.GET("/admin/auctions/:id", auctionHandler.AdminGet)
 
 	// 出价相关路由
 	v1.POST("/auctions/:id/bids", bidHandler.PlaceBid)

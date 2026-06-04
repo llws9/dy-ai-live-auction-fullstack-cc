@@ -25,6 +25,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	productProxy := handler.NewProxyHandler(cfg.Services.ProductURL)
 	adminProductProxy := handler.NewProxyHandlerWithInternalToken(cfg.Services.ProductURL, cfg.Services.InternalToken)
 	auctionProxy := handler.NewProxyHandler(cfg.Services.AuctionURL)
+	adminAuctionProxy := handler.NewProxyHandlerWithInternalToken(cfg.Services.AuctionURL, cfg.Services.InternalToken)
 	testProxy := handler.NewProxyHandler(cfg.Services.TestURL)
 	touchpointHandler := handler.NewTouchpointHandler(cfg.Services.AuctionURL, cfg.Services.ProductURL)
 	liveStartHandler := handler.NewLiveStartHandler(cfg.Services.AuctionURL, cfg.Services.InternalToken)
@@ -159,6 +160,8 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.PUT("/admin/live-streams/:id", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
 	authGroup.PUT("/admin/live-streams/:id/end", middleware.RequireAdmin(), adminProductProxy.Forward)
 	authGroup.PUT("/admin/live-streams/:id/ban", middleware.RequireAdmin(), adminProductProxy.Forward)
+	authGroup.GET("/admin/auctions", middleware.RequireMerchantOrAdmin(), adminAuctionProxy.Forward)
+	authGroup.GET("/admin/auctions/:id", middleware.RequireMerchantOrAdmin(), adminAuctionProxy.Forward)
 	// T010: 直播间详情。公开访问，但若客户端带合法 Bearer token，
 	// OptionalJWTAuth 会注入 user_id，proxy.Forward 据此把 X-User-ID 透传给 product-service，
 	// 用于查询 is_following 等登录态字段（spec B / F-B1, T2.5）。

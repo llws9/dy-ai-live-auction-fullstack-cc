@@ -33,11 +33,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `10` |
-| Done | `5` |
+| Done | `6` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `5` |
-| Last Updated | `2026-06-04 22:14` |
+| Pending | `4` |
+| Last Updated | `2026-06-04 22:40` |
 
 ## Task Matrix
 
@@ -50,7 +50,7 @@
 | `T005` | `Role-aware live stream management` | `done` | `main-agent` | `W3` | `T001,T002` | `Product live stream admin scope` | `backend/product/handler/live_stream.go; backend/product/service/live_stream.go; backend/product/dao/live_stream.go; backend/product/main.go; backend/gateway/router/router.go` |
 | `T006` | `Seller-scoped orders` | `pending` | `unassigned` | `W4` | `T001,T002,T003` | `Order seller scope` | `backend/product/model/order.go; backend/product/dao/order*.go; backend/product/service/order*.go; backend/product/handler/order*.go; backend/gateway/router/router.go` |
 | `T007` | `Role-aware statistics` | `pending` | `unassigned` | `W4` | `T001,T002,T006` | `Product statistics role scope` | `backend/product/handler/statistics.go; backend/product/service/statistics.go; backend/product/dao/statistics.go; backend/gateway/router/router.go` |
-| `T008` | `Auction service admin frontend scope` | `pending` | `unassigned` | `W3` | `T001` | `Auction admin endpoints and creator scope` | `backend/auction/handler/auction.go; backend/auction/service/auction.go; backend/auction/dao/auction.go; backend/gateway/router/router.go` |
+| `T008` | `Auction service admin frontend scope` | `done` | `main-agent` | `W3` | `T001` | `Auction admin endpoints and creator scope` | `backend/auction/handler/auction.go; backend/auction/service/auction.go; backend/auction/dao/auction.go; backend/gateway/router/router.go` |
 | `T009` | `Fixed-price merchant-only write enforcement` | `pending` | `unassigned` | `W3` | `T001` | `Fixed-price merchant-only write guard` | `backend/auction/handler/fixed_price.go; backend/auction/handler/fixed_price_test.go; backend/gateway/router/router.go` |
 | `T010` | `Integration verification and API smoke tests` | `pending` | `unassigned` | `W5` | `T003,T004,T005,T006,T007,T008,T009` | `Integration verification` | `backend/test/scenarios/admin_role_visibility_test.go; service route tests as needed` |
 
@@ -379,10 +379,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-04 22:27` |
+| Completed At | `2026-06-04 22:40` |
 | Branch | `feat/admin-role-backend` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-role-backend` |
 | Depends On | `-` |
@@ -398,11 +398,33 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `TDD Red -> Green -> Verify evidence` | `not_run` | `pending` |
+| `cd backend/auction && go test ./dao -run 'TestAuctionDAOListAdminScoped|TestAuctionDAOGetByIDAndCreatorID' -count=1` | Red: failed before implementation because scoped DAO methods were undefined; Green: passed after implementation | `ok auction-service/dao 0.688s` | `passed` |
+| `cd backend/auction && go test ./service -run 'TestAuctionServiceCreateAuctionStoresCreatorID|TestAuctionServiceListAdminScoped' -count=1` | Red: failed before implementation because `CreatorID` and admin list service were missing; Green: passed after implementation | `ok auction-service/service 0.807s` | `passed` |
+| `cd backend/auction && go test ./handler -run 'TestAuctionHandlerAdmin' -count=1` | Red: failed before implementation because `AdminList/AdminGet` were undefined; Green: passed after implementation | `ok auction-service/handler 0.873s` | `passed` |
+| `cd backend/gateway && go test ./router -run 'TestAdminAuctionRoutesRoleScope' -count=1` | Red: failed before route/internal-token wiring; Green: passed after admin auction proxy route implementation | `ok gateway-service/router 0.643s` | `passed` |
+| `cd backend/auction && go test ./... -count=1` | Verify: Auction full suite passes | `ok auction-service/...` | `passed` |
+| `cd backend/gateway && go test ./... -count=1` | Verify: Gateway full suite passes | `ok gateway-service/...` | `passed` |
+| `git diff --check` | Verify: no whitespace errors | `no output` | `passed` |
+
+**Modified Files**
+
+- `backend/auction/dao/auction.go`
+- `backend/auction/dao/auction_admin_scope_test.go`
+- `backend/auction/service/auction.go`
+- `backend/auction/service/auction_admin_scope_test.go`
+- `backend/auction/handler/auction.go`
+- `backend/auction/handler/auction_admin_scope_test.go`
+- `backend/auction/main.go`
+- `backend/gateway/router/router.go`
+- `backend/gateway/router/admin_auction_route_test.go`
+
+**Risks / Blockers**
+
+- No blocker. Existing public `/auctions` behavior is unchanged; new `/admin/auctions` is read-only and role-scoped.
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `当前分支/worktree：feat/admin-role-backend @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-role-backend`
 
 
 ### T009 - `Fixed-price merchant-only write enforcement`
@@ -477,6 +499,8 @@
 | `2026-06-04 22:02` | `T004 completed` | `Merchant auction rule template APIs implemented and verified` | `T005/T008/T009 can continue; T006/T007 remain pending` | `main-agent` |
 | `2026-06-04 22:04` | `Dispatch T005` | `T001/T002 done; live stream role-aware management can start` | `Run sequentially to avoid gateway router conflicts` | `main-agent` |
 | `2026-06-04 22:14` | `T005 completed` | `Role-aware live stream management implemented and verified` | `T008/T009 can continue; T006/T007 remain pending` | `main-agent` |
+| `2026-06-04 22:27` | `Dispatch T008` | `T001 done; Auction admin frontend scope can start` | `Run sequentially to avoid gateway router conflicts` | `main-agent` |
+| `2026-06-04 22:40` | `T008 completed` | `Auction admin frontend scope implemented and verified` | `T009 can continue; T006/T007 remain pending` | `main-agent` |
 
 ## Final Review Checklist
 

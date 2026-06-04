@@ -44,6 +44,16 @@ type CreateAuctionRequest struct {
 	Duration   int     `json:"duration" binding:"required"`
 }
 
+const (
+	adminRole    = "admin"
+	merchantRole = "merchant"
+)
+
+type adminActor struct {
+	UserID int64
+	Role   string
+}
+
 // Create 创建竞拍场次
 // @Summary 创建竞拍
 // @Description 创建新的竞拍场次
@@ -57,6 +67,10 @@ type CreateAuctionRequest struct {
 // @Failure 500 {object} map[string]interface{}
 // @Router /auctions [post]
 func (h *AuctionHandler) Create(ctx context.Context, c *app.RequestContext) {
+	var creatorID *int64
+	if id, ok := userIDFromHeader(c); ok {
+		creatorID = &id
+	}
 	var req CreateAuctionRequest
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(400, map[string]interface{}{
@@ -69,6 +83,7 @@ func (h *AuctionHandler) Create(ctx context.Context, c *app.RequestContext) {
 	// 创建竞拍场次请求
 	auctionReq := &service.CreateAuctionRequest{
 		ProductID: req.ProductID,
+		CreatorID: creatorID,
 		StartTime: time.Now(),
 		EndTime:   time.Now().Add(time.Duration(req.Duration) * time.Second),
 	}
@@ -83,6 +98,68 @@ func (h *AuctionHandler) Create(ctx context.Context, c *app.RequestContext) {
 	}
 
 	c.JSON(201, auction)
+}
+
+func (h *AuctionHandler) AdminList(ctx context.Context, c *app.RequestContext) {
+	actor, ok := readAdminActor(c)
+	if !ok {
+		return
+	}
+	status, ok := parseOptionalAuctionStatus(c)
+	if !ok {
+		return
+	}
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if page < 1 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+	var creatorID *int64
+	if actor.Role == merchantRole {
+		creatorID = &actor.UserID
+	}
+	auctions, total, err := h.auctionService.ListAdminAuctions(ctx, status, page, pageSize, creatorID)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "获取竞拍列表失败: " + err.Error()})
+		return
+	}
+	c.JSON(200, map[string]interface{}{
+		"code":    200,
+		"message": "success",
+		"data": map[string]interface{}{
+			"list":      auctions,
+			"total":     total,
+			"page":      page,
+			"page_size": pageSize,
+		},
+	})
+}
+
+func (h *AuctionHandler) AdminGet(ctx context.Context, c *app.RequestContext) {
+	actor, ok := readAdminActor(c)
+	if !ok {
+		return
+	}
+	id, ok := parseAuctionIDParam(c)
+	if !ok {
+		return
+	}
+	var creatorID *int64
+	if actor.Role == merchantRole {
+		creatorID = &actor.UserID
+	}
+	auction, err := h.auctionService.GetAdminAuction(ctx, id, creatorID)
+	if err != nil {
+		c.JSON(404, map[string]interface{}{"code": 404, "message": "竞拍不存在"})
+		return
+	}
+	c.JSON(200, map[string]interface{}{"code": 200, "message": "success", "data": auction})
 }
 
 // Cancel 取消竞拍
@@ -312,6 +389,52 @@ func (h *AuctionHandler) List(ctx context.Context, c *app.RequestContext) {
 			"page_size": pageSize,
 		},
 	})
+}
+
+func readAdminActor(c *app.RequestContext) (adminActor, bool) {
+	userID, ok := userIDFromHeader(c)
+	if !ok {
+		c.JSON(401, map[string]interface{}{"code": 401, "message": "未认证，请先登录"})
+		return adminActor{}, false
+	}
+	role := string(c.GetHeader("X-User-Role"))
+	if role != adminRole && role != merchantRole {
+		c.JSON(403, map[string]interface{}{"code": 403, "message": "权限不足"})
+		return adminActor{}, false
+	}
+	return adminActor{UserID: userID, Role: role}, true
+}
+
+func userIDFromHeader(c *app.RequestContext) (int64, bool) {
+	raw := string(c.GetHeader("X-User-ID"))
+	id, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil || id <= 0 {
+		return 0, false
+	}
+	return id, true
+}
+
+func parseOptionalAuctionStatus(c *app.RequestContext) (*model.AuctionStatus, bool) {
+	statusStr := c.Query("status")
+	if statusStr == "" {
+		return nil, true
+	}
+	statusValue, err := strconv.Atoi(statusStr)
+	if err != nil {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "无效的竞拍状态"})
+		return nil, false
+	}
+	status := model.AuctionStatus(statusValue)
+	return &status, true
+}
+
+func parseAuctionIDParam(c *app.RequestContext) (int64, bool) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "无效的竞拍ID"})
+		return 0, false
+	}
+	return id, true
 }
 
 // GetBids 获取竞拍出价记录
