@@ -1,9 +1,17 @@
 // API统一封装入口
 
 import { get, post, put, del, buildQuery, ApiError, setToastFunction } from './request';
+export { productApi } from './product';
 
 // 重新导出类型
 export * from './types';
+export type {
+  ProductListParams,
+  ProductCreateData,
+  RuleCreateData,
+  CopywritingGenerateData,
+  CopywritingDraft,
+} from './product';
 
 // 认证API
 export const authApi = {
@@ -14,56 +22,6 @@ export const authApi = {
     post<{ token: string; user: any }>('/auth/register', data),
 
   getCurrentUser: () => get<any>('/users/me'),
-};
-
-export interface CopywritingGenerateData {
-  images: string[];
-  category_id?: number;
-  keywords?: string;
-}
-
-export interface CopywritingDraft {
-  name: string;
-  description: string;
-  selling_points: string[];
-  suggested_start_price: string;
-}
-
-// 商品API - 增加 get 方法
-export const productApi = {
-  list: (params?: { status?: number; page?: number; page_size?: number }) => {
-    const query = buildQuery(params || {});
-    return get<{ list: any[]; total: number; page: number; page_size: number }>(`/products?${query}`);
-  },
-
-  get: (id: number) => get<any>(`/products/${id}`),
-
-  create: (data: { name: string; description: string; images: string[]; category?: string }) =>
-    post<any>('/products', data),
-
-  generateCopywriting: (data: CopywritingGenerateData) =>
-    post<CopywritingDraft>('/products/ai/copywriting', data, { timeout: 70000 }),
-
-  update: (id: number, data: Partial<{ name: string; description: string; images: string[]; category?: string }>) =>
-    put<any>(`/products/${id}`, data),
-
-  delete: (id: number) => del<void>(`/products/${id}`),
-
-  publish: (id: number) => post<any>(`/products/${id}/publish`),
-
-  unpublish: (id: number, reason?: string) => post<any>(`/products/${id}/unpublish`, { reason }),
-
-  getRules: (productId: number) => get<any>(`/products/${productId}/rules`),
-
-  createRules: (productId: number, data: {
-    start_price: number;
-    increment: number;
-    cap_price: number;
-    duration: number;
-    delay_duration: number;
-    max_delay_time: number;
-    trigger_delay_before: number;
-  }) => post<any>(`/products/${productId}/rules`, data),
 };
 
 // 竞拍API

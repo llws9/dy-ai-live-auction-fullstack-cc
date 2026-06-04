@@ -7,6 +7,7 @@ import { productApi } from '@/shared/api'
 jest.mock('@/shared/api', () => ({
   productApi: {
     get: jest.fn(),
+    listCategories: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     publish: jest.fn(),
@@ -26,9 +27,9 @@ jest.mock('react-router-dom', () => {
   }
 })
 
-function renderGoodsEdit() {
+function renderGoodsEdit(route = '/goods/edit') {
   return render(
-    <MemoryRouter initialEntries={['/goods/edit']}>
+    <MemoryRouter initialEntries={[route]}>
       <GoodsEdit />
     </MemoryRouter>
   )
@@ -41,6 +42,10 @@ describe('GoodsEdit AI copywriting integration', () => {
     jest.clearAllMocks()
     window.alert = jest.fn()
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    ;(productApi.listCategories as jest.Mock).mockResolvedValue([
+      { id: 1, name: '艺术收藏', code: 'art' },
+      { id: 2, name: '珠宝名表', code: 'jewelry' },
+    ])
   })
 
   afterEach(() => {
@@ -88,6 +93,14 @@ describe('GoodsEdit AI copywriting integration', () => {
       target: { value: 'https://cdn.example.com/camera.jpg' },
     })
     fireEvent.click(screen.getByRole('button', { name: '添加图片 URL' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: '艺术收藏' })).toBeInTheDocument()
+    })
+
+    fireEvent.change(screen.getByRole('combobox'), {
+      target: { value: '1' },
+    })
     fireEvent.click(screen.getByRole('button', { name: /AI 一键文案/ }))
 
     await waitFor(() => {
@@ -102,6 +115,64 @@ describe('GoodsEdit AI copywriting integration', () => {
     expect(screen.getByText('复古外观')).toBeInTheDocument()
     expect(screen.getByText(/AI 建议起拍价：¥199.00/)).toBeInTheDocument()
     expect(screen.getByText('AI 仅生成草稿，请确认后再保存或发布。')).toBeInTheDocument()
+  })
+
+  it('loads categories, backfills category_id in edit mode, submits category_id, and uses selected category name for AI keywords', async () => {
+    ;(productApi.get as jest.Mock).mockResolvedValue({
+      id: 12,
+      name: '旧商品',
+      description: '旧描述',
+      images: ['https://cdn.example.com/old.jpg'],
+      category_id: 2,
+    })
+    ;(productApi.update as jest.Mock).mockResolvedValue({
+      id: 12,
+    })
+    ;(productApi.generateCopywriting as jest.Mock).mockResolvedValue({
+      name: 'AI 珠宝',
+      description: '适合直播竞拍的珠宝。',
+      selling_points: ['宝石闪耀'],
+      suggested_start_price: '299.00',
+    })
+
+    renderGoodsEdit('/goods/edit?id=12')
+
+    expect(productApi.listCategories).toHaveBeenCalledTimes(1)
+    expect(productApi.get).toHaveBeenCalledWith(12)
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('珠宝名表')).toBeInTheDocument()
+    })
+
+    fireEvent.change(screen.getByDisplayValue('珠宝名表'), {
+      target: { value: '1' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /AI 一键文案/ }))
+
+    await waitFor(() => {
+      expect(productApi.generateCopywriting).toHaveBeenCalledWith({
+        images: ['https://cdn.example.com/old.jpg'],
+        keywords: expect.stringContaining('类目：艺术收藏'),
+      })
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: '保存为草稿' }))
+
+    await waitFor(() => {
+      expect(productApi.update).toHaveBeenCalledWith(
+        12,
+        expect.objectContaining({
+          category_id: 1,
+        }),
+      )
+    })
+    expect(productApi.update).not.toHaveBeenCalledWith(
+      12,
+      expect.objectContaining({
+        category: expect.anything(),
+      }),
+    )
   })
 
   it('does not overwrite current form values when AI generation fails', async () => {

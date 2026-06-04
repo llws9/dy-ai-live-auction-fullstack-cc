@@ -1,7 +1,7 @@
 // 商品API
 
 import { get, post, put, del, buildQuery } from './request';
-import { Product, AuctionRule, PaginatedResponse } from './types';
+import { Product, AuctionRule, PaginatedResponse, Category } from './types';
 
 export interface ProductListParams {
   status?: number;
@@ -13,7 +13,7 @@ export interface ProductCreateData {
   name: string;
   description: string;
   images: string[];
-  category?: string;
+  category_id?: number | null;
 }
 
 export interface RuleCreateData {
@@ -48,6 +48,9 @@ export const productApi = {
 
   // 获取商品详情
   get: (id: number) => get<Product>(`/products/${id}`),
+
+  // 获取分类列表
+  listCategories: () => get<Category[]>('/categories'),
 
   // 创建商品
   create: (data: ProductCreateData) => post<Product>('/products', data),

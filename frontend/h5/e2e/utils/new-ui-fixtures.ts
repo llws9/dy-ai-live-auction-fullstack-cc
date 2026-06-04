@@ -10,6 +10,11 @@ export const mockUser = {
 
 export const mockToken = 'e2e-auth-token';
 
+const categories = [
+  { id: 1, name: '珠宝腕表' },
+  { id: 2, name: '艺术品' },
+];
+
 const auctions = [
   {
     id: 101,
@@ -22,6 +27,7 @@ const auctions = [
     bid_count: 8,
     product: {
       id: 201,
+      category_id: 1,
       name: '星河钻石腕表',
       category_name: '珠宝腕表',
       description: '新版 H5 E2E 测试竞拍商品',
@@ -40,6 +46,7 @@ const auctions = [
     bid_count: 16,
     product: {
       id: 202,
+      category_id: 2,
       name: '宋代青瓷珍藏',
       category_name: '艺术品',
       description: '已结束竞拍商品',
@@ -93,6 +100,13 @@ function getAuction(id: number) {
   return auctions.find((auction) => auction.id === id) || auctions[0];
 }
 
+function listAuctions(categoryId?: number) {
+  if (!categoryId) {
+    return auctions;
+  }
+  return auctions.filter((auction) => auction.product.category_id === categoryId);
+}
+
 export async function mockNewUiApis(page: Page) {
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request();
@@ -129,8 +143,14 @@ export async function mockNewUiApis(page: Page) {
       return;
     }
 
+    if (path === '/categories') {
+      await route.fulfill(json(success(categories)));
+      return;
+    }
+
     if (path === '/auctions') {
-      await route.fulfill(json(success({ items: auctions })));
+      const categoryId = Number(url.searchParams.get('category_id') || '');
+      await route.fulfill(json(success({ items: listAuctions(Number.isNaN(categoryId) ? undefined : categoryId) })));
       return;
     }
 

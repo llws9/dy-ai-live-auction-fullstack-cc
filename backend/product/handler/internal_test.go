@@ -24,10 +24,11 @@ func newInternalHandlerWithSeed(t *testing.T, seed func(db *gorm.DB)) *InternalH
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open("file::memory:?mode=memory&cache=shared"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&model.Product{}, &model.AuctionRule{}, &model.LiveStream{}))
+	require.NoError(t, db.AutoMigrate(&model.Product{}, &model.Category{}, &model.AuctionRule{}, &model.LiveStream{}))
 	// Clean slate; ":memory:?cache=shared" is shared across the process so tests
 	// must reset the table before seeding.
 	db.Exec("DELETE FROM products")
+	db.Exec("DELETE FROM categories")
 	if seed != nil {
 		seed(db)
 	}

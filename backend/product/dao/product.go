@@ -26,7 +26,12 @@ func (d *ProductDAO) Create(ctx context.Context, product *model.Product) error {
 // GetByID 根据 ID 获取商品
 func (d *ProductDAO) GetByID(ctx context.Context, id int64) (*model.Product, error) {
 	var product model.Product
-	err := d.db.WithContext(ctx).First(&product, id).Error
+	err := d.db.WithContext(ctx).
+		Model(&model.Product{}).
+		Select("products.*, categories.name AS category_name").
+		Joins("LEFT JOIN categories ON categories.id = products.category_id").
+		Where("products.id = ?", id).
+		First(&product).Error
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +53,18 @@ func (d *ProductDAO) List(ctx context.Context, status *model.ProductStatus, page
 	}
 
 	offset := (page - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&products).Error; err != nil {
+	readQuery := d.db.WithContext(ctx).
+		Model(&model.Product{}).
+		Select("products.*, categories.name AS category_name").
+		Joins("LEFT JOIN categories ON categories.id = products.category_id")
+	if status != nil {
+		readQuery = readQuery.Where("products.status = ?", *status)
+	}
+	if err := readQuery.
+		Offset(offset).
+		Limit(pageSize).
+		Order("products.created_at DESC").
+		Find(&products).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -99,4 +115,16 @@ func (d *ProductDAO) GetByIDs(ctx context.Context, ids []int64) ([]model.Product
 		return nil, err
 	}
 	return products, nil
+}
+
+// GetActiveCategoryByID 获取启用中的类别。
+func (d *ProductDAO) GetActiveCategoryByID(ctx context.Context, id int64) (*model.Category, error) {
+	var category model.Category
+	err := d.db.WithContext(ctx).
+		Where("id = ? AND status = ?", id, model.CategoryStatusActive).
+		First(&category).Error
+	if err != nil {
+		return nil, err
+	}
+	return &category, nil
 }

@@ -29,7 +29,7 @@ func TestListPublic_OnlyLiveAndCurrentAuction(t *testing.T) {
 
 	db, err := gorm.Open(sqlite.Open("file::memory:?mode=memory&cache=shared"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&model.Product{}, &model.AuctionRule{}, &model.LiveStream{}))
+	require.NoError(t, db.AutoMigrate(&model.Product{}, &model.Category{}, &model.AuctionRule{}, &model.LiveStream{}))
 	db.Exec("DELETE FROM live_streams")
 	require.NoError(t, db.Create(&model.LiveStream{
 		ID:             501,
@@ -102,7 +102,7 @@ func TestListPublic_OnlyLiveAndCurrentAuction(t *testing.T) {
 func TestListPublic_ClampsPageSize(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("file::memory:?mode=memory&cache=shared"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&model.Product{}, &model.AuctionRule{}, &model.LiveStream{}))
+	require.NoError(t, db.AutoMigrate(&model.Product{}, &model.Category{}, &model.AuctionRule{}, &model.LiveStream{}))
 	db.Exec("DELETE FROM live_streams")
 
 	svc := service.NewLiveStreamService(dao.NewLiveStreamDAO(db))

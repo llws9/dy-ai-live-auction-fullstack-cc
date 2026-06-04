@@ -16,7 +16,7 @@ import (
 // ProductTestSuite 测试套件
 type ProductTestSuite struct {
 	suite.Suite
-	db      *gorm.DB
+	db         *gorm.DB
 	productDAO *dao.ProductDAO
 	ruleDAO    *dao.AuctionRuleDAO
 	service    *ProductService
@@ -29,7 +29,7 @@ func (suite *ProductTestSuite) SetupSuite() {
 	assert.NoError(suite.T(), err)
 
 	// 自动迁移
-	err = db.AutoMigrate(&model.Product{}, &model.AuctionRule{}, &model.LiveStream{})
+	err = db.AutoMigrate(&model.Product{}, &model.Category{}, &model.AuctionRule{}, &model.LiveStream{})
 	assert.NoError(suite.T(), err)
 
 	suite.db = db
@@ -47,6 +47,7 @@ func (suite *ProductTestSuite) TearDownSuite() {
 // SetupTest 每个测试前清理数据
 func (suite *ProductTestSuite) SetupTest() {
 	suite.db.Exec("DELETE FROM products")
+	suite.db.Exec("DELETE FROM categories")
 	suite.db.Exec("DELETE FROM auction_rules")
 }
 
@@ -279,9 +280,9 @@ func (suite *ProductTestSuite) TestCreateAuctionRule() {
 	ctx := context.Background()
 
 	req := &CreateAuctionRuleRequest{
-		ProductID:  1,
-		Increment:  10.0,
-		Duration:   3600,
+		ProductID: 1,
+		Increment: 10.0,
+		Duration:  3600,
 	}
 
 	rule, err := suite.service.CreateAuctionRule(ctx, req)

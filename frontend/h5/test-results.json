@@ -1,8 +1,8 @@
 {
   "config": {
-    "configFile": "/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/playwright.config.ts",
-    "rootDir": "/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/e2e",
-    "forbidOnly": false,
+    "configFile": "/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/fix-product-category-contract/frontend/h5/playwright.config.ts",
+    "rootDir": "/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/fix-product-category-contract/frontend/h5/e2e",
+    "forbidOnly": true,
     "fullyParallel": true,
     "globalSetup": null,
     "globalTeardown": null,
@@ -11,20 +11,20 @@
     "grepInvert": null,
     "maxFailures": 0,
     "metadata": {
-      "actualWorkers": 6
+      "actualWorkers": 1
     },
     "preserveOutput": "always",
     "projects": [
       {
-        "outputDir": "/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/test-results",
+        "outputDir": "/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/fix-product-category-contract/frontend/h5/test-results",
         "repeatEach": 1,
-        "retries": 0,
+        "retries": 2,
         "metadata": {
-          "actualWorkers": 6
+          "actualWorkers": 1
         },
         "id": "chromium",
         "name": "chromium",
-        "testDir": "/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/e2e",
+        "testDir": "/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/fix-product-category-contract/frontend/h5/e2e",
         "testIgnore": [],
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
@@ -32,15 +32,15 @@
         "timeout": 60000
       },
       {
-        "outputDir": "/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/test-results",
+        "outputDir": "/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/fix-product-category-contract/frontend/h5/test-results",
         "repeatEach": 1,
-        "retries": 0,
+        "retries": 2,
         "metadata": {
-          "actualWorkers": 6
+          "actualWorkers": 1
         },
         "id": "Mobile Chrome",
         "name": "Mobile Chrome",
-        "testDir": "/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/e2e",
+        "testDir": "/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/fix-product-category-contract/frontend/h5/e2e",
         "testIgnore": [],
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
@@ -48,15 +48,15 @@
         "timeout": 60000
       },
       {
-        "outputDir": "/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/test-results",
+        "outputDir": "/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/fix-product-category-contract/frontend/h5/test-results",
         "repeatEach": 1,
-        "retries": 0,
+        "retries": 2,
         "metadata": {
-          "actualWorkers": 6
+          "actualWorkers": 1
         },
         "id": "Mobile Safari",
         "name": "Mobile Safari",
-        "testDir": "/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/e2e",
+        "testDir": "/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/fix-product-category-contract/frontend/h5/e2e",
         "testIgnore": [],
         "testMatch": [
           "**/*.@(spec|test).?(c|m)[jt]s?(x)"
@@ -92,1516 +92,231 @@
     "updateSnapshots": "missing",
     "updateSourceMethod": "patch",
     "version": "1.60.0",
-    "workers": 6,
+    "workers": 1,
     "webServer": {
-      "command": "npm run dev",
-      "url": "http://localhost:5173",
+      "command": "npm run dev -- --host localhost --port 4173 --strictPort",
+      "url": "http://localhost:4173",
       "reuseExistingServer": true,
       "timeout": 120000
     }
   },
   "suites": [
     {
-      "title": "phase2-bid.spec.ts",
-      "file": "phase2-bid.spec.ts",
+      "title": "home.spec.ts",
+      "file": "home.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "Phase 2: 用户出价功能测试",
-          "file": "phase2-bid.spec.ts",
-          "line": 3,
+          "title": "Home Page - 首页分类闭环",
+          "file": "home.spec.ts",
+          "line": 4,
           "column": 6,
-          "specs": [],
-          "suites": [
+          "specs": [
             {
-              "title": "认证状态检查",
-              "file": "phase2-bid.spec.ts",
-              "line": 14,
-              "column": 8,
-              "specs": [
+              "title": "渲染固定 tab 与来自 /categories 的动态分类 tab",
+              "ok": true,
+              "tags": [],
+              "tests": [
                 {
-                  "title": "未登录用户访问出价功能应跳转登录页",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
                     {
-                      "timeout": 60000,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 907,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-04T10:24:59.149Z",
                       "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 5794,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:18.093Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "attachments": []
                     }
                   ],
-                  "id": "7ef5580a00d8d8500cfb-e14357ee94ee61dbd977",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 15,
-                  "column": 9
-                },
-                {
-                  "title": "登录状态应在localStorage中存储token",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [
-                        {
-                          "workerIndex": 1,
-                          "parallelIndex": 1,
-                          "status": "passed",
-                          "duration": 4725,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:18.100Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-fcaceb9ebf377a1df36b",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 43,
-                  "column": 9
-                },
-                {
-                  "title": "未登录用户访问出价功能应跳转登录页",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Chrome",
-                      "projectName": "Mobile Chrome",
-                      "results": [
-                        {
-                          "workerIndex": 6,
-                          "parallelIndex": 2,
-                          "status": "passed",
-                          "duration": 6773,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:30.143Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-37313c3678ded32bdd78",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 15,
-                  "column": 9
-                },
-                {
-                  "title": "登录状态应在localStorage中存储token",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Chrome",
-                      "projectName": "Mobile Chrome",
-                      "results": [
-                        {
-                          "workerIndex": 7,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 4108,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:30.258Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-2579cb0840e3405dcdab",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 43,
-                  "column": 9
-                },
-                {
-                  "title": "未登录用户访问出价功能应跳转登录页",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Safari",
-                      "projectName": "Mobile Safari",
-                      "results": [
-                        {
-                          "workerIndex": 12,
-                          "parallelIndex": 4,
-                          "status": "passed",
-                          "duration": 8362,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:42.021Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-b444fe3312f3e4dc6d6f",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 15,
-                  "column": 9
-                },
-                {
-                  "title": "登录状态应在localStorage中存储token",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Safari",
-                      "projectName": "Mobile Safari",
-                      "results": [
-                        {
-                          "workerIndex": 13,
-                          "parallelIndex": 2,
-                          "status": "passed",
-                          "duration": 4605,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:42.974Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-0338cfc144226cd3263f",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 43,
-                  "column": 9
+                  "status": "expected"
                 }
-              ]
+              ],
+              "id": "d318381359a9b96acb1e-169148078190dd86a9c8",
+              "file": "home.spec.ts",
+              "line": 10,
+              "column": 7
             },
             {
-              "title": "出价输入组件验证",
-              "file": "phase2-bid.spec.ts",
-              "line": 89,
-              "column": 8,
-              "specs": [
+              "title": "点击动态分类 tab 时透传 category_id 并仅展示匹配拍品",
+              "ok": true,
+              "tags": [],
+              "tests": [
                 {
-                  "title": "出价金额应显示最小出价提示",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
                     {
-                      "timeout": 60000,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 885,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-04T10:25:00.440Z",
                       "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [
-                        {
-                          "workerIndex": 2,
-                          "parallelIndex": 2,
-                          "status": "passed",
-                          "duration": 5579,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:18.105Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "attachments": []
                     }
                   ],
-                  "id": "7ef5580a00d8d8500cfb-8fd65b6251494c0c5bb2",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 110,
-                  "column": 9
-                },
-                {
-                  "title": "输入非法金额应显示错误提示",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [
-                        {
-                          "workerIndex": 3,
-                          "parallelIndex": 3,
-                          "status": "passed",
-                          "duration": 6145,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:18.102Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-8fdeb378313f74b59d55",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 130,
-                  "column": 9
-                },
-                {
-                  "title": "出价金额应限制小数位数",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [
-                        {
-                          "workerIndex": 4,
-                          "parallelIndex": 4,
-                          "status": "passed",
-                          "duration": 5163,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:18.099Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-a3c230bf3799bb9c0e25",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 154,
-                  "column": 9
-                },
-                {
-                  "title": "快捷出价按钮应正常工作",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [
-                        {
-                          "workerIndex": 5,
-                          "parallelIndex": 5,
-                          "status": "passed",
-                          "duration": 4835,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:18.098Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-b72d8c297e0fe2ab27e1",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 178,
-                  "column": 9
-                },
-                {
-                  "title": "出价金额应显示最小出价提示",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Chrome",
-                      "projectName": "Mobile Chrome",
-                      "results": [
-                        {
-                          "workerIndex": 8,
-                          "parallelIndex": 4,
-                          "status": "passed",
-                          "duration": 6098,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:30.394Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-7f4d65e6ab500712f3b4",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 110,
-                  "column": 9
-                },
-                {
-                  "title": "输入非法金额应显示错误提示",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Chrome",
-                      "projectName": "Mobile Chrome",
-                      "results": [
-                        {
-                          "workerIndex": 9,
-                          "parallelIndex": 3,
-                          "status": "passed",
-                          "duration": 4688,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:30.461Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-a93917794da3c8055fac",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 130,
-                  "column": 9
-                },
-                {
-                  "title": "出价金额应限制小数位数",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Chrome",
-                      "projectName": "Mobile Chrome",
-                      "results": [
-                        {
-                          "workerIndex": 10,
-                          "parallelIndex": 1,
-                          "status": "passed",
-                          "duration": 5576,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:32.862Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-f121d9eb15ff1780bc29",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 154,
-                  "column": 9
-                },
-                {
-                  "title": "快捷出价按钮应正常工作",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Chrome",
-                      "projectName": "Mobile Chrome",
-                      "results": [
-                        {
-                          "workerIndex": 7,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 4917,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:34.481Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-4915e4e605a7401026c7",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 178,
-                  "column": 9
-                },
-                {
-                  "title": "出价金额应显示最小出价提示",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Safari",
-                      "projectName": "Mobile Safari",
-                      "results": [
-                        {
-                          "workerIndex": 14,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 7371,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:43.881Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-45e32f546b1960eadb52",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 110,
-                  "column": 9
-                },
-                {
-                  "title": "输入非法金额应显示错误提示",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Safari",
-                      "projectName": "Mobile Safari",
-                      "results": [
-                        {
-                          "workerIndex": 15,
-                          "parallelIndex": 1,
-                          "status": "passed",
-                          "duration": 7776,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:46.389Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-0c21a0e471edfd212fe0",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 130,
-                  "column": 9
-                },
-                {
-                  "title": "出价金额应限制小数位数",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Safari",
-                      "projectName": "Mobile Safari",
-                      "results": [
-                        {
-                          "workerIndex": 16,
-                          "parallelIndex": 5,
-                          "status": "passed",
-                          "duration": 7676,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:46.747Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-d820ec78bb9f874f6490",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 154,
-                  "column": 9
-                },
-                {
-                  "title": "快捷出价按钮应正常工作",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Safari",
-                      "projectName": "Mobile Safari",
-                      "results": [
-                        {
-                          "workerIndex": 13,
-                          "parallelIndex": 2,
-                          "status": "passed",
-                          "duration": 7619,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:47.779Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-63baa0db725ba4454abb",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 178,
-                  "column": 9
+                  "status": "expected"
                 }
-              ]
+              ],
+              "id": "d318381359a9b96acb1e-302332f40b6932e2826d",
+              "file": "home.spec.ts",
+              "line": 17,
+              "column": 7
             },
             {
-              "title": "出价流程测试",
-              "file": "phase2-bid.spec.ts",
-              "line": 209,
-              "column": 8,
-              "specs": [
+              "title": "渲染固定 tab 与来自 /categories 的动态分类 tab",
+              "ok": true,
+              "tags": [],
+              "tests": [
                 {
-                  "title": "出价按钮点击后应显示加载状态",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [
                     {
-                      "timeout": 60000,
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 756,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-04T10:25:01.641Z",
                       "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [
-                        {
-                          "workerIndex": 1,
-                          "parallelIndex": 1,
-                          "status": "passed",
-                          "duration": 4672,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:23.293Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "attachments": []
                     }
                   ],
-                  "id": "7ef5580a00d8d8500cfb-67901c7302628bd30546",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 229,
-                  "column": 9
-                },
-                {
-                  "title": "出价成功应显示成功提示",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [
-                        {
-                          "workerIndex": 5,
-                          "parallelIndex": 5,
-                          "status": "passed",
-                          "duration": 4075,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:23.402Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-e4d2106a3ec25b1e7db0",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 250,
-                  "column": 9
-                },
-                {
-                  "title": "出价按钮点击后应显示加载状态",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Chrome",
-                      "projectName": "Mobile Chrome",
-                      "results": [
-                        {
-                          "workerIndex": 9,
-                          "parallelIndex": 3,
-                          "status": "passed",
-                          "duration": 4862,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:35.264Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-cf4f1804aff4fdd67bc8",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 229,
-                  "column": 9
-                },
-                {
-                  "title": "出价成功应显示成功提示",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Chrome",
-                      "projectName": "Mobile Chrome",
-                      "results": [
-                        {
-                          "workerIndex": 11,
-                          "parallelIndex": 5,
-                          "status": "passed",
-                          "duration": 4552,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:35.860Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-280c865f62e7b1bdc4c8",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 250,
-                  "column": 9
-                },
-                {
-                  "title": "出价按钮点击后应显示加载状态",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Safari",
-                      "projectName": "Mobile Safari",
-                      "results": [
-                        {
-                          "workerIndex": 17,
-                          "parallelIndex": 3,
-                          "status": "passed",
-                          "duration": 8550,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:49.206Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-9fd47fafcd9e3aa6f209",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 229,
-                  "column": 9
-                },
-                {
-                  "title": "出价成功应显示成功提示",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Safari",
-                      "projectName": "Mobile Safari",
-                      "results": [
-                        {
-                          "workerIndex": 12,
-                          "parallelIndex": 4,
-                          "status": "passed",
-                          "duration": 7509,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:50.836Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-fad0fae2e3e9ef4d1c99",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 250,
-                  "column": 9
+                  "status": "expected"
                 }
-              ]
+              ],
+              "id": "d318381359a9b96acb1e-b3e3900b079916995fb2",
+              "file": "home.spec.ts",
+              "line": 10,
+              "column": 7
             },
             {
-              "title": "排名列表显示测试",
-              "file": "phase2-bid.spec.ts",
-              "line": 278,
-              "column": 8,
-              "specs": [
+              "title": "点击动态分类 tab 时透传 category_id 并仅展示匹配拍品",
+              "ok": true,
+              "tags": [],
+              "tests": [
                 {
-                  "title": "排名列表应显示竞拍排名",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Chrome",
+                  "projectName": "Mobile Chrome",
+                  "results": [
                     {
-                      "timeout": 60000,
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 855,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-04T10:25:02.543Z",
                       "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [
-                        {
-                          "workerIndex": 4,
-                          "parallelIndex": 4,
-                          "status": "passed",
-                          "duration": 6303,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:23.735Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "attachments": []
                     }
                   ],
-                  "id": "7ef5580a00d8d8500cfb-9d983a23fe6164d83a2f",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 298,
-                  "column": 9
-                },
-                {
-                  "title": "当前用户排名应高亮显示",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [
-                        {
-                          "workerIndex": 2,
-                          "parallelIndex": 2,
-                          "status": "passed",
-                          "duration": 5655,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:24.148Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-0f1f33bfbbba236363ac",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 311,
-                  "column": 9
-                },
-                {
-                  "title": "前三名应有特殊徽章",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [
-                        {
-                          "workerIndex": 0,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 5544,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:24.358Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-2a7f6c61aaf5af06e3fe",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 334,
-                  "column": 9
-                },
-                {
-                  "title": "排名列表应显示竞拍排名",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Chrome",
-                      "projectName": "Mobile Chrome",
-                      "results": [
-                        {
-                          "workerIndex": 8,
-                          "parallelIndex": 4,
-                          "status": "passed",
-                          "duration": 5025,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:36.606Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-d4ffff8d6f77661c5882",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 298,
-                  "column": 9
-                },
-                {
-                  "title": "当前用户排名应高亮显示",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Chrome",
-                      "projectName": "Mobile Chrome",
-                      "results": [
-                        {
-                          "workerIndex": 6,
-                          "parallelIndex": 2,
-                          "status": "passed",
-                          "duration": 5568,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:37.014Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-49d4b5eae806bb10300b",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 311,
-                  "column": 9
-                },
-                {
-                  "title": "前三名应有特殊徽章",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Chrome",
-                      "projectName": "Mobile Chrome",
-                      "results": [
-                        {
-                          "workerIndex": 10,
-                          "parallelIndex": 1,
-                          "status": "passed",
-                          "duration": 7392,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:38.548Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-551ced04cd889e83d085",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 334,
-                  "column": 9
-                },
-                {
-                  "title": "排名列表应显示竞拍排名",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Safari",
-                      "projectName": "Mobile Safari",
-                      "results": [
-                        {
-                          "workerIndex": 14,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 11221,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:51.456Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-3db9329415bf474b4533",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 298,
-                  "column": 9
-                },
-                {
-                  "title": "当前用户排名应高亮显示",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Safari",
-                      "projectName": "Mobile Safari",
-                      "results": [
-                        {
-                          "workerIndex": 15,
-                          "parallelIndex": 1,
-                          "status": "passed",
-                          "duration": 8088,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:54.352Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-8e48156447eb8483ff37",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 311,
-                  "column": 9
-                },
-                {
-                  "title": "前三名应有特殊徽章",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Safari",
-                      "projectName": "Mobile Safari",
-                      "results": [
-                        {
-                          "workerIndex": 16,
-                          "parallelIndex": 5,
-                          "status": "passed",
-                          "duration": 7283,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:54.654Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-85cf4dc2c432fc381ef6",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 334,
-                  "column": 9
+                  "status": "expected"
                 }
-              ]
+              ],
+              "id": "d318381359a9b96acb1e-7bd7c8d55558fdf55f24",
+              "file": "home.spec.ts",
+              "line": 17,
+              "column": 7
             },
             {
-              "title": "WebSocket连接测试",
-              "file": "phase2-bid.spec.ts",
-              "line": 365,
-              "column": 8,
-              "specs": [
+              "title": "渲染固定 tab 与来自 /categories 的动态分类 tab",
+              "ok": true,
+              "tags": [],
+              "tests": [
                 {
-                  "title": "WebSocket应自动连接",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [
                     {
-                      "timeout": 60000,
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1343,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-04T10:25:03.751Z",
                       "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [
-                        {
-                          "workerIndex": 3,
-                          "parallelIndex": 3,
-                          "status": "passed",
-                          "duration": 5376,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:24.720Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "attachments": []
                     }
                   ],
-                  "id": "7ef5580a00d8d8500cfb-0180545c5c5a13a5d5c4",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 366,
-                  "column": 9
-                },
-                {
-                  "title": "WebSocket断线应自动重连",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [
-                        {
-                          "workerIndex": 5,
-                          "parallelIndex": 5,
-                          "status": "passed",
-                          "duration": 8024,
-                          "errors": [],
-                          "stdout": [
-                            {
-                              "text": "WebSocket相关日志: []\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:27.486Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-3abd0c1b0f89642c35b5",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 400,
-                  "column": 9
-                },
-                {
-                  "title": "WebSocket应自动连接",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Chrome",
-                      "projectName": "Mobile Chrome",
-                      "results": [
-                        {
-                          "workerIndex": 7,
-                          "parallelIndex": 0,
-                          "status": "passed",
-                          "duration": 4068,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:39.406Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-9c9471415610415bc224",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 366,
-                  "column": 9
-                },
-                {
-                  "title": "WebSocket断线应自动重连",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Chrome",
-                      "projectName": "Mobile Chrome",
-                      "results": [
-                        {
-                          "workerIndex": 9,
-                          "parallelIndex": 3,
-                          "status": "passed",
-                          "duration": 8737,
-                          "errors": [],
-                          "stdout": [
-                            {
-                              "text": "WebSocket相关日志: []\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:40.136Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-7aecead663877878535e",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 400,
-                  "column": 9
-                },
-                {
-                  "title": "WebSocket应自动连接",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Safari",
-                      "projectName": "Mobile Safari",
-                      "results": [
-                        {
-                          "workerIndex": 13,
-                          "parallelIndex": 2,
-                          "status": "passed",
-                          "duration": 4873,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:55.413Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-ab28fedbd6919468cfb3",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 366,
-                  "column": 9
-                },
-                {
-                  "title": "WebSocket断线应自动重连",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Safari",
-                      "projectName": "Mobile Safari",
-                      "results": [
-                        {
-                          "workerIndex": 17,
-                          "parallelIndex": 3,
-                          "status": "passed",
-                          "duration": 7673,
-                          "errors": [],
-                          "stdout": [
-                            {
-                              "text": "WebSocket相关日志: []\n"
-                            }
-                          ],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:57.940Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-dae98d724116990f716e",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 400,
-                  "column": 9
+                  "status": "expected"
                 }
-              ]
+              ],
+              "id": "d318381359a9b96acb1e-39877b1fea4e0be1b24e",
+              "file": "home.spec.ts",
+              "line": 10,
+              "column": 7
             },
             {
-              "title": "移动端适配测试",
-              "file": "phase2-bid.spec.ts",
-              "line": 428,
-              "column": 8,
-              "specs": [
+              "title": "点击动态分类 tab 时透传 category_id 并仅展示匹配拍品",
+              "ok": true,
+              "tags": [],
+              "tests": [
                 {
-                  "title": "移动端出价UI应正常显示",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "Mobile Safari",
+                  "projectName": "Mobile Safari",
+                  "results": [
                     {
-                      "timeout": 60000,
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 925,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-06-04T10:25:07.119Z",
                       "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "chromium",
-                      "projectName": "chromium",
-                      "results": [
-                        {
-                          "workerIndex": 1,
-                          "parallelIndex": 1,
-                          "status": "passed",
-                          "duration": 4546,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:27.973Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
+                      "attachments": []
                     }
                   ],
-                  "id": "7ef5580a00d8d8500cfb-7140d36d50d18425f681",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 429,
-                  "column": 9
-                },
-                {
-                  "title": "移动端出价UI应正常显示",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Chrome",
-                      "projectName": "Mobile Chrome",
-                      "results": [
-                        {
-                          "workerIndex": 11,
-                          "parallelIndex": 5,
-                          "status": "passed",
-                          "duration": 5833,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:40.528Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-8a0018c04679ed4e65ba",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 429,
-                  "column": 9
-                },
-                {
-                  "title": "移动端出价UI应正常显示",
-                  "ok": true,
-                  "tags": [],
-                  "tests": [
-                    {
-                      "timeout": 60000,
-                      "annotations": [],
-                      "expectedStatus": "passed",
-                      "projectId": "Mobile Safari",
-                      "projectName": "Mobile Safari",
-                      "results": [
-                        {
-                          "workerIndex": 12,
-                          "parallelIndex": 4,
-                          "status": "passed",
-                          "duration": 8151,
-                          "errors": [],
-                          "stdout": [],
-                          "stderr": [],
-                          "retry": 0,
-                          "startTime": "2026-05-23T08:51:58.358Z",
-                          "annotations": [],
-                          "attachments": []
-                        }
-                      ],
-                      "status": "expected"
-                    }
-                  ],
-                  "id": "7ef5580a00d8d8500cfb-26b02744220163a2e2ef",
-                  "file": "phase2-bid.spec.ts",
-                  "line": 429,
-                  "column": 9
+                  "status": "expected"
                 }
-              ]
+              ],
+              "id": "d318381359a9b96acb1e-14cc0154d010182bb0f6",
+              "file": "home.spec.ts",
+              "line": 17,
+              "column": 7
             }
           ]
         }
@@ -1610,9 +325,9 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-05-23T08:51:17.467Z",
-    "duration": 49079.128,
-    "expected": 42,
+    "startTime": "2026-06-04T10:24:57.468Z",
+    "duration": 10624.453000000001,
+    "expected": 6,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0

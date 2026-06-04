@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"time"
 
@@ -47,6 +48,13 @@ func (h *ProductHandler) Create(ctx context.Context, c *app.RequestContext) {
 
 	product, err := h.productService.CreateProduct(ctx, &req)
 	if err != nil {
+		if errors.Is(err, service.ErrInvalidCategory) {
+			c.JSON(400, map[string]interface{}{
+				"code":    400,
+				"message": "非法或未启用的 category_id",
+			})
+			return
+		}
 		c.JSON(500, map[string]interface{}{
 			"code":    500,
 			"message": "创建商品失败: " + err.Error(),
@@ -172,6 +180,13 @@ func (h *ProductHandler) Update(ctx context.Context, c *app.RequestContext) {
 
 	product, err := h.productService.UpdateProduct(ctx, id, &req)
 	if err != nil {
+		if errors.Is(err, service.ErrInvalidCategory) {
+			c.JSON(400, map[string]interface{}{
+				"code":    400,
+				"message": "非法或未启用的 category_id",
+			})
+			return
+		}
 		c.JSON(500, map[string]interface{}{
 			"code":    500,
 			"message": "更新商品失败: " + err.Error(),
