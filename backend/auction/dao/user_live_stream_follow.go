@@ -106,6 +106,8 @@ func (d *UserLiveStreamFollowDAO) GetFollowStats(ctx context.Context, liveStream
 		return nil, err
 	}
 	stats["total_count"] = totalCount
+	stats["followers_count"] = totalCount
+	stats["count"] = totalCount
 
 	// 开启通知的关注数
 	var notificationCount int64

@@ -169,6 +169,23 @@ const normalizeAuction = (auction: RawAuction, product?: ProductSummary): HomeAu
   product: auction.product ?? product,
 });
 
+const getAuctionSortPriority = (auction: HomeAuction) => {
+  if ((auction.status === 1 || auction.status === 2) && !isPastEndTime(auction.endTime)) {
+    return 0;
+  }
+  if (auction.status === 0) {
+    return 1;
+  }
+  return 2;
+};
+
+const sortAuctionsForHome = (items: HomeAuction[]) =>
+  [...items].sort((a, b) => {
+    const priorityDiff = getAuctionSortPriority(a) - getAuctionSortPriority(b);
+    if (priorityDiff !== 0) return priorityDiff;
+    return b.id - a.id;
+  });
+
 const getStreamId = (stream: LiveStream) => stream.id ?? stream.live_stream_id;
 
 const getStreamTitle = (stream: LiveStream) => {
@@ -289,7 +306,7 @@ const HomePage: React.FC = () => {
       const rawAuctions = extractList<RawAuction>(response);
 
       setFavoriteLiveStreams([]);
-      setAuctions(rawAuctions.map((auction) => normalizeAuction(auction)));
+      setAuctions(sortAuctionsForHome(rawAuctions.map((auction) => normalizeAuction(auction))));
     } catch (error) {
       console.error('获取竞拍列表失败:', error);
       setAuctions([]);

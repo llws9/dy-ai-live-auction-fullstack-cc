@@ -75,3 +75,30 @@ func TestGetCurrentByLiveStreamIDsSkipsExpiredActiveAuction(t *testing.T) {
 	require.True(t, ok, "应回退到尚未过 end_time 的竞拍")
 	require.Equal(t, int64(21), cur.ID)
 }
+
+func TestListOrdersByLiveUpcomingEndedPriority(t *testing.T) {
+	db := newCurrentTestDB(t)
+	dao := NewAuctionDAO(db)
+	ctx := context.Background()
+
+	now := time.Now()
+	rows := []model.Auction{
+		{ID: 100, ProductID: 100, Status: model.AuctionStatusEnded, StartTime: now.Add(-3 * time.Hour), EndTime: now.Add(-2 * time.Hour)},
+		{ID: 101, ProductID: 101, Status: model.AuctionStatusPending, StartTime: now.Add(time.Hour), EndTime: now.Add(2 * time.Hour)},
+		{ID: 102, ProductID: 102, Status: model.AuctionStatusOngoing, StartTime: now.Add(-time.Hour), EndTime: now.Add(time.Hour)},
+		{ID: 103, ProductID: 103, Status: model.AuctionStatusOngoing, StartTime: now.Add(-2 * time.Hour), EndTime: now.Add(-time.Minute)},
+	}
+	for i := range rows {
+		require.NoError(t, db.Create(&rows[i]).Error)
+	}
+
+	got, total, err := dao.List(ctx, nil, 1, 10)
+	require.NoError(t, err)
+	require.Equal(t, int64(4), total)
+	require.Len(t, got, 4)
+
+	require.Equal(t, int64(102), got[0].ID, "未过 end_time 的 ongoing 应排在最前")
+	require.Equal(t, int64(101), got[1].ID, "pending 应排在直播中之后、已结束之前")
+	require.Equal(t, int64(103), got[2].ID, "已过 end_time 的 active 状态应按已结束处理")
+	require.Equal(t, int64(100), got[3].ID)
+}

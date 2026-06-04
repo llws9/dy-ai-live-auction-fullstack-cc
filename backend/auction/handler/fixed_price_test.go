@@ -444,6 +444,34 @@ func TestAdminLiveStreamFixedPriceListHandler_IncludesProductTitle(t *testing.T)
 	assert.Equal(t, "翡翠手镯", items[0].(map[string]any)["product_title"])
 }
 
+func TestPublicLiveStreamFixedPriceListHandler_IncludesProductBrief(t *testing.T) {
+	uc := &fakeFixedPriceUsecase{liveItems: []*service.LiveFixedPriceItem{
+		{
+			Item: &model.FixedPriceItem{
+				ID: 7001, LiveStreamID: 1001, ProductID: 5001,
+				Price: decimal.NewFromInt(99), TotalStock: 100, RemainingStock: 87,
+				MaxPerUser: 1, Status: model.FixedPriceStatusOnSale,
+			},
+			RemainingStock: 87,
+		},
+	}}
+	pc := &fakeProductClient{batchOut: map[int64]client.ProductSummary{
+		5001: {ID: 5001, Name: "青花瓷茶杯", Images: []string{"https://example.com/cup.jpg"}},
+	}}
+	eng := newFixedPriceTestServerWithProductClient(uc, &fakeFPBalanceProvider{}, pc)
+
+	w := ut.PerformRequest(eng, http.MethodGet, "/api/v1/live-streams/1001/fixed-price/items", nil)
+	resp := w.Result()
+	require.Equal(t, 200, resp.StatusCode())
+	var out map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body(), &out))
+	items := out["items"].([]any)
+	require.Len(t, items, 1)
+	brief := items[0].(map[string]any)["product_brief"].(map[string]any)
+	assert.Equal(t, "青花瓷茶杯", brief["title"])
+	assert.Equal(t, "https://example.com/cup.jpg", brief["cover_image"])
+}
+
 func TestListHandler_ReturnsFullFields(t *testing.T) {
 	uc := &fakeFixedPriceUsecase{listResult: &model.FixedPriceItem{
 		ID: 7001, LiveStreamID: 1001, ProductID: 5001,

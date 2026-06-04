@@ -283,10 +283,11 @@ func (h *FixedPriceHandler) ListByLiveStream(ctx context.Context, c *app.Request
 		writeFPErr(c, 500, "FP_INTERNAL", "服务异常", nil)
 		return
 	}
+	productSummaries := h.batchProductSummaries(ctx, items)
 	resp := make([]map[string]any, 0, len(items))
 	for _, it := range items {
 		item := it.Item
-		resp = append(resp, map[string]any{
+		entry := map[string]any{
 			"id":              item.ID,
 			"live_stream_id":  item.LiveStreamID,
 			"product_id":      item.ProductID,
@@ -295,7 +296,18 @@ func (h *FixedPriceHandler) ListByLiveStream(ctx context.Context, c *app.Request
 			"remaining_stock": it.RemainingStock,
 			"max_per_user":    item.MaxPerUser,
 			"status":          fpStatusString(item.Status),
-		})
+		}
+		if summary, ok := productSummaries[item.ProductID]; ok {
+			brief := map[string]any{
+				"id":    summary.ID,
+				"title": summary.Name,
+			}
+			if len(summary.Images) > 0 {
+				brief["cover_image"] = summary.Images[0]
+			}
+			entry["product_brief"] = brief
+		}
+		resp = append(resp, entry)
 	}
 	c.JSON(200, map[string]any{"items": resp})
 }
@@ -343,6 +355,18 @@ func (h *FixedPriceHandler) ListAllByLiveStream(ctx context.Context, c *app.Requ
 
 // batchProductTitles 批量查询 product_title，失败时静默降级（返回空 map）。
 func (h *FixedPriceHandler) batchProductTitles(ctx context.Context, items []*service.LiveFixedPriceItem) map[int64]string {
+	summaries := h.batchProductSummaries(ctx, items)
+	if len(summaries) == 0 {
+		return nil
+	}
+	out := make(map[int64]string, len(summaries))
+	for id, s := range summaries {
+		out[id] = s.Name
+	}
+	return out
+}
+
+func (h *FixedPriceHandler) batchProductSummaries(ctx context.Context, items []*service.LiveFixedPriceItem) map[int64]client.ProductSummary {
 	if h.productClient == nil || len(items) == 0 {
 		return nil
 	}
@@ -354,11 +378,7 @@ func (h *FixedPriceHandler) batchProductTitles(ctx context.Context, items []*ser
 	if err != nil {
 		return nil
 	}
-	out := make(map[int64]string, len(summaries))
-	for id, s := range summaries {
-		out[id] = s.Name
-	}
-	return out
+	return summaries
 }
 
 // MyPurchase GET /fixed-price/items/:id/my-purchase（spec §4.1 / T10）。无跨域，查本服务购买记录。

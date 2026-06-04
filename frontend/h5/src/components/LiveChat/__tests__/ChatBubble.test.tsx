@@ -16,6 +16,12 @@ describe('ChatBubble', () => {
     expect(screen.getByText('hello world')).toBeInTheDocument();
   });
 
+  it('repairs mojibake user names before rendering', () => {
+    render(<ChatBubble msg={{ ...baseMsg, user_name: 'æµ‹è¯•ç”¨æˆ·' }} isSelf={false} />);
+    expect(screen.getByText('测试用户')).toBeInTheDocument();
+    expect(screen.queryByText('æµ‹è¯•ç”¨æˆ·')).not.toBeInTheDocument();
+  });
+
   it('does not interpret HTML in text', () => {
     render(<ChatBubble msg={{ ...baseMsg, text: '<img src=x onerror=alert(1)>' }} isSelf={false} />);
     expect(screen.queryByRole('img')).toBeNull();

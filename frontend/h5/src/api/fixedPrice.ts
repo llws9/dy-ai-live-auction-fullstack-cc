@@ -12,6 +12,7 @@ export interface FixedPriceItem {
   id: number;
   product_id?: number;
   product?: ProductBrief;
+  product_title?: string;
   price: string;
   total_stock: number;
   remaining_stock: number;

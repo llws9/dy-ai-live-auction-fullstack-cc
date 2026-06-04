@@ -75,4 +75,13 @@ describe('ChatPanel', () => {
     expect(css).not.toMatch(/\.inputBar\s*\{[\s\S]*?position:\s*absolute;/);
     expect(css).not.toContain('rgba(0, 0, 0, 0.6)');
   });
+
+  it('keeps the floating input bar compact at roughly 90 percent of the previous size', () => {
+    const css = readFileSync(join(__dirname, '..', 'ChatPanel.module.css'), 'utf8');
+
+    expect(css).toMatch(/\.inputBar\s*\{[\s\S]*?padding:\s*5px;/);
+    expect(css).toMatch(/\.input\s*\{[\s\S]*?height:\s*25px;/);
+    expect(css).toMatch(/\.sendBtn\s*\{[\s\S]*?height:\s*25px;/);
+    expect(css).toMatch(/\.sendBtn\s*\{[\s\S]*?min-width:\s*41px;/);
+  });
 });

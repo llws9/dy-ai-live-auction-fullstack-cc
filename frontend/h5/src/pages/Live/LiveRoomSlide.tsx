@@ -368,7 +368,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
             ? followStatus.is_following
             : Boolean(liveStreamData?.is_following);
         setFollowing(authoritativeFollowing);
-        setFollowersCount(Number(followersStats?.count ?? followersStats?.followers_count ?? liveStreamData?.followers_count ?? 0));
+        setFollowersCount(Number(followersStats?.count ?? followersStats?.followers_count ?? followersStats?.total_count ?? liveStreamData?.followers_count ?? 0));
         await loadRanking(effectiveId);
       } catch (error) {
         console.error('加载直播竞拍失败:', error);
@@ -711,6 +711,13 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         </div>
       )}
 
+      <section className={styles.liveChatOverlay} aria-label="直播互动">
+        <ChatPanel
+          currentUserId={user?.id ?? 0}
+          onSend={(text, clientMsgId) => wsRef.current?.sendChat(text, clientMsgId) ?? false}
+        />
+      </section>
+
       <BidDock
         product={product || auction?.product}
         productImage={productImage}
@@ -843,14 +850,6 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           )}
           {!isAuthenticated && <p className={styles.authHint}>请先登录后出价</p>}
           {!isActive && <p className={styles.authHint}>当前竞拍不可出价</p>}
-        </section>
-
-        <section className={styles.chatBlock}>
-          <h2>直播互动</h2>
-          <ChatPanel
-            currentUserId={user?.id ?? 0}
-            onSend={(text, clientMsgId) => wsRef.current?.sendChat(text, clientMsgId) ?? false}
-          />
         </section>
       </BidDock>
 

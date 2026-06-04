@@ -1,27 +1,36 @@
 .card {
   --fixed-price-card-bg: rgba(255, 255, 255, 0.96);
-  --fixed-price-card-border: rgba(249, 115, 22, 0.16);
+  --fixed-price-card-border: rgba(249, 115, 22, 0.22);
   --fixed-price-accent: var(--color-primary-500, #f97316);
   --fixed-price-accent-strong: var(--color-primary-600, #ea580c);
 
-  display: flex;
+  display: grid;
+  width: 100%;
+  box-sizing: border-box;
+  grid-template-columns: 46px minmax(0, 1fr);
+  grid-template-areas:
+    "badge badge"
+    "cover info"
+    "button button";
   align-items: center;
-  gap: var(--spacing-3, 12px);
-  min-height: 88px;
-  padding: var(--spacing-3, 12px);
+  gap: 8px;
+  min-height: 0;
+  padding: 10px;
   border: 1px solid var(--fixed-price-card-border);
   border-radius: var(--radius-xl, 16px);
   background:
-    radial-gradient(circle at 12% 0%, rgba(251, 191, 36, 0.18), transparent 30%),
+    radial-gradient(circle at 10% 0%, rgba(251, 191, 36, 0.22), transparent 32%),
     var(--fixed-price-card-bg);
-  box-shadow: 0 10px 28px rgba(124, 45, 18, 0.1);
+  box-shadow: 0 12px 30px rgba(124, 45, 18, 0.18);
+  backdrop-filter: blur(12px);
 }
 
 .cover,
 .coverFallback {
-  width: 64px;
-  height: 64px;
-  flex: 0 0 64px;
+  grid-area: cover;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
   border-radius: var(--radius-lg, 12px);
 }
 
@@ -34,69 +43,77 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-secondary, #525252);
+  color: rgba(124, 45, 18, 0.58);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 800;
   background:
     linear-gradient(135deg, rgba(249, 115, 22, 0.14), rgba(251, 191, 36, 0.18)),
     #fff7ed;
 }
 
 .info {
+  grid-area: info;
   min-width: 0;
   flex: 1;
 }
 
 .badge {
-  width: fit-content;
-  margin-bottom: var(--spacing-1, 4px);
-  padding: 2px 7px;
+  grid-area: badge;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 3px 8px;
   border-radius: var(--radius-full, 9999px);
   color: var(--fixed-price-accent-strong);
   font-size: 11px;
   font-weight: 700;
   line-height: 1.3;
+  text-align: center;
   background: rgba(249, 115, 22, 0.1);
 }
 
 .title {
   margin: 0;
   overflow: hidden;
-  color: var(--text-primary, #171717);
+  color: #111827;
   font-size: 15px;
-  font-weight: 700;
-  line-height: 1.35;
+  font-weight: 900;
+  line-height: 1.22;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.72);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .meta {
-  display: flex;
-  align-items: baseline;
-  gap: var(--spacing-2, 8px);
+  display: grid;
+  gap: 2px;
   margin-top: var(--spacing-1, 4px);
 }
 
 .price {
   color: var(--fixed-price-accent-strong);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: -0.02em;
 }
 
 .stock {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
   color: var(--text-secondary, #525252);
-  font-size: 12px;
+  font-size: 11px;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .purchaseButton {
-  min-width: 88px;
-  min-height: 44px;
+  grid-area: button;
+  min-width: 0;
+  min-height: 34px;
   border: none;
   border-radius: var(--radius-full, 9999px);
   color: var(--text-inverse, #ffffff);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
   background: linear-gradient(135deg, var(--fixed-price-accent), var(--fixed-price-accent-strong));
   box-shadow: 0 8px 16px rgba(249, 115, 22, 0.28);

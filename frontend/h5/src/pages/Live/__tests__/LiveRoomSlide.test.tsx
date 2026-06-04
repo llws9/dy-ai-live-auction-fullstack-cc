@@ -308,6 +308,24 @@ describe('LiveRoomSlide', () => {
     expect(screen.getByTestId('dock-sky-lamp-icon')).toBeInTheDocument();
   });
 
+  it('uses total_count from followers stats when count aliases are absent', async () => {
+    mockedFollowApi.getFollowersStats.mockResolvedValue({ total_count: 1 });
+    mockedLiveStreamApi.get.mockResolvedValue({
+      id: 3,
+      name: '瓷器珍藏夜场',
+      host_name: '拍卖师王老师',
+      viewer_count: 128,
+      is_following: false,
+      followers_count: 0,
+    });
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    fireEvent.click(await screen.findByText('明代紫砂壶'));
+
+    expect(await screen.findByText('1 人收藏')).toBeInTheDocument();
+  });
+
   it('uses auction rule as authoritative increment when product detail has no rules', async () => {
     mockedAuctionApi.get.mockResolvedValue({
       id: 5,

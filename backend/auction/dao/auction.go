@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"auction-service/model"
 	"github.com/shopspring/decimal"
@@ -22,6 +23,15 @@ type AuctionDAO struct {
 // NewAuctionDAO 创建竞拍 DAO
 func NewAuctionDAO(db *gorm.DB) *AuctionDAO {
 	return &AuctionDAO{db: db}
+}
+
+func orderByAuctionFeedPriority(query *gorm.DB) *gorm.DB {
+	return query.Clauses(clause.OrderBy{
+		Expression: clause.Expr{
+			SQL:  "CASE WHEN auctions.status IN (1, 2) AND auctions.end_time > ? THEN 0 WHEN auctions.status = 0 THEN 1 ELSE 2 END ASC, auctions.id DESC",
+			Vars: []interface{}{time.Now()},
+		},
+	})
 }
 
 // DB 获取底层数据库连接
@@ -159,7 +169,7 @@ func (d *AuctionDAO) List(ctx context.Context, status *model.AuctionStatus, page
 
 	// 分页查询
 	offset := (page - 1) * pageSize
-	err := query.Order("id DESC").
+	err := orderByAuctionFeedPriority(query).
 		Offset(offset).
 		Limit(pageSize).
 		Find(&auctions).Error
@@ -222,7 +232,7 @@ func (d *AuctionDAO) ListWithFilters(ctx context.Context, filters *AuctionFilter
 
 	// 分页查询
 	offset := (page - 1) * pageSize
-	err := query.Order("id DESC").
+	err := orderByAuctionFeedPriority(query).
 		Offset(offset).
 		Limit(pageSize).
 		Find(&auctions).Error
@@ -288,7 +298,7 @@ func (d *AuctionDAO) GetByLiveStreamID(ctx context.Context, liveStreamID int64, 
 
 	// 分页查询
 	offset := (page - 1) * pageSize
-	err := query.Order("id DESC").
+	err := orderByAuctionFeedPriority(query).
 		Offset(offset).
 		Limit(pageSize).
 		Find(&auctions).Error

@@ -8,7 +8,10 @@ interface FixedPriceCardProps {
 }
 
 function getProductBrief(item: FixedPriceItem): ProductBrief {
-  return item.product_brief ?? item.product ?? { id: item.product_id ?? item.id, title: '一口价商品' };
+  return item.product_brief ?? item.product ?? {
+    id: item.product_id ?? item.id,
+    title: item.product_title ?? '一口价商品',
+  };
 }
 
 function getButtonState(item: FixedPriceItem, purchased: boolean): { disabled: boolean; label: string } {
@@ -34,6 +37,8 @@ export default function FixedPriceCard({ item, purchased = false, onPurchase }: 
 
   return (
     <article className={styles.card} aria-label={`${product.title} 一口价商品`}>
+      <div className={styles.badge}>限时一口价</div>
+
       {product.cover_image ? (
         <img className={styles.cover} src={product.cover_image} alt={product.title} />
       ) : (
@@ -43,7 +48,6 @@ export default function FixedPriceCard({ item, purchased = false, onPurchase }: 
       )}
 
       <div className={styles.info}>
-        <div className={styles.badge}>限时一口价</div>
         <h3 className={styles.title}>{product.title}</h3>
         <div className={styles.meta}>
           <span className={styles.price}>¥{item.price}</span>

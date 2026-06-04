@@ -245,13 +245,14 @@
 .fixedPriceList {
   position: absolute;
   right: var(--spacing-4);
-  bottom: calc(180px + env(safe-area-inset-bottom, 0px));
-  left: var(--spacing-4);
-  z-index: 3;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  z-index: 6;
   display: grid;
-  max-height: 34vh;
+  width: min(40vw, 156px);
+  max-height: 28vh;
   gap: var(--spacing-2);
-  overflow-y: auto;
+  overflow: hidden;
+  overflow-x: hidden;
   overscroll-behavior: contain;
   transition: opacity 0.35s ease, transform 0.35s ease;
 }
@@ -260,6 +261,15 @@
   opacity: 0;
   pointer-events: none;
   transform: translateY(24px);
+}
+
+.liveChatOverlay {
+  position: absolute;
+  left: var(--spacing-4);
+  bottom: calc(102px + env(safe-area-inset-bottom, 0px));
+  z-index: 4;
+  width: min(50vw, 210px);
+  pointer-events: none;
 }
 
 .panel {

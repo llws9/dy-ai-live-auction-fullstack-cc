@@ -204,6 +204,44 @@ describe('HomePage 分类联动 (T2.10)', () => {
     expect(screen.queryByRole('link', { name: '进入直播' })).not.toBeInTheDocument();
   });
 
+  it('首页按直播状态优先级展示：直播中 > 即将开始 > 已结束', async () => {
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [
+        {
+          id: 9,
+          status: 3,
+          current_price: 100,
+          end_time: new Date(Date.now() - 60_000).toISOString(),
+          product: { id: 9, name: '已结束拍品' },
+        },
+        {
+          id: 8,
+          status: 0,
+          current_price: 200,
+          end_time: new Date(Date.now() + 7_200_000).toISOString(),
+          product: { id: 8, name: '即将开始拍品' },
+        },
+        {
+          id: 7,
+          status: 1,
+          current_price: 300,
+          end_time: new Date(Date.now() + 3_600_000).toISOString(),
+          product: { id: 7, name: '直播中拍品' },
+        },
+      ],
+      total: 3,
+    });
+
+    renderHome();
+
+    const headings = await screen.findAllByRole('heading', { level: 2 });
+    expect(headings.map((heading) => heading.textContent)).toEqual([
+      '直播中拍品',
+      '即将开始拍品',
+      '已结束拍品',
+    ]);
+  });
+
   it('点击收藏 tab 时复用我的收藏接口渲染收藏直播间', async () => {
     mockedFollowApi.getFollowedLiveStreams.mockResolvedValue({
       list: [
