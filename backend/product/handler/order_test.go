@@ -298,3 +298,43 @@ func TestOrderHandler_Pay_AuthContract(t *testing.T) {
 		assert.Equal(t, 401, c.Response.StatusCode())
 	})
 }
+
+func TestOrderHandler_Ship_AdminRoleRejected(t *testing.T) {
+	h := NewOrderHandler(service.NewOrderService(nil, nil))
+	c := app.NewContext(0)
+	c.Request.SetMethod("PUT")
+	c.Request.SetRequestURI("/api/v1/orders/123/ship")
+	c.Request.Header.Set("X-User-ID", "2001")
+	c.Request.Header.Set("X-User-Role", "admin")
+
+	h.Ship(context.Background(), c)
+
+	assert.Equal(t, 403, c.Response.StatusCode())
+	var body map[string]interface{}
+	assert.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.EqualValues(t, 403, body["code"])
+}
+
+func TestOrderHandler_Ship_MerchantOtherSellerRejected(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	assert.NoError(t, err)
+	assert.NoError(t, db.AutoMigrate(&model.Order{}))
+	assert.NoError(t, db.Exec("DELETE FROM orders").Error)
+	seller := int64(1001)
+	order := &model.Order{ID: 123, AuctionID: 1, ProductID: 1, SellerID: &seller, WinnerID: 3001, FinalPrice: decimal.NewFromInt(100), Status: model.OrderStatusPaid}
+	assert.NoError(t, db.Create(order).Error)
+	h := NewOrderHandler(service.NewOrderService(dao.NewOrderDAO(db), nil))
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("PUT")
+	c.Request.SetRequestURI("/api/v1/orders/123/ship")
+	c.Request.Header.Set("X-User-ID", "1002")
+	c.Request.Header.Set("X-User-Role", "merchant")
+
+	h.Ship(context.Background(), c)
+
+	assert.Equal(t, 400, c.Response.StatusCode())
+	var saved model.Order
+	assert.NoError(t, db.First(&saved, 123).Error)
+	assert.Equal(t, model.OrderStatusPaid, saved.Status)
+}

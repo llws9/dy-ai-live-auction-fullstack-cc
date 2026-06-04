@@ -38,6 +38,10 @@ func (d *OrderAdminDAO) adminBaseQuery(ctx context.Context) *gorm.DB {
 // ListAdminOrders 返回全量订单（不按 winner_id 过滤），可选按 status / user_id 筛选。
 // userID 在 admin 语义里等价于 winner_id 过滤——admin 想查某用户的订单。
 func (d *OrderAdminDAO) ListAdminOrders(ctx context.Context, status *model.OrderStatus, userID *int64, page, pageSize int) ([]OrderAdminRow, int64, error) {
+	return d.ListAdminOrdersScoped(ctx, status, userID, nil, page, pageSize)
+}
+
+func (d *OrderAdminDAO) ListAdminOrdersScoped(ctx context.Context, status *model.OrderStatus, userID *int64, sellerID *int64, page, pageSize int) ([]OrderAdminRow, int64, error) {
 	var rows []OrderAdminRow
 	var total int64
 
@@ -50,6 +54,10 @@ func (d *OrderAdminDAO) ListAdminOrders(ctx context.Context, status *model.Order
 	if userID != nil {
 		countQ = countQ.Where("winner_id = ?", *userID)
 		listQ = listQ.Where("orders.winner_id = ?", *userID)
+	}
+	if sellerID != nil {
+		countQ = countQ.Where("seller_id = ?", *sellerID)
+		listQ = listQ.Where("orders.seller_id = ?", *sellerID)
 	}
 
 	if err := countQ.Count(&total).Error; err != nil {
@@ -69,10 +77,16 @@ func (d *OrderAdminDAO) ListAdminOrders(ctx context.Context, status *model.Order
 
 // GetAdminOrder 根据 id 返回单条 admin 视图订单。未命中返回 gorm.ErrRecordNotFound。
 func (d *OrderAdminDAO) GetAdminOrder(ctx context.Context, id int64) (*OrderAdminRow, error) {
+	return d.GetAdminOrderScoped(ctx, id, nil)
+}
+
+func (d *OrderAdminDAO) GetAdminOrderScoped(ctx context.Context, id int64, sellerID *int64) (*OrderAdminRow, error) {
 	var row OrderAdminRow
-	err := d.adminBaseQuery(ctx).
-		Where("orders.id = ?", id).
-		Scan(&row).Error
+	query := d.adminBaseQuery(ctx).Where("orders.id = ?", id)
+	if sellerID != nil {
+		query = query.Where("orders.seller_id = ?", *sellerID)
+	}
+	err := query.Scan(&row).Error
 	if err != nil {
 		return nil, err
 	}

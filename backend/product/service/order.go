@@ -203,6 +203,25 @@ func (s *OrderService) ShipOrder(ctx context.Context, id int64) (*model.Order, e
 	return s.orderDAO.GetByID(ctx, id)
 }
 
+func (s *OrderService) ShipOrderForSeller(ctx context.Context, id, sellerID int64) (*model.Order, error) {
+	order, err := s.orderDAO.GetByIDAndSellerID(ctx, id, sellerID)
+	if err != nil {
+		return nil, err
+	}
+	if order.Status != model.OrderStatusPaid {
+		return nil, errors.New("订单状态不允许发货")
+	}
+	if err := s.orderDAO.ShipOrderForSeller(ctx, id, sellerID); err != nil {
+		return nil, err
+	}
+	if s.notificationCallback != nil {
+		go func() {
+			_ = s.notificationCallback.OnOrderShipped(ctx, order.WinnerID, id)
+		}()
+	}
+	return s.orderDAO.GetByIDAndSellerID(ctx, id, sellerID)
+}
+
 // CompleteOrder 完成订单（模拟）
 func (s *OrderService) CompleteOrder(ctx context.Context, id int64) (*model.Order, error) {
 	start := time.Now()

@@ -134,7 +134,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.GET("/orders", productProxy.Forward)
 	authGroup.GET("/orders/:id", productProxy.Forward)
 	authGroup.POST("/orders/:id/pay", productProxy.Forward)
-	authGroup.PUT("/orders/:id/ship", middleware.RequireMerchant(), productProxy.Forward) // T007: 订单发货
+	authGroup.PUT("/orders/:id/ship", middleware.RequireMerchantOnly(), productProxy.Forward) // 商家发货，平台不代运营
 	// 订单列表 & 历史均需 JWT 认证；下游通过 X-User-ID header 识别本人，禁止接受 query user_id。
 	authGroup.GET("/orders/history", productProxy.Forward)
 
@@ -150,8 +150,8 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.POST("/admin/auction-rule-templates", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
 	authGroup.PUT("/admin/auction-rule-templates/:id", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
 	authGroup.DELETE("/admin/auction-rule-templates/:id", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
-	authGroup.GET("/admin/orders", middleware.RequireAdmin(), adminProductProxy.Forward)
-	authGroup.GET("/admin/orders/:id", middleware.RequireAdmin(), adminProductProxy.Forward)
+	authGroup.GET("/admin/orders", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
+	authGroup.GET("/admin/orders/:id", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
 
 	// ========== 直播间路由 ==========
 	authGroup.GET("/admin/live-streams", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward) // T009/T4: 管理端直播间列表

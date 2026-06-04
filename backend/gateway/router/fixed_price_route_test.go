@@ -271,3 +271,59 @@ func TestFixedPriceAdminLiveStreamListRoute_RequireStreamer(t *testing.T) {
 		assert.Equal(t, "9", lastUserID.Load().(string))
 	})
 }
+
+func TestOrderAdminRoutesAllowMerchantReadAndShipMerchantOnly(t *testing.T) {
+	var calls atomic.Int64
+	var lastMethod, lastPath, lastRole atomic.Value
+	lastMethod.Store("")
+	lastPath.Store("")
+	lastRole.Store("")
+	productMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		lastMethod.Store(r.Method)
+		lastPath.Store(r.URL.Path)
+		lastRole.Store(r.Header.Get("X-User-Role"))
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer productMock.Close()
+	auctionMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer auctionMock.Close()
+	cfg := &config.Config{
+		Services: config.ServicesConfig{
+			ProductURL:    productMock.URL,
+			AuctionURL:    auctionMock.URL,
+			TestURL:       "http://127.0.0.1:0",
+			TestWSURL:     "ws://127.0.0.1:0",
+			InternalToken: "internal-secret",
+		},
+		JWT: config.JWTConfig{Secret: "order-route-secret"},
+	}
+	h := server.Default(server.WithHostPorts("127.0.0.1:0"))
+	RegisterRoutes(h, cfg, nil)
+	adminToken, err := middleware.GenerateToken(cfg.JWT.Secret, 99, "admin", 2, 24)
+	assert.NoError(t, err)
+	merchantToken, err := middleware.GenerateToken(cfg.JWT.Secret, 9, "merchant", 1, 24)
+	assert.NoError(t, err)
+
+	calls.Store(0)
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/admin/orders", nil,
+		ut.Header{Key: "Authorization", Value: "Bearer " + merchantToken})
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode())
+	assert.Equal(t, int64(1), calls.Load())
+	assert.Equal(t, "/api/v1/admin/orders", lastPath.Load().(string))
+	assert.Equal(t, "merchant", lastRole.Load().(string))
+
+	calls.Store(0)
+	w = ut.PerformRequest(h.Engine, http.MethodPut, "/api/v1/orders/77/ship", nil,
+		ut.Header{Key: "Authorization", Value: "Bearer " + adminToken})
+	assert.Equal(t, http.StatusForbidden, w.Result().StatusCode())
+	assert.Equal(t, int64(0), calls.Load())
+
+	w = ut.PerformRequest(h.Engine, http.MethodPut, "/api/v1/orders/77/ship", nil,
+		ut.Header{Key: "Authorization", Value: "Bearer " + merchantToken})
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode())
+	assert.Equal(t, http.MethodPut, lastMethod.Load().(string))
+	assert.Equal(t, "merchant", lastRole.Load().(string))
+}

@@ -132,7 +132,39 @@ func TestOrderHandler_AdminList_UserIDFilter(t *testing.T) {
 	}
 }
 
-func TestOrderHandler_AdminList_RequiresAdminRole(t *testing.T) {
+func TestOrderHandler_AdminList_MerchantOnlyOwnSellerOrders(t *testing.T) {
+	sellerA := int64(1001)
+	sellerB := int64(1002)
+	h := newAdminOrderHandlerWithSeed(t, func(db *gorm.DB) {
+		require.NoError(t, db.Create(&model.Product{ID: 11, OwnerID: &sellerA, Name: "茶杯"}).Error)
+		require.NoError(t, db.Create(&model.Product{ID: 12, OwnerID: &sellerB, Name: "茶壶"}).Error)
+		require.NoError(t, db.Create(&model.Order{ID: 101, AuctionID: 201, ProductID: 11, SellerID: &sellerA, WinnerID: 901, FinalPrice: decimal.NewFromInt(100), Status: model.OrderStatusPending}).Error)
+		require.NoError(t, db.Create(&model.Order{ID: 102, AuctionID: 202, ProductID: 12, SellerID: &sellerB, WinnerID: 902, FinalPrice: decimal.NewFromInt(200), Status: model.OrderStatusPaid}).Error)
+	})
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/admin/orders")
+	c.Request.Header.Set("X-User-Role", "merchant")
+	c.Request.Header.Set("X-User-ID", "1001")
+
+	h.AdminList(context.Background(), c)
+
+	assert.Equal(t, 200, c.Response.StatusCode())
+	var body struct {
+		Data struct {
+			List  []map[string]interface{} `json:"list"`
+			Total int64                    `json:"total"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.EqualValues(t, 1, body.Data.Total)
+	require.Len(t, body.Data.List, 1)
+	assert.EqualValues(t, 1001, body.Data.List[0]["seller_id"])
+	assert.EqualValues(t, 101, body.Data.List[0]["id"])
+}
+
+func TestOrderHandler_AdminList_RequiresManagementRole(t *testing.T) {
 	h := newAdminOrderHandlerWithSeed(t, nil)
 
 	c := app.NewContext(0)
@@ -240,7 +272,26 @@ func TestOrderHandler_AdminGet(t *testing.T) {
 	assert.Equal(t, "https://cdn/first.jpg", body.Data["product_image"])
 }
 
-func TestOrderHandler_AdminGet_RequiresAdminRole(t *testing.T) {
+func TestOrderHandler_AdminGet_MerchantRejectsOtherSellerOrder(t *testing.T) {
+	seller := int64(1001)
+	h := newAdminOrderHandlerWithSeed(t, func(db *gorm.DB) {
+		require.NoError(t, db.Create(&model.Product{ID: 11, OwnerID: &seller, Name: "茶杯"}).Error)
+		require.NoError(t, db.Create(&model.Order{ID: 101, AuctionID: 201, ProductID: 11, SellerID: &seller, WinnerID: 901, FinalPrice: decimal.NewFromInt(100), Status: model.OrderStatusPending}).Error)
+	})
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/admin/orders/101")
+	c.Request.Header.Set("X-User-Role", "merchant")
+	c.Request.Header.Set("X-User-ID", "1002")
+	c.Params = append(c.Params, param.Param{Key: "id", Value: "101"})
+
+	h.AdminGet(context.Background(), c)
+
+	assert.Equal(t, 404, c.Response.StatusCode())
+}
+
+func TestOrderHandler_AdminGet_RequiresManagementRole(t *testing.T) {
 	h := newAdminOrderHandlerWithSeed(t, nil)
 
 	c := app.NewContext(0)

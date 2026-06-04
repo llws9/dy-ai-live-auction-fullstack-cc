@@ -170,12 +170,8 @@ func (h *OrderHandler) Pay(ctx context.Context, c *app.RequestContext) {
 // @Failure 400 {object} map[string]interface{}
 // @Router /orders/{id}/ship [post]
 func (h *OrderHandler) Ship(ctx context.Context, c *app.RequestContext) {
-	role := string(c.GetHeader("X-User-Role"))
-	if role != "merchant" && role != "admin" {
-		c.JSON(403, map[string]interface{}{
-			"code":    403,
-			"message": "无权限发货",
-		})
+	actor, ok := requireMerchantActor(c)
+	if !ok {
 		return
 	}
 
@@ -189,7 +185,7 @@ func (h *OrderHandler) Ship(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	order, err := h.orderService.ShipOrder(ctx, id)
+	order, err := h.orderService.ShipOrderForSeller(ctx, id, actor.UserID)
 	if err != nil {
 		c.JSON(400, map[string]interface{}{
 			"code":    400,
