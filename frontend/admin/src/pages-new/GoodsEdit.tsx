@@ -188,9 +188,9 @@ export default function GoodsEdit() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="border-slate-200">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+        <div className="lg:col-span-2 flex flex-col h-full">
+          <Card className="border-slate-200 flex-1 flex flex-col">
             <CardHeader>
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -208,7 +208,7 @@ export default function GoodsEdit() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 flex-1 flex flex-col">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">商品名称 *</label>
                 <Input
@@ -243,10 +243,10 @@ export default function GoodsEdit() {
                   />
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 flex-1 flex flex-col">
                 <label className="text-sm font-medium text-slate-700">详细描述 *</label>
                 <textarea
-                  className="flex min-h-[120px] w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                  className="flex flex-1 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 min-h-[120px] resize-none"
                   placeholder="详细介绍商品的来源、年代、成色等信息..."
                   value={formData.description}
                   onChange={(e) => updateField('description', e.target.value)}
@@ -256,7 +256,7 @@ export default function GoodsEdit() {
           </Card>
         </div>
 
-        <div className="space-y-6">
+        <div className="flex flex-col gap-6 h-full">
           <Card className="border-slate-200">
             <CardHeader>
               <CardTitle className="text-lg">商品图片</CardTitle>
@@ -334,7 +334,7 @@ export default function GoodsEdit() {
             </Card>
           )}
 
-          <Card className="border-slate-200">
+          <Card className="border-slate-200 mt-auto">
             <CardHeader>
               <CardTitle className="text-lg">发布状态</CardTitle>
             </CardHeader>
