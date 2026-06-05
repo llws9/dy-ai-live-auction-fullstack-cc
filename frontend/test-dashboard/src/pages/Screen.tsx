@@ -10,14 +10,14 @@ export default function Screen() {
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<UserJourneyReport | null>(null);
   const { connected, testID, progress, step, history, connect, disconnect } = useWSStore();
-  const pollReport = usePollReport<UserJourneyReport>({ maxAttempts: 120 });
+  const { start: startPollingReport, cancel: cancelPollingReport } = usePollReport<UserJourneyReport>({ maxAttempts: 120 });
 
   useEffect(() => {
     return () => {
       disconnect();
-      pollReport.cancel();
+      cancelPollingReport();
     };
-  }, [disconnect, pollReport]);
+  }, [disconnect, cancelPollingReport]);
 
   const model = useMemo(
     () =>
@@ -42,7 +42,7 @@ export default function Screen() {
       const id = await startUserJourney(DEMO_USER_JOURNEY_CONFIG);
       const wsURL = await discoverWS(id);
       connect(wsURL, id);
-      pollReport.start(
+      startPollingReport(
         id,
         (nextReport) => {
           setReport(nextReport);
@@ -67,7 +67,7 @@ export default function Screen() {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       disconnect();
-      pollReport.cancel();
+      cancelPollingReport();
       setStarting(false);
     }
   };

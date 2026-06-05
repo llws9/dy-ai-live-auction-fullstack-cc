@@ -37,7 +37,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `1` |
-| Last Updated | `2026-06-06 02:11` |
+| Last Updated | `2026-06-06 02:16` |
 
 ## Task Matrix
 
@@ -295,6 +295,9 @@
 | `cd frontend/test-dashboard && npm run test:run -- src/pages/Screen.test.tsx` | `FAIL before implementation` | `FAIL: old historical dashboard rendered; missing AI 直播竞拍全链路验收, 开始演示, ¥110.00 and 点天灯触发` | `red_passed` |
 | `cd frontend/test-dashboard && npm run test:run -- src/pages/Screen.test.tsx` | `PASS after Screen theater implementation` | `PASS: 1 file, 3 tests` | `passed` |
 | `cd frontend/test-dashboard && npm run test:run && npm run build` | `PASS` | `PASS: 2 test files, 8 tests; build succeeded with existing Vite large chunk warning` | `passed` |
+| `cd frontend/test-dashboard && npm run test:run -- src/pages/Screen.test.tsx` | `FAIL review regression before fix` | `FAIL: connect-triggered rerender called disconnect twice because cleanup depended on unstable pollReport object` | `red_passed` |
+| `cd frontend/test-dashboard && npm run test:run -- src/pages/Screen.test.tsx` | `PASS after stable cleanup dependencies` | `PASS: 1 file, 4 tests` | `passed` |
+| `cd frontend/test-dashboard && npm run test:run && npm run build` | `PASS after review fix` | `PASS: 2 test files, 9 tests; build succeeded with existing Vite large chunk warning` | `passed` |
 
 **Modified Files**
 
@@ -305,12 +308,15 @@
 **Commits**
 
 - `782280f3 feat(test-dashboard): turn screen into demo theater`
+- `pending: fix(test-dashboard): keep demo theater polling alive`
 
 **Review Notes**
 
 - `/test/screen` no longer renders the historical task stats dashboard.
 - Screen uses centralized `DEMO_USER_JOURNEY_CONFIG`, starts `UserJourney`, discovers WS, connects progress, polls report, and disconnects on unmount.
 - UI exposes required judge-facing texts and keeps technical report drill-down via `/test/report/<test_id>`.
+- Review fix: `usePollReport()` returns a new wrapper object each render, so cleanup now depends on stable `cancelPollingReport` instead of the unstable `pollReport` object.
+- Regression test covers `connect()` updating WS store and triggering rerender without calling `disconnect()` or canceling report polling.
 
 **Risks / Blockers**
 

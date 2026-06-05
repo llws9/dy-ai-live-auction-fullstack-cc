@@ -67,6 +67,33 @@ describe('Screen demo theater', () => {
     });
   });
 
+  it('keeps ws and report polling alive when connect triggers a rerender', async () => {
+    connect.mockImplementationOnce((_wsURL: string, testID: string) => {
+      useWSStore.setState({
+        connected: true,
+        testID,
+        progress: 1,
+        step: 'prepare',
+        metrics: {},
+        history: [],
+        socket: null,
+        connect,
+        disconnect,
+      });
+    });
+    const user = userEvent.setup();
+    renderScreen();
+
+    await user.click(screen.getByRole('button', { name: '开始演示' }));
+
+    await waitFor(() => {
+      expect(connect).toHaveBeenCalledWith('ws://localhost:18092/ws/test/progress?test_id=tj_demo', 'tj_demo');
+      expect(pollStart).toHaveBeenCalled();
+    });
+    expect(disconnect).not.toHaveBeenCalled();
+    expect(pollCancel).not.toHaveBeenCalled();
+  });
+
   it('shows live bid and sky lamp story from ws history', () => {
     useWSStore.setState({
       connected: true,
