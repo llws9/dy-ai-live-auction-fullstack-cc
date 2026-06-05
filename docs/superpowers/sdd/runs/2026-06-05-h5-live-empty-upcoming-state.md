@@ -37,7 +37,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `3` |
-| Last Updated | `2026-06-05 21:20 CST` |
+| Last Updated | `2026-06-05 21:28 CST` |
 
 ## Task Matrix
 
@@ -298,6 +298,8 @@
 | --- | --- | --- | --- |
 | `cd frontend/h5 && npm test -- LiveFeedPage.test.tsx --runInBand` | Expected red from T003: 4 upcoming empty-state failures, no unrelated failures | `FAIL src/pages/Live/__tests__/LiveFeedPage.test.tsx`; `13 total`, `9 passed`, `4 failed`; first failure: expected `auctionApi.list({ status: '0', upcoming: true, page: 1, page_size: 2 })`, actual calls `0`; DOM still showed `暂无正在竞拍的直播间` | `red_passed` |
 | `cd frontend/h5 && npm test -- LiveFeedPage.test.tsx --runInBand` | `PASS` | `PASS src/pages/Live/__tests__/LiveFeedPage.test.tsx`; `13 passed`, `13 total`; `Test Suites: 1 passed, 1 total` | `green_passed` |
+| `cd frontend/h5 && npm test -- LiveFeedPage.test.tsx --runInBand` | Expected red for T004 code-quality review fix: subscribe button `keydown` bubbles to preview row and navigates to detail | `FAIL src/pages/Live/__tests__/LiveFeedPage.test.tsx`; `15 total`, `13 passed`, `2 failed`; failures: pressing `Enter` or Space on focused `订阅` button changed location from `/live` to `/detail?id=701` | `red_passed` |
+| `cd frontend/h5 && npm test -- LiveFeedPage.test.tsx --runInBand` | `PASS` after keyboard bubbling fix | `PASS src/pages/Live/__tests__/LiveFeedPage.test.tsx`; `15 passed`, `15 total`; `Test Suites: 1 passed, 1 total` | `green_passed` |
 
 **Modified Files**
 
@@ -309,6 +311,7 @@
 **Commits**
 
 - `a430f13aff7e6da6822f864197ec8f0ae960d67f` (`feat: add h5 live upcoming empty state`)
+- `pending` (`fix: prevent live empty subscribe keyboard navigation`; to be filled after commit)
 
 **Review Notes**
 
@@ -317,6 +320,7 @@
 - Authenticated users get reminder state from `productReminderApi.list()`; subscribe marks pending, handles success and `已经订阅` as subscribed, and shows Toast for other failures.
 - Unauthenticated subscribe navigates to `/login?redirect=%2Flive`.
 - Updated the existing empty-list test to assert the new actionable fallback state instead of the removed legacy plain text.
+- Code-quality review fix: parent preview row keyboard handling now ignores `keydown` events from nested interactive elements, and the subscribe button stops Enter/Space `keydown` propagation without preventing native button activation. This prevents keyboard subscribe attempts from navigating to auction detail; existing click coverage still verifies subscribe API behavior.
 
 **Risks / Blockers**
 

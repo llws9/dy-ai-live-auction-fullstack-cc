@@ -58,6 +58,15 @@ const getProductName = (auction: UpcomingAuctionItem) =>
   auction.title ||
   `竞拍场次 #${auction.id}`;
 
+const isActivationKey = (key: string) => key === 'Enter' || key === ' ';
+
+const isFromNestedInteractive = (event: React.KeyboardEvent<HTMLElement>) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement) || target === event.currentTarget) return false;
+  const interactive = target.closest('button, a, input, select, textarea, [role="button"], [role="link"]');
+  return Boolean(interactive && interactive !== event.currentTarget);
+};
+
 const LiveEmptyState: React.FC<LiveEmptyStateProps> = ({
   upcomingAuctions,
   subscribedProductIds,
@@ -102,7 +111,7 @@ const LiveEmptyState: React.FC<LiveEmptyStateProps> = ({
                 tabIndex={0}
                 onClick={() => onAuctionClick(auction.id)}
                 onKeyDown={(event) => {
-                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  if (!isActivationKey(event.key) || isFromNestedInteractive(event)) return;
                   event.preventDefault();
                   onAuctionClick(auction.id);
                 }}
@@ -119,6 +128,9 @@ const LiveEmptyState: React.FC<LiveEmptyStateProps> = ({
                   onClick={(event) => {
                     event.stopPropagation();
                     onSubscribe(productId, auction.id);
+                  }}
+                  onKeyDown={(event) => {
+                    if (isActivationKey(event.key)) event.stopPropagation();
                   }}
                 >
                   {buttonLabel}

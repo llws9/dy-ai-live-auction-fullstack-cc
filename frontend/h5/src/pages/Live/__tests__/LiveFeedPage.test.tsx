@@ -264,6 +264,31 @@ describe('LiveFeedPage feed 骨架', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/live');
   });
 
+  it.each(['Enter', ' '] as const)('订阅按钮获得焦点后按 %s 不触发预告行详情跳转', async (key) => {
+    mockedLiveStreamApi.list.mockResolvedValue({
+      list: [{ id: 3, name: '空直播间', current_auction_id: null }],
+      total: 1,
+      page: 1,
+      page_size: 20,
+    });
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [{ id: 701, product_id: 501, product_name: '青花瓷瓶', start_time: '2026-06-05T21:00:00Z', start_price: '1200.00' }],
+      total: 1,
+      page: 1,
+      page_size: 2,
+    });
+
+    renderFeed('/live');
+
+    const subscribeButton = await screen.findByRole('button', { name: '订阅' });
+    subscribeButton.focus();
+    expect(subscribeButton).toHaveFocus();
+
+    fireEvent.keyDown(subscribeButton, { key });
+
+    expect(screen.getByTestId('location')).toHaveTextContent('/live');
+  });
+
   it('upcoming 接口失败时降级展示去首页看拍品入口', async () => {
     mockedLiveStreamApi.list.mockResolvedValue({
       list: [{ id: 3, name: '空直播间', current_auction_id: null }],
