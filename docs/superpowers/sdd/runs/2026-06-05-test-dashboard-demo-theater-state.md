@@ -37,7 +37,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `3` |
-| Last Updated | `2026-06-06 00:11` |
+| Last Updated | `2026-06-06 00:20` |
 
 ## Task Matrix
 
@@ -179,6 +179,11 @@
 | `cd frontend/test-dashboard && npm exec -- vitest --version` | `Vitest resolves` | `vitest/4.1.8 darwin-arm64 node-v20.20.1` | `passed` |
 | `cd frontend/test-dashboard && npm run test:run -- --passWithNoTests` | `PASS` | `No test files found, exiting with code 0` | `passed` |
 | `cd frontend/test-dashboard && npm run build` | `PASS` | `✓ built in 3.33s` | `passed` |
+| `cd frontend/test-dashboard && npm ls vite vitest --all` | `FAIL review gate before fix` | `vitest@4.1.8 nested vite@8.0.16 while project uses vite@5.4.21` | `red_passed` |
+| `cd frontend/test-dashboard && npm install -D vitest@3.2.4` | `Regenerate lockfile with Vite 5 compatible Vitest` | `added 13 packages, removed 9 packages, changed 12 packages; npm audit reports 3 vulnerabilities` | `passed` |
+| `cd frontend/test-dashboard && npm ls vite vitest --all` | `Only Vite 5 in dependency tree` | `vitest@3.2.4, @vitest/mocker@3.2.4 and vite-node@3.2.4 all dedupe to vite@5.4.21` | `passed` |
+| `cd frontend/test-dashboard && npm run test:run -- --passWithNoTests` | `PASS after version alignment` | `RUN v3.2.4; No test files found, exiting with code 0` | `passed` |
+| `cd frontend/test-dashboard && npm run build` | `PASS after version alignment` | `✓ built in 3.26s` | `passed` |
 
 **Modified Files**
 
@@ -190,16 +195,18 @@
 **Commits**
 
 - `6d6752ba test(test-dashboard): add frontend test runner`
+- `review fix: test(test-dashboard): align vitest with vite 5`
 
 **Review Notes**
 
 - Added Vitest scripts and Vite test config with `jsdom`, `globals`, and RTL matcher setup.
 - No business source files changed; T003/T004 can now add `*.test.ts(x)` files against the configured runner.
+- Review fix: replaced `vitest@^4.1.8` with `vitest@^3.2.4` because Vitest 4 pulled nested `vite@8.0.16`; Vitest 3.2.4 declares `vite@^5.0.0 || ^6.0.0 || ^7.0.0-0` and dedupes to project `vite@5.4.21`.
 
 **Risks / Blockers**
 
-- `npm install` reported 2 moderate audit findings in transitive dependencies; not fixed in T002 to avoid out-of-scope dependency upgrades.
-- `npm run test:run -- --passWithNoTests` emits Vite/Vitest deprecation warnings from upstream plugin options; command exits 0.
+- `npm install -D vitest@3.2.4` reports 3 audit findings; not fixed in T002 review fix to avoid out-of-scope dependency upgrades.
+- Build still reports an existing large chunk warning; no functional or type-check failure.
 
 **Handoff**
 
