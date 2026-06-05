@@ -88,7 +88,7 @@
 
 **Commits**
 
-- `pending commit`
+- `bae7c6f9 feat(test): expose user journey demo snapshot`
 
 **Review Notes**
 
@@ -119,4 +119,4 @@
 
 **状态**
 
-- `T001 done; commit pending`
+- `T001 done; implementation commit bae7c6f9`
