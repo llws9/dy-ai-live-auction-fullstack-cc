@@ -1,0 +1,417 @@
+frontend/admin/src/shared/auth/index.ts
+  d6be5d78ae25b585 3,5 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22bc472ec60aa1a73a1991","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":3},{"Single":5}]}]}
+frontend/admin/src/App.tsx
+  d6be5d78ae25b585 18,21-29,50-51,54-56,59-60,65,67-68 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22bc472ec60aa1a73a1991","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":18},{"Range":[21,29]},{"Range":[50,51]},{"Range":[54,56]},{"Range":[59,60]},{"Single":65},{"Range":[67,68]}]}]}
+frontend/admin/src/pages-new/__tests__/Login.auth.test.tsx
+  d6be5d78ae25b585 5,96-126 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22bc472ec60aa1a73a1991","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":5},{"Range":[96,126]}]}]}
+frontend/admin/src/shared/auth/AuthContext.tsx
+  d6be5d78ae25b585 178-207 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22bc472ec60aa1a73a1991","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[178,207]}]}]}
+frontend/admin/src/components/__tests__/Layout.roleVisibility.test.tsx
+  d6be5d78ae25b585 1-54 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22bc472ec60aa1a73a1991","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,54]}]}]}
+frontend/admin/src/shared/auth/roles.ts
+  d6be5d78ae25b585 1-14 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22bc472ec60aa1a73a1991","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,14]}]}]}
+frontend/admin/src/components/Layout.tsx
+  d6be5d78ae25b585 19-20,26-27,38,47,56-57,75,84-85,93,95-105,115,122,143,234-235 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22bc472ec60aa1a73a1991","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[19,20]},{"Range":[26,27]},{"Single":38},{"Single":47},{"Range":[56,57]},{"Single":75},{"Range":[84,85]},{"Single":93},{"Range":[95,105]},{"Single":115},{"Single":122},{"Single":143},{"Range":[234,235]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "926328ee1ba71487883736c53e896921e85272ca",
+  "prompts": {
+    "d6be5d78ae25b585": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a22bb3a2ec60aa1a73a18d2",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>",
+      "messages": [],
+      "total_additions": 201,
+      "total_deletions": 47,
+      "accepted_lines": 183,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "frontend/admin/src/App.tsx": [
+      {
+        "hash": "d6be5d78ae25b585",
+        "line_ranges": [
+          {
+            "Single": 18
+          },
+          {
+            "Range": [
+              21,
+              29
+            ]
+          },
+          {
+            "Range": [
+              50,
+              51
+            ]
+          },
+          {
+            "Range": [
+              54,
+              56
+            ]
+          },
+          {
+            "Range": [
+              59,
+              60
+            ]
+          },
+          {
+            "Single": 65
+          },
+          {
+            "Range": [
+              67,
+              68
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22bc472ec60aa1a73a1991",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 18
+              },
+              {
+                "Range": [
+                  21,
+                  29
+                ]
+              },
+              {
+                "Range": [
+                  50,
+                  51
+                ]
+              },
+              {
+                "Range": [
+                  54,
+                  56
+                ]
+              },
+              {
+                "Range": [
+                  59,
+                  60
+                ]
+              },
+              {
+                "Single": 65
+              },
+              {
+                "Range": [
+                  67,
+                  68
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frontend/admin/src/components/Layout.tsx": [
+      {
+        "hash": "d6be5d78ae25b585",
+        "line_ranges": [
+          {
+            "Range": [
+              19,
+              20
+            ]
+          },
+          {
+            "Range": [
+              26,
+              27
+            ]
+          },
+          {
+            "Single": 38
+          },
+          {
+            "Single": 47
+          },
+          {
+            "Range": [
+              56,
+              57
+            ]
+          },
+          {
+            "Single": 75
+          },
+          {
+            "Range": [
+              84,
+              85
+            ]
+          },
+          {
+            "Single": 93
+          },
+          {
+            "Range": [
+              95,
+              105
+            ]
+          },
+          {
+            "Single": 115
+          },
+          {
+            "Single": 122
+          },
+          {
+            "Single": 143
+          },
+          {
+            "Range": [
+              234,
+              235
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22bc472ec60aa1a73a1991",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  19,
+                  20
+                ]
+              },
+              {
+                "Range": [
+                  26,
+                  27
+                ]
+              },
+              {
+                "Single": 38
+              },
+              {
+                "Single": 47
+              },
+              {
+                "Range": [
+                  56,
+                  57
+                ]
+              },
+              {
+                "Single": 75
+              },
+              {
+                "Range": [
+                  84,
+                  85
+                ]
+              },
+              {
+                "Single": 93
+              },
+              {
+                "Range": [
+                  95,
+                  105
+                ]
+              },
+              {
+                "Single": 115
+              },
+              {
+                "Single": 122
+              },
+              {
+                "Single": 143
+              },
+              {
+                "Range": [
+                  234,
+                  235
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frontend/admin/src/components/__tests__/Layout.roleVisibility.test.tsx": [
+      {
+        "hash": "d6be5d78ae25b585",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              54
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22bc472ec60aa1a73a1991",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  54
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frontend/admin/src/pages-new/__tests__/Login.auth.test.tsx": [
+      {
+        "hash": "d6be5d78ae25b585",
+        "line_ranges": [
+          {
+            "Single": 5
+          },
+          {
+            "Range": [
+              96,
+              126
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22bc472ec60aa1a73a1991",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 5
+              },
+              {
+                "Range": [
+                  96,
+                  126
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frontend/admin/src/shared/auth/AuthContext.tsx": [
+      {
+        "hash": "d6be5d78ae25b585",
+        "line_ranges": [
+          {
+            "Range": [
+              178,
+              207
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22bc472ec60aa1a73a1991",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  178,
+                  207
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frontend/admin/src/shared/auth/index.ts": [
+      {
+        "hash": "d6be5d78ae25b585",
+        "line_ranges": [
+          {
+            "Single": 3
+          },
+          {
+            "Single": 5
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22bc472ec60aa1a73a1991",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 3
+              },
+              {
+                "Single": 5
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frontend/admin/src/shared/auth/roles.ts": [
+      {
+        "hash": "d6be5d78ae25b585",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              14
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22bc472ec60aa1a73a1991",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  14
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "d6be5d78ae25b585": {
+      "tool": "trae",
+      "conversation_id": "6a22bb3a2ec60aa1a73a18d2",
+      "session_id": "6a22bb3a2ec60aa1a73a18d2",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
