@@ -163,8 +163,13 @@ assert_contains \
 
 assert_contains \
   "$ROOT/scripts/init-local-auth-users.sh" \
-  'ON DUPLICATE KEY UPDATE' \
-  "init-local-auth-users.sh must be idempotent"
+  'WHERE NOT EXISTS \(SELECT 1 FROM users WHERE phone = '\''18600000001'\''\)' \
+  "init-local-auth-users.sh must be idempotent for existing README H5 user phone"
+
+assert_contains \
+  "$ROOT/scripts/init-local-auth-users.sh" \
+  'WHERE email = '\''merchant@example.com'\''' \
+  "init-local-auth-users.sh must update existing README merchant account by email"
 
 assert_contains \
   "$ROOT/scripts/init-local-auth-users.sh" \

@@ -60,19 +60,58 @@ ensure_index idx_users_email "CREATE UNIQUE INDEX idx_users_email ON users (emai
 ensure_index idx_users_phone "CREATE UNIQUE INDEX idx_users_phone ON users (phone);"
 
 mysql_exec <<'SQL'
+UPDATE users
+SET
+  name = '本地测试用户',
+  avatar = '',
+  email = NULL,
+  password = '$2a$10$BNzNS6qrCs4z0zPrTB01m.OlGPNBYq5o3d.8JlTrz2O5laOi6gxWy',
+  role = 0,
+  status = 1
+WHERE phone = '18600000001';
+
 INSERT INTO users (id, name, avatar, email, phone, password, role, status, created_at)
-VALUES
-  (9001, '本地测试用户', '', NULL, '18600000001', '$2a$10$BNzNS6qrCs4z0zPrTB01m.OlGPNBYq5o3d.8JlTrz2O5laOi6gxWy', 0, 1, NOW()),
-  (9002, '本地商家账号', '', 'merchant@example.com', '18600000002', '$2a$10$BNzNS6qrCs4z0zPrTB01m.OlGPNBYq5o3d.8JlTrz2O5laOi6gxWy', 1, 1, NOW()),
-  (999, '系统管理员', '', 'admin@example.com', NULL, '$2a$10$dAlzKYPTCJMOrgoGXm/FFubDiWeI7.JS4hNYhXp7gZRwBwV6Vwu0e', 2, 1, NOW())
-ON DUPLICATE KEY UPDATE
-  name = VALUES(name),
-  avatar = VALUES(avatar),
-  email = VALUES(email),
-  phone = VALUES(phone),
-  password = VALUES(password),
-  role = VALUES(role),
-  status = VALUES(status);
+SELECT 9001, '本地测试用户', '', NULL, '18600000001', '$2a$10$BNzNS6qrCs4z0zPrTB01m.OlGPNBYq5o3d.8JlTrz2O5laOi6gxWy', 0, 1, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE phone = '18600000001')
+  AND NOT EXISTS (SELECT 1 FROM users WHERE id = 9001);
+
+INSERT INTO users (name, avatar, email, phone, password, role, status, created_at)
+SELECT '本地测试用户', '', NULL, '18600000001', '$2a$10$BNzNS6qrCs4z0zPrTB01m.OlGPNBYq5o3d.8JlTrz2O5laOi6gxWy', 0, 1, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE phone = '18600000001');
+
+UPDATE users
+SET
+  name = '本地商家账号',
+  avatar = '',
+  phone = '18600000002',
+  password = '$2a$10$BNzNS6qrCs4z0zPrTB01m.OlGPNBYq5o3d.8JlTrz2O5laOi6gxWy',
+  role = 1,
+  status = 1
+WHERE email = 'merchant@example.com';
+
+INSERT INTO users (id, name, avatar, email, phone, password, role, status, created_at)
+SELECT 9002, '本地商家账号', '', 'merchant@example.com', '18600000002', '$2a$10$BNzNS6qrCs4z0zPrTB01m.OlGPNBYq5o3d.8JlTrz2O5laOi6gxWy', 1, 1, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'merchant@example.com' OR phone = '18600000002')
+  AND NOT EXISTS (SELECT 1 FROM users WHERE id = 9002);
+
+INSERT INTO users (name, avatar, email, phone, password, role, status, created_at)
+SELECT '本地商家账号', '', 'merchant@example.com', '18600000002', '$2a$10$BNzNS6qrCs4z0zPrTB01m.OlGPNBYq5o3d.8JlTrz2O5laOi6gxWy', 1, 1, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'merchant@example.com' OR phone = '18600000002');
+
+UPDATE users
+SET
+  name = '系统管理员',
+  avatar = '',
+  email = 'admin@example.com',
+  phone = NULL,
+  password = '$2a$10$dAlzKYPTCJMOrgoGXm/FFubDiWeI7.JS4hNYhXp7gZRwBwV6Vwu0e',
+  role = 2,
+  status = 1
+WHERE id = 999 OR email = 'admin@example.com';
+
+INSERT INTO users (id, name, avatar, email, phone, password, role, status, created_at)
+SELECT 999, '系统管理员', '', 'admin@example.com', NULL, '$2a$10$dAlzKYPTCJMOrgoGXm/FFubDiWeI7.JS4hNYhXp7gZRwBwV6Vwu0e', 2, 1, NOW()
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = 999 OR email = 'admin@example.com');
 SQL
 
 echo -e "${GREEN}✓ 本地 README 登录账号已就绪${NC}"
