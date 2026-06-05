@@ -376,10 +376,11 @@
 
 **Commits**
 
-- `pending in commit style: polish h5 live empty upcoming state`
+- `2d0219b360e35bc18a68332a065a1a0568a9fca0` (`style: polish h5 live empty upcoming state`)
 
 **Review Notes**
 
+- T005 spec review requested state SHA backfill; replaced the placeholder commit note with actual commit `2d0219b360e35bc18a68332a065a1a0568a9fca0`.
 - Added CSS regression coverage that locks empty-state page, title, primary link, and upcoming card colors to theme-token declarations.
 - Added day/night-compatible styles for `LiveEmptyState` classes referenced by T004, including fallback panel, optional icon primitives, upcoming list/card layout, time/info text, subscribe button, focus-visible state, and disabled state.
 - Did not modify React files or business logic.
