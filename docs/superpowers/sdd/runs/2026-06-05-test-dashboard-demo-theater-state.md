@@ -189,7 +189,7 @@
 
 **Commits**
 
-- `pending`
+- `6d6752ba test(test-dashboard): add frontend test runner`
 
 **Review Notes**
 
