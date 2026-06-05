@@ -24,9 +24,9 @@ func setupLiveStreamServiceTest(t *testing.T) *LiveStreamService {
 func TestLiveStreamServiceListAdminScopedMerchantOnlyOwnStreams(t *testing.T) {
 	svc := setupLiveStreamServiceTest(t)
 	ctx := context.Background()
-	_, err := svc.CreateForCreator(ctx, 1001, AdminLiveStreamRequest{Name: "A"})
+	_, _, err := svc.CreateForCreator(ctx, 1001, AdminLiveStreamRequest{Name: "A"})
 	require.NoError(t, err)
-	_, err = svc.CreateForCreator(ctx, 1002, AdminLiveStreamRequest{Name: "B"})
+	_, _, err = svc.CreateForCreator(ctx, 1002, AdminLiveStreamRequest{Name: "B"})
 	require.NoError(t, err)
 	creatorID := int64(1001)
 
@@ -38,10 +38,27 @@ func TestLiveStreamServiceListAdminScopedMerchantOnlyOwnStreams(t *testing.T) {
 	require.Equal(t, "A", items[0].Name)
 }
 
+func TestLiveStreamServiceCreateForCreatorReturnsExistingStream(t *testing.T) {
+	svc := setupLiveStreamServiceTest(t)
+	ctx := context.Background()
+
+	first, created, err := svc.CreateForCreator(ctx, 1001, AdminLiveStreamRequest{Name: "第一次创建"})
+	require.NoError(t, err)
+	require.True(t, created)
+
+	second, created, err := svc.CreateForCreator(ctx, 1001, AdminLiveStreamRequest{Name: "重复创建"})
+	require.NoError(t, err)
+	require.False(t, created)
+
+	require.Equal(t, first.ID, second.ID)
+	require.Equal(t, int64(1001), second.CreatorID)
+	require.Equal(t, "第一次创建", second.Name)
+}
+
 func TestLiveStreamServiceGetAdminDetailMerchantRejectsOtherOwner(t *testing.T) {
 	svc := setupLiveStreamServiceTest(t)
 	ctx := context.Background()
-	item, err := svc.CreateForCreator(ctx, 1001, AdminLiveStreamRequest{Name: "A"})
+	item, _, err := svc.CreateForCreator(ctx, 1001, AdminLiveStreamRequest{Name: "A"})
 	require.NoError(t, err)
 
 	got, err := svc.GetAdminDetail(ctx, "merchant", 1002, item.ID)

@@ -71,6 +71,9 @@ func main() {
 	); err != nil {
 		log.Printf("Warning: AutoMigrate failed (tables may already exist): %v", err)
 	}
+	if err := dao.EnsureAuctionRuleProductScopeSchema(db); err != nil {
+		log.Fatalf("Failed to align auction_rules schema: %v", err)
+	}
 
 	// 初始化 DAO 层
 	productDAO := dao.NewProductDAO(db)

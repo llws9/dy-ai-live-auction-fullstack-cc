@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -117,8 +118,80 @@ func TestReminderStepUsesFollowAndFollowStatusOnly(t *testing.T) {
 	assert.NotContains(t, biz.calls, "pending_reminder")
 }
 
+func TestPrepareEnsuresBusinessUsersBeforeReadingBalance(t *testing.T) {
+	ctx := context.Background()
+	biz := newFakeBiz()
+	internal := &fakeInternalClient{}
+
+	_, err := New(biz, internal, &fakeSeedRecorder{}, Config{TestID: "tj_users"}).Run(ctx, nil)
+	require.NoError(t, err)
+
+	assert.True(t, internal.ensureUsersCalled)
+	require.GreaterOrEqual(t, len(biz.calls), 1)
+	assert.Equal(t, "get_user_balance", biz.calls[0])
+}
+
+func TestAuctionBidWaitsForAuctionStartedBeforeBidding(t *testing.T) {
+	ctx := context.Background()
+	biz := newFakeBiz()
+
+	_, err := New(biz, &fakeInternalClient{}, &fakeSeedRecorder{}, Config{TestID: "tj_wait"}).Run(ctx, nil)
+	require.NoError(t, err)
+
+	waitIdx := indexOfCall(biz.calls, "wait_auction_started")
+	bidIdx := indexOfCall(biz.calls, "place_bid")
+	require.NotEqual(t, -1, waitIdx)
+	require.NotEqual(t, -1, bidIdx)
+	assert.Less(t, waitIdx, bidIdx)
+}
+
+func TestVerifyWaitsForAuctionEndedBeforeReadingResult(t *testing.T) {
+	ctx := context.Background()
+	biz := newFakeBiz()
+
+	_, err := New(biz, &fakeInternalClient{}, &fakeSeedRecorder{}, Config{TestID: "tj_wait_end"}).Run(ctx, nil)
+	require.NoError(t, err)
+
+	waitIdx := indexOfCall(biz.calls, "wait_auction_ended")
+	resultIdx := indexOfCall(biz.calls, "get_auction_result")
+	require.NotEqual(t, -1, waitIdx)
+	require.NotEqual(t, -1, resultIdx)
+	assert.Less(t, waitIdx, resultIdx)
+}
+
+func TestPrepareCreatesAuctionRuleBeforeAuction(t *testing.T) {
+	ctx := context.Background()
+	biz := newFakeBiz()
+
+	_, err := New(biz, &fakeInternalClient{}, &fakeSeedRecorder{}, Config{TestID: "tj_rule"}).Run(ctx, nil)
+	require.NoError(t, err)
+
+	ruleIdx := indexOfCall(biz.calls, "create_auction_rule")
+	auctionIdx := indexOfCall(biz.calls, "create_auction")
+	require.NotEqual(t, -1, ruleIdx)
+	require.NotEqual(t, -1, auctionIdx)
+	assert.Less(t, ruleIdx, auctionIdx)
+}
+
+func TestPrepareCreatesFastAuctionRuleForUserJourney(t *testing.T) {
+	ctx := context.Background()
+	biz := newFakeBiz()
+
+	_, err := New(biz, &fakeInternalClient{}, &fakeSeedRecorder{}, Config{
+		TestID:             "tj_fast_rule",
+		AuctionDurationSec: 8,
+	}).Run(ctx, nil)
+	require.NoError(t, err)
+
+	require.Equal(t, 8, biz.lastRuleReq.Duration)
+	assert.Equal(t, 2, biz.lastRuleReq.DelayDuration)
+	assert.Equal(t, 2, biz.lastRuleReq.MaxDelayTime)
+	assert.Equal(t, 1, biz.lastRuleReq.TriggerDelayBefore)
+}
+
 type fakeBiz struct {
-	calls []string
+	calls       []string
+	lastRuleReq auction.CreateAuctionRuleReq
 }
 
 func newFakeBiz() *fakeBiz { return &fakeBiz{calls: make([]string, 0, 16)} }
@@ -135,9 +208,37 @@ func (f *fakeBiz) CreateLiveStream(_ context.Context, _ auction.Actor, _ auction
 	return okStep("create_live_stream", 201)
 }
 
+func (f *fakeBiz) CreateAuctionRule(_ context.Context, _ auction.Actor, _ int64, req auction.CreateAuctionRuleReq) auction.StepResult {
+	f.call("create_auction_rule")
+	f.lastRuleReq = req
+	return okStep("create_auction_rule", 0)
+}
+
 func (f *fakeBiz) CreateAuctionAs(_ context.Context, _ auction.Actor, _ auction.CreateAuctionReq) auction.StepResult {
 	f.call("create_auction")
 	return okStep("create_auction", 301)
+}
+
+func (f *fakeBiz) WaitAuctionStarted(_ context.Context, auctionID int64, _, _ time.Duration) auction.StepResult {
+	f.call("wait_auction_started")
+	return okStep("wait_auction_started", auctionID)
+}
+
+func (f *fakeBiz) WaitAuctionEnded(_ context.Context, auctionID int64, _, _ time.Duration) auction.StepResult {
+	f.call("wait_auction_ended")
+	return okStep("wait_auction_ended", auctionID)
+}
+
+func (f *fakeBiz) GetAuctionResult(_ context.Context, auctionID int64) (auction.AuctionResult, auction.StepResult) {
+	f.call("get_auction_result")
+	return auction.AuctionResult{
+		AuctionID:  auctionID,
+		ProductID:  101,
+		Status:     3,
+		WinnerID:   2001,
+		FinalPrice: 110,
+		WonBid:     110,
+	}, okStep("get_auction_result", auctionID)
 }
 
 func (f *fakeBiz) CreateFixedPriceItem(_ context.Context, _ auction.Actor, _ auction.CreateFixedPriceItemReq) auction.StepResult {
@@ -204,7 +305,13 @@ func (f *fakeBiz) GetUserBalance(_ context.Context, _ auction.Actor) (string, au
 }
 
 type fakeInternalClient struct {
-	topUpErr error
+	topUpErr          error
+	ensureUsersCalled bool
+}
+
+func (f *fakeInternalClient) EnsureUsers(_ context.Context, _ []auction.Actor) auction.StepResult {
+	f.ensureUsersCalled = true
+	return okStep("ensure_users", 0)
 }
 
 func (f *fakeInternalClient) TopUpUserBalance(_ context.Context, _ int64, _ string) (string, auction.StepResult) {
@@ -267,6 +374,15 @@ func countCalls(calls []string, name string) int {
 		}
 	}
 	return n
+}
+
+func indexOfCall(calls []string, name string) int {
+	for i, call := range calls {
+		if call == name {
+			return i
+		}
+	}
+	return -1
 }
 
 func itoa(v int64) string {

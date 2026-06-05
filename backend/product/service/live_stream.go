@@ -4,6 +4,8 @@ import (
 	"context"
 	"product-service/dao"
 	"product-service/model"
+
+	"gorm.io/gorm"
 )
 
 // LiveStreamService 直播间服务
@@ -121,7 +123,15 @@ func (s *LiveStreamService) GetAdminDetail(ctx context.Context, role string, use
 	return s.liveStreamDAO.GetByID(ctx, id)
 }
 
-func (s *LiveStreamService) CreateForCreator(ctx context.Context, creatorID int64, req AdminLiveStreamRequest) (*model.LiveStream, error) {
+func (s *LiveStreamService) CreateForCreator(ctx context.Context, creatorID int64, req AdminLiveStreamRequest) (*model.LiveStream, bool, error) {
+	existing, err := s.liveStreamDAO.GetByCreatorID(ctx, creatorID)
+	if err == nil {
+		return existing, false, nil
+	}
+	if err != gorm.ErrRecordNotFound {
+		return nil, false, err
+	}
+
 	liveStream := &model.LiveStream{
 		CreatorID:      creatorID,
 		Name:           req.Name,
@@ -133,9 +143,9 @@ func (s *LiveStreamService) CreateForCreator(ctx context.Context, creatorID int6
 		StreamerAvatar: req.StreamerAvatar,
 	}
 	if err := s.liveStreamDAO.Create(ctx, liveStream); err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return liveStream, nil
+	return liveStream, true, nil
 }
 
 func (s *LiveStreamService) UpdateForCreator(ctx context.Context, creatorID, id int64, req AdminLiveStreamRequest) (*model.LiveStream, error) {

@@ -241,6 +241,34 @@ func TestAdminCreateLiveStreamMerchantSetsCreatorID(t *testing.T) {
 	assert.Equal(t, "商家直播间", data["name"])
 }
 
+func TestAdminCreateLiveStreamReturnsOKForExistingStream(t *testing.T) {
+	h := newLiveStreamHandlerWithSeed(t, nil)
+
+	first := app.NewContext(0)
+	first.Request.SetRequestURI("/api/v1/admin/live-streams")
+	first.Request.Header.Set("X-User-ID", "1001")
+	first.Request.Header.Set("X-User-Role", "merchant")
+	first.Request.Header.Set("Content-Type", "application/json")
+	first.Request.SetBodyString(`{"name":"已有直播间"}`)
+	h.AdminCreate(context.Background(), first)
+	require.Equal(t, 201, first.Response.StatusCode())
+
+	second := app.NewContext(0)
+	second.Request.SetRequestURI("/api/v1/admin/live-streams")
+	second.Request.Header.Set("X-User-ID", "1001")
+	second.Request.Header.Set("X-User-Role", "merchant")
+	second.Request.Header.Set("Content-Type", "application/json")
+	second.Request.SetBodyString(`{"name":"重复创建直播间"}`)
+	h.AdminCreate(context.Background(), second)
+
+	assert.Equal(t, 200, second.Response.StatusCode())
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(second.Response.Body(), &body))
+	assert.EqualValues(t, 200, body["code"])
+	data := body["data"].(map[string]interface{})
+	assert.Equal(t, "已有直播间", data["name"])
+}
+
 func TestListAdminLiveStreamRejectsInvalidStatus(t *testing.T) {
 	h := newLiveStreamHandlerWithSeed(t, nil)
 

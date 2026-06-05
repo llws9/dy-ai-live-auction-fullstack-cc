@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -75,6 +76,71 @@ func InitDB(cfg *Config) (*gorm.DB, error) {
 // GetDB 获取数据库连接
 func GetDB() *gorm.DB {
 	return DB
+}
+
+// EnsureAuctionRuleProductScopeSchema aligns legacy MySQL databases with the
+// current product-scoped auction_rules contract.
+func EnsureAuctionRuleProductScopeSchema(db *gorm.DB) error {
+	if db == nil {
+		return fmt.Errorf("db is nil")
+	}
+	if db.Dialector.Name() != "mysql" {
+		return nil
+	}
+	if !db.Migrator().HasTable("auction_rules") {
+		return nil
+	}
+
+	type foreignKey struct {
+		ConstraintName string `gorm:"column:CONSTRAINT_NAME"`
+	}
+	var fks []foreignKey
+	if err := db.Raw(`
+		SELECT CONSTRAINT_NAME
+		FROM information_schema.KEY_COLUMN_USAGE
+		WHERE TABLE_SCHEMA = DATABASE()
+		  AND TABLE_NAME = 'auction_rules'
+		  AND COLUMN_NAME = 'auction_id'
+		  AND REFERENCED_TABLE_NAME IS NOT NULL
+	`).Scan(&fks).Error; err != nil {
+		return fmt.Errorf("inspect auction_rules.auction_id foreign keys: %w", err)
+	}
+	for _, fk := range fks {
+		if fk.ConstraintName == "" {
+			continue
+		}
+		if err := db.Exec("ALTER TABLE auction_rules DROP FOREIGN KEY " + quoteMySQLIdentifier(fk.ConstraintName)).Error; err != nil {
+			return fmt.Errorf("drop auction_rules foreign key %s: %w", fk.ConstraintName, err)
+		}
+	}
+
+	type columnInfo struct {
+		IsNullable string `gorm:"column:IS_NULLABLE"`
+	}
+	var col columnInfo
+	tx := db.Raw(`
+		SELECT IS_NULLABLE
+		FROM information_schema.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE()
+		  AND TABLE_NAME = 'auction_rules'
+		  AND COLUMN_NAME = 'auction_id'
+	`).Scan(&col)
+	if tx.Error != nil {
+		return fmt.Errorf("inspect auction_rules.auction_id column: %w", tx.Error)
+	}
+	if tx.RowsAffected == 0 {
+		return nil
+	}
+	if strings.EqualFold(col.IsNullable, "NO") {
+		if err := db.Exec("ALTER TABLE auction_rules MODIFY COLUMN auction_id BIGINT NULL COMMENT 'legacy auction id; product_id is source of truth'").Error; err != nil {
+			return fmt.Errorf("make auction_rules.auction_id nullable: %w", err)
+		}
+	}
+	return nil
+}
+
+func quoteMySQLIdentifier(s string) string {
+	return "`" + strings.ReplaceAll(s, "`", "``") + "`"
 }
 
 // InitDBFromEnv 从环境变量初始化数据库连接

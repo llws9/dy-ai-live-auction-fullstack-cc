@@ -3,6 +3,7 @@ package user_journey
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"test-service/client/auction"
 	"test-service/runner"
@@ -11,7 +12,11 @@ import (
 type BusinessClient interface {
 	CreateProductAs(ctx context.Context, actor auction.Actor, req auction.CreateProductReq) auction.StepResult
 	CreateLiveStream(ctx context.Context, actor auction.Actor, req auction.CreateLiveStreamReq) auction.StepResult
+	CreateAuctionRule(ctx context.Context, actor auction.Actor, productID int64, req auction.CreateAuctionRuleReq) auction.StepResult
 	CreateAuctionAs(ctx context.Context, actor auction.Actor, req auction.CreateAuctionReq) auction.StepResult
+	WaitAuctionStarted(ctx context.Context, auctionID int64, interval, timeout time.Duration) auction.StepResult
+	WaitAuctionEnded(ctx context.Context, auctionID int64, interval, timeout time.Duration) auction.StepResult
+	GetAuctionResult(ctx context.Context, auctionID int64) (auction.AuctionResult, auction.StepResult)
 	CreateFixedPriceItem(ctx context.Context, actor auction.Actor, req auction.CreateFixedPriceItemReq) auction.StepResult
 	StartLive(ctx context.Context, actor auction.Actor, liveStreamID int64) auction.StepResult
 	GetLiveStream(ctx context.Context, actor auction.Actor, liveStreamID int64) (auction.LiveStream, auction.StepResult)
@@ -27,6 +32,7 @@ type BusinessClient interface {
 }
 
 type InternalClient interface {
+	EnsureUsers(ctx context.Context, actors []auction.Actor) auction.StepResult
 	TopUpUserBalance(ctx context.Context, userID int64, amount string) (string, auction.StepResult)
 }
 
@@ -134,6 +140,11 @@ func (o *Orchestrator) Run(ctx context.Context, p runner.ProgressEmitter) (repor
 }
 
 func (o *Orchestrator) prepare(ctx context.Context, rep *Report, p runner.ProgressEmitter, buyer, merchant auction.Actor) error {
+	ensureUsers := o.internal.EnsureUsers(ctx, []auction.Actor{buyer, merchant})
+	if !ensureUsers.OK {
+		return o.recordAndError(rep, p, 5, "prepare", ensureUsers, "prepare ensure_users failed")
+	}
+
 	balanceBefore, balanceStep := o.biz.GetUserBalance(ctx, buyer)
 	if !balanceStep.OK {
 		return fmt.Errorf("prepare get_balance failed: %s", balanceStep.Message)
@@ -152,7 +163,7 @@ func (o *Orchestrator) prepare(ctx context.Context, rep *Report, p runner.Progre
 	o.addSeed(ctx, "product", rep.ProductID)
 
 	live := o.biz.CreateLiveStream(ctx, merchant, auction.CreateLiveStreamReq{
-		Title:       fmt.Sprintf("TEST_USER_JOURNEY_%s 直播间", o.cfg.TestID),
+		Name:        fmt.Sprintf("TEST_USER_JOURNEY_%s 直播间", o.cfg.TestID),
 		Description: "TEST_USER_JOURNEY_" + o.cfg.TestID,
 		ProductID:   rep.ProductID,
 	})
@@ -161,6 +172,18 @@ func (o *Orchestrator) prepare(ctx context.Context, rep *Report, p runner.Progre
 	}
 	rep.LiveStreamID = live.RefID
 	o.addSeed(ctx, "live_stream", rep.LiveStreamID)
+
+	rule := o.biz.CreateAuctionRule(ctx, merchant, rep.ProductID, auction.CreateAuctionRuleReq{
+		StartPrice:         100,
+		Increment:          10,
+		Duration:           o.cfg.AuctionDurationSec,
+		DelayDuration:      2,
+		MaxDelayTime:       2,
+		TriggerDelayBefore: 1,
+	})
+	if !rule.OK {
+		return o.recordAndError(rep, p, 10, "prepare", rule, "prepare create_auction_rule failed")
+	}
 
 	auctionStep := o.biz.CreateAuctionAs(ctx, merchant, auction.CreateAuctionReq{
 		ProductID:  rep.ProductID,
@@ -225,6 +248,11 @@ func (o *Orchestrator) reminder(ctx context.Context, rep *Report, p runner.Progr
 }
 
 func (o *Orchestrator) auctionBid(ctx context.Context, rep *Report, p runner.ProgressEmitter, buyer auction.Actor) error {
+	wait := o.biz.WaitAuctionStarted(ctx, rep.AuctionID, 200*time.Millisecond, time.Duration(o.cfg.AuctionDurationSec+5)*time.Second)
+	if !wait.OK {
+		return o.recordAndError(rep, p, 45, "auction_bid", wait, "auction_bid wait_started failed")
+	}
+
 	step := o.biz.PlaceBid(ctx, buyer.UserID, rep.AuctionID, 110)
 	if !step.OK {
 		return o.recordAndError(rep, p, 50, "auction_bid", step, "auction_bid failed")
@@ -262,9 +290,14 @@ func (o *Orchestrator) fixedPricePurchase(ctx context.Context, rep *Report, p ru
 }
 
 func (o *Orchestrator) verify(ctx context.Context, rep *Report, p runner.ProgressEmitter, buyer auction.Actor) error {
-	orders, orderStep := o.biz.FindOrdersByAuction(ctx, buyer.UserID, rep.AuctionID)
-	if !orderStep.OK || len(orders) == 0 {
-		return o.recordAndError(rep, p, 100, "verify", orderStep, "verify orders failed")
+	wait := o.biz.WaitAuctionEnded(ctx, rep.AuctionID, 200*time.Millisecond, time.Duration(o.cfg.AuctionDurationSec+5)*time.Second)
+	if !wait.OK {
+		return o.recordAndError(rep, p, 95, "verify", wait, "verify wait_ended failed")
+	}
+
+	result, resultStep := o.biz.GetAuctionResult(ctx, rep.AuctionID)
+	if !resultStep.OK || result.Status < 3 || result.WinnerID != buyer.UserID || result.FinalPrice <= 0 {
+		return o.recordAndError(rep, p, 100, "verify", resultStep, "verify auction_result failed")
 	}
 	balanceAfter, balanceStep := o.biz.GetUserBalance(ctx, buyer)
 	if !balanceStep.OK {

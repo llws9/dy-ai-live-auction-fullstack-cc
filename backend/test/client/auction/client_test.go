@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -43,6 +44,61 @@ func TestSDK_CreateProduct(t *testing.T) {
 	}
 }
 
+func TestSDK_EnsureUsersCreatesEachActor(t *testing.T) {
+	var callCount atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/users" || r.Method != http.MethodPost {
+			t.Fatalf("path/method: %s %s", r.Method, r.URL.Path)
+		}
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		if body["id"] == nil || body["name"] == "" {
+			t.Fatalf("invalid user body: %#v", body)
+		}
+		callCount.Add(1)
+		w.WriteHeader(201)
+		_, _ = w.Write([]byte(`{"code":201}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	step := c.EnsureUsers(context.Background(), []Actor{
+		{UserID: 2001, Username: "buyer_2001", Role: RoleUser},
+		{UserID: 9001, Username: "merchant_9001", Role: RoleMerchant},
+	})
+	if !step.OK {
+		t.Fatalf("EnsureUsers failed: %s err=%v", step.Message, step.Err)
+	}
+	if callCount.Load() != 2 {
+		t.Fatalf("call count: want 2, got %d", callCount.Load())
+	}
+}
+
+func TestSDK_CreateProductAsMerchantUsesAdminProductAPI(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/admin/products" || r.Method != http.MethodPost {
+			t.Fatalf("path/method: %s %s", r.Method, r.URL.Path)
+		}
+		if r.Header.Get("X-User-Role") != "merchant" {
+			t.Fatalf("X-User-Role: want merchant, got %q", r.Header.Get("X-User-Role"))
+		}
+		w.WriteHeader(201)
+		_, _ = w.Write([]byte(`{"code":201,"data":{"id":42,"owner_id":9001}}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	step := c.CreateProductAs(context.Background(), Actor{UserID: 9001, Role: RoleMerchant}, CreateProductReq{Name: "iPhone"})
+	if !step.OK {
+		t.Fatalf("CreateProductAs failed: %s err=%v", step.Message, step.Err)
+	}
+	if step.RefID != 42 {
+		t.Fatalf("RefID: want 42, got %d", step.RefID)
+	}
+}
+
 // TestSDK_CreateAuction 创建拍卖 → 201 + 返回 ID
 func TestSDK_CreateAuction(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -60,6 +116,167 @@ func TestSDK_CreateAuction(t *testing.T) {
 	}
 	if step.RefID != 7 {
 		t.Fatalf("RefID: want 7, got %d", step.RefID)
+	}
+}
+
+func TestSDK_CreateAuctionRuleUsesProductRuleAPI(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/products/42/rules" || r.Method != http.MethodPost {
+			t.Fatalf("path/method: %s %s", r.Method, r.URL.Path)
+		}
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		if body["start_price"] != float64(100) || body["increment"] != float64(10) {
+			t.Fatalf("invalid rule body: %#v", body)
+		}
+		w.WriteHeader(201)
+		_, _ = w.Write([]byte(`{"id":88}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	step := c.CreateAuctionRule(context.Background(), Actor{UserID: 9001, Role: RoleMerchant}, 42, CreateAuctionRuleReq{
+		StartPrice: 100,
+		Increment:  10,
+		Duration:   8,
+	})
+	if !step.OK {
+		t.Fatalf("CreateAuctionRule failed: %s err=%v", step.Message, step.Err)
+	}
+	if step.RefID != 42 {
+		t.Fatalf("RefID: want 42, got %d", step.RefID)
+	}
+}
+
+func TestSDK_WaitAuctionEndedDoesNotTreatDelayedAsEnded(t *testing.T) {
+	var calls atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/auctions/7" || r.Method != http.MethodGet {
+			t.Fatalf("path/method: %s %s", r.Method, r.URL.Path)
+		}
+		status := 2
+		if calls.Add(1) >= 2 {
+			status = 3
+		}
+		_, _ = w.Write([]byte(`{"id":7,"product_id":42,"status":` + strconv.Itoa(status) + `,"current_price":"110.00"}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	step := c.WaitAuctionEnded(context.Background(), 7, time.Millisecond, 100*time.Millisecond)
+	if !step.OK {
+		t.Fatalf("WaitAuctionEnded failed: %s err=%v", step.Message, step.Err)
+	}
+	if calls.Load() < 2 {
+		t.Fatalf("WaitAuctionEnded returned before status=3, calls=%d", calls.Load())
+	}
+}
+
+func TestSDK_GetAuctionResultParsesDataEnvelope(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/auctions/7/result" || r.Method != http.MethodGet {
+			t.Fatalf("path/method: %s %s", r.Method, r.URL.Path)
+		}
+		_, _ = w.Write([]byte(`{"code":200,"data":{"auction_id":7,"product_id":42,"status":3,"final_price":110,"winner_id":2001,"won_bid":110}}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	result, step := c.GetAuctionResult(context.Background(), 7)
+	if !step.OK {
+		t.Fatalf("GetAuctionResult failed: %s err=%v", step.Message, step.Err)
+	}
+	if result.AuctionID != 7 || result.Status != 3 || result.WinnerID != 2001 || result.FinalPrice != 110 {
+		t.Fatalf("invalid auction result: %#v", result)
+	}
+}
+
+func TestSDK_GetAuctionResultRejectsBusinessErrorEnvelope(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/auctions/7/result" || r.Method != http.MethodGet {
+			t.Fatalf("path/method: %s %s", r.Method, r.URL.Path)
+		}
+		_, _ = w.Write([]byte(`{"code":500,"message":"竞拍结果生成失败"}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	result, step := c.GetAuctionResult(context.Background(), 7)
+	if step.OK {
+		t.Fatalf("GetAuctionResult must fail on business error envelope, result=%#v", result)
+	}
+	if step.Message != "竞拍结果生成失败" {
+		t.Fatalf("message: want 竞拍结果生成失败, got %q", step.Message)
+	}
+}
+
+func TestSDK_CreateLiveStreamSendsAdminNameField(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/admin/live-streams" || r.Method != http.MethodPost {
+			t.Errorf("path/method: %s %s", r.Method, r.URL.Path)
+		}
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		if body["name"] != "验收直播间" {
+			t.Fatalf("name field: want 验收直播间, got %#v", body["name"])
+		}
+		if _, exists := body["title"]; exists {
+			t.Fatalf("title field must not be sent to admin live-stream API")
+		}
+		w.WriteHeader(201)
+		_, _ = w.Write([]byte(`{"code":201,"data":{"id":66}}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	step := c.CreateLiveStream(context.Background(), Actor{UserID: 9001, Role: RoleMerchant}, CreateLiveStreamReq{
+		Name:        "验收直播间",
+		Description: "说明",
+	})
+	if !step.OK {
+		t.Fatalf("CreateLiveStream failed: %s", step.Message)
+	}
+	if step.RefID != 66 {
+		t.Fatalf("RefID: want 66, got %d", step.RefID)
+	}
+}
+
+func TestSDK_CreateFixedPriceItemSendsTotalStock(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/fixed-price/items" || r.Method != http.MethodPost {
+			t.Fatalf("path/method: %s %s", r.Method, r.URL.Path)
+		}
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		if body["total_stock"] != float64(3) {
+			t.Fatalf("total_stock: want 3, got %#v", body["total_stock"])
+		}
+		if _, exists := body["stock"]; exists {
+			t.Fatalf("stock field must not be sent to fixed-price API")
+		}
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(`{"id":77}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	step := c.CreateFixedPriceItem(context.Background(), Actor{UserID: 9001, Role: RoleMerchant}, CreateFixedPriceItemReq{
+		LiveStreamID: 66,
+		ProductID:    42,
+		Price:        "100.00",
+		Stock:        3,
+	})
+	if !step.OK {
+		t.Fatalf("CreateFixedPriceItem failed: %s err=%v", step.Message, step.Err)
+	}
+	if step.RefID != 77 {
+		t.Fatalf("RefID: want 77, got %d", step.RefID)
 	}
 }
 
@@ -103,6 +320,22 @@ func TestSDK_GetAuction(t *testing.T) {
 	}
 }
 
+func TestSDK_GetAuctionParsesStringCurrentPrice(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"id":7,"status":3,"current_price":"150.50","winner_id":100002}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	a, step := c.GetAuction(context.Background(), 7)
+	if !step.OK {
+		t.Fatalf("GetAuction failed: %s err=%v", step.Message, step.Err)
+	}
+	if a.CurrentPrice != 150.50 {
+		t.Fatalf("current price: want 150.50, got %f", a.CurrentPrice)
+	}
+}
+
 // TestSDK_WaitAuctionStarted 轮询直到 status >= 1（Ongoing）
 func TestSDK_WaitAuctionStarted(t *testing.T) {
 	var calls int32
@@ -127,16 +360,16 @@ func TestSDK_WaitAuctionStarted(t *testing.T) {
 	}
 }
 
-// TestSDK_WaitAuctionEnded 轮询直到 status >= 2（Ended）
+// TestSDK_WaitAuctionEnded 轮询直到 status >= 3（Ended）
 func TestSDK_WaitAuctionEnded(t *testing.T) {
 	var calls int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
 		status := 1
 		if calls >= 2 {
-			status = 2
+			status = 3
 		}
-		_, _ = w.Write([]byte(`{"id":7,"status":` + itoa(status) + `,"winner_id":100002}`))
+		_, _ = w.Write([]byte(`{"id":7,"status":` + strconv.Itoa(status) + `,"winner_id":100002}`))
 	}))
 	defer srv.Close()
 

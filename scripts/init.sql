@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS auctions (
 -- 竞拍规则表
 CREATE TABLE IF NOT EXISTS auction_rules (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    auction_id BIGINT UNIQUE NOT NULL COMMENT '关联竞拍ID',
+    product_id BIGINT NOT NULL COMMENT '关联商品ID',
     start_price DECIMAL(10,2) DEFAULT 0 COMMENT '起拍价（默认0元）',
     increment DECIMAL(10,2) NOT NULL COMMENT '加价幅度',
     cap_price DECIMAL(10,2) NULL COMMENT '封顶价',
@@ -49,7 +49,9 @@ CREATE TABLE IF NOT EXISTS auction_rules (
     delay_duration INT DEFAULT 30 COMMENT '单次延时时长（秒）',
     max_delay_time INT DEFAULT 180 COMMENT '最大延时时长（秒）',
     trigger_delay_before INT DEFAULT 30 COMMENT '延时触发时间（秒）',
-    FOREIGN KEY (auction_id) REFERENCES auctions(id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    INDEX idx_auction_rules_product_id (product_id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='竞拍规则表';
 
 -- 出价记录表

@@ -121,12 +121,16 @@ func (h *LiveStreamHandler) AdminCreate(ctx context.Context, c *app.RequestConte
 		c.JSON(400, map[string]interface{}{"code": 400, "message": "请求参数错误: " + err.Error()})
 		return
 	}
-	liveStream, err := h.liveStreamService.CreateForCreator(ctx, actor.UserID, req)
+	liveStream, created, err := h.liveStreamService.CreateForCreator(ctx, actor.UserID, req)
 	if err != nil {
 		c.JSON(500, map[string]interface{}{"code": 500, "message": "创建直播间失败: " + err.Error()})
 		return
 	}
-	c.JSON(201, map[string]interface{}{"code": 201, "message": "success", "data": liveStream})
+	statusCode := 200
+	if created {
+		statusCode = 201
+	}
+	c.JSON(statusCode, map[string]interface{}{"code": statusCode, "message": "success", "data": liveStream})
 }
 
 func (h *LiveStreamHandler) AdminUpdate(ctx context.Context, c *app.RequestContext) {

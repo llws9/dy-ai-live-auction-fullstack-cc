@@ -92,8 +92,18 @@ type CreateAuctionReq struct {
 	Duration   int     `json:"duration"` // 秒
 }
 
+type CreateAuctionRuleReq struct {
+	StartPrice         float64 `json:"start_price"`
+	Increment          float64 `json:"increment"`
+	CapPrice           float64 `json:"cap_price,omitempty"`
+	Duration           int     `json:"duration"`
+	DelayDuration      int     `json:"delay_duration,omitempty"`
+	MaxDelayTime       int     `json:"max_delay_time,omitempty"`
+	TriggerDelayBefore int     `json:"trigger_delay_before,omitempty"`
+}
+
 type CreateLiveStreamReq struct {
-	Title       string `json:"title"`
+	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
 	ProductID   int64  `json:"product_id,omitempty"`
 	CoverImage  string `json:"cover_image,omitempty"`
@@ -103,7 +113,7 @@ type CreateFixedPriceItemReq struct {
 	LiveStreamID int64  `json:"live_stream_id"`
 	ProductID    int64  `json:"product_id"`
 	Price        string `json:"price"`
-	Stock        int64  `json:"stock"`
+	Stock        int64  `json:"total_stock"`
 }
 
 type LiveStream struct {
@@ -134,6 +144,44 @@ type Auction struct {
 	DelayUsed    int       `json:"delay_used"`
 	StartTime    time.Time `json:"start_time"`
 	EndTime      time.Time `json:"end_time"`
+}
+
+type AuctionResult struct {
+	AuctionID  int64   `json:"auction_id"`
+	ProductID  int64   `json:"product_id"`
+	Status     int     `json:"status"`
+	FinalPrice float64 `json:"final_price"`
+	WinnerID   int64   `json:"winner_id"`
+	WonBid     float64 `json:"won_bid"`
+}
+
+func (a *Auction) UnmarshalJSON(data []byte) error {
+	type auctionAlias Auction
+	var aux struct {
+		auctionAlias
+		CurrentPrice any `json:"current_price"`
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	*a = Auction(aux.auctionAlias)
+	switch v := aux.CurrentPrice.(type) {
+	case float64:
+		a.CurrentPrice = v
+	case string:
+		if v == "" {
+			a.CurrentPrice = 0
+			return nil
+		}
+		price, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return err
+		}
+		a.CurrentPrice = price
+	case nil:
+		a.CurrentPrice = 0
+	}
+	return nil
 }
 
 // Order 订单快照
@@ -175,17 +223,41 @@ type idResp struct {
 
 // ---------- 各步骤实现 ----------
 
+func (c *Client) EnsureUsers(ctx context.Context, actors []Actor) StepResult {
+	aggregate := StepResult{Step: "ensure_users", OK: true}
+	start := time.Now()
+	for _, actor := range actors {
+		if actor.UserID <= 0 {
+			continue
+		}
+		body := map[string]any{
+			"id":     actor.UserID,
+			"name":   actor.username(),
+			"avatar": "",
+		}
+		step := c.doAs(ctx, "ensure_user", http.MethodPost, "/api/v1/users", Actor{}, body, nil, nil)
+		if !step.OK {
+			step.Step = "ensure_users"
+			return step
+		}
+	}
+	aggregate.DurationMs = time.Since(start).Milliseconds()
+	return aggregate
+}
+
 // CreateProduct POST /api/v1/products
 func (c *Client) CreateProduct(ctx context.Context, userID int64, req CreateProductReq) StepResult {
 	return c.CreateProductAs(ctx, defaultActor(userID), req)
 }
 
 func (c *Client) CreateProductAs(ctx context.Context, actor Actor, req CreateProductReq) StepResult {
-	var resp struct {
-		ID int64 `json:"id"`
+	var resp idResp
+	path := "/api/v1/products"
+	if actor.role() == RoleMerchant {
+		path = "/api/v1/admin/products"
 	}
-	step := c.doAs(ctx, "create_product", http.MethodPost, "/api/v1/products", actor, req, nil, &resp)
-	step.RefID = resp.ID
+	step := c.doAs(ctx, "create_product", http.MethodPost, path, actor, req, nil, &resp)
+	step.RefID = firstNonZero(resp.ID, resp.Data.ID)
 	return step
 }
 
@@ -200,6 +272,13 @@ func (c *Client) CreateAuctionAs(ctx context.Context, actor Actor, req CreateAuc
 	}
 	step := c.doAs(ctx, "create_auction", http.MethodPost, "/api/v1/auctions", actor, req, nil, &resp)
 	step.RefID = resp.ID
+	return step
+}
+
+func (c *Client) CreateAuctionRule(ctx context.Context, actor Actor, productID int64, req CreateAuctionRuleReq) StepResult {
+	path := "/api/v1/products/" + strconv.FormatInt(productID, 10) + "/rules"
+	step := c.doAs(ctx, "create_auction_rule", http.MethodPost, path, actor, req, nil, nil)
+	step.RefID = productID
 	return step
 }
 
@@ -271,6 +350,27 @@ func (c *Client) GetAuction(ctx context.Context, auctionID int64) (Auction, Step
 	return a, step
 }
 
+func (c *Client) GetAuctionResult(ctx context.Context, auctionID int64) (AuctionResult, StepResult) {
+	var resp struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+		AuctionResult
+		Data AuctionResult `json:"data"`
+	}
+	path := "/api/v1/auctions/" + strconv.FormatInt(auctionID, 10) + "/result"
+	step := c.doAs(ctx, "get_auction_result", http.MethodGet, path, Actor{}, nil, nil, &resp)
+	if step.OK && resp.Code != 0 && resp.Code != 200 {
+		step.OK = false
+		step.Message = firstNonEmpty(resp.Message, fmt.Sprintf("business code %d", resp.Code))
+		return AuctionResult{}, step
+	}
+	result := resp.AuctionResult
+	if result.AuctionID == 0 {
+		result = resp.Data
+	}
+	return result, step
+}
+
 // WaitAuctionStarted 轮询直到 status >= 1
 func (c *Client) WaitAuctionStarted(ctx context.Context, auctionID int64, interval, timeout time.Duration) StepResult {
 	return c.poll(ctx, "wait_started", auctionID, interval, timeout, func(a Auction) bool {
@@ -278,10 +378,10 @@ func (c *Client) WaitAuctionStarted(ctx context.Context, auctionID int64, interv
 	})
 }
 
-// WaitAuctionEnded 轮询直到 status >= 2
+// WaitAuctionEnded 轮询直到 status >= 3；status=2 是延时中，不代表已生成订单。
 func (c *Client) WaitAuctionEnded(ctx context.Context, auctionID int64, interval, timeout time.Duration) StepResult {
 	return c.poll(ctx, "wait_ended", auctionID, interval, timeout, func(a Auction) bool {
-		return a.Status >= 2
+		return a.Status >= 3
 	})
 }
 
