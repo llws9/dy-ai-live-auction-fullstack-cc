@@ -33,11 +33,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `6` |
-| Done | `2` |
+| Done | `3` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `4` |
-| Last Updated | `2026-06-06 00:07` |
+| Pending | `3` |
+| Last Updated | `2026-06-06 00:11` |
 
 ## Task Matrix
 
@@ -45,7 +45,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T000` | `Isolate Worktree` | `done` | `main-agent` | `W0` | `-` | `Create isolated worktree and initialize SDD state` | `docs/superpowers/sdd/runs/2026-06-05-test-dashboard-demo-theater-state.md` |
 | `T001` | `Add Demo Snapshot To UserJourney Report` | `done` | `subagent-bfee7079` | `W1` | `T000` | `Backend user_journey demo_snapshot report and progress metrics` | `backend/test/scenario/user_journey/orchestrator.go, backend/test/scenario/user_journey/orchestrator_test.go` |
-| `T002` | `Add Test Infrastructure For Test Dashboard` | `pending` | `unassigned` | `W2` | `T000` | `Vitest and Testing Library setup for frontend/test-dashboard` | `frontend/test-dashboard/package.json, frontend/test-dashboard/package-lock.json, frontend/test-dashboard/vite.config.ts, frontend/test-dashboard/src/test/setup.ts` |
+| `T002` | `Add Test Infrastructure For Test Dashboard` | `done` | `main-agent` | `W2` | `T000` | `Vitest and Testing Library setup for frontend/test-dashboard` | `frontend/test-dashboard/package.json, frontend/test-dashboard/package-lock.json, frontend/test-dashboard/vite.config.ts, frontend/test-dashboard/src/test/setup.ts` |
 | `T003` | `Add Demo Theater Mapping Layer` | `pending` | `unassigned` | `W3` | `T001,T002` | `Frontend UserJourney demo model mapping` | `frontend/test-dashboard/src/api/test.ts, frontend/test-dashboard/src/pages/demoTheater.ts, frontend/test-dashboard/src/pages/demoTheater.test.ts` |
 | `T004` | `Replace Screen With One-Click Demo Theater` | `pending` | `unassigned` | `W4` | `T003` | `Replace /test/screen historical dashboard with one-click demo theater` | `frontend/test-dashboard/src/pages/Screen.tsx, frontend/test-dashboard/src/pages/Screen.test.tsx` |
 | `T005` | `Integration Verification And SDD Evidence` | `pending` | `unassigned` | `W5` | `T004` | `Run backend/frontend verification and record evidence` | `docs/superpowers/sdd/runs/2026-06-05-test-dashboard-demo-theater-state.md` |
@@ -153,10 +153,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-06 00:08` |
+| Completed At | `2026-06-06 00:11` |
 | Branch | `feat/test-dashboard-demo-theater` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-test-dashboard-demo-theater` |
 | Depends On | `T000` |
@@ -174,8 +174,38 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `cd frontend/test-dashboard && npm run test:run -- --passWithNoTests` | `PASS` | `not_run` | `pending` |
-| `cd frontend/test-dashboard && npm run build` | `PASS` | `not_run` | `pending` |
+| `cd frontend/test-dashboard && npm run test:run -- --passWithNoTests` | `FAIL before implementation` | `FAIL: npm error Missing script: "test:run"` | `red_passed` |
+| `cd frontend/test-dashboard && npm install -D vitest jsdom @testing-library/react @testing-library/jest-dom @testing-library/user-event` | `package.json and package-lock.json update` | `added 234 packages; npm audit reports 2 moderate vulnerabilities` | `passed` |
+| `cd frontend/test-dashboard && npm exec -- vitest --version` | `Vitest resolves` | `vitest/4.1.8 darwin-arm64 node-v20.20.1` | `passed` |
+| `cd frontend/test-dashboard && npm run test:run -- --passWithNoTests` | `PASS` | `No test files found, exiting with code 0` | `passed` |
+| `cd frontend/test-dashboard && npm run build` | `PASS` | `✓ built in 3.33s` | `passed` |
+
+**Modified Files**
+
+- `frontend/test-dashboard/package.json`
+- `frontend/test-dashboard/package-lock.json`
+- `frontend/test-dashboard/vite.config.ts`
+- `frontend/test-dashboard/src/test/setup.ts`
+
+**Commits**
+
+- `pending`
+
+**Review Notes**
+
+- Added Vitest scripts and Vite test config with `jsdom`, `globals`, and RTL matcher setup.
+- No business source files changed; T003/T004 can now add `*.test.ts(x)` files against the configured runner.
+
+**Risks / Blockers**
+
+- `npm install` reported 2 moderate audit findings in transitive dependencies; not fixed in T002 to avoid out-of-scope dependency upgrades.
+- `npm run test:run -- --passWithNoTests` emits Vite/Vitest deprecation warnings from upstream plugin options; command exits 0.
+
+**Handoff**
+
+- Completion summary: frontend test-dashboard now has Vitest/React Testing Library test infrastructure.
+- Remaining work: T003 mapping tests and implementation.
+- First response line used: `当前分支/worktree：feat/test-dashboard-demo-theater @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-test-dashboard-demo-theater`
 
 ### T003 - `Add Demo Theater Mapping Layer`
 
