@@ -1,0 +1,301 @@
+frontend/h5/src/components/MobileShell/MobileContainer.tsx
+  98ec9136c700ff0b 3,15-16,22-23,31,70 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22ac682ec60aa1a73a0dc1","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":3},{"Range":[15,16]},{"Range":[22,23]},{"Single":31},{"Single":70}]}]}
+frontend/h5/src/__tests__/components/MobileShell.test.tsx
+  98ec9136c700ff0b 5,22-25,38,70,320-347 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22ac682ec60aa1a73a0dc1","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":5},{"Range":[22,25]},{"Single":38},{"Single":70},{"Range":[320,347]}]}]}
+scripts/test-init-growthbook.sh
+  98ec9136c700ff0b 1-41 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22ac682ec60aa1a73a0dc1","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,41]}]}]}
+backend/gateway/pkg/growthbook/client.go
+  98ec9136c700ff0b 27 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22ac682ec60aa1a73a0dc1","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":27}]}]}
+scripts/init-growthbook.sh
+  98ec9136c700ff0b 1-273 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22ac682ec60aa1a73a0dc1","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,273]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "589bcf285b0bfe398e9112111e0161f3710ba4d6",
+  "prompts": {
+    "21ae0125b33bc7bf": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a2287d72ec60aa1a739f906",
+        "model": "gpt-5.4__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>",
+      "messages": [],
+      "total_additions": 222,
+      "total_deletions": 32,
+      "accepted_lines": 216,
+      "overriden_lines": 0
+    },
+    "64f64564b262f14a": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a228ebf2ec60aa1a739fdcb",
+        "model": "gpt-5.4__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>",
+      "messages": [],
+      "total_additions": 194,
+      "total_deletions": 29,
+      "accepted_lines": 189,
+      "overriden_lines": 0
+    },
+    "98ec9136c700ff0b": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a229aad2ec60aa1a73a04da",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>",
+      "messages": [],
+      "total_additions": 380,
+      "total_deletions": 23,
+      "accepted_lines": 359,
+      "overriden_lines": 0
+    },
+    "f4a4398db8d7196f": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a22abbf2ec60aa1a73a0cac",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>",
+      "messages": [],
+      "total_additions": 124,
+      "total_deletions": 0,
+      "accepted_lines": 124,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "backend/gateway/pkg/growthbook/client.go": [
+      {
+        "hash": "98ec9136c700ff0b",
+        "line_ranges": [
+          {
+            "Single": 27
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22ac682ec60aa1a73a0dc1",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 27
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frontend/h5/src/__tests__/components/MobileShell.test.tsx": [
+      {
+        "hash": "98ec9136c700ff0b",
+        "line_ranges": [
+          {
+            "Single": 5
+          },
+          {
+            "Range": [
+              22,
+              25
+            ]
+          },
+          {
+            "Single": 38
+          },
+          {
+            "Single": 70
+          },
+          {
+            "Range": [
+              320,
+              347
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22ac682ec60aa1a73a0dc1",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 5
+              },
+              {
+                "Range": [
+                  22,
+                  25
+                ]
+              },
+              {
+                "Single": 38
+              },
+              {
+                "Single": 70
+              },
+              {
+                "Range": [
+                  320,
+                  347
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frontend/h5/src/components/MobileShell/MobileContainer.tsx": [
+      {
+        "hash": "98ec9136c700ff0b",
+        "line_ranges": [
+          {
+            "Single": 3
+          },
+          {
+            "Range": [
+              15,
+              16
+            ]
+          },
+          {
+            "Range": [
+              22,
+              23
+            ]
+          },
+          {
+            "Single": 31
+          },
+          {
+            "Single": 70
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22ac682ec60aa1a73a0dc1",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 3
+              },
+              {
+                "Range": [
+                  15,
+                  16
+                ]
+              },
+              {
+                "Range": [
+                  22,
+                  23
+                ]
+              },
+              {
+                "Single": 31
+              },
+              {
+                "Single": 70
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "scripts/init-growthbook.sh": [
+      {
+        "hash": "98ec9136c700ff0b",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              273
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22ac682ec60aa1a73a0dc1",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  273
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "scripts/test-init-growthbook.sh": [
+      {
+        "hash": "98ec9136c700ff0b",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              41
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22ac682ec60aa1a73a0dc1",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  41
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "21ae0125b33bc7bf": {
+      "tool": "trae",
+      "conversation_id": "6a2287d72ec60aa1a739f906",
+      "session_id": "6a2287d72ec60aa1a739f906",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "64f64564b262f14a": {
+      "tool": "trae",
+      "conversation_id": "6a228ebf2ec60aa1a739fdcb",
+      "session_id": "6a228ebf2ec60aa1a739fdcb",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "98ec9136c700ff0b": {
+      "tool": "trae",
+      "conversation_id": "6a229aad2ec60aa1a73a04da",
+      "session_id": "6a229aad2ec60aa1a73a04da",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "f4a4398db8d7196f": {
+      "tool": "trae",
+      "conversation_id": "6a22abbf2ec60aa1a73a0cac",
+      "session_id": "6a22abbf2ec60aa1a73a0cac",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
