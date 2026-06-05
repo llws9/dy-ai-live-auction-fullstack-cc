@@ -32,11 +32,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `3` |
-| Done | `0` |
+| Done | `3` |
 | Blocked | `0` |
-| In Progress | `1` |
-| Pending | `2` |
-| Last Updated | `2026-06-05 21:35` |
+| In Progress | `0` |
+| Pending | `0` |
+| Last Updated | `2026-06-05 21:41` |
 
 ## Status Legend
 
@@ -55,9 +55,9 @@
 
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Allowed Files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `T001` | `Move Start Live Entry To LiveDetail` | `in_progress` | `main-agent` | `P1` | `-` | `LiveDetail 商家开播入口与测试` | `frontend/admin/src/pages-new/LiveDetail.tsx`, `frontend/admin/src/pages-new/__tests__/LiveDetail.startLive.test.tsx` |
-| `T002` | `Remove Dashboard Prompt Start Live` | `in_progress` | `main-agent` | `P1` | `-` | `Dashboard 移除 prompt 开播与测试` | `frontend/admin/src/pages-new/Dashboard.tsx`, `frontend/admin/src/pages-new/__tests__/Dashboard.roleVisibility.test.tsx` |
-| `T003` | `Align Status Comment And Focused Regression` | `pending` | `main-agent` | `P2` | `T001,T002` | `状态注释与聚焦验证` | `frontend/admin/src/shared/api/types.ts`, modified frontend admin files |
+| `T001` | `Move Start Live Entry To LiveDetail` | `done` | `main-agent` | `P1` | `-` | `LiveDetail 商家开播入口与测试` | `frontend/admin/src/pages-new/LiveDetail.tsx`, `frontend/admin/src/pages-new/__tests__/LiveDetail.startLive.test.tsx` |
+| `T002` | `Remove Dashboard Prompt Start Live` | `done` | `main-agent` | `P1` | `-` | `Dashboard 移除 prompt 开播与测试` | `frontend/admin/src/pages-new/Dashboard.tsx`, `frontend/admin/src/pages-new/__tests__/Dashboard.roleVisibility.test.tsx` |
+| `T003` | `Align Status Comment And Focused Regression` | `done` | `main-agent` | `P2` | `T001,T002` | `状态注释与聚焦验证` | `frontend/admin/src/shared/api/types.ts`, modified frontend admin files |
 
 ## Wave Plan
 
@@ -83,10 +83,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `in_progress` |
+| Status | `done` |
 | Owner | `main-agent` |
 | Started At | `2026-06-05 21:30` |
-| Completed At | `-` |
+| Completed At | `2026-06-05 21:41` |
 | Branch | `feat/admin-live-start-product-design` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-live-start-product-design` |
 | Depends On | `-` |
@@ -116,6 +116,7 @@
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
 | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/LiveDetail.startLive.test.tsx src/pages-new/__tests__/Dashboard.roleVisibility.test.tsx --runInBand` | FAIL with missing LiveDetail copy/start button and Dashboard still showing old start button | FAIL: LiveDetail missing phase-one copy; Dashboard still contains `开启直播` | `red_passed` |
+| `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/LiveDetail.startLive.test.tsx src/pages-new/__tests__/Dashboard.roleVisibility.test.tsx --runInBand` | PASS | PASS: 2 test suites, 4 tests | `passed` |
 
 **Modified Files**
 
@@ -124,30 +125,30 @@
 
 **Commits**
 
-- `not_committed`
+- `3fdd9ce6 feat: move admin live start to detail page`
 
 **Review Notes**
 
-- `LiveDetail.tsx` has partial implementation. Must run test again before marking done.
+- `LiveDetail` now renders merchant-only phase-one copy and `开始直播` action; admin view keeps governance actions only.
 
 **Risks / Blockers**
 
-- Current test uses `screen.getByText('直播中')`; page may contain multiple `直播中` nodes after state update. If ambiguous, change assertion to a role/status-specific expectation rather than weakening behavior.
+- `screen.getByText('直播中')` was ambiguous after implementation; assertion was tightened to the disabled `直播中` button.
 
 **Handoff**
 
-- Completion summary: `not_completed`
-- Remaining work: `finish implementation and run focused test`
+- Completion summary: `商家可在 LiveDetail 对当前直播间开始直播，成功后按钮显示并禁用为直播中。`
+- Remaining work: `none`
 - First response line used: `当前分支/worktree：feat/admin-live-start-product-design @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-live-start-product-design`
 
 ### T002 - Remove Dashboard Prompt Start Live
 
 | Key | Value |
 | --- | --- |
-| Status | `in_progress` |
+| Status | `done` |
 | Owner | `main-agent` |
 | Started At | `2026-06-05 21:30` |
-| Completed At | `-` |
+| Completed At | `2026-06-05 21:41` |
 | Branch | `feat/admin-live-start-product-design` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-live-start-product-design` |
 | Depends On | `-` |
@@ -177,6 +178,7 @@
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
 | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/LiveDetail.startLive.test.tsx src/pages-new/__tests__/Dashboard.roleVisibility.test.tsx --runInBand` | FAIL with Dashboard old button still present | FAIL: Dashboard merchant test found `开启直播` button | `red_passed` |
+| `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/LiveDetail.startLive.test.tsx src/pages-new/__tests__/Dashboard.roleVisibility.test.tsx --runInBand` | PASS | PASS: 2 test suites, 4 tests | `passed` |
 
 **Modified Files**
 
@@ -185,30 +187,30 @@
 
 **Commits**
 
-- `not_committed`
+- `3fdd9ce6 feat: move admin live start to detail page`
 
 **Review Notes**
 
-- `Dashboard.tsx` still needs implementation cleanup.
+- `Dashboard` no longer renders prompt-based live start; merchant `发布商品` remains.
 
 **Risks / Blockers**
 
-- Removing Dashboard button changes visible merchant workflow; `LiveDetail` route must be reachable from live list.
+- `LiveDetail` route remains the new start-live entry; Dashboard quick live-management entry still points to `/live/list`.
 
 **Handoff**
 
-- Completion summary: `not_completed`
-- Remaining work: `remove old Dashboard start flow and run focused test`
+- Completion summary: `Dashboard prompt-based 开播入口已移除，角色可见性测试通过。`
+- Remaining work: `none`
 - First response line used: `当前分支/worktree：feat/admin-live-start-product-design @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-live-start-product-design`
 
 ### T003 - Align Status Comment And Focused Regression
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
+| Status | `done` |
 | Owner | `main-agent` |
-| Started At | `-` |
-| Completed At | `-` |
+| Started At | `2026-06-05 21:41` |
+| Completed At | `2026-06-05 21:41` |
 | Branch | `feat/admin-live-start-product-design` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-live-start-product-design` |
 | Depends On | `T001,T002` |
@@ -237,29 +239,30 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/LiveDetail.startLive.test.tsx src/pages-new/__tests__/Dashboard.roleVisibility.test.tsx --runInBand` | PASS | `not_run` | `not_run` |
-| `cd frontend/admin && npm run build` | PASS | `not_run` | `not_run` |
+| `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/LiveDetail.startLive.test.tsx src/pages-new/__tests__/Dashboard.roleVisibility.test.tsx --runInBand` | PASS | PASS: 2 test suites, 4 tests | `passed` |
+| `cd frontend/admin && npm run build` | PASS | PASS: `tsc && vite build`, 2545 modules transformed | `passed` |
 
 **Modified Files**
 
-- `not_started`
+- `frontend/admin/src/shared/api/types.ts`
+- `docs/superpowers/sdd/runs/2026-06-05-admin-live-start-product-state.md`
 
 **Commits**
 
-- `not_committed`
+- `3fdd9ce6 feat: move admin live start to detail page`
 
 **Review Notes**
 
-- Must not mark done until T001 and T002 are green.
+- `LiveStream.status` 注释已补全 `3=已封禁`；聚焦测试和 Admin build 均通过。
 
 **Risks / Blockers**
 
-- Build may reveal TypeScript issues from partial implementation.
+- No remaining blockers.
 
 **Handoff**
 
-- Completion summary: `not_completed`
-- Remaining work: `pending after T001/T002`
+- Completion summary: `状态注释补齐，聚焦测试和 Admin build 已通过。`
+- Remaining work: `none`
 - First response line used: `当前分支/worktree：feat/admin-live-start-product-design @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-live-start-product-design`
 
 ## Cross-Task Decisions
@@ -281,16 +284,16 @@
 
 | Area | Command | Required | Last Result | Notes |
 | --- | --- | --- | --- | --- |
-| Frontend Admin Focused | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/LiveDetail.startLive.test.tsx src/pages-new/__tests__/Dashboard.roleVisibility.test.tsx --runInBand` | yes | `red_passed` | Fails for expected missing implementation |
-| Frontend Admin Build | `cd frontend/admin && npm run build` | yes | `not_run` | Run after focused tests pass |
+| Frontend Admin Focused | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/LiveDetail.startLive.test.tsx src/pages-new/__tests__/Dashboard.roleVisibility.test.tsx --runInBand` | yes | `passed` | PASS: 2 suites, 4 tests |
+| Frontend Admin Build | `cd frontend/admin && npm run build` | yes | `passed` | PASS: `tsc && vite build` |
 
 ## Final Review Checklist
 
-- [ ] 所有任务状态已更新。
-- [ ] 没有未解释的 `blocked` 任务。
-- [ ] 每个 `done` 任务都有测试或替代验证证据。
-- [ ] 每个实现型任务都遵循 TDD 或写明无法 TDD 的原因。
-- [ ] API 契约变更已同步文档。
+- [x] 所有任务状态已更新。
+- [x] 没有未解释的 `blocked` 任务。
+- [x] 每个 `done` 任务都有测试或替代验证证据。
+- [x] 每个实现型任务都遵循 TDD 或写明无法 TDD 的原因。
+- [x] API 契约变更已同步文档。
 - [ ] 最终回答第一句展示当前分支/worktree。
 - [ ] 用户已获得下一步选项：继续下一波、发起 review、提交 PR、归档。
 
@@ -300,16 +303,18 @@
 
 **完成项**
 
-- `not_completed`
+- `T001`：商家在 `LiveDetail` 对当前直播间开始直播，页面展示一期说明文案。
+- `T002`：Dashboard prompt-based 开播入口已移除。
+- `T003`：`LiveStream.status` 注释补齐 `3=已封禁`，聚焦测试与 Admin build 通过。
 
 **未完成项**
 
-- `T001,T002,T003`
+- `none`
 
 **验证结果**
 
-- `RED` focused tests observed.
+- RED 已观察；GREEN 后聚焦 Jest 测试通过；Admin build 通过。
 
 **建议下一步**
 
-- 完成 T001/T002 最小实现，运行聚焦测试；再执行 T003 build 验证并提交。
+- 提交实现变更并进入 review/合并决策。

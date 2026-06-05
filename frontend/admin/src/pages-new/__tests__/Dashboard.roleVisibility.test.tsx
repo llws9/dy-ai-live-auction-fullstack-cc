@@ -89,7 +89,7 @@ describe('Dashboard role visibility', () => {
 
     expect(await screen.findByRole('heading', { name: /欢迎，商家用户/ })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /发布商品/ }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: /开启直播/ }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /开启直播|开始直播/ })).not.toBeInTheDocument();
 
     expect(screen.getByText('总收入')).toBeInTheDocument();
     expect(screen.getByText('参与用户')).toBeInTheDocument();

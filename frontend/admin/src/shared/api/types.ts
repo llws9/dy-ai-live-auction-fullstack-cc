@@ -115,7 +115,7 @@ export interface LiveStream {
   streamer_id: number;
   streamer_name?: string;
   streamer_avatar?: string;
-  status: number; // 0=未开播, 1=直播中, 2=已结束
+  status: number; // 0=未开播, 1=直播中, 2=已结束, 3=已封禁
   viewer_count: number;
   auction_count: number;
   created_at: string;

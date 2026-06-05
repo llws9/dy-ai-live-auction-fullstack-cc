@@ -4,13 +4,17 @@ import { useNavigate, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { liveStreamApi } from "@/shared/api"
+import { useAuth } from "@/shared/auth"
+import { ADMIN_ROLE, MERCHANT_ROLE } from "@/shared/auth/roles"
 
 export default function LiveDetail() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { user } = useAuth()
   const liveStreamId = searchParams.get('id')
 
   const [loading, setLoading] = React.useState(true)
+  const [starting, setStarting] = React.useState(false)
   const [liveStream, setLiveStream] = React.useState<any>(null)
 
   // 获取直播间详情
@@ -35,6 +39,26 @@ export default function LiveDetail() {
     }
     fetchLiveStream()
   }, [liveStreamId, navigate])
+
+  const handleStart = async () => {
+    if (!liveStreamId || starting || liveStream?.status === 1) return
+    const confirmed = window.confirm(
+      "确认开始直播？\n当前版本将由 PC 管理端发起直播状态，用于演示观看、竞拍和一口价交易链路；真实移动端推流将在后续版本接入。"
+    )
+    if (!confirmed) return
+
+    setStarting(true)
+    try {
+      await liveStreamApi.start(Number(liveStreamId))
+      setLiveStream((prev: any) => ({ ...prev, status: 1 }))
+      alert("直播已开始")
+    } catch (e) {
+      console.error("开始直播失败:", e)
+      alert("开始直播失败")
+    } finally {
+      setStarting(false)
+    }
+  }
 
   const handleEnd = async () => {
     if (!liveStreamId || !window.confirm("确认强制结束该直播间？")) return
@@ -79,6 +103,8 @@ export default function LiveDetail() {
   }
 
   const isLive = liveStream.status === 1
+  const isMerchant = user?.role === MERCHANT_ROLE
+  const isPlatformAdmin = user?.role === ADMIN_ROLE
 
   return (
     <div className="space-y-6">
@@ -138,16 +164,31 @@ export default function LiveDetail() {
           <Card className="border-slate-200">
             <CardHeader><CardTitle className="text-lg">操作中心</CardTitle></CardHeader>
             <CardContent className="space-y-2">
-              {/* 推送商品 - 后端无接口，暂空置 */}
-              <Button className="w-full bg-amber-500 text-[#0f172a]" disabled>
-                推送商品
-              </Button>
-              <Button variant="outline" className="w-full" onClick={handleBan}>
-                封禁直播间
-              </Button>
-              <Button variant="destructive" className="w-full" onClick={handleEnd} disabled={liveStream.status === 2}>
-                关闭直播
-              </Button>
+              {isMerchant && (
+                <>
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">
+                    当前版本支持通过 PC 管理端发起直播状态，用于商品讲解、竞拍和一口价交易链路演示；移动端主播推流能力将在后续版本接入。
+                  </div>
+                  <Button
+                    className="w-full bg-amber-500 text-[#0f172a] hover:bg-amber-600"
+                    onClick={handleStart}
+                    disabled={starting || isLive}
+                  >
+                    <Video className="mr-2 w-4 h-4" />
+                    {isLive ? "直播中" : starting ? "开始中..." : "开始直播"}
+                  </Button>
+                </>
+              )}
+              {isPlatformAdmin && (
+                <>
+                  <Button variant="outline" className="w-full" onClick={handleBan}>
+                    封禁直播间
+                  </Button>
+                  <Button variant="destructive" className="w-full" onClick={handleEnd} disabled={liveStream.status === 2}>
+                    关闭直播
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

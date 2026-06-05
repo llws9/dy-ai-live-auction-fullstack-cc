@@ -31,7 +31,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
-import { liveStreamApi, statisticsApi } from "@/shared/api"
+import { statisticsApi } from "@/shared/api"
 import { useAuth } from "@/shared/auth"
 import { ADMIN_ROLE } from "@/shared/auth/roles"
 
@@ -55,24 +55,6 @@ export default function Dashboard() {
   const [overview, setOverview] = React.useState<any>(null)
   const [trendData, setTrendData] = React.useState<any[]>([])
   const [revenueComposition, setRevenueComposition] = React.useState<any[]>([])
-
-  const handleStartLive = async () => {
-    const id = window.prompt("请输入要开启的直播间 ID")
-    if (!id) return
-    const liveStreamId = Number(id)
-    if (!Number.isFinite(liveStreamId) || liveStreamId <= 0) {
-      alert("直播间 ID 无效")
-      return
-    }
-    try {
-      await liveStreamApi.start(liveStreamId)
-      alert("直播已开启")
-      navigate(`/live/detail?id=${liveStreamId}`)
-    } catch (e) {
-      console.error("开启直播失败:", e)
-      alert("开启直播失败")
-    }
-  }
 
   // 获取数据
   React.useEffect(() => {
@@ -145,10 +127,6 @@ export default function Dashboard() {
               <Button variant="outline" className="border-slate-200" onClick={() => navigate("/goods/create")}>
                 <PlusCircle className="mr-2 w-4 h-4" />
                 发布商品
-              </Button>
-              <Button className="bg-amber-500 hover:bg-amber-600 text-[#0f172a]" onClick={handleStartLive}>
-                <Video className="mr-2 w-4 h-4" />
-                开启直播
               </Button>
             </>
           )}
