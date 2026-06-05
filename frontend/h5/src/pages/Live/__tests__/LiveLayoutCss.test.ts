@@ -30,14 +30,18 @@ describe('Live layout css', () => {
     const css = readLiveCss();
     const liveEmptyPageCss = getClassBlock(css, 'liveEmptyPage');
     const liveEmptyTitleCss = getClassBlock(css, 'liveEmptyTitle');
+    const liveEmptyIconRingCss = getClassBlock(css, 'liveEmptyIconRing');
     const liveEmptyPrimaryLinkCss = getClassBlock(css, 'liveEmptyPrimaryLink');
     const upcomingCardCss = getClassBlock(css, 'upcomingCard');
 
     expect(liveEmptyPageCss).toContain('background: var(--bg-page);');
     expect(liveEmptyPageCss).toContain('color: var(--text-primary);');
     expect(liveEmptyTitleCss).toContain('color: var(--text-primary);');
+    expect(getDeclaration(liveEmptyIconRingCss, 'border')).toContain('var(');
+    expect(getDeclaration(liveEmptyIconRingCss, 'background')).toContain('var(');
     expect(getDeclaration(liveEmptyPrimaryLinkCss, 'background')).toContain('var(');
     expect(getDeclaration(liveEmptyPrimaryLinkCss, 'color')).toContain('var(');
+    expect(getDeclaration(liveEmptyPrimaryLinkCss, 'box-shadow')).toContain('var(');
     expect(upcomingCardCss).toContain('background: var(--bg-elevated);');
   });
 });

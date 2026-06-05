@@ -266,6 +266,7 @@ describe('LiveFeedPage feed 骨架', () => {
     fireEvent.click(await screen.findByRole('button', { name: '订阅' }));
 
     await waitFor(() => expect(mockedProductReminderApi.subscribe).toHaveBeenCalledWith(501));
+    expect(await screen.findByRole('button', { name: '已订阅' })).toBeDisabled();
     expect(screen.getByTestId('location')).toHaveTextContent('/live');
     expect(mockTrackBusinessEvent).toHaveBeenCalledWith('reminder_subscribe', {
       source: 'live_room',
@@ -275,7 +276,7 @@ describe('LiveFeedPage feed 骨架', () => {
     });
   });
 
-  it('后端返回已经订阅时按订阅成功上报同一个提醒事件', async () => {
+  it('订阅接口错误时不依赖错误文案做已订阅判断', async () => {
     mockedLiveStreamApi.list.mockResolvedValue({
       list: [{ id: 3, name: '空直播间', current_auction_id: null }],
       total: 1,
@@ -294,13 +295,9 @@ describe('LiveFeedPage feed 骨架', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: '订阅' }));
 
-    expect(await screen.findByRole('button', { name: '已订阅' })).toBeDisabled();
-    expect(mockTrackBusinessEvent).toHaveBeenCalledWith('reminder_subscribe', {
-      source: 'live_room',
-      auctionId: 21,
-      productId: 501,
-      metadata: { entry: 'live_empty_upcoming' },
-    });
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith('订阅失败，请稍后重试'));
+    expect(screen.getByRole('button', { name: '订阅' })).toBeEnabled();
+    expect(mockTrackBusinessEvent).not.toHaveBeenCalled();
   });
 
   it('未登录点击订阅跳转登录且不上报提醒事件', async () => {

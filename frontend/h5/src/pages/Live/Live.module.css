@@ -48,9 +48,9 @@
 .liveEmptyIconRing {
   position: absolute;
   inset: 0;
-  border: 1px solid rgba(201, 169, 110, 0.28);
+  border: 1px solid var(--focus-ring);
   border-radius: var(--radius-full);
-  background: rgba(201, 169, 110, 0.08);
+  background: var(--icon-tile-bg);
 }
 
 .liveEmptyIconCamera {
@@ -113,7 +113,7 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
   text-decoration: none;
-  box-shadow: 0 12px 28px rgba(201, 169, 110, 0.22);
+  box-shadow: var(--shadow-key);
 }
 
 .upcomingHeader {

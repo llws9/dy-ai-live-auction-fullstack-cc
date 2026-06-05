@@ -273,16 +273,7 @@ const LiveFeedPage: React.FC = () => {
       });
       trackReminderSubscribe(productId, auctionId);
     } catch (error: any) {
-      if (typeof error?.message === 'string' && error.message.includes('已经订阅')) {
-        setSubscribedProductIds((current) => {
-          const next = new Set(current);
-          next.add(productId);
-          return next;
-        });
-        trackReminderSubscribe(productId, auctionId);
-      } else {
-        showToast('订阅失败，请稍后重试');
-      }
+      showToast('订阅失败，请稍后重试');
     } finally {
       setReminderPendingProductId(null);
     }
