@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import LiveRoomSlide from '../LiveRoomSlide';
 import { fetchMyPurchase, purchase } from '../../../api/fixedPrice';
 import { useFixedPriceItems } from '../../../hooks/useFixedPriceItems';
-import { auctionApi, bidApi, followApi, liveStreamApi, productApi } from '../../../services/api';
+import { auctionApi, bidApi, followApi, liveStreamApi, productApi, skyLampApi } from '../../../services/api';
 import WebSocketService from '../../../services/websocket';
 import { useLiveChatStore } from '../../../store/liveChatStore';
 
@@ -40,6 +40,10 @@ jest.mock('../../../services/api', () => ({
   },
   productApi: {
     get: jest.fn(),
+  },
+  skyLampApi: {
+    listSubscriptions: jest.fn(),
+    startSubscription: jest.fn(),
   },
 }));
 
@@ -99,6 +103,7 @@ const mockedBidApi = bidApi as jest.Mocked<typeof bidApi>;
 const mockedFollowApi = followApi as jest.Mocked<typeof followApi>;
 const mockedLiveStreamApi = liveStreamApi as jest.Mocked<typeof liveStreamApi>;
 const mockedProductApi = productApi as jest.Mocked<typeof productApi>;
+const mockedSkyLampApi = skyLampApi as jest.Mocked<typeof skyLampApi>;
 const mockedUseFixedPriceItems = useFixedPriceItems as jest.MockedFunction<typeof useFixedPriceItems>;
 const mockedFetchMyPurchase = fetchMyPurchase as jest.MockedFunction<typeof fetchMyPurchase>;
 const mockedPurchase = purchase as jest.MockedFunction<typeof purchase>;
@@ -149,6 +154,8 @@ describe('LiveRoom migration', () => {
     mockedFollowApi.unfollowLiveStream.mockResolvedValue({});
     mockedFollowApi.getFollowersStats.mockResolvedValue({ count: 12 });
     mockedFollowApi.getFollowStatus.mockResolvedValue({ is_following: false });
+    mockedSkyLampApi.listSubscriptions.mockResolvedValue({ subscriptions: [] } as any);
+    mockedSkyLampApi.startSubscription.mockResolvedValue({} as any);
     mockedFetchMyPurchase.mockResolvedValue({ i_bought: false });
     mockedPurchase.mockResolvedValue({
       purchase_id: 88,
@@ -189,6 +196,45 @@ describe('LiveRoom migration', () => {
     // 出价成功后 sheet 自动收起，重新展开以校验排行已刷新
     fireEvent.click(screen.getByRole('button', { name: '出价' }));
     expect(await screen.findByText('测试用户')).toBeInTheDocument();
+  });
+
+  it('shows a bid success flair after normal bid succeeds and closes the bid sheet', async () => {
+    render(
+      <MemoryRouter
+        initialEntries={['/live?id=3&auction_id=5']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: '出价' }));
+    fireEvent.click(screen.getByRole('button', { name: /立即出价/ }));
+
+    await waitFor(() => expect(mockedBidApi.placeBid).toHaveBeenCalledWith(5, 1300));
+    await waitFor(() => expect(screen.queryByLabelText('收起竞拍面板')).not.toBeInTheDocument());
+
+    const bidFlair = await screen.findByTestId('bid-success-flair');
+    expect(bidFlair).toHaveTextContent('测试用户 刚刚出价');
+    expect(bidFlair).toHaveTextContent('¥1,300');
+  });
+
+  it('does not show the normal bid flair when starting sky lamp', async () => {
+    render(
+      <MemoryRouter
+        initialEntries={['/live?id=3&auction_id=5']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: '出价' }));
+    fireEvent.click(screen.getByRole('button', { name: /点天灯/ }));
+    fireEvent.click(screen.getByRole('button', { name: /确认开启/ }));
+
+    await waitFor(() => expect(mockedSkyLampApi.startSubscription).toHaveBeenCalledWith(5));
+    expect(screen.queryByTestId('bid-success-flair')).not.toBeInTheDocument();
   });
 
   it('uses follow-status endpoint as the authoritative is_following source when logged in', async () => {

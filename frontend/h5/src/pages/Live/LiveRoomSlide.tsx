@@ -66,6 +66,12 @@ interface RankingItem {
   created_at?: string;
 }
 
+interface BidSuccessFlair {
+  id: number;
+  amount: number;
+  userName: string;
+}
+
 export interface LiveRoomSlideProps {
   liveStreamId: number;
   currentAuctionId?: number | null;
@@ -98,6 +104,8 @@ const formatMoney = (amount: number) => amount.toLocaleString('zh-CN', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 2,
 });
+const BID_SUCCESS_FLAIR_DELAY_MS = 240;
+const BID_SUCCESS_FLAIR_VISIBLE_MS = 2800;
 
 const toAmount = (value: unknown, fallback = 0) => {
   const amount = Number(value);
@@ -186,9 +194,12 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const [followingPending, setFollowingPending] = useState(false);
   const [connected, setConnected] = useState(false);
   const [toast, setToast] = useState('');
+  const [bidSuccessFlair, setBidSuccessFlair] = useState<BidSuccessFlair | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const { showToast: showGlobalToast } = useToast();
   const wsRef = useRef<WebSocketService | null>(null);
+  const bidFlairDelayTimerRef = useRef<number | null>(null);
+  const bidFlairHideTimerRef = useRef<number | null>(null);
   const [fixedPriceModalItem, setFixedPriceModalItem] = useState<FixedPriceItem | null>(null);
   const [purchasedFixedPriceItemIds, setPurchasedFixedPriceItemIds] = useState<Set<number>>(() => new Set());
 
@@ -250,6 +261,39 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const showToast = useCallback((message: string) => {
     setToast(message);
     window.setTimeout(() => setToast(''), 2200);
+  }, []);
+
+  const showBidSuccessFlair = useCallback((amount: number) => {
+    if (bidFlairDelayTimerRef.current !== null) {
+      window.clearTimeout(bidFlairDelayTimerRef.current);
+    }
+    if (bidFlairHideTimerRef.current !== null) {
+      window.clearTimeout(bidFlairHideTimerRef.current);
+    }
+
+    bidFlairDelayTimerRef.current = window.setTimeout(() => {
+      setBidSuccessFlair({
+        id: Date.now(),
+        amount,
+        userName: user?.name || '当前用户',
+      });
+      bidFlairHideTimerRef.current = window.setTimeout(() => {
+        setBidSuccessFlair(null);
+        bidFlairHideTimerRef.current = null;
+      }, BID_SUCCESS_FLAIR_VISIBLE_MS);
+      bidFlairDelayTimerRef.current = null;
+    }, BID_SUCCESS_FLAIR_DELAY_MS);
+  }, [user?.name]);
+
+  useEffect(() => {
+    return () => {
+      if (bidFlairDelayTimerRef.current !== null) {
+        window.clearTimeout(bidFlairDelayTimerRef.current);
+      }
+      if (bidFlairHideTimerRef.current !== null) {
+        window.clearTimeout(bidFlairHideTimerRef.current);
+      }
+    };
   }, []);
 
   // sheet 状态由 URL searchParams 单源驱动（spec §14.4）：
@@ -521,6 +565,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       setBidAmount(String(nextPrice + increment));
       showToast('出价成功');
       closeSheet();
+      showBidSuccessFlair(nextPrice);
     } catch (error: any) {
       showToast(error?.message || '出价失败，请稍后重试');
     } finally {
@@ -857,6 +902,23 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         <div className={styles.skyLampNotice} role="status">
           <i className={styles.skyLampNoticeIcon} aria-hidden="true"><span /></i>
           <strong>{user?.name || '当前用户'} 开启点天灯，自动守住领先</strong>
+        </div>
+      )}
+      {bidSuccessFlair && (
+        <div
+          className={styles.bidSuccessFlair}
+          data-testid="bid-success-flair"
+          key={bidSuccessFlair.id}
+          role="status"
+          aria-live="polite"
+        >
+          <span className={styles.bidSuccessAvatar} aria-hidden="true">
+            {bidSuccessFlair.userName.slice(0, 1)}
+          </span>
+          <span className={styles.bidSuccessCopy}>
+            <span>{bidSuccessFlair.userName} 刚刚出价</span>
+            <strong>¥{formatMoney(bidSuccessFlair.amount)}</strong>
+          </span>
         </div>
       )}
       {toast && <div className={styles.toast} role="status">{toast}</div>}
