@@ -538,6 +538,8 @@
 | `2026-06-05 20:33` | Backend targeted baseline | `cd backend/auction && go test ./dao -count=1` passed; `cd backend/auction && go test ./handler -run TestBuildAuctionListResponse -count=1` passed | Plan-specific backend baseline is clean | Proceed with SDD |
 | `2026-06-05 20:32` | H5 targeted baseline | `cd frontend/h5 && npm test -- LiveFeedPage.test.tsx LiveLayoutCss.test.ts --runInBand` passed, 11 tests | Plan-specific frontend baseline is clean | Proceed with SDD |
 | `2026-06-05 21:58` | H5 local dependency state | First `cd frontend/h5 && npm run build` failed because local `node_modules` lacked declared dependency `zustand`; `package.json` and `package-lock.json` already declared it | Local environment was incomplete after prior worktree activity | Ran `cd frontend/h5 && npm ci`, reran build successfully, and restored tracked `node_modules/.vite` cache side effects so only the state file remains changed |
+| `2026-06-05 22:10` | Main-agent final verification | `cd backend/auction && go test ./dao -count=1 && go test ./handler -run TestBuildAuctionListResponse -count=1` passed; `cd frontend/h5 && npm test -- LiveFeedPage.test.tsx LiveLayoutCss.test.ts --runInBand` passed 21 tests; `cd frontend/h5 && npm run build` passed; `git status --short` empty | Fresh verification after all subagent work and final review | Feature gates are clean; broad backend baseline failure remains separately recorded |
+| `2026-06-05 22:10` | Final code review | Whole-branch review over merge-base `b8fc16ec..HEAD` found no Critical/Important issues; one Minor note about possible duplicate global/local toast for reminder API errors | Not blocking; no source changes required in this plan | Approved with residual minor risk |
 
 ## Final Review Checklist
 
@@ -550,6 +552,8 @@
 - [x] H5 build passed after local dependency restoration.
 - [x] Known broad backend baseline failure is recorded separately.
 - [x] T007 modified only the SDD state file.
+- [x] Final whole-branch code review completed.
+- [x] Main agent reran targeted backend, H5 tests, H5 build, and git status after final review.
 - [ ] Human confirmation to merge/close branch.
 
 ## Final Handoff
@@ -566,8 +570,10 @@
 - Backend targeted gate: `passed`.
 - H5 targeted tests: `passed`.
 - H5 build: `passed_after_local_dependency_restore`.
+- Main-agent final recheck: backend targeted gate `passed`; H5 targeted tests `21 passed`; H5 build `passed`; worktree `clean`.
 
 **已知风险**
 
 - Broad backend `./handler` package still has the unrelated notification baseline failure.
 - H5 build depends on a complete local `node_modules`; `npm ci` restored this worktree before the successful build.
+- Minor review note: reminder API failures may show both global API error and page-level toast; functionality is correct, but future UX polish can suppress global errors for this page-owned flow.
