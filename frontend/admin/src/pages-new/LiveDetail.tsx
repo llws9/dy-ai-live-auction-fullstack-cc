@@ -193,7 +193,7 @@ export default function LiveDetail() {
                   <Button variant="outline" className="w-full" onClick={handleBan}>
                     封禁直播间
                   </Button>
-                  <Button variant="destructive" className="w-full" onClick={handleEnd} disabled={liveStream.status === 2}>
+                  <Button variant="destructive" className="w-full" onClick={handleEnd} disabled={liveStream.status === 2 || liveStream.status === 3}>
                     关闭直播
                   </Button>
                 </>
