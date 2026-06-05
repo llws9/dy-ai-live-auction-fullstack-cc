@@ -24,6 +24,7 @@ var KnownFeatureKeys = []string{
 	"new-bidding-algorithm",
 	"bid-button-color",
 	"price-suggestion-strategy",
+	"live-start-popup-visibility",
 }
 
 // Attributes 业务侧用户属性。仅承载 gateway 层关心的字段,

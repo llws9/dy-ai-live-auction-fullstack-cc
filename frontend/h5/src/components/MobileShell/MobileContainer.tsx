@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useFeatureVal } from '../../hooks/useExperiment';
 import { notificationApi } from '../../services/notification';
 import { useAuth } from '../../store/authContext';
 import { trackEvent } from '../../utils/trackEvent';
@@ -11,11 +12,15 @@ interface MobileContainerProps {
   children: ReactNode;
 }
 
+const LIVE_START_POPUP_VISIBILITY_KEY = 'live-start-popup-visibility';
+
 function MobileContainer({ children }: MobileContainerProps) {
   const { pathname } = useLocation();
   const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [reminderStream, setReminderStream] = useState<StreamInfo | null>(null);
   const { isAuthenticated, loading: authLoading, token, user } = useAuth();
+  const popupVisibilityVariant = useFeatureVal<boolean | null>(LIVE_START_POPUP_VISIBILITY_KEY, null);
+  const isLiveStartPopupVisible = popupVisibilityVariant !== false;
   const userId = user?.id ?? null;
   const identityRef = useRef({ token, userId });
   const isLiveRoute = pathname.startsWith('/live');
@@ -23,7 +28,7 @@ function MobileContainer({ children }: MobileContainerProps) {
   identityRef.current = { token, userId };
 
   useEffect(() => {
-    if (authLoading || !isAuthenticated || !token || userId === null) {
+    if (authLoading || !isAuthenticated || !token || userId === null || !isLiveStartPopupVisible) {
       setIsReminderOpen(false);
       setReminderStream(null);
       return;
@@ -62,7 +67,7 @@ function MobileContainer({ children }: MobileContainerProps) {
     return () => {
       alive = false;
     };
-  }, [authLoading, isAuthenticated, token, userId, pathname]);
+  }, [authLoading, isAuthenticated, token, userId, pathname, isLiveStartPopupVisible]);
 
   return (
     <div className={styles.shell} data-testid="mobile-shell">

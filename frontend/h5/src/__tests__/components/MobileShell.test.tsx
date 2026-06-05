@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Link, MemoryRouter } from 'react-router-dom';
 import MobileContainer from '../../components/MobileShell/MobileContainer';
 import BottomNav from '../../components/MobileShell/BottomNav';
+import { useFeatureVal } from '../../hooks/useExperiment';
 import { notificationApi } from '../../services/notification';
 import { useAuth } from '../../store/authContext';
 import { ThemeProvider } from '../../store/themeContext';
@@ -18,6 +19,10 @@ jest.mock('../../store/authContext', () => ({
   useAuth: jest.fn(),
 }));
 
+jest.mock('../../hooks/useExperiment', () => ({
+  useFeatureVal: jest.fn(),
+}));
+
 jest.mock('../../utils/trackEvent', () => ({
   trackEvent: jest.fn(),
   getCountBucket: (count: number) =>
@@ -30,6 +35,7 @@ const mockGetTouchpointSummary = notificationApi.getTouchpointSummary as jest.Mo
 const mockGetPendingLiveReminder = notificationApi.getPendingLiveReminder as jest.MockedFunction<
   typeof notificationApi.getPendingLiveReminder
 >;
+const mockUseFeatureVal = useFeatureVal as jest.MockedFunction<typeof useFeatureVal>;
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockTrackEvent = trackEvent as jest.MockedFunction<typeof trackEvent>;
 
@@ -61,6 +67,7 @@ describe('MobileShell', () => {
   beforeEach(() => {
     authState = authenticatedAuthState;
     mockUseAuth.mockImplementation(() => authState);
+    mockUseFeatureVal.mockReturnValue(null);
     mockGetTouchpointSummary.mockResolvedValue({
       unreadTotal: 7,
       pendingPayment: 2,
@@ -308,6 +315,36 @@ describe('MobileShell', () => {
         result: 'success',
       }),
     );
+  });
+
+  it('does not open live reminder when popup visibility experiment is off', async () => {
+    mockUseFeatureVal.mockReturnValue(false);
+    mockGetPendingLiveReminder.mockResolvedValue({
+      hasReminder: true,
+      stream: {
+        id: 1,
+        name: '云端珍藏直播间',
+        avatarUrl: '',
+        statusText: '正在直播',
+        liveRoomId: 1,
+        startedAt: 1717000000000,
+      },
+    });
+
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>页面内容</main>
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByText('页面内容')).toBeInTheDocument());
+    expect(mockGetPendingLiveReminder).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mockTrackEvent).not.toHaveBeenCalledWith('live_reminder_exposed', expect.anything());
   });
 
   it('refetches pending live reminder when re-entering pages after login', async () => {
