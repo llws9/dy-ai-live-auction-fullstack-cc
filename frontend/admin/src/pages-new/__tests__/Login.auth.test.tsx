@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import Login from '../Login';
-import { AuthProvider, RequireAuth, useAuth } from '@/shared/auth';
+import { AuthProvider, RequireAuth, RequireRole, useAuth } from '@/shared/auth';
 import { authApi } from '@/shared/api/auth';
 
 jest.mock('@/shared/api/auth', () => ({
@@ -92,5 +92,37 @@ describe('Login auth flow', () => {
       expect(screen.getByText('欢迎，系统管理员')).toBeInTheDocument();
     });
     expect(JSON.parse(localStorage.getItem('admin_auth_user') || '{}').name).toBe('系统管理员');
+  });
+
+  it('redirects authenticated users away from role-forbidden pages', async () => {
+    localStorage.setItem('admin_auth_token', 'admin-token');
+    localStorage.setItem('admin_auth_user', JSON.stringify({
+      id: 1003,
+      name: '系统管理员',
+      email: 'admin@example.com',
+      role: 2,
+      created_at: '2026-06-05T00:00:00Z',
+    }));
+
+    render(
+      <MemoryRouter initialEntries={['/goods/create']}>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/goods/create"
+              element={
+                <RequireRole allowedRoles={[1]}>
+                  <h1>创建商品</h1>
+                </RequireRole>
+              }
+            />
+            <Route path="/dashboard" element={<h1>经营总览</h1>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('heading', { name: '经营总览' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '创建商品' })).not.toBeInTheDocument();
   });
 });

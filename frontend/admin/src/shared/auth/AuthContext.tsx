@@ -175,3 +175,33 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
+
+export function RequireRole({
+  allowedRoles,
+  children,
+  fallbackPath = '/dashboard',
+}: {
+  allowedRoles: number[];
+  children: React.ReactNode;
+  fallbackPath?: string;
+}) {
+  const { user, isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0f172a]">
+        <div className="text-white">加载中...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/admin-login" replace />;
+  }
+
+  if (!user || !allowedRoles.includes(user.role)) {
+    return <Navigate to={fallbackPath} replace />;
+  }
+
+  return <>{children}</>;
+}

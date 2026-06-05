@@ -16,12 +16,15 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar } from "./ui/avatar"
+import { useAuth } from "@/shared/auth"
+import { ADMIN_ROLE, MERCHANT_ROLE, isAllowedRole, roleLabel } from "@/shared/auth/roles"
 
 interface NavItem {
   title: string
   path: string
   icon: React.ElementType
-  children?: { title: string; path: string }[]
+  allowedRoles?: number[]
+  children?: { title: string; path: string; allowedRoles?: number[] }[]
 }
 
 const navItems: NavItem[] = [
@@ -32,7 +35,7 @@ const navItems: NavItem[] = [
     icon: Package,
     children: [
       { title: "商品列表", path: "/goods/list" },
-      { title: "创建商品", path: "/goods/create" },
+      { title: "创建商品", path: "/goods/create", allowedRoles: [MERCHANT_ROLE] },
     ]
   },
   {
@@ -41,7 +44,7 @@ const navItems: NavItem[] = [
     icon: Gavel,
     children: [
       { title: "竞拍列表", path: "/auction/list" },
-      { title: "规则模板", path: "/auction/rules" },
+      { title: "规则模板", path: "/auction/rules", allowedRoles: [MERCHANT_ROLE] },
     ]
   },
   {
@@ -50,8 +53,8 @@ const navItems: NavItem[] = [
     icon: Video,
     children: [
       { title: "直播间列表", path: "/live/list" },
-      { title: "一口价上下架", path: "/live/fixed-price" },
-      { title: "创建直播间", path: "/live/create" },
+      { title: "一口价上下架", path: "/live/fixed-price", allowedRoles: [MERCHANT_ROLE] },
+      { title: "创建直播间", path: "/live/create", allowedRoles: [MERCHANT_ROLE] },
     ]
   },
   {
@@ -69,7 +72,7 @@ const navItems: NavItem[] = [
     children: [
       { title: "竞拍统计", path: "/stats/auction" },
       { title: "收入统计", path: "/stats/revenue" },
-      { title: "用户统计", path: "/stats/user" },
+      { title: "用户统计", path: "/stats/user", allowedRoles: [ADMIN_ROLE] },
     ]
   },
   {
@@ -78,8 +81,8 @@ const navItems: NavItem[] = [
     icon: Settings,
     children: [
       { title: "个人中心", path: "/system/profile" },
-      { title: "角色管理", path: "/system/permission/roles" },
-      { title: "用户管理", path: "/system/permission/users" },
+      { title: "角色管理", path: "/system/permission/roles", allowedRoles: [ADMIN_ROLE] },
+      { title: "用户管理", path: "/system/permission/users", allowedRoles: [ADMIN_ROLE] },
     ]
   },
 ]
@@ -87,7 +90,19 @@ const navItems: NavItem[] = [
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [expandedMenus, setExpandedMenus] = React.useState<string[]>([])
+  const visibleNavItems = React.useMemo(() => navItems
+    .map((item) => {
+      const visibleChildren = item.children?.filter((child) => isAllowedRole(child.allowedRoles, user?.role))
+      if (item.children) {
+        return visibleChildren && visibleChildren.length > 0 && isAllowedRole(item.allowedRoles, user?.role)
+          ? { ...item, children: visibleChildren }
+          : null
+      }
+      return isAllowedRole(item.allowedRoles, user?.role) ? item : null
+    })
+    .filter((item): item is NavItem => item !== null), [user?.role])
 
   const toggleMenu = (title: string) => {
     setExpandedMenus(prev =>
@@ -97,14 +112,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   // Auto expand menu based on current path
   React.useEffect(() => {
-    navItems.forEach(item => {
+    visibleNavItems.forEach(item => {
       if (item.children?.some(child => location.pathname === child.path)) {
         if (!expandedMenus.includes(item.title)) {
           setExpandedMenus(prev => [...prev, item.title])
         }
       }
     })
-  }, [location.pathname])
+  }, [location.pathname, visibleNavItems])
 
   const handleLogout = () => {
     localStorage.removeItem('admin_auth_token');
@@ -125,7 +140,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
         <nav className="flex-1 overflow-y-auto py-6 no-scrollbar">
           <div className="px-4 space-y-1">
-            {navItems.map((item) => (
+            {visibleNavItems.map((item) => (
               <div key={item.title} className="space-y-1">
                 {item.children ? (
                   <>
@@ -216,8 +231,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </button>
             <div className="flex items-center gap-3 pl-6 border-l border-slate-200">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-slate-900 leading-tight">管理员</p>
-                <p className="text-xs text-slate-500">高级运营人员</p>
+                <p className="text-sm font-semibold text-slate-900 leading-tight">{user?.name || '未登录用户'}</p>
+                <p className="text-xs text-slate-500">{roleLabel(user?.role)}</p>
               </div>
               <Avatar className="w-10 h-10 rounded-full border-2 border-amber-500/20" />
             </div>
