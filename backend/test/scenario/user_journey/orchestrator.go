@@ -55,6 +55,16 @@ type Config struct {
 	FixedPriceItemPrice string `json:"fixed_price_item_price,omitempty"`
 }
 
+type DemoSnapshot struct {
+	CurrentPrice     string `json:"current_price,omitempty"`
+	LeaderLabel      string `json:"leader_label,omitempty"`
+	BidCount         int64  `json:"bid_count,omitempty"`
+	OrderCount       int64  `json:"order_count,omitempty"`
+	StockBefore      int64  `json:"stock_before,omitempty"`
+	StockAfter       int64  `json:"stock_after,omitempty"`
+	HighlightedEvent string `json:"highlighted_event,omitempty"`
+}
+
 type Report struct {
 	TestRunID        string               `json:"test_run_id"`
 	BuyerID          int64                `json:"buyer_id"`
@@ -72,6 +82,7 @@ type Report struct {
 	AllOK            bool                 `json:"all_ok"`
 	Warnings         []string             `json:"warnings,omitempty"`
 	Error            string               `json:"error,omitempty"`
+	DemoSnapshot     *DemoSnapshot        `json:"demo_snapshot,omitempty"`
 }
 
 type Orchestrator struct {
@@ -94,6 +105,12 @@ func (o *Orchestrator) Run(ctx context.Context, p runner.ProgressEmitter) (repor
 		Steps:       make([]auction.StepResult, 0, 8),
 		Warnings:    make([]string, 0),
 		StockBefore: 1,
+		StockAfter:  1,
+		DemoSnapshot: &DemoSnapshot{
+			CurrentPrice: "100.00",
+			StockBefore:  1,
+			StockAfter:   1,
+		},
 	}
 	defer func() {
 		if o.cfg.keepEvidence() || o.rec == nil {
@@ -257,6 +274,14 @@ func (o *Orchestrator) auctionBid(ctx context.Context, rep *Report, p runner.Pro
 	if !step.OK {
 		return o.recordAndError(rep, p, 50, "auction_bid", step, "auction_bid failed")
 	}
+	o.updateDemoSnapshot(rep, func(s *DemoSnapshot) {
+		s.CurrentPrice = "110.00"
+		s.LeaderLabel = fmt.Sprintf("买家 %d", buyer.UserID)
+		s.BidCount = 1
+		s.StockBefore = rep.StockBefore
+		s.StockAfter = rep.StockBefore
+		s.HighlightedEvent = "bid"
+	})
 	o.record(rep, p, 50, auction.StepResult{Step: "auction_bid", OK: true, RefID: rep.AuctionID})
 	return nil
 }
@@ -266,6 +291,12 @@ func (o *Orchestrator) skyLamp(ctx context.Context, rep *Report, p runner.Progre
 	if !step.OK {
 		return o.recordAndError(rep, p, 62, "sky_lamp", step, "sky_lamp failed")
 	}
+	o.updateDemoSnapshot(rep, func(s *DemoSnapshot) {
+		s.CurrentPrice = "110.00"
+		s.LeaderLabel = fmt.Sprintf("买家 %d", buyer.UserID)
+		s.BidCount = 1
+		s.HighlightedEvent = "sky_lamp"
+	})
 	o.record(rep, p, 62, auction.StepResult{Step: "sky_lamp", OK: true, RefID: step.RefID})
 	return nil
 }
@@ -284,6 +315,12 @@ func (o *Orchestrator) fixedPricePurchase(ctx context.Context, rep *Report, p ru
 		rep.OrderID = purchase.OrderID
 	}
 	rep.StockAfter = 0
+	o.updateDemoSnapshot(rep, func(s *DemoSnapshot) {
+		s.OrderCount = 1
+		s.StockBefore = rep.StockBefore
+		s.StockAfter = rep.StockAfter
+		s.HighlightedEvent = "order"
+	})
 	o.addSeed(ctx, "order", rep.OrderID)
 	o.record(rep, p, 75, auction.StepResult{Step: "fixed_price_purchase", OK: true, RefID: rep.OrderID})
 	return nil
@@ -304,6 +341,11 @@ func (o *Orchestrator) verify(ctx context.Context, rep *Report, p runner.Progres
 		return o.recordAndError(rep, p, 100, "verify", balanceStep, "verify balance failed")
 	}
 	rep.BalanceAfter = balanceAfter
+	o.updateDemoSnapshot(rep, func(s *DemoSnapshot) {
+		s.StockBefore = rep.StockBefore
+		s.StockAfter = rep.StockAfter
+		s.HighlightedEvent = "verify"
+	})
 	o.record(rep, p, 100, auction.StepResult{Step: "verify", OK: true, RefID: rep.OrderID})
 	return nil
 }
@@ -311,13 +353,17 @@ func (o *Orchestrator) verify(ctx context.Context, rep *Report, p runner.Progres
 func (o *Orchestrator) record(rep *Report, p runner.ProgressEmitter, progress int, step auction.StepResult) {
 	rep.Steps = append(rep.Steps, step)
 	if p != nil {
-		p.Emit(progress, step.Step, map[string]any{
+		metrics := map[string]any{
 			"ok":          step.OK,
 			"duration_ms": step.DurationMs,
 			"ref_id":      step.RefID,
 			"message":     step.Message,
 			"status_code": step.StatusCode,
-		})
+		}
+		if rep.DemoSnapshot != nil {
+			metrics["demo_snapshot"] = *rep.DemoSnapshot
+		}
+		p.Emit(progress, step.Step, metrics)
 	}
 }
 
@@ -328,6 +374,13 @@ func (o *Orchestrator) recordAndError(rep *Report, p runner.ProgressEmitter, pro
 	}
 	o.record(rep, p, progress, step)
 	return fmt.Errorf("%s: %s", prefix, step.Message)
+}
+
+func (o *Orchestrator) updateDemoSnapshot(rep *Report, mutate func(*DemoSnapshot)) {
+	if rep.DemoSnapshot == nil {
+		rep.DemoSnapshot = &DemoSnapshot{}
+	}
+	mutate(rep.DemoSnapshot)
 }
 
 func (o *Orchestrator) addSeed(ctx context.Context, kind string, refID int64) {

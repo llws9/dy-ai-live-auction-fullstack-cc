@@ -33,6 +33,14 @@ func TestRunHappyPathProducesEvidenceReport(t *testing.T) {
 	assert.Equal(t, "900.00", report.BalanceAfter)
 	assert.Equal(t, int64(1), report.StockBefore)
 	assert.Equal(t, int64(0), report.StockAfter)
+	require.NotNil(t, report.DemoSnapshot)
+	assert.Equal(t, "110.00", report.DemoSnapshot.CurrentPrice)
+	assert.Equal(t, "买家 2001", report.DemoSnapshot.LeaderLabel)
+	assert.Equal(t, int64(1), report.DemoSnapshot.BidCount)
+	assert.Equal(t, int64(1), report.DemoSnapshot.OrderCount)
+	assert.Equal(t, int64(1), report.DemoSnapshot.StockBefore)
+	assert.Equal(t, int64(0), report.DemoSnapshot.StockAfter)
+	assert.Equal(t, "verify", report.DemoSnapshot.HighlightedEvent)
 	assertStepOrder(t, report.Steps, []string{
 		"prepare",
 		"enter_live",
@@ -45,6 +53,23 @@ func TestRunHappyPathProducesEvidenceReport(t *testing.T) {
 	assert.Equal(t, []string{"product:101", "live_stream:201", "auction:301", "fixed_price_item:401", "order:501"}, rec.added)
 	assert.False(t, rec.deleteCalled, "user_journey must keep evidence by default")
 	assert.Equal(t, "verify", emitter.lastStep())
+}
+
+func TestRunEmitsDemoSnapshotInProgressMetrics(t *testing.T) {
+	ctx := context.Background()
+	emitter := &fakeEmitter{}
+
+	report, err := New(newFakeBiz(), &fakeInternalClient{}, &fakeSeedRecorder{}, Config{TestID: "tj_demo"}).Run(ctx, emitter)
+	require.NoError(t, err)
+	require.NotNil(t, report.DemoSnapshot)
+
+	metrics := emitter.metricsForStep("sky_lamp")
+	require.NotNil(t, metrics)
+	snapshot, ok := metrics["demo_snapshot"].(DemoSnapshot)
+	require.True(t, ok)
+	assert.Equal(t, "110.00", snapshot.CurrentPrice)
+	assert.Equal(t, "买家 2001", snapshot.LeaderLabel)
+	assert.Equal(t, "sky_lamp", snapshot.HighlightedEvent)
 }
 
 func TestPrepareFailsClosedWhenTopUpFails(t *testing.T) {
@@ -340,11 +365,16 @@ func (f *fakeSeedRecorder) DeleteByTestID(_ context.Context, testID string) erro
 }
 
 type fakeEmitter struct {
-	steps []string
+	steps   []string
+	metrics map[string]map[string]any
 }
 
-func (f *fakeEmitter) Emit(_ int, step string, _ map[string]any) {
+func (f *fakeEmitter) Emit(_ int, step string, metrics map[string]any) {
 	f.steps = append(f.steps, step)
+	if f.metrics == nil {
+		f.metrics = make(map[string]map[string]any)
+	}
+	f.metrics[step] = metrics
 }
 
 func (f *fakeEmitter) lastStep() string {
@@ -352,6 +382,13 @@ func (f *fakeEmitter) lastStep() string {
 		return ""
 	}
 	return f.steps[len(f.steps)-1]
+}
+
+func (f *fakeEmitter) metricsForStep(step string) map[string]any {
+	if f.metrics == nil {
+		return nil
+	}
+	return f.metrics[step]
 }
 
 func okStep(step string, refID int64) auction.StepResult {
