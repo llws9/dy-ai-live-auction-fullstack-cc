@@ -33,11 +33,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `7` |
-| Done | `4` |
+| Done | `5` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `3` |
-| Last Updated | `2026-06-05 21:28 CST` |
+| Pending | `2` |
+| Last Updated | `2026-06-05 21:35 CST` |
 
 ## Task Matrix
 
@@ -47,7 +47,7 @@
 | `T002` | `Backend Handler Contract` | `done` | `subagent-codex` | `W2` | `T001` | `upcoming=true contract forwarding` | `backend/auction/handler/auction.go; backend/auction/handler/auction_list.go; backend/auction/handler/auction_list_test.go` |
 | `T003` | `H5 API Contract and Empty-State Tests` | `done` | `subagent-trae` | `W3` | `T002` | `frontend API params and failing tests` | `frontend/h5/src/services/api.ts; frontend/h5/src/pages/Live/__tests__/LiveFeedPage.test.tsx` |
 | `T004` | `H5 Empty-State Component and Feed Integration` | `done` | `subagent-trae` | `W4` | `T003` | `LiveEmptyState and LiveFeedPage integration` | `frontend/h5/src/pages/Live/LiveEmptyState.tsx; frontend/h5/src/pages/Live/LiveFeedPage.tsx; frontend/h5/src/pages/Live/__tests__/LiveFeedPage.test.tsx; frontend/h5/src/services/api.ts` |
-| `T005` | `Empty-State Styling and CSS Regression` | `pending` | `unassigned` | `W5` | `T004` | `CSS modules and layout CSS tests` | `frontend/h5/src/pages/Live/Live.module.css; frontend/h5/src/pages/Live/__tests__/LiveLayoutCss.test.ts` |
+| `T005` | `Empty-State Styling and CSS Regression` | `done` | `subagent-trae` | `W5` | `T004` | `CSS modules and layout CSS tests` | `frontend/h5/src/pages/Live/Live.module.css; frontend/h5/src/pages/Live/__tests__/LiveLayoutCss.test.ts` |
 | `T006` | `Business Event Reuse` | `pending` | `unassigned` | `W6` | `T004` | `reuse reminder_subscribe tracking` | `frontend/h5/src/pages/Live/LiveFeedPage.tsx; frontend/h5/src/pages/Live/__tests__/LiveFeedPage.test.tsx` |
 | `T007` | `Full Verification` | `pending` | `unassigned` | `W7` | `T001,T002,T003,T004,T005,T006` | `backend/frontend verification only` | `verify only` |
 
@@ -334,10 +334,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `subagent-trae` |
+| Started At | `2026-06-05 21:31 CST` |
+| Completed At | `2026-06-05 21:35 CST` |
 | Branch | `feat/h5-live-empty-upcoming` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-live-empty-upcoming` |
 | Depends On | `T004` |
@@ -364,19 +364,25 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `CSS and page tests pass` | `not_run` | `pending` |
+| `cd frontend/h5 && npm test -- LiveLayoutCss.test.ts --runInBand` | Expected red after adding CSS regression test, because empty-state classes do not exist yet | `FAIL src/pages/Live/__tests__/LiveLayoutCss.test.ts`; `3 total`, `2 passed`, `1 failed`; failure: `.liveEmptyPage` block was empty and did not contain `background: var(--bg-page);` | `red_passed` |
+| `cd frontend/h5 && npm test -- LiveLayoutCss.test.ts --runInBand` | `PASS` after adding tokenized empty-state styles | `PASS src/pages/Live/__tests__/LiveLayoutCss.test.ts`; `3 passed`, `3 total`; `Test Suites: 1 passed, 1 total` | `green_passed` |
+| `cd frontend/h5 && npm test -- LiveLayoutCss.test.ts LiveFeedPage.test.tsx --runInBand` | `PASS` | `PASS src/pages/Live/__tests__/LiveFeedPage.test.tsx`; `PASS src/pages/Live/__tests__/LiveLayoutCss.test.ts`; `18 passed`, `18 total`; `Test Suites: 2 passed, 2 total` | `passed` |
 
 **Modified Files**
 
-- `not_started`
+- `frontend/h5/src/pages/Live/Live.module.css`
+- `frontend/h5/src/pages/Live/__tests__/LiveLayoutCss.test.ts`
+- `docs/superpowers/sdd/runs/2026-06-05-h5-live-empty-upcoming-state.md`
 
 **Commits**
 
-- `not_started`
+- `pending in commit style: polish h5 live empty upcoming state`
 
 **Review Notes**
 
-- `not_started`
+- Added CSS regression coverage that locks empty-state page, title, primary link, and upcoming card colors to theme-token declarations.
+- Added day/night-compatible styles for `LiveEmptyState` classes referenced by T004, including fallback panel, optional icon primitives, upcoming list/card layout, time/info text, subscribe button, focus-visible state, and disabled state.
+- Did not modify React files or business logic.
 
 **Risks / Blockers**
 
@@ -384,7 +390,7 @@
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `当前分支/worktree：feat/h5-live-empty-upcoming @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-live-empty-upcoming`
 
 ### T006 - `Business Event Reuse`
 
