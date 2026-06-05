@@ -260,9 +260,9 @@ func (h *AuthHandler) GetCurrentUser(ctx context.Context, c *app.RequestContext)
 	user, err := h.userDAO.GetByID(ctx, userID.(int64))
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(404, map[string]interface{}{
-				"code":    404,
-				"message": "用户不存在",
+			c.JSON(401, map[string]interface{}{
+				"code":    401,
+				"message": "登录已失效，请重新登录",
 			})
 		} else {
 			c.JSON(500, map[string]interface{}{
