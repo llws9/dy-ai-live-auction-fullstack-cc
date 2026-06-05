@@ -180,7 +180,7 @@
 
 **Commits**
 
-- `pending until commit is created`
+- `a3a42ba1c8a024d4b7dbbe6c79a4dfc0d8e105e8` (`feat: expose upcoming auction list contract`)
 
 **Review Notes**
 
