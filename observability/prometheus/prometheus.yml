@@ -21,7 +21,7 @@ scrape_configs:
   # Gateway 服务
   - job_name: 'gateway'
     static_configs:
-      - targets: ['gateway:8080']
+      - targets: ['gateway:9090']
     metrics_path: /metrics
 
   # Product 服务
@@ -36,11 +36,17 @@ scrape_configs:
       - targets: ['auction:8082']
     metrics_path: /metrics
 
+  # 本地开发配置 - Gateway Prometheus 指标端口
+  - job_name: 'local-gateway'
+    static_configs:
+      - targets:
+          - 'host.docker.internal:9090'
+    metrics_path: /metrics
+
   # 本地开发配置
   - job_name: 'local-services'
     static_configs:
       - targets:
-          - 'host.docker.internal:8080'  # Gateway
           - 'host.docker.internal:8081'  # Product
           - 'host.docker.internal:8082'  # Auction
     metrics_path: /metrics

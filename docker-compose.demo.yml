@@ -26,10 +26,14 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:?set DB_PASSWORD}
       - DB_NAME=${DB_NAME:-auction}
     depends_on:
-      - product
-      - auction
-      - mysql
-      - redis
+      product:
+        condition: service_started
+      auction:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
     restart: unless-stopped
     networks:
       - auction-demo
@@ -105,6 +109,12 @@ services:
     restart: unless-stopped
     networks:
       - auction-demo
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   redis:
     image: docker.m.daocloud.io/library/redis:7-alpine

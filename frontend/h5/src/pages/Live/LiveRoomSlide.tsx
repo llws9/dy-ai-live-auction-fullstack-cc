@@ -226,7 +226,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   }, [effectiveLiveStreamId]);
 
   useEffect(() => {
-    const eventProductId = auction?.product_id ?? auction?.product?.id ?? product?.id;
+    const eventProductId = auction?.product_id ?? auction?.product?.id;
     if (!active || !isAuthenticated || effectiveLiveStreamId <= 0 || auctionId <= 0 || !eventProductId) {
       return;
     }
@@ -241,7 +241,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       auctionId,
       productId: eventProductId,
     });
-  }, [active, isAuthenticated, effectiveLiveStreamId, auctionId, auction?.product_id, auction?.product?.id, product?.id]);
+  }, [active, isAuthenticated, effectiveLiveStreamId, auctionId, auction?.product_id, auction?.product?.id]);
 
   useEffect(() => {
     if (!isAuthenticated || fixedPriceItemIds.length === 0) {

@@ -3,7 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -71,8 +71,6 @@ const (
 	maxMetadataKeys        = 8
 	maxMetadataStringBytes = 256
 )
-
-var errInvalidMetadata = errors.New("invalid metadata")
 
 func NewBusinessEventHandler(store BusinessEventStore, m *metrics.Metrics) *BusinessEventHandler {
 	return &BusinessEventHandler{store: store, metrics: m}
@@ -191,20 +189,25 @@ func validClientEventID(value string) bool {
 
 func validateMetadata(metadata map[string]interface{}) error {
 	if len(metadata) > maxMetadataKeys {
-		return errInvalidMetadata
+		return fmt.Errorf("too many metadata keys")
 	}
 	for key, value := range metadata {
 		if !isAllowed(key, allowedMetadataKeys) {
-			return errInvalidMetadata
+			return fmt.Errorf("unsupported metadata key: %s", key)
+		}
+		if key == "client_event_id" {
+			if _, ok := value.(string); !ok {
+				return fmt.Errorf("client_event_id must be a string")
+			}
 		}
 		switch v := value.(type) {
 		case string:
 			if len(v) > maxMetadataStringBytes {
-				return errInvalidMetadata
+				return fmt.Errorf("metadata value too long: %s", key)
 			}
 		case float64, bool, nil:
 		default:
-			return errInvalidMetadata
+			return fmt.Errorf("unsupported metadata value type: %s", key)
 		}
 	}
 	return nil

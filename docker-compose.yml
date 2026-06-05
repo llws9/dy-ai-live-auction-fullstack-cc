@@ -24,10 +24,14 @@ services:
       - DB_PASSWORD=root
       - DB_NAME=auction
     depends_on:
-      - nacos
-      - mysql
-      - redis
-      - test-service
+      nacos:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      test-service:
+        condition: service_started
     networks:
       - auction-network
     labels:
@@ -126,6 +130,12 @@ services:
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - auction-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   # ==================== 配置中心 (Nacos) ====================
 
