@@ -41,6 +41,8 @@ describe('Screen demo theater', () => {
     renderScreen();
 
     expect(screen.getByText('AI 直播竞拍全链路验收')).toBeInTheDocument();
+    expect(screen.getByText('H5 直播间同步画面')).toBeInTheDocument();
+    expect(screen.getByText('事件证据流')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '开始演示' })).toBeInTheDocument();
     expect(screen.getByText('业务闭环成立')).toBeInTheDocument();
     expect(screen.queryByText('总任务')).not.toBeInTheDocument();
@@ -140,9 +142,49 @@ describe('Screen demo theater', () => {
 
     renderScreen();
 
-    expect(screen.getByText('¥110.00')).toBeInTheDocument();
+    expect(screen.getAllByText('¥110.00').length).toBeGreaterThan(0);
     expect(screen.getByText('买家 2001')).toBeInTheDocument();
-    expect(screen.getByText('点天灯触发')).toBeInTheDocument();
+    expect(screen.getByText('买家 2001 正在领先')).toBeInTheDocument();
+    expect(screen.getAllByText('点天灯触发').length).toBeGreaterThan(0);
+    expect(screen.getByText('天灯锁定领先')).toBeInTheDocument();
+  });
+
+  it('shows fixed-price purchase as a live-room deal moment', () => {
+    useWSStore.setState({
+      connected: true,
+      testID: 'tj_deal',
+      progress: 75,
+      step: 'fixed_price_purchase',
+      metrics: {},
+      history: [
+        {
+          test_id: 'tj_deal',
+          progress: 75,
+          step: 'fixed_price_purchase',
+          metrics: {
+            demo_snapshot: {
+              current_price: '110.00',
+              leader_label: '买家 2001',
+              bid_count: 1,
+              order_count: 1,
+              stock_before: 1,
+              stock_after: 0,
+              highlighted_event: 'order',
+            },
+          },
+          ts: Date.now(),
+        },
+      ],
+      socket: null,
+      connect,
+      disconnect,
+    });
+
+    renderScreen();
+
+    expect(screen.getByText('成交弹幕')).toBeInTheDocument();
+    expect(screen.getByText('库存 1 → 0')).toBeInTheDocument();
+    expect(screen.getByText('订单已生成')).toBeInTheDocument();
   });
 });
 
