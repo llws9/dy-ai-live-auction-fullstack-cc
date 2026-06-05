@@ -70,6 +70,16 @@ export interface UserJourneyConfig {
 	keep_evidence?: boolean;
 }
 
+export interface DemoSnapshot {
+	current_price?: string;
+	leader_label?: string;
+	bid_count?: number;
+	order_count?: number;
+	stock_before?: number;
+	stock_after?: number;
+	highlighted_event?: 'bid' | 'sky_lamp' | 'fixed_price' | 'order' | 'verify';
+}
+
 export interface UserJourneyReport {
 	test_run_id?: string;
 	buyer_id?: number;
@@ -94,6 +104,7 @@ export interface UserJourneyReport {
 	all_ok?: boolean;
 	warnings?: string[];
 	error?: string;
+	demo_snapshot?: DemoSnapshot;
 }
 
 export async function startUserJourney(config: UserJourneyConfig): Promise<string> {
