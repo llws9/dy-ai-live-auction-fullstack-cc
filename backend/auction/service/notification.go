@@ -11,6 +11,7 @@ import (
 
 	"auction-service/dao"
 	"auction-service/model"
+	"auction-service/pkg/metrics"
 	"auction-service/websocket"
 )
 
@@ -491,9 +492,11 @@ func (s *NotificationService) persistProductReminderNotifications(ctx context.Co
 	candidates, err := s.productReminder.GetStartingSoonByUser(ctx, userID, now, windowEnd)
 	if err != nil {
 		log.Printf("HotPullProductReminder: query failed user=%d err=%v", userID, err)
+		metrics.GetNotificationMetrics().RecordHotPull("product_reminder", "failures", 1)
 		return nil, err
 	}
 	log.Printf("HotPullProductReminder: query completed user=%d candidate_count=%d", userID, len(candidates))
+	metrics.GetNotificationMetrics().RecordHotPull("product_reminder", "candidates", len(candidates))
 
 	notifications := make([]*model.Notification, 0, len(candidates))
 	duplicateCount := 0
@@ -534,6 +537,9 @@ func (s *NotificationService) persistProductReminderNotifications(ctx context.Co
 
 	log.Printf("HotPullProductReminder: completed user=%d candidates=%d created=%d duplicates=%d failures=%d",
 		userID, len(candidates), len(notifications), duplicateCount, failureCount)
+	metrics.GetNotificationMetrics().RecordHotPull("product_reminder", "created", len(notifications))
+	metrics.GetNotificationMetrics().RecordHotPull("product_reminder", "duplicates", duplicateCount)
+	metrics.GetNotificationMetrics().RecordHotPull("product_reminder", "failures", failureCount)
 	return notifications, nil
 }
 

@@ -9,7 +9,8 @@ alerting:
     - static_configs:
         - targets: []
 
-rule_files: []
+rule_files:
+  - 'business-alerts.yml'
 
 scrape_configs:
   # Prometheus 自身监控

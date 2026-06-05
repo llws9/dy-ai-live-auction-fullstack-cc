@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { trackBusinessEvent } from '../../utils/businessEvent';
 import { trackEvent } from '../../utils/trackEvent';
 import styles from './LiveReminderModal.module.css';
 
@@ -66,8 +67,12 @@ const LiveReminderModal: React.FC<LiveReminderModalProps> = ({ isOpen, onClose, 
     if (!trackActionOnce('live_reminder_clicked', 'clicked')) {
       return;
     }
+    trackBusinessEvent('reminder_click', {
+      source: 'live_reminder',
+      liveStreamId: Number(stream.id) || undefined,
+    });
     onClose();
-    navigate(`/live`);
+    navigate(`/live?id=${stream.id}`);
   };
 
   return (

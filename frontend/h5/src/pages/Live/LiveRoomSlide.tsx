@@ -11,6 +11,7 @@ import { useAuth } from '@/store/authContext';
 import { useToast } from '../../components/Toast';
 import { ChatPanel } from '../../components/LiveChat/ChatPanel';
 import { useLiveChatStore } from '../../store/liveChatStore';
+import { trackBusinessEvent } from '../../utils/businessEvent';
 import { repairUtf8Mojibake } from '../../utils/textEncoding';
 import BidDock from './BidDock';
 import styles from './Live.module.css';
@@ -198,6 +199,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const [now, setNow] = useState(() => Date.now());
   const { showToast: showGlobalToast } = useToast();
   const wsRef = useRef<WebSocketService | null>(null);
+  const enteredRoomsRef = useRef<Set<number>>(new Set());
   const bidFlairDelayTimerRef = useRef<number | null>(null);
   const bidFlairHideTimerRef = useRef<number | null>(null);
   const [fixedPriceModalItem, setFixedPriceModalItem] = useState<FixedPriceItem | null>(null);
@@ -222,6 +224,22 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   useEffect(() => {
     setPurchasedFixedPriceItemIds(new Set());
   }, [effectiveLiveStreamId]);
+
+  useEffect(() => {
+    if (!active || !isAuthenticated || effectiveLiveStreamId <= 0) {
+      return;
+    }
+    if (enteredRoomsRef.current.has(effectiveLiveStreamId)) {
+      return;
+    }
+    enteredRoomsRef.current.add(effectiveLiveStreamId);
+    trackBusinessEvent('live_room_enter', {
+      source: 'live_room',
+      liveStreamId: effectiveLiveStreamId,
+      auctionId: auctionId || undefined,
+      productId: auction?.product_id ?? auction?.product?.id,
+    });
+  }, [active, isAuthenticated, effectiveLiveStreamId, auctionId, auction?.product_id, auction?.product?.id]);
 
   useEffect(() => {
     if (!isAuthenticated || fixedPriceItemIds.length === 0) {
@@ -300,10 +318,18 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   // 打开 sheet 时 push 一条新 history entry，浏览器返回键即可消费抽屉态（先收起抽屉、不离开直播页）。
   const openSheet = useCallback((next: 'bid' | 'info') => {
     if (!active) return; // 非活跃 slide 不读写 URL sheet
+    if (next === 'bid') {
+      trackBusinessEvent('bid_button_click', {
+        source: 'live_room',
+        liveStreamId: effectiveLiveStreamId,
+        auctionId,
+        productId: auction?.product_id ?? auction?.product?.id,
+      });
+    }
     const params = new URLSearchParams(searchParams);
     params.set('sheet', next);
     setSearchParams(params, { replace: false });
-  }, [active, searchParams, setSearchParams]);
+  }, [active, auction?.product_id, auction?.product?.id, auctionId, effectiveLiveStreamId, searchParams, setSearchParams]);
 
   // 程序关闭 sheet（onClose / 出价成功）：去除 sheet 参数并 replace，避免再点返回多退一步。
   const closeSheet = useCallback(() => {
@@ -750,7 +776,16 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
               key={item.id}
               item={item}
               purchased={purchasedFixedPriceItemIds.has(item.id)}
-              onPurchase={() => setFixedPriceModalItem(item)}
+              onPurchase={() => {
+                trackBusinessEvent('fixed_price_click', {
+                  source: 'fixed_price_card',
+                  liveStreamId: effectiveLiveStreamId,
+                  auctionId,
+                  productId: item.product_id ?? item.product?.id ?? item.product_brief?.id,
+                  metadata: { item_id: item.id },
+                });
+                setFixedPriceModalItem(item);
+              }}
             />
           ))}
         </div>
@@ -929,6 +964,13 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           open={true}
           onClose={() => setFixedPriceModalItem(null)}
           onSuccess={() => {
+            trackBusinessEvent('purchase_success', {
+              source: 'fixed_price_card',
+              liveStreamId: effectiveLiveStreamId,
+              auctionId,
+              productId: fixedPriceModalItem.product_id ?? fixedPriceModalItem.product?.id ?? fixedPriceModalItem.product_brief?.id,
+              metadata: { item_id: fixedPriceModalItem.id },
+            });
             setPurchasedFixedPriceItemIds((current) => {
               const next = new Set(current);
               next.add(fixedPriceModalItem.id);

@@ -16,6 +16,7 @@ type Config struct {
 	RateLimit  RateLimitConfig  `yaml:"rate_limit"`
 	JWT        JWTConfig        `yaml:"jwt"`
 	Redis      RedisConfig      `yaml:"redis"`
+	Database   DatabaseConfig   `yaml:"database"`
 	GrowthBook GrowthBookConfig `yaml:"growthbook"`
 }
 
@@ -59,6 +60,14 @@ type RedisConfig struct {
 	PoolSize int    `yaml:"pool_size"`
 }
 
+type DatabaseConfig struct {
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	Name     string `yaml:"name"`
+}
+
 // Load 从环境变量加载配置（本地开发）
 func Load() *Config {
 	return &Config{
@@ -83,6 +92,13 @@ func Load() *Config {
 			Addr:     getEnvOrDefault("REDIS_ADDR", "localhost:6379"),
 			Password: getEnvOrDefault("REDIS_PASSWORD", ""),
 			PoolSize: 100,
+		},
+		Database: DatabaseConfig{
+			Host:     getEnvOrDefault("DB_HOST", "localhost"),
+			Port:     getEnvOrDefault("DB_PORT", "3306"),
+			User:     getEnvOrDefault("DB_USER", "root"),
+			Password: getEnvOrDefault("DB_PASSWORD", ""),
+			Name:     getEnvOrDefault("DB_NAME", "auction"),
 		},
 		GrowthBook: GrowthBookConfig{
 			APIHost:   getEnvOrDefault("GROWTHBOOK_API_HOST", "http://localhost:3200"),
@@ -145,6 +161,11 @@ func injectRuntimeSecrets(cfg *Config) {
 	if token := os.Getenv("INTERNAL_API_TOKEN"); token != "" {
 		cfg.Services.InternalToken = token
 	}
+	cfg.Database.Host = getEnvOrDefault("DB_HOST", cfg.Database.Host)
+	cfg.Database.Port = getEnvOrDefault("DB_PORT", cfg.Database.Port)
+	cfg.Database.User = getEnvOrDefault("DB_USER", cfg.Database.User)
+	cfg.Database.Password = getEnvOrDefault("DB_PASSWORD", cfg.Database.Password)
+	cfg.Database.Name = getEnvOrDefault("DB_NAME", cfg.Database.Name)
 }
 
 func getEnvOrDefault(key, defaultValue string) string {

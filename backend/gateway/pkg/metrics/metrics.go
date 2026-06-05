@@ -54,6 +54,7 @@ type Metrics struct {
 	ExperimentViewed    *prometheus.CounterVec
 	ExperimentCompleted *prometheus.CounterVec
 	TouchpointEvent     *prometheus.CounterVec
+	BusinessFunnelEvent *prometheus.CounterVec
 
 	// SQL 查询
 	SQLQueryDuration *prometheus.HistogramVec
@@ -301,6 +302,14 @@ func NewMetrics(serviceName string, reg registerer) *Metrics {
 			},
 			[]string{"event", "source", "entry", "type", "result"},
 		),
+
+		BusinessFunnelEvent: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "business_funnel_event_total",
+				Help: "增长漏斗业务事件总数",
+			},
+			[]string{"event_type", "source", "result"},
+		),
 	}
 
 	// 注册所有指标
@@ -333,6 +342,7 @@ func NewMetrics(serviceName string, reg registerer) *Metrics {
 		m.ExperimentViewed,
 		m.ExperimentCompleted,
 		m.TouchpointEvent,
+		m.BusinessFunnelEvent,
 	)
 
 	return m
@@ -404,6 +414,10 @@ func (m *Metrics) RecordPayment(method string, amount float64, success bool, err
 
 func (m *Metrics) RecordTouchpointEvent(event, source, entry, touchpointType, result string) {
 	m.TouchpointEvent.WithLabelValues(event, source, entry, touchpointType, result).Inc()
+}
+
+func (m *Metrics) RecordBusinessFunnelEvent(eventType, source, result string) {
+	m.BusinessFunnelEvent.WithLabelValues(eventType, source, result).Inc()
 }
 
 // IncWSConnections 增加 WebSocket 连接

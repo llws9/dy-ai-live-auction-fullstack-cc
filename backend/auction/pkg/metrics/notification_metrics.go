@@ -1,21 +1,29 @@
 package metrics
 
-// NotificationMetrics 通知服务指标收集器（占位）
-// 当前通知服务不需要特定的metrics打点
-// 保留此文件以备将来扩展
+import "github.com/prometheus/client_golang/prometheus"
+
 type NotificationMetrics struct {
-	// 未来可根据需要添加：
-	// - notificationsSent
-	// - notificationsFailed
-	// - notificationLatency
-	// - batchNotificationSize
+	hotPullTotal *prometheus.CounterVec
 }
 
 var notificationMetrics *NotificationMetrics
 
-// InitNotificationMetrics 初始化通知指标（占位）
+func NewNotificationMetrics(reg prometheus.Registerer) *NotificationMetrics {
+	m := &NotificationMetrics{
+		hotPullTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "notification_hot_pull_total",
+				Help: "热拉通知处理结果总数",
+			},
+			[]string{"source", "result"},
+		),
+	}
+	reg.MustRegister(m.hotPullTotal)
+	return m
+}
+
 func InitNotificationMetrics() *NotificationMetrics {
-	m := &NotificationMetrics{}
+	m := NewNotificationMetrics(prometheus.DefaultRegisterer)
 	notificationMetrics = m
 	return m
 }
@@ -27,4 +35,11 @@ func GetNotificationMetrics() *NotificationMetrics {
 		return InitNotificationMetrics()
 	}
 	return notificationMetrics
+}
+
+func (m *NotificationMetrics) RecordHotPull(source, result string, count int) {
+	if count <= 0 {
+		return
+	}
+	m.hotPullTotal.WithLabelValues(source, result).Add(float64(count))
 }

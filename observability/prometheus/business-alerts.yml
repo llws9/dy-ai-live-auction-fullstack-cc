@@ -1,0 +1,59 @@
+groups:
+  - name: business_funnel_alerts
+    interval: 30s
+    rules:
+      - alert: BusinessEventIngestFailures
+        expr: |
+          sum(rate(business_funnel_event_total{result="failed"}[5m])) > 0
+        for: 2m
+        labels:
+          severity: warning
+          category: business
+          service: gateway-service
+        annotations:
+          summary: "业务事件写入失败"
+          description: "gateway-service 在最近 5 分钟内持续出现业务事件写入失败，增长漏斗数据可能缺口。"
+
+      - alert: NotificationHotPullFailureRateHigh
+        expr: |
+          (
+            sum(rate(notification_hot_pull_total{source="product_reminder",result="failures"}[5m]))
+            /
+            clamp_min(sum(rate(notification_hot_pull_total{source="product_reminder",result=~"created|duplicates|failures"}[5m])), 1)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          category: business
+          service: auction-service
+        annotations:
+          summary: "商品提醒热拉失败率过高"
+          description: "商品提醒热拉失败率超过 5%，可能影响开拍提醒触达。"
+
+      - alert: AuctionBidFailureRateHigh
+        expr: |
+          (
+            sum(rate(auction_bid_total{status!="success"}[5m]))
+            /
+            clamp_min(sum(rate(auction_bid_total[5m])), 1)
+          ) > 0.05
+        for: 3m
+        labels:
+          severity: critical
+          category: business
+          service: auction-service
+        annotations:
+          summary: "出价失败率过高"
+          description: "出价失败率超过 5%，需要检查竞拍状态、锁竞争、DB 或 Redis 链路。"
+
+      - alert: FixedPricePurchaseFailures
+        expr: |
+          sum(rate(fixed_price_purchase_total{result!="success"}[5m])) > 0
+        for: 3m
+        labels:
+          severity: warning
+          category: business
+          service: auction-service
+        annotations:
+          summary: "一口价购买失败"
+          description: "一口价购买链路持续出现失败，需要检查库存、余额、幂等或补偿事务。"

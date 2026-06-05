@@ -541,6 +541,34 @@
       }],
       "title": "WebSocket 错误数 (1小时)",
       "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 7, "w": 12, "x": 0, "y": 68},
+      "id": 36,
+      "options": {"legend": {"calcs": ["sum"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum by (event_type) (increase(business_funnel_event_total{result=\"success\"}[1h]))",
+        "legendFormat": "{{event_type}}",
+        "refId": "A"
+      }],
+      "title": "增长漏斗业务事件 (1小时)",
+      "type": "barchart"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 7, "w": 12, "x": 12, "y": 68},
+      "id": 37,
+      "options": {"legend": {"calcs": ["sum"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "expr": "sum by (result) (increase(notification_hot_pull_total{source=\"product_reminder\"}[1h]))",
+        "legendFormat": "{{result}}",
+        "refId": "A"
+      }],
+      "title": "商品提醒热拉结果 (1小时)",
+      "type": "timeseries"
     }
   ],
   "refresh": "5s",
@@ -553,5 +581,5 @@
   "timezone": "",
   "title": "直播竞拍业务监控仪表板",
   "uid": "business-metrics",
-  "version": 2
+  "version": 3
 }

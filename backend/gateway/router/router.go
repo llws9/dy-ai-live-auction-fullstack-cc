@@ -20,7 +20,7 @@ type RouterConfig struct {
 }
 
 // RegisterRoutes 注册所有路由
-func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Client) {
+func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Client, businessEventHandlers ...*handler.BusinessEventHandler) {
 	// 创建代理处理器
 	productProxy := handler.NewProxyHandler(cfg.Services.ProductURL)
 	adminProductProxy := handler.NewProxyHandlerWithInternalToken(cfg.Services.ProductURL, cfg.Services.InternalToken)
@@ -57,6 +57,9 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 
 	// 用户信息
 	authGroup.GET("/users/me", auctionProxy.Forward)
+	if len(businessEventHandlers) > 0 && businessEventHandlers[0] != nil {
+		authGroup.POST("/events", businessEventHandlers[0].Create)
+	}
 
 	// 用户聚合统计 (T2.7 / spec A F-A1) —— Gateway BFF 并行调下游聚合
 	userStatsHandler := handler.NewUserStatsHandler(cfg.Services.AuctionURL, cfg.Services.ProductURL, 2*time.Second)

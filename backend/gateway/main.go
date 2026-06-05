@@ -9,6 +9,7 @@ import (
 	"gateway-service/config"
 	"gateway-service/dao"
 	_ "gateway-service/docs" // Swagger docs
+	"gateway-service/handler"
 	"gateway-service/middleware"
 	"gateway-service/pkg/growthbook"
 	"gateway-service/pkg/metrics"
@@ -80,6 +81,15 @@ func main() {
 		h.Use(middleware.IPRateLimit(redisClient, cfg.RateLimit.RequestsPerSecond, time.Second))
 	}
 
+	businessEventHandler := handler.NewBusinessEventHandler(nil, m)
+	eventDB, err := dao.InitBusinessEventDB(cfg.Database)
+	if err != nil {
+		log.Printf("Warning: business event DB init failed: %v, /api/v1/events will return 503", err)
+	} else {
+		businessEventHandler = handler.NewBusinessEventHandler(dao.NewBusinessEventDAO(eventDB), m)
+		log.Println("Business event store initialized")
+	}
+
 	// 请求日志中间件
 	h.Use(middleware.RequestLogger(middleware.LoggerConfig{
 		ServiceName: "gateway-service",
@@ -89,7 +99,7 @@ func main() {
 	h.Use(middleware.MetricsMiddleware("gateway", m))
 
 	// 注册路由（包含 GrowthBook 客户端）
-	router.RegisterRoutes(h, cfg, gbClient)
+	router.RegisterRoutes(h, cfg, gbClient, businessEventHandler)
 
 	// 前端埋点 API
 	h.POST("/api/v1/track", metrics.TrackEvent(m))
