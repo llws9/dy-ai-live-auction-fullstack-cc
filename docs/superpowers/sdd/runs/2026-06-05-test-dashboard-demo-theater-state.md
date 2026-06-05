@@ -33,11 +33,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `6` |
-| Done | `4` |
+| Done | `5` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `2` |
-| Last Updated | `2026-06-06 02:00` |
+| Pending | `1` |
+| Last Updated | `2026-06-06 02:11` |
 
 ## Task Matrix
 
@@ -47,7 +47,7 @@
 | `T001` | `Add Demo Snapshot To UserJourney Report` | `done` | `subagent-bfee7079` | `W1` | `T000` | `Backend user_journey demo_snapshot report and progress metrics` | `backend/test/scenario/user_journey/orchestrator.go, backend/test/scenario/user_journey/orchestrator_test.go` |
 | `T002` | `Add Test Infrastructure For Test Dashboard` | `done` | `main-agent` | `W2` | `T000` | `Vitest and Testing Library setup for frontend/test-dashboard` | `frontend/test-dashboard/package.json, frontend/test-dashboard/package-lock.json, frontend/test-dashboard/vite.config.ts, frontend/test-dashboard/src/test/setup.ts` |
 | `T003` | `Add Demo Theater Mapping Layer` | `done` | `main-agent` | `W3` | `T001,T002` | `Frontend UserJourney demo model mapping` | `frontend/test-dashboard/src/api/test.ts, frontend/test-dashboard/src/pages/demoTheater.ts, frontend/test-dashboard/src/pages/demoTheater.test.ts` |
-| `T004` | `Replace Screen With One-Click Demo Theater` | `pending` | `unassigned` | `W4` | `T003` | `Replace /test/screen historical dashboard with one-click demo theater` | `frontend/test-dashboard/src/pages/Screen.tsx, frontend/test-dashboard/src/pages/Screen.test.tsx` |
+| `T004` | `Replace Screen With One-Click Demo Theater` | `done` | `main-agent` | `W4` | `T003` | `Replace /test/screen historical dashboard with one-click demo theater` | `frontend/test-dashboard/src/pages/Screen.tsx, frontend/test-dashboard/src/pages/Screen.test.tsx` |
 | `T005` | `Integration Verification And SDD Evidence` | `pending` | `unassigned` | `W5` | `T004` | `Run backend/frontend verification and record evidence` | `docs/superpowers/sdd/runs/2026-06-05-test-dashboard-demo-theater-state.md` |
 
 ## Wave Plan
@@ -273,10 +273,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-06 02:07` |
+| Completed At | `2026-06-06 02:11` |
 | Branch | `feat/test-dashboard-demo-theater` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-test-dashboard-demo-theater` |
 | Depends On | `T003` |
@@ -292,8 +292,36 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `cd frontend/test-dashboard && npm run test:run -- src/pages/Screen.test.tsx` | `PASS` | `not_run` | `pending` |
-| `cd frontend/test-dashboard && npm run test:run && npm run build` | `PASS` | `not_run` | `pending` |
+| `cd frontend/test-dashboard && npm run test:run -- src/pages/Screen.test.tsx` | `FAIL before implementation` | `FAIL: old historical dashboard rendered; missing AI 直播竞拍全链路验收, 开始演示, ¥110.00 and 点天灯触发` | `red_passed` |
+| `cd frontend/test-dashboard && npm run test:run -- src/pages/Screen.test.tsx` | `PASS after Screen theater implementation` | `PASS: 1 file, 3 tests` | `passed` |
+| `cd frontend/test-dashboard && npm run test:run && npm run build` | `PASS` | `PASS: 2 test files, 8 tests; build succeeded with existing Vite large chunk warning` | `passed` |
+
+**Modified Files**
+
+- `frontend/test-dashboard/src/pages/Screen.tsx`
+- `frontend/test-dashboard/src/pages/Screen.test.tsx`
+- `docs/superpowers/sdd/runs/2026-06-05-test-dashboard-demo-theater-state.md`
+
+**Commits**
+
+- `pending: feat(test-dashboard): turn screen into demo theater`
+
+**Review Notes**
+
+- `/test/screen` no longer renders the historical task stats dashboard.
+- Screen uses centralized `DEMO_USER_JOURNEY_CONFIG`, starts `UserJourney`, discovers WS, connects progress, polls report, and disconnects on unmount.
+- UI exposes required judge-facing texts and keeps technical report drill-down via `/test/report/<test_id>`.
+
+**Risks / Blockers**
+
+- Manual browser smoke for a real backend run is deferred to `T005`; T004 verification is automated component tests plus frontend build.
+- Build still reports the existing large chunk warning; no type or bundle failure.
+
+**Handoff**
+
+- Completion summary: `/test/screen` has been replaced with a one-click UserJourney demo theater.
+- Remaining work: `T005` integration verification and final SDD evidence.
+- First response line used: `当前分支/worktree：feat/test-dashboard-demo-theater @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-test-dashboard-demo-theater`
 
 ### T005 - `Integration Verification And SDD Evidence`
 
