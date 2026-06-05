@@ -47,6 +47,12 @@ export default function Layout() {
             E2E 全链路
           </NavLink>
           <NavLink
+            to="/test/user-journey"
+            style={({ isActive }) => ({ ...navItemStyle, ...(isActive ? activeStyle : {}) })}
+          >
+            用户验收剧本
+          </NavLink>
+          <NavLink
             to="/test/antisnipe"
             style={({ isActive }) => ({ ...navItemStyle, ...(isActive ? activeStyle : {}) })}
           >

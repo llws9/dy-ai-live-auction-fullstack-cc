@@ -290,6 +290,7 @@ func main() {
 		h,
 		middleware.InternalAuthMiddleware(internalAPIToken),
 		internalUserHandler,
+		userBalanceHandler,
 		liveReminderHandler,
 		liveStreamStatsHandler,
 		currentAuctionHandler,
@@ -462,10 +463,13 @@ func registerRoutes(h *server.Hertz, internalAPIToken string, auctionHandler *ha
 	v1.POST("/users/me/addresses/:id/default", userAddressHandler.SetDefault)
 }
 
-func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, internalUserHandler *handler.InternalUserHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler, currentAuctionHandler *handler.InternalCurrentAuctionHandler) {
+func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, internalUserHandler *handler.InternalUserHandler, userBalanceHandler *handler.UserBalanceHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler, currentAuctionHandler *handler.InternalCurrentAuctionHandler) {
 	internal := h.Group("/internal", internalAuth)
 	if internalUserHandler != nil {
 		internal.POST("/users/batch", internalUserHandler.BatchByIDs)
+	}
+	if userBalanceHandler != nil {
+		internal.POST("/test/user-balance", userBalanceHandler.TopUpInternal)
 	}
 	internal.GET("/live/pending-reminder", liveReminderHandler.GetPendingReminder)
 	internal.POST("/live-streams/:id/start", liveStreamStatsHandler.StartLive)

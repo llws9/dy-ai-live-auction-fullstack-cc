@@ -6,6 +6,7 @@ import (
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"auction-service/model"
 )
@@ -57,4 +58,34 @@ func (d *UserBalanceDAO) DeductWithTx(ctx context.Context, tx *gorm.DB, userID i
 		return 0, res.Error
 	}
 	return res.RowsAffected, nil
+}
+
+// AddAmount 为内部测试准备场景增加用户可用余额。
+//
+// 该方法只供 /internal/test/user-balance 使用；公开 API 不暴露写余额能力。
+func (d *UserBalanceDAO) AddAmount(ctx context.Context, userID int64, amount decimal.Decimal) (decimal.Decimal, error) {
+	b := model.UserBalance{
+		UserID:          userID,
+		AvailableAmount: amount,
+		FrozenAmount:    decimal.Zero,
+		Currency:        "CNY",
+	}
+	err := d.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "user_id"}},
+		DoUpdates: clause.Assignments(map[string]any{
+			"available_amount": gorm.Expr("available_amount + ?", amount),
+			"currency":         "CNY",
+		}),
+	}).Create(&b).Error
+	if err != nil {
+		return decimal.Zero, err
+	}
+	available, _, _, hit, err := d.GetByUserID(ctx, userID)
+	if err != nil {
+		return decimal.Zero, err
+	}
+	if !hit {
+		return decimal.Zero, gorm.ErrRecordNotFound
+	}
+	return available, nil
 }

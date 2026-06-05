@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	github.com/cloudwego/hertz v0.10.4
 	github.com/glebarez/sqlite v1.11.0
+	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/stretchr/testify v1.11.1

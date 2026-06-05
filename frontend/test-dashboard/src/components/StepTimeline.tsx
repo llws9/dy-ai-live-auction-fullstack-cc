@@ -28,6 +28,13 @@ const stepLabels: Record<string, string> = {
   verify_winner: '校验中标',
   find_orders: '查询订单',
   verify_order_unique: '校验订单唯一',
+  prepare: '准备测试数据',
+  enter_live: '进入直播间',
+  reminder: '关注提醒',
+  auction_bid: '竞拍出价',
+  sky_lamp: '点天灯',
+  fixed_price_purchase: '一口价购买',
+  verify: '汇总校验',
   cleanup: '清理副作用',
 };
 

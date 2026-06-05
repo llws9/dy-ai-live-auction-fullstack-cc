@@ -6,8 +6,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // TestSDK_CreateProduct 创建拍品 → 200 + 返回 ID
@@ -181,6 +184,223 @@ func TestSDK_FindOrderByAuction(t *testing.T) {
 	}
 	if len(orders) != 1 || orders[0].ID != 2 {
 		t.Fatalf("filter wrong: got %+v", orders)
+	}
+}
+
+func TestDoSetsMerchantIdentityHeaders(t *testing.T) {
+	var capturedUserID atomic.Value
+	var capturedUsername atomic.Value
+	var capturedRole atomic.Value
+	capturedUserID.Store("")
+	capturedUsername.Store("")
+	capturedRole.Store("")
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedUserID.Store(r.Header.Get("X-User-ID"))
+		capturedUsername.Store(r.Header.Get("X-Username"))
+		capturedRole.Store(r.Header.Get("X-User-Role"))
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"id":42}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	step := c.CreateProductAs(context.Background(), Actor{
+		UserID:   9002,
+		Username: "merchant_9002",
+		Role:     RoleMerchant,
+	}, CreateProductReq{Name: "merchant product"})
+	if !step.OK {
+		t.Fatalf("CreateProductAs failed: %s err=%v", step.Message, step.Err)
+	}
+	if capturedUserID.Load().(string) != "9002" {
+		t.Fatalf("X-User-ID: want 9002, got %s", capturedUserID.Load().(string))
+	}
+	if capturedUsername.Load().(string) != "merchant_9002" {
+		t.Fatalf("X-Username mismatch: %s", capturedUsername.Load().(string))
+	}
+	if capturedRole.Load().(string) != "merchant" {
+		t.Fatalf("X-User-Role: want merchant, got %s", capturedRole.Load().(string))
+	}
+}
+
+func TestDoSetsGatewayJWTAuthorization(t *testing.T) {
+	const secret = "test-jwt-secret"
+	var capturedAuth atomic.Value
+	capturedAuth.Store("")
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedAuth.Store(r.Header.Get("Authorization"))
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"id":42}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	c.SetJWTSecret(secret)
+	step := c.CreateAuctionAs(context.Background(), Actor{
+		UserID:   9002,
+		Username: "merchant_9002",
+		Role:     RoleMerchant,
+	}, CreateAuctionReq{ProductID: 42, StartPrice: 100, Increment: 10, Duration: 30})
+	if !step.OK {
+		t.Fatalf("CreateAuctionAs failed: %s err=%v", step.Message, step.Err)
+	}
+
+	auth := capturedAuth.Load().(string)
+	if !strings.HasPrefix(auth, "Bearer ") {
+		t.Fatalf("Authorization must be Bearer token, got %q", auth)
+	}
+	token, err := jwt.ParseWithClaims(strings.TrimPrefix(auth, "Bearer "), jwt.MapClaims{}, func(token *jwt.Token) (any, error) {
+		return []byte(secret), nil
+	})
+	if err != nil || !token.Valid {
+		t.Fatalf("invalid jwt: token=%v err=%v", token, err)
+	}
+	claims := token.Claims.(jwt.MapClaims)
+	if int64(claims["user_id"].(float64)) != 9002 {
+		t.Fatalf("user_id claim mismatch: %v", claims["user_id"])
+	}
+	if claims["username"] != "merchant_9002" {
+		t.Fatalf("username claim mismatch: %v", claims["username"])
+	}
+	if int(claims["role"].(float64)) != 1 {
+		t.Fatalf("role claim mismatch: %v", claims["role"])
+	}
+}
+
+func TestTopUpUserBalanceCallsInternalEndpoint(t *testing.T) {
+	var called atomic.Int32
+	var capturedPath atomic.Value
+	capturedPath.Store("")
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called.Add(1)
+		capturedPath.Store(r.URL.Path)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"code":0,"message":"success","data":{"user_id":1001,"balance":"500.00"}}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	balance, step := c.TopUpUserBalance(context.Background(), 1001, "500.00")
+	if !step.OK {
+		t.Fatalf("TopUpUserBalance failed: %s err=%v", step.Message, step.Err)
+	}
+	if balance != "500.00" {
+		t.Fatalf("balance: want 500.00, got %s", balance)
+	}
+	if capturedPath.Load().(string) != "/internal/test/user-balance" {
+		t.Fatalf("path: want /internal/test/user-balance, got %s", capturedPath.Load().(string))
+	}
+	if called.Load() != 1 {
+		t.Fatalf("expected 1 call, got %d", called.Load())
+	}
+}
+
+func TestTopUpUserBalanceSendsInternalToken(t *testing.T) {
+	var capturedToken atomic.Value
+	capturedToken.Store("")
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedToken.Store(r.Header.Get("X-Internal-Token"))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"code":0,"message":"success","data":{"user_id":1001,"balance":"500.00"}}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	c.SetInternalToken("internal-secret")
+	_, step := c.TopUpUserBalance(context.Background(), 1001, "500.00")
+	if !step.OK {
+		t.Fatalf("TopUpUserBalance failed: %s err=%v", step.Message, step.Err)
+	}
+	if capturedToken.Load().(string) != "internal-secret" {
+		t.Fatalf("X-Internal-Token: want internal-secret, got %q", capturedToken.Load().(string))
+	}
+}
+
+func TestPurchaseFixedPriceIncludesIdempotencyKey(t *testing.T) {
+	var capturedPath atomic.Value
+	var capturedKey atomic.Value
+	capturedPath.Store("")
+	capturedKey.Store("")
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedPath.Store(r.URL.Path)
+		capturedKey.Store(r.Header.Get("X-Idempotency-Key"))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"code":0,"message":"success","data":{"order_id":88}}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	orderID, step := c.PurchaseFixedPriceItem(context.Background(), Actor{
+		UserID:   1001,
+		Username: "buyer_1001",
+		Role:     RoleUser,
+	}, 77, "idem-77")
+	if !step.OK {
+		t.Fatalf("PurchaseFixedPriceItem failed: %s err=%v", step.Message, step.Err)
+	}
+	if orderID != 88 {
+		t.Fatalf("orderID: want 88, got %d", orderID)
+	}
+	if capturedPath.Load().(string) != "/api/v1/fixed-price/items/77/purchase" {
+		t.Fatalf("path: got %s", capturedPath.Load().(string))
+	}
+	if capturedKey.Load().(string) != "idem-77" {
+		t.Fatalf("idempotency key mismatch: %s", capturedKey.Load().(string))
+	}
+}
+
+func TestFollowAndFollowStatusUseBuyerIdentity(t *testing.T) {
+	var callCount atomic.Int32
+	var firstPath atomic.Value
+	var firstRole atomic.Value
+	var secondPath atomic.Value
+	var secondRole atomic.Value
+	firstPath.Store("")
+	firstRole.Store("")
+	secondPath.Store("")
+	secondRole.Store("")
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		idx := callCount.Add(1)
+		switch idx {
+		case 1:
+			firstPath.Store(r.URL.Path)
+			firstRole.Store(r.Header.Get("X-User-Role"))
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"code":0,"message":"success"}`))
+		case 2:
+			secondPath.Store(r.URL.Path)
+			secondRole.Store(r.Header.Get("X-User-Role"))
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"is_following":true}`))
+		default:
+			t.Fatalf("unexpected extra call %d", idx)
+		}
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	actor := Actor{UserID: 1001, Username: "buyer_1001", Role: RoleUser}
+	if step := c.FollowLiveStream(context.Background(), actor, 66); !step.OK {
+		t.Fatalf("FollowLiveStream failed: %s err=%v", step.Message, step.Err)
+	}
+	ok, step := c.GetFollowStatus(context.Background(), actor, 66)
+	if !step.OK {
+		t.Fatalf("GetFollowStatus failed: %s err=%v", step.Message, step.Err)
+	}
+	if !ok {
+		t.Fatalf("expected follow status true")
+	}
+	if firstPath.Load().(string) != "/api/v1/live-streams/66/follow" || firstRole.Load().(string) != "user" {
+		t.Fatalf("follow call mismatch: path=%s role=%s", firstPath.Load().(string), firstRole.Load().(string))
+	}
+	if secondPath.Load().(string) != "/api/v1/live-streams/66/follow-status" || secondRole.Load().(string) != "user" {
+		t.Fatalf("follow-status call mismatch: path=%s role=%s", secondPath.Load().(string), secondRole.Load().(string))
 	}
 }
 

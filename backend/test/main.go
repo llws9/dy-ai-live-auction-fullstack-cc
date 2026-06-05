@@ -24,6 +24,7 @@ import (
 	"test-service/scenario/e2e"
 	"test-service/scenario/pressure"
 	"test-service/scenario/script"
+	"test-service/scenario/user_journey"
 	"test-service/service/cron"
 	"test-service/ws"
 )
@@ -67,7 +68,11 @@ func main() {
 	if db != nil {
 		seedDAO := dao.NewSeedDAO(db)
 		bizCli := auction.NewClient(cfg.Target.GatewayURL, 10*time.Second)
+		bizCli.SetJWTSecret(cfg.Security.JWTSecret)
 		r.Register(e2e.NewScenario(bizCli, seedDAO))
+		internalCli := auction.NewClient(cfg.Target.AuctionURL, 10*time.Second)
+		internalCli.SetInternalToken(cfg.Security.InternalToken)
+		r.Register(user_journey.NewScenario(bizCli, internalCli, seedDAO))
 
 		// 防狙击场景：通过 SDK 工厂创建 30s 拍卖
 		antisnipeFactory := antisnipe.NewSDKAuctionFactory(bizCli, 9001, 30)
@@ -110,6 +115,7 @@ func main() {
 		api.POST("/dummy", th.PostDummy)
 		api.POST("/pressure", th.PostPressure)
 		api.POST("/e2e", th.PostE2E)
+		api.POST("/user-journey", th.PostUserJourney)
 		api.POST("/antisnipe", th.PostAntiSnipe)
 		api.POST("/callback", th.PostCallback)
 		api.POST("/chaos", th.PostChaos)

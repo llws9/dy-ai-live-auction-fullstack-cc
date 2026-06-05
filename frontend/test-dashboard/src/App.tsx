@@ -3,6 +3,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Pressure from './pages/Pressure';
 import E2E from './pages/E2E';
+import UserJourney from './pages/UserJourney';
 import AntiSnipe from './pages/AntiSnipe';
 import Callback from './pages/Callback';
 import Chaos from './pages/Chaos';
@@ -21,6 +22,7 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="pressure" element={<Pressure />} />
         <Route path="e2e" element={<E2E />} />
+        <Route path="user-journey" element={<UserJourney />} />
         <Route path="antisnipe" element={<AntiSnipe />} />
         <Route path="callback" element={<Callback />} />
         <Route path="chaos" element={<Chaos />} />

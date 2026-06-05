@@ -16,6 +16,18 @@ type BalanceProvider interface {
 	GetByUserID(ctx context.Context, userID int64) (available, frozen decimal.Decimal, currency string, hit bool, err error)
 }
 
+// BalanceTopUpper 是内部测试充值接口需要的最小写能力。
+type BalanceTopUpper interface {
+	AddAmount(ctx context.Context, userID int64, amount decimal.Decimal) (decimal.Decimal, error)
+}
+
+// BalanceStore 是 UserBalanceHandler 的完整依赖：公开余额查询和内部测试充值
+// 使用同一个存储实现，避免 TopUpInternal 在运行时再做能力探测。
+type BalanceStore interface {
+	BalanceProvider
+	BalanceTopUpper
+}
+
 // UserBalanceResponse 是 GET /api/v1/user/balance 的稳定响应数据。
 // 金额字段使用 decimal.Decimal，JSON 序列化为字符串（如 "1234.56"），
 // 前端用 parseFloat 或 toNumber 处理即可。

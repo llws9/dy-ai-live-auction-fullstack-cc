@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getReport, type TestResult } from '@/api/test';
+import { getReport, type TestResult, type UserJourneyReport } from '@/api/test';
 
 export default function Report() {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +32,7 @@ export default function Report() {
           )}
           <Field label="ReplayToken" value={data.ReplayToken || '-'} />
           {data.ErrorMsg && <Field label="错误" value={data.ErrorMsg} />}
+          {data.TestType === 'user_journey' && <UserJourneySummary raw={data.ResultJSON} />}
           <details>
             <summary style={{ cursor: 'pointer' }}>Config JSON</summary>
             <pre style={preStyle}>{prettyJSON(data.ConfigJSON)}</pre>
@@ -43,6 +44,24 @@ export default function Report() {
         </div>
       )}
     </div>
+  );
+}
+
+function UserJourneySummary({ raw }: { raw: string }) {
+  const report = parseUserJourneyReport(raw);
+  if (!report) return null;
+  return (
+    <section style={{ border: '1px solid #e5e7eb', borderRadius: 6, padding: 12 }}>
+      <h3 style={{ fontSize: 15, marginBottom: 10 }}>用户验收摘要</h3>
+      <div style={{ display: 'grid', gap: 8 }}>
+        <Field label="整体成功" value={report.all_ok ? 'OK' : 'FAIL'} />
+        <Field label="资源 ID" value={`live=${fmtNum(report.live_stream_id)} auction=${fmtNum(report.auction_id)} fixed=${fmtNum(report.fixed_price_item_id)}`} />
+        <Field label="订单 ID" value={fmtNum(report.order_id)} />
+        <Field label="余额变化" value={`${report.balance_before ?? '-'} → ${report.balance_after ?? '-'}`} />
+        <Field label="库存变化" value={`${fmtNum(report.stock_before)} → ${fmtNum(report.stock_after)}`} />
+        {report.warnings && report.warnings.length > 0 && <Field label="Warnings" value={report.warnings.join('；')} />}
+      </div>
+    </section>
   );
 }
 
@@ -71,4 +90,17 @@ function prettyJSON(s: string): string {
   } catch {
     return s;
   }
+}
+
+function parseUserJourneyReport(raw: string): UserJourneyReport | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as UserJourneyReport;
+  } catch {
+    return null;
+  }
+}
+
+function fmtNum(v?: number): string {
+  return v == null ? '-' : String(v);
 }

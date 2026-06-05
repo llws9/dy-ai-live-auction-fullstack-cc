@@ -60,6 +60,7 @@ func TestPendingReminderInternalRouteRequiresInternalToken(t *testing.T) {
 		h,
 		middleware.InternalAuthMiddleware("internal-secret"),
 		nil,
+		nil,
 		handler.NewLiveReminderHandler(&routeReminderProvider{}),
 		&handler.LiveStreamStatsHandler{},
 		nil,

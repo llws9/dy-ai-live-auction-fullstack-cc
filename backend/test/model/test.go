@@ -19,6 +19,7 @@ const (
 	TypeCallback    = "callback"
 	TypeChaos       = "chaos"
 	TypeScript      = "script"
+	TypeUserJourney = "user_journey"
 )
 
 // TestResult 测试任务记录

@@ -61,6 +61,46 @@ export async function startE2E(config: E2EConfig): Promise<string> {
   return r.data.test_id;
 }
 
+export interface UserJourneyConfig {
+	include_reminder?: boolean;
+	include_sky_lamp?: boolean;
+	include_fixed_price?: boolean;
+	auction_duration_sec?: number;
+	buyer_count?: number;
+	keep_evidence?: boolean;
+}
+
+export interface UserJourneyReport {
+	test_run_id?: string;
+	buyer_id?: number;
+	merchant_id?: number;
+	product_id?: number;
+	live_stream_id?: number;
+	auction_id?: number;
+	fixed_price_item_id?: number;
+	order_id?: number;
+	balance_before?: string;
+	balance_after?: string;
+	stock_before?: number;
+	stock_after?: number;
+	steps?: Array<{
+		step: string;
+		ok?: boolean;
+		status_code?: number;
+		ref_id?: number;
+		message?: string;
+		duration_ms?: number;
+	}>;
+	all_ok?: boolean;
+	warnings?: string[];
+	error?: string;
+}
+
+export async function startUserJourney(config: UserJourneyConfig): Promise<string> {
+	const r = await http.post<{ test_id: string }>('/test/user-journey', config);
+	return r.data.test_id;
+}
+
 // 启动防狙击测试（场景 F）
 export interface AntiSnipeConfig {
   cases?: string[]; // 为空 → 跑全部 5 个

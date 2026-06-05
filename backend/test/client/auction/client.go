@@ -15,6 +15,13 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+)
+
+const (
+	RoleUser     = "user"
+	RoleMerchant = "merchant"
 )
 
 // StepResult E2E 单步结果（同 spec §M3.2 StepResult）
@@ -28,10 +35,19 @@ type StepResult struct {
 	Err        error  `json:"-"`
 }
 
+// Actor 描述一次业务请求使用的测试身份。
+type Actor struct {
+	UserID   int64
+	Username string
+	Role     string // user | merchant
+}
+
 // Client 业务 HTTP 客户端
 type Client struct {
-	baseURL string
-	hc      *http.Client
+	baseURL       string
+	hc            *http.Client
+	jwtSecret     string
+	internalToken string
 }
 
 // NewClient 构造（baseURL 例如 http://localhost:8080）
@@ -50,6 +66,14 @@ func NewClient(baseURL string, timeout time.Duration) *Client {
 	}
 }
 
+func (c *Client) SetJWTSecret(secret string) {
+	c.jwtSecret = secret
+}
+
+func (c *Client) SetInternalToken(token string) {
+	c.internalToken = token
+}
+
 // ---------- 请求/响应 DTO ----------
 
 // CreateProductReq 创建拍品
@@ -66,6 +90,38 @@ type CreateAuctionReq struct {
 	StartPrice float64 `json:"start_price"`
 	Increment  float64 `json:"increment"`
 	Duration   int     `json:"duration"` // 秒
+}
+
+type CreateLiveStreamReq struct {
+	Title       string `json:"title"`
+	Description string `json:"description,omitempty"`
+	ProductID   int64  `json:"product_id,omitempty"`
+	CoverImage  string `json:"cover_image,omitempty"`
+}
+
+type CreateFixedPriceItemReq struct {
+	LiveStreamID int64  `json:"live_stream_id"`
+	ProductID    int64  `json:"product_id"`
+	Price        string `json:"price"`
+	Stock        int64  `json:"stock"`
+}
+
+type LiveStream struct {
+	ID     int64 `json:"id"`
+	Status any   `json:"status"`
+}
+
+type FixedPriceItem struct {
+	ID             int64 `json:"id"`
+	LiveStreamID   int64 `json:"live_stream_id"`
+	Stock          int64 `json:"stock"`
+	RemainingStock int64 `json:"remaining_stock"`
+}
+
+type FixedPricePurchase struct {
+	ID      int64 `json:"id"`
+	ItemID  int64 `json:"item_id"`
+	OrderID int64 `json:"order_id"`
 }
 
 // Auction 拍卖快照（仅 E2E/AntiSnipe 关心的字段）
@@ -102,40 +158,116 @@ type skyLampResp struct {
 	} `json:"subscription"`
 }
 
+type fixedPricePurchaseResp struct {
+	Code int `json:"code"`
+	Data struct {
+		OrderID int64 `json:"order_id"`
+	} `json:"data"`
+	OrderID int64 `json:"order_id"`
+}
+
+type idResp struct {
+	ID   int64 `json:"id"`
+	Data struct {
+		ID int64 `json:"id"`
+	} `json:"data"`
+}
+
 // ---------- 各步骤实现 ----------
 
 // CreateProduct POST /api/v1/products
 func (c *Client) CreateProduct(ctx context.Context, userID int64, req CreateProductReq) StepResult {
+	return c.CreateProductAs(ctx, defaultActor(userID), req)
+}
+
+func (c *Client) CreateProductAs(ctx context.Context, actor Actor, req CreateProductReq) StepResult {
 	var resp struct {
 		ID int64 `json:"id"`
 	}
-	step := c.do(ctx, "create_product", http.MethodPost, "/api/v1/products", userID, req, &resp)
+	step := c.doAs(ctx, "create_product", http.MethodPost, "/api/v1/products", actor, req, nil, &resp)
 	step.RefID = resp.ID
 	return step
 }
 
 // CreateAuction POST /api/v1/auctions
 func (c *Client) CreateAuction(ctx context.Context, userID int64, req CreateAuctionReq) StepResult {
+	return c.CreateAuctionAs(ctx, defaultActor(userID), req)
+}
+
+func (c *Client) CreateAuctionAs(ctx context.Context, actor Actor, req CreateAuctionReq) StepResult {
 	var resp struct {
 		ID int64 `json:"id"`
 	}
-	step := c.do(ctx, "create_auction", http.MethodPost, "/api/v1/auctions", userID, req, &resp)
+	step := c.doAs(ctx, "create_auction", http.MethodPost, "/api/v1/auctions", actor, req, nil, &resp)
 	step.RefID = resp.ID
 	return step
+}
+
+func (c *Client) CreateLiveStream(ctx context.Context, actor Actor, req CreateLiveStreamReq) StepResult {
+	var resp idResp
+	step := c.doAs(ctx, "create_live_stream", http.MethodPost, "/api/v1/admin/live-streams", actor, req, nil, &resp)
+	step.RefID = firstNonZero(resp.ID, resp.Data.ID)
+	return step
+}
+
+func (c *Client) StartLive(ctx context.Context, actor Actor, liveStreamID int64) StepResult {
+	path := "/api/v1/live-streams/" + strconv.FormatInt(liveStreamID, 10) + "/start"
+	step := c.doAs(ctx, "start_live", http.MethodPost, path, actor, nil, nil, nil)
+	step.RefID = liveStreamID
+	return step
+}
+
+func (c *Client) GetLiveStream(ctx context.Context, actor Actor, liveStreamID int64) (LiveStream, StepResult) {
+	var resp struct {
+		ID     int64 `json:"id"`
+		Status any   `json:"status"`
+		Data   struct {
+			ID     int64 `json:"id"`
+			Status any   `json:"status"`
+		} `json:"data"`
+	}
+	path := "/api/v1/live-streams/" + strconv.FormatInt(liveStreamID, 10)
+	step := c.doAs(ctx, "get_live_stream", http.MethodGet, path, actor, nil, nil, &resp)
+	return LiveStream{
+		ID:     firstNonZero(resp.ID, resp.Data.ID),
+		Status: firstNonNil(resp.Status, resp.Data.Status),
+	}, step
+}
+
+func (c *Client) CreateFixedPriceItem(ctx context.Context, actor Actor, req CreateFixedPriceItemReq) StepResult {
+	var resp idResp
+	step := c.doAs(ctx, "create_fixed_price_item", http.MethodPost, "/api/v1/fixed-price/items", actor, req, nil, &resp)
+	step.RefID = firstNonZero(resp.ID, resp.Data.ID)
+	return step
+}
+
+func (c *Client) ListFixedPriceItemsByLiveStream(ctx context.Context, actor Actor, liveStreamID int64) ([]FixedPriceItem, StepResult) {
+	var resp struct {
+		Items []FixedPriceItem `json:"items"`
+		Data  struct {
+			Items []FixedPriceItem `json:"items"`
+		} `json:"data"`
+	}
+	path := "/api/v1/live-streams/" + strconv.FormatInt(liveStreamID, 10) + "/fixed-price/items"
+	step := c.doAs(ctx, "list_fixed_price_items", http.MethodGet, path, actor, nil, nil, &resp)
+	if len(resp.Items) > 0 {
+		return resp.Items, step
+	}
+	return resp.Data.Items, step
 }
 
 // PlaceBid POST /api/v1/auctions/{id}/bids
 func (c *Client) PlaceBid(ctx context.Context, userID, auctionID int64, amount float64) StepResult {
 	body := map[string]any{"amount": amount, "user_id": userID}
 	path := "/api/v1/auctions/" + strconv.FormatInt(auctionID, 10) + "/bids"
-	return c.do(ctx, "bid", http.MethodPost, path, userID, body, nil)
+	return c.doAs(ctx, "bid", http.MethodPost, path, defaultActor(userID), body, nil, nil)
 }
 
 // GetAuction GET /api/v1/auctions/{id}
 func (c *Client) GetAuction(ctx context.Context, auctionID int64) (Auction, StepResult) {
 	var a Auction
 	path := "/api/v1/auctions/" + strconv.FormatInt(auctionID, 10)
-	step := c.do(ctx, "get_auction", http.MethodGet, path, 0, nil, &a)
+	step := c.doAs(ctx, "get_auction", http.MethodGet, path, Actor{}, nil, nil, &a)
 	return a, step
 }
 
@@ -157,7 +289,7 @@ func (c *Client) WaitAuctionEnded(ctx context.Context, auctionID int64, interval
 func (c *Client) SubscribeSkyLamp(ctx context.Context, userID, auctionID int64) StepResult {
 	body := map[string]any{"auction_id": auctionID}
 	var resp skyLampResp
-	step := c.do(ctx, "skylamp_subscribe", http.MethodPost, "/api/v1/sky-lamp/subscriptions", userID, body, &resp)
+	step := c.doAs(ctx, "skylamp_subscribe", http.MethodPost, "/api/v1/sky-lamp/subscriptions", defaultActor(userID), body, nil, &resp)
 	step.RefID = resp.Subscription.ID
 	return step
 }
@@ -166,7 +298,7 @@ func (c *Client) SubscribeSkyLamp(ctx context.Context, userID, auctionID int64) 
 func (c *Client) FindOrdersByAuction(ctx context.Context, winnerID, auctionID int64) ([]Order, StepResult) {
 	var resp ordersResp
 	path := "/api/v1/orders?user_id=" + strconv.FormatInt(winnerID, 10) + "&page=1&page_size=100"
-	step := c.do(ctx, "find_orders", http.MethodGet, path, winnerID, nil, &resp)
+	step := c.doAs(ctx, "find_orders", http.MethodGet, path, defaultActor(winnerID), nil, nil, &resp)
 	if !step.OK {
 		return nil, step
 	}
@@ -179,10 +311,107 @@ func (c *Client) FindOrdersByAuction(ctx context.Context, winnerID, auctionID in
 	return out, step
 }
 
+func (c *Client) FollowLiveStream(ctx context.Context, actor Actor, liveStreamID int64) StepResult {
+	path := "/api/v1/live-streams/" + strconv.FormatInt(liveStreamID, 10) + "/follow"
+	return c.doAs(ctx, "reminder", http.MethodPost, path, actor, nil, nil, nil)
+}
+
+func (c *Client) GetFollowStatus(ctx context.Context, actor Actor, liveStreamID int64) (bool, StepResult) {
+	path := "/api/v1/live-streams/" + strconv.FormatInt(liveStreamID, 10) + "/follow-status"
+	var resp struct {
+		IsFollowing bool `json:"is_following"`
+		Data        struct {
+			IsFollowing bool `json:"is_following"`
+		} `json:"data"`
+	}
+	step := c.doAs(ctx, "reminder", http.MethodGet, path, actor, nil, nil, &resp)
+	if !step.OK {
+		return false, step
+	}
+	if resp.Data.IsFollowing {
+		return true, step
+	}
+	return resp.IsFollowing, step
+}
+
+func (c *Client) TopUpUserBalance(ctx context.Context, userID int64, amount string) (string, StepResult) {
+	var resp struct {
+		Balance string `json:"balance"`
+		Data    struct {
+			Balance string `json:"balance"`
+		} `json:"data"`
+	}
+	step := c.doAs(ctx, "prepare", http.MethodPost, "/internal/test/user-balance", Actor{}, map[string]any{
+		"user_id": userID,
+		"amount":  amount,
+	}, map[string]string{"X-Internal-Token": c.internalToken}, &resp)
+	if !step.OK {
+		return "", step
+	}
+	if resp.Data.Balance != "" {
+		return resp.Data.Balance, step
+	}
+	return resp.Balance, step
+}
+
+func (c *Client) PurchaseFixedPriceItem(ctx context.Context, actor Actor, itemID int64, idemKey string) (int64, StepResult) {
+	path := "/api/v1/fixed-price/items/" + strconv.FormatInt(itemID, 10) + "/purchase"
+	var resp fixedPricePurchaseResp
+	step := c.doAs(ctx, "fixed_price_purchase", http.MethodPost, path, actor, map[string]any{}, map[string]string{
+		"X-Idempotency-Key": idemKey,
+	}, &resp)
+	if !step.OK {
+		return 0, step
+	}
+	if resp.Data.OrderID != 0 {
+		step.RefID = resp.Data.OrderID
+		return resp.Data.OrderID, step
+	}
+	step.RefID = resp.OrderID
+	return resp.OrderID, step
+}
+
+func (c *Client) GetMyFixedPricePurchase(ctx context.Context, actor Actor, itemID int64) (FixedPricePurchase, StepResult) {
+	var resp struct {
+		ID      int64 `json:"id"`
+		ItemID  int64 `json:"item_id"`
+		OrderID int64 `json:"order_id"`
+		Data    struct {
+			ID      int64 `json:"id"`
+			ItemID  int64 `json:"item_id"`
+			OrderID int64 `json:"order_id"`
+		} `json:"data"`
+	}
+	path := "/api/v1/fixed-price/items/" + strconv.FormatInt(itemID, 10) + "/my-purchase"
+	step := c.doAs(ctx, "get_my_fixed_price_purchase", http.MethodGet, path, actor, nil, nil, &resp)
+	purchase := FixedPricePurchase{
+		ID:      firstNonZero(resp.ID, resp.Data.ID),
+		ItemID:  firstNonZero(resp.ItemID, resp.Data.ItemID),
+		OrderID: firstNonZero(resp.OrderID, resp.Data.OrderID),
+	}
+	step.RefID = purchase.OrderID
+	return purchase, step
+}
+
+func (c *Client) GetUserBalance(ctx context.Context, actor Actor) (string, StepResult) {
+	var resp struct {
+		AvailableAmount string `json:"available_amount"`
+		Data            struct {
+			AvailableAmount string `json:"available_amount"`
+		} `json:"data"`
+	}
+	step := c.doAs(ctx, "get_user_balance", http.MethodGet, "/api/v1/user/balance", actor, nil, nil, &resp)
+	return firstNonEmpty(resp.AvailableAmount, resp.Data.AvailableAmount), step
+}
+
 // ---------- 内部工具 ----------
 
 // do 通用 HTTP 调用 + StepResult 装配
 func (c *Client) do(ctx context.Context, step, method, path string, userID int64, body any, out any) StepResult {
+	return c.doAs(ctx, step, method, path, defaultActor(userID), body, nil, out)
+}
+
+func (c *Client) doAs(ctx context.Context, step, method, path string, actor Actor, body any, extraHeaders map[string]string, out any) StepResult {
 	start := time.Now()
 	res := StepResult{Step: step}
 
@@ -202,11 +431,23 @@ func (c *Client) do(ctx context.Context, step, method, path string, userID int64
 		return res
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if userID > 0 {
-		// 注入网关身份头，绕过 JWT；auction-service 的 gatewayIdentityMiddleware 会读
-		req.Header.Set("X-User-ID", strconv.FormatInt(userID, 10))
-		req.Header.Set("X-Username", "test_user_"+strconv.FormatInt(userID, 10))
-		req.Header.Set("X-User-Role", "user")
+	if actor.UserID > 0 {
+		req.Header.Set("X-User-ID", strconv.FormatInt(actor.UserID, 10))
+		req.Header.Set("X-Username", actor.username())
+		req.Header.Set("X-User-Role", actor.role())
+		if c.jwtSecret != "" {
+			token, err := actor.jwt(c.jwtSecret)
+			if err != nil {
+				res.Err = err
+				res.Message = "jwt: " + err.Error()
+				res.DurationMs = time.Since(start).Milliseconds()
+				return res
+			}
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+	}
+	for k, v := range extraHeaders {
+		req.Header.Set(k, v)
 	}
 
 	resp, err := c.hc.Do(req)
@@ -232,6 +473,84 @@ func (c *Client) do(ctx context.Context, step, method, path string, userID int64
 	}
 	res.OK = true
 	return res
+}
+
+func defaultActor(userID int64) Actor {
+	if userID <= 0 {
+		return Actor{}
+	}
+	return Actor{
+		UserID:   userID,
+		Username: "test_user_" + strconv.FormatInt(userID, 10),
+		Role:     RoleUser,
+	}
+}
+
+func (a Actor) username() string {
+	if a.Username != "" {
+		return a.Username
+	}
+	if a.UserID > 0 {
+		return "test_user_" + strconv.FormatInt(a.UserID, 10)
+	}
+	return ""
+}
+
+func (a Actor) role() string {
+	switch a.Role {
+	case RoleMerchant:
+		return RoleMerchant
+	default:
+		return RoleUser
+	}
+}
+
+func (a Actor) roleCode() int {
+	switch a.Role {
+	case RoleMerchant:
+		return 1
+	default:
+		return 0
+	}
+}
+
+func (a Actor) jwt(secret string) (string, error) {
+	claims := jwt.MapClaims{
+		"user_id":  a.UserID,
+		"username": a.username(),
+		"role":     a.roleCode(),
+		"exp":      time.Now().Add(24 * time.Hour).Unix(),
+		"iat":      time.Now().Unix(),
+		"nbf":      time.Now().Unix(),
+	}
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secret))
+}
+
+func firstNonZero(values ...int64) int64 {
+	for _, v := range values {
+		if v != 0 {
+			return v
+		}
+	}
+	return 0
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+func firstNonNil(values ...any) any {
+	for _, v := range values {
+		if v != nil {
+			return v
+		}
+	}
+	return nil
 }
 
 // poll 轮询拍卖状态

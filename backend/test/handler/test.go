@@ -73,6 +73,22 @@ func (h *TestHandler) PostE2E(ctx context.Context, c *app.RequestContext) {
 	c.JSON(200, map[string]any{"test_id": id})
 }
 
+// PostUserJourney POST /api/test/user-journey 启动买家验收剧本
+func (h *TestHandler) PostUserJourney(ctx context.Context, c *app.RequestContext) {
+	body := c.Request.Body()
+	hlog.CtxInfof(ctx, "[http] POST /api/test/user-journey remote=%s body=%s",
+		c.ClientIP(), truncate(string(body), 256))
+
+	id, err := h.runner.Submit(ctx, model.TypeUserJourney, body)
+	if err != nil {
+		hlog.CtxErrorf(ctx, "[http] PostUserJourney submit failed: %v", err)
+		c.JSON(400, map[string]any{"error": err.Error()})
+		return
+	}
+	hlog.CtxInfof(ctx, "[http] PostUserJourney submitted test_id=%s", id)
+	c.JSON(200, map[string]any{"test_id": id})
+}
+
 // PostAntiSnipe POST /api/test/antisnipe 启动防狙击延时测试任务
 func (h *TestHandler) PostAntiSnipe(ctx context.Context, c *app.RequestContext) {
 	body := c.Request.Body()
@@ -142,7 +158,7 @@ func (h *TestHandler) PostScript(ctx context.Context, c *app.RequestContext) {
 // PostCompare POST /api/test/compare 并发跑两份配置，返回两个 test_id
 func (h *TestHandler) PostCompare(ctx context.Context, c *app.RequestContext) {
 	var req struct {
-		Type   string          `json:"type"`
+		Type      string          `json:"type"`
 		LeftBody  json.RawMessage `json:"left"`
 		RightBody json.RawMessage `json:"right"`
 	}

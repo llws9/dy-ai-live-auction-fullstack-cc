@@ -90,6 +90,51 @@ func TestHTTP_DummyEndpoints(t *testing.T) {
 	assert.GreaterOrEqual(t, hist.Total, int64(1))
 }
 
+func TestHTTP_PostUserJourney(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:user_journey_handler?mode=memory&cache=shared"), &gorm.Config{})
+	require.NoError(t, err)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	sqlDB.SetMaxOpenConns(1)
+	require.NoError(t, db.AutoMigrate(&model.TestResult{}, &model.TestSeedData{}))
+
+	resultDAO := dao.NewResultDAO(db)
+	r := runner.New(resultDAO)
+	r.Register(userJourneyNoopScenario{})
+	th := NewTestHandler(r, resultDAO)
+
+	port := freePort(t)
+	h := server.New(server.WithHostPorts("127.0.0.1:" + port))
+	apiTest := h.Group("/api/test")
+	apiTest.POST("/user-journey", th.PostUserJourney)
+	apiTest.GET("/status/:id", th.GetStatus)
+
+	go h.Spin()
+	defer func() { _ = h.Shutdown(context.Background()) }()
+	waitForPort(t, port)
+
+	base := "http://127.0.0.1:" + port
+	resp, err := http.Post(base+"/api/test/user-journey", "application/json", strings.NewReader(`{"include_reminder":true}`))
+	require.NoError(t, err)
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	require.Equal(t, 200, resp.StatusCode, string(body))
+
+	var out struct {
+		TestID string `json:"test_id"`
+	}
+	require.NoError(t, json.Unmarshal(body, &out))
+	require.NotEmpty(t, out.TestID)
+}
+
+type userJourneyNoopScenario struct{}
+
+func (userJourneyNoopScenario) Type() string { return model.TypeUserJourney }
+
+func (userJourneyNoopScenario) Run(_ context.Context, _ json.RawMessage, _ runner.ProgressEmitter) (any, error) {
+	return map[string]any{"all_ok": true}, nil
+}
+
 // freePort 返回一个随机可用端口
 func freePort(t *testing.T) string {
 	t.Helper()

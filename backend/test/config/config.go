@@ -7,12 +7,13 @@ import (
 
 // Config test-service 应用配置
 type Config struct {
-	Server    ServerConfig
-	Database  DatabaseConfig
-	Target    TargetConfig
-	Mock      MockConfig
-	Chaos     ChaosConfig
-	Cleanup   CleanupConfig
+	Server   ServerConfig
+	Database DatabaseConfig
+	Target   TargetConfig
+	Security SecurityConfig
+	Mock     MockConfig
+	Chaos    ChaosConfig
+	Cleanup  CleanupConfig
 }
 
 // ServerConfig 服务器配置
@@ -36,6 +37,12 @@ type DatabaseConfig struct {
 type TargetConfig struct {
 	GatewayURL string // 默认走 gateway
 	AuctionURL string // 直连 auction，自检用
+}
+
+// SecurityConfig 测试服务调用被测系统所需的鉴权配置。
+type SecurityConfig struct {
+	JWTSecret     string
+	InternalToken string
 }
 
 // MockConfig Mock Partner 配置
@@ -70,6 +77,10 @@ func DefaultConfig() *Config {
 			GatewayURL: "http://localhost:8080",
 			AuctionURL: "http://localhost:8082",
 		},
+		Security: SecurityConfig{
+			JWTSecret:     "your-secret-key-change-in-production",
+			InternalToken: "",
+		},
 		Mock: MockConfig{PartnerPort: ":18091"},
 		Chaos: ChaosConfig{
 			ToxiproxyURL: "http://localhost:8474",
@@ -95,6 +106,8 @@ func LoadFromEnv() *Config {
 
 	cfg.Target.GatewayURL = getEnvOrDefault("TEST_GATEWAY_URL", cfg.Target.GatewayURL)
 	cfg.Target.AuctionURL = getEnvOrDefault("TEST_AUCTION_URL", cfg.Target.AuctionURL)
+	cfg.Security.JWTSecret = getEnvOrDefault("JWT_SECRET", cfg.Security.JWTSecret)
+	cfg.Security.InternalToken = getEnvOrDefault("INTERNAL_API_TOKEN", cfg.Security.InternalToken)
 
 	cfg.Mock.PartnerPort = getEnvOrDefault("TEST_MOCK_PARTNER_PORT", cfg.Mock.PartnerPort)
 	cfg.Chaos.ToxiproxyURL = getEnvOrDefault("TEST_TOXIPROXY_URL", cfg.Chaos.ToxiproxyURL)
