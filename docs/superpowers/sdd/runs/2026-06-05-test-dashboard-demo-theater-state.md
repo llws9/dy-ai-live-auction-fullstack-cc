@@ -33,11 +33,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `6` |
-| Done | `3` |
+| Done | `4` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `3` |
-| Last Updated | `2026-06-06 00:20` |
+| Pending | `2` |
+| Last Updated | `2026-06-06 02:00` |
 
 ## Task Matrix
 
@@ -46,7 +46,7 @@
 | `T000` | `Isolate Worktree` | `done` | `main-agent` | `W0` | `-` | `Create isolated worktree and initialize SDD state` | `docs/superpowers/sdd/runs/2026-06-05-test-dashboard-demo-theater-state.md` |
 | `T001` | `Add Demo Snapshot To UserJourney Report` | `done` | `subagent-bfee7079` | `W1` | `T000` | `Backend user_journey demo_snapshot report and progress metrics` | `backend/test/scenario/user_journey/orchestrator.go, backend/test/scenario/user_journey/orchestrator_test.go` |
 | `T002` | `Add Test Infrastructure For Test Dashboard` | `done` | `main-agent` | `W2` | `T000` | `Vitest and Testing Library setup for frontend/test-dashboard` | `frontend/test-dashboard/package.json, frontend/test-dashboard/package-lock.json, frontend/test-dashboard/vite.config.ts, frontend/test-dashboard/src/test/setup.ts` |
-| `T003` | `Add Demo Theater Mapping Layer` | `pending` | `unassigned` | `W3` | `T001,T002` | `Frontend UserJourney demo model mapping` | `frontend/test-dashboard/src/api/test.ts, frontend/test-dashboard/src/pages/demoTheater.ts, frontend/test-dashboard/src/pages/demoTheater.test.ts` |
+| `T003` | `Add Demo Theater Mapping Layer` | `done` | `main-agent` | `W3` | `T001,T002` | `Frontend UserJourney demo model mapping` | `frontend/test-dashboard/src/api/test.ts, frontend/test-dashboard/src/pages/demoTheater.ts, frontend/test-dashboard/src/pages/demoTheater.test.ts` |
 | `T004` | `Replace Screen With One-Click Demo Theater` | `pending` | `unassigned` | `W4` | `T003` | `Replace /test/screen historical dashboard with one-click demo theater` | `frontend/test-dashboard/src/pages/Screen.tsx, frontend/test-dashboard/src/pages/Screen.test.tsx` |
 | `T005` | `Integration Verification And SDD Evidence` | `pending` | `unassigned` | `W5` | `T004` | `Run backend/frontend verification and record evidence` | `docs/superpowers/sdd/runs/2026-06-05-test-dashboard-demo-theater-state.md` |
 
@@ -218,10 +218,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-06 01:58` |
+| Completed At | `2026-06-06 02:00` |
 | Branch | `feat/test-dashboard-demo-theater` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-test-dashboard-demo-theater` |
 | Depends On | `T001,T002` |
@@ -238,7 +238,36 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `cd frontend/test-dashboard && npm run test:run -- src/pages/demoTheater.test.ts` | `PASS` | `not_run` | `pending` |
+| `cd frontend/test-dashboard && npm run test:run -- src/pages/demoTheater.test.ts` | `FAIL before implementation` | `FAIL: Failed to resolve import "./demoTheater" from "src/pages/demoTheater.test.ts"` | `red_passed` |
+| `cd frontend/test-dashboard && npm run test:run -- src/pages/demoTheater.test.ts` | `PASS after pure mapping implementation` | `PASS: 1 file, 5 tests` | `passed` |
+| `cd frontend/test-dashboard && npm run build` | `PASS` | `PASS: tsc && vite build; existing large chunk warning only` | `passed` |
+
+**Modified Files**
+
+- `frontend/test-dashboard/src/api/test.ts`
+- `frontend/test-dashboard/src/pages/demoTheater.ts`
+- `frontend/test-dashboard/src/pages/demoTheater.test.ts`
+
+**Commits**
+
+- `f180c044 feat(test-dashboard): map user journey to demo theater model`
+
+**Review Notes**
+
+- Extended `UserJourneyReport` with optional `demo_snapshot`, preserving backward compatibility.
+- Added pure `demoTheater` mapping with no network calls or UI side effects.
+- Standard one-click demo config is centralized as `DEMO_USER_JOURNEY_CONFIG`.
+- Build red after green initially exposed `Array.prototype.at` incompatibility with project `ES2020` lib; test was changed to ES2020-compatible indexing.
+
+**Risks / Blockers**
+
+- Full `/test/screen` integration is not in T003 and remains pending in `T004`.
+- `npm run build` still reports the existing Vite large chunk warning; no type or functional failure.
+
+**Handoff**
+
+- Completion summary: T003 frontend report type and pure UserJourney-to-demo-theater mapping layer are implemented and covered by focused tests.
+- First response line used: `当前分支/worktree：feat/test-dashboard-demo-theater @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-test-dashboard-demo-theater`
 
 ### T004 - `Replace Screen With One-Click Demo Theater`
 
