@@ -185,6 +185,32 @@ describe('HomePage 分类联动 (T2.10)', () => {
     expect(screen.queryByText('è€èœœèœ¡æ‰‹ä¸²')).toBeNull();
   });
 
+  it('首页竞拍卡片兼容后端 list 返回的 product.image 首图字段', async () => {
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [
+        {
+          id: 10,
+          product_id: 99,
+          live_stream_id: 5,
+          status: 1,
+          current_price: 6800,
+          product: {
+            id: 99,
+            name: '高冰飘花翡翠吊坠',
+            image: 'https://example.com/jade-pendant.jpg',
+          },
+        },
+      ],
+      total: 1,
+    });
+
+    renderHome();
+
+    const image = await screen.findByRole('img', { name: '高冰飘花翡翠吊坠' });
+    expect(image).toHaveAttribute('src', 'https://example.com/jade-pendant.jpg');
+    expect(screen.queryByText('暂无图片')).not.toBeInTheDocument();
+  });
+
   it('首页将已过 end_time 的 active 竞拍展示为已结束并隐藏进入直播', async () => {
     mockedAuctionApi.list.mockResolvedValue({
       list: [

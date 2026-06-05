@@ -35,6 +35,8 @@ describe('Layout role visibility', () => {
     expect(await screen.findByText('商家用户')).toBeInTheDocument();
     expect(screen.getByText('商家/主播')).toBeInTheDocument();
 
+    expect(screen.getByRole('button', { name: '商品管理' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '竞拍管理' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '我的直播间' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: '直播间列表' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: '用户统计' })).not.toBeInTheDocument();
@@ -48,6 +50,8 @@ describe('Layout role visibility', () => {
     expect(await screen.findByText('系统管理员')).toBeInTheDocument();
     expect(screen.getByText('平台管理员')).toBeInTheDocument();
 
+    expect(screen.queryByRole('button', { name: '商品管理' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '竞拍管理' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '直播间列表' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: '我的直播间' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: '创建商品' })).not.toBeInTheDocument();
