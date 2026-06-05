@@ -91,4 +91,43 @@ describe('LiveDetail start live', () => {
     expect(await screen.findByRole('heading', { name: '直播间控制台' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /开始直播/ })).not.toBeInTheDocument();
   });
+
+  it('does not allow merchants to start banned live streams', async () => {
+    renderLiveDetailAs(1, {
+      id: 501,
+      name: '被封禁直播间',
+      streamer_id: 1002,
+      streamer_name: '商家用户',
+      status: 3,
+      viewer_count: 0,
+      auction_count: 0,
+      created_at: '2026-06-05T00:00:00Z',
+    });
+
+    expect(await screen.findByRole('heading', { name: '直播间控制台' })).toBeInTheDocument();
+    expect(screen.getAllByText('已封禁').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: /已封禁/ })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: /已封禁/ }));
+
+    expect(liveStreamApi.start).not.toHaveBeenCalled();
+  });
+
+  it('lets admins view banned live streams without showing merchant start action', async () => {
+    renderLiveDetailAs(2, {
+      id: 501,
+      name: '平台封禁直播间',
+      streamer_id: 1002,
+      streamer_name: '商家用户',
+      status: 3,
+      viewer_count: 0,
+      auction_count: 0,
+      created_at: '2026-06-05T00:00:00Z',
+    });
+
+    expect(await screen.findByRole('heading', { name: '直播间控制台' })).toBeInTheDocument();
+    expect(screen.getByText('已封禁')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /开始直播|已封禁/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /封禁直播间/ })).toBeInTheDocument();
+  });
 });

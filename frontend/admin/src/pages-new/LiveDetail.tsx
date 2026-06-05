@@ -7,6 +7,13 @@ import { liveStreamApi } from "@/shared/api"
 import { useAuth } from "@/shared/auth"
 import { ADMIN_ROLE, MERCHANT_ROLE } from "@/shared/auth/roles"
 
+const liveStatusLabels: Record<number, string> = {
+  0: "未开播",
+  1: "直播中",
+  2: "已结束",
+  3: "已封禁",
+}
+
 export default function LiveDetail() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -41,7 +48,7 @@ export default function LiveDetail() {
   }, [liveStreamId, navigate])
 
   const handleStart = async () => {
-    if (!liveStreamId || starting || liveStream?.status === 1) return
+    if (!liveStreamId || starting || liveStream?.status !== 0) return
     const confirmed = window.confirm(
       "确认开始直播？\n当前版本将由 PC 管理端发起直播状态，用于演示观看、竞拍和一口价交易链路；真实移动端推流将在后续版本接入。"
     )
@@ -103,6 +110,8 @@ export default function LiveDetail() {
   }
 
   const isLive = liveStream.status === 1
+  const canStartLive = liveStream.status === 0
+  const statusLabel = liveStatusLabels[liveStream.status] || "未知状态"
   const isMerchant = user?.role === MERCHANT_ROLE
   const isPlatformAdmin = user?.role === ADMIN_ROLE
 
@@ -135,7 +144,7 @@ export default function LiveDetail() {
               ) : (
                 <>
                   <Video className="w-16 h-16 mx-auto mb-4 text-slate-400" />
-                  <p className="text-xl font-bold tracking-widest text-slate-400">直播间未开播</p>
+                  <p className="text-xl font-bold tracking-widest text-slate-400">直播间{statusLabel}</p>
                 </>
               )}
             </div>
@@ -156,7 +165,7 @@ export default function LiveDetail() {
               </div>
               <div className="flex justify-between border-b pb-2">
                 <span className="text-slate-500">直播间状态</span>
-                <span className="font-bold">{isLive ? '直播中' : '未开播'}</span>
+                <span className="font-bold">{statusLabel}</span>
               </div>
             </CardContent>
           </Card>
@@ -172,10 +181,10 @@ export default function LiveDetail() {
                   <Button
                     className="w-full bg-amber-500 text-[#0f172a] hover:bg-amber-600"
                     onClick={handleStart}
-                    disabled={starting || isLive}
+                    disabled={starting || !canStartLive}
                   >
                     <Video className="mr-2 w-4 h-4" />
-                    {isLive ? "直播中" : starting ? "开始中..." : "开始直播"}
+                    {canStartLive ? (starting ? "开始中..." : "开始直播") : statusLabel}
                   </Button>
                 </>
               )}

@@ -11,6 +11,7 @@ const statusMap: Record<number, { label: string; badgeClass: string }> = {
   0: { label: "未开播", badgeClass: "secondary" },
   1: { label: "直播中", badgeClass: "bg-rose-500 animate-pulse border-none" },
   2: { label: "已结束", badgeClass: "outline" },
+  3: { label: "已封禁", badgeClass: "destructive" },
 }
 
 export default function LiveList() {
