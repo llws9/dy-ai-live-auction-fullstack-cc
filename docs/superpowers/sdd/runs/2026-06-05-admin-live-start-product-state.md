@@ -125,7 +125,7 @@
 
 **Commits**
 
-- `3fdd9ce6 feat: move admin live start to detail page`
+- `ebe42eed feat: move admin live start to detail page`
 
 **Review Notes**
 
@@ -187,7 +187,7 @@
 
 **Commits**
 
-- `3fdd9ce6 feat: move admin live start to detail page`
+- `ebe42eed feat: move admin live start to detail page`
 
 **Review Notes**
 
@@ -249,7 +249,7 @@
 
 **Commits**
 
-- `3fdd9ce6 feat: move admin live start to detail page`
+- `ebe42eed feat: move admin live start to detail page`
 
 **Review Notes**
 
