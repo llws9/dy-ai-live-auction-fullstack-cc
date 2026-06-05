@@ -199,7 +199,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const [now, setNow] = useState(() => Date.now());
   const { showToast: showGlobalToast } = useToast();
   const wsRef = useRef<WebSocketService | null>(null);
-  const enteredRoomsRef = useRef<Set<number>>(new Set());
+  const enteredRoomsRef = useRef<Set<string>>(new Set());
   const bidFlairDelayTimerRef = useRef<number | null>(null);
   const bidFlairHideTimerRef = useRef<number | null>(null);
   const [fixedPriceModalItem, setFixedPriceModalItem] = useState<FixedPriceItem | null>(null);
@@ -226,20 +226,22 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   }, [effectiveLiveStreamId]);
 
   useEffect(() => {
-    if (!active || !isAuthenticated || effectiveLiveStreamId <= 0) {
+    const eventProductId = auction?.product_id ?? auction?.product?.id ?? product?.id;
+    if (!active || !isAuthenticated || effectiveLiveStreamId <= 0 || auctionId <= 0 || !eventProductId) {
       return;
     }
-    if (enteredRoomsRef.current.has(effectiveLiveStreamId)) {
+    const eventKey = `${effectiveLiveStreamId}:${auctionId}:${eventProductId}`;
+    if (enteredRoomsRef.current.has(eventKey)) {
       return;
     }
-    enteredRoomsRef.current.add(effectiveLiveStreamId);
+    enteredRoomsRef.current.add(eventKey);
     trackBusinessEvent('live_room_enter', {
       source: 'live_room',
       liveStreamId: effectiveLiveStreamId,
-      auctionId: auctionId || undefined,
-      productId: auction?.product_id ?? auction?.product?.id,
+      auctionId,
+      productId: eventProductId,
     });
-  }, [active, isAuthenticated, effectiveLiveStreamId, auctionId, auction?.product_id, auction?.product?.id]);
+  }, [active, isAuthenticated, effectiveLiveStreamId, auctionId, auction?.product_id, auction?.product?.id, product?.id]);
 
   useEffect(() => {
     if (!isAuthenticated || fixedPriceItemIds.length === 0) {

@@ -20,9 +20,15 @@ services:
       - GROWTHBOOK_API_HOST=http://127.0.0.1:3200
       - GROWTHBOOK_CLIENT_KEY=disabled
       - GROWTHBOOK_SECRET_KEY=disabled
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=${DB_PASSWORD:?set DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-auction}
     depends_on:
       - product
       - auction
+      - mysql
       - redis
     restart: unless-stopped
     networks:

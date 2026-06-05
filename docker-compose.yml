@@ -18,8 +18,14 @@ services:
       # Browser connects directly to host-exposed WS port after gateway endpoint discovery.
       - TEST_SERVICE_WS_URL=ws://localhost:18092
       - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_NAME=auction
     depends_on:
       - nacos
+      - mysql
       - redis
       - test-service
     networks:
@@ -309,6 +315,7 @@ services:
       - "9090:9090"
     volumes:
       - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./observability/prometheus/business-alerts.yml:/etc/prometheus/business-alerts.yml
       - prometheus-data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
