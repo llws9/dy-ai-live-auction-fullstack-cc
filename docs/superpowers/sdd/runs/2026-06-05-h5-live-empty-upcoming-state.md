@@ -380,7 +380,7 @@
 **Commits**
 
 - `2d0219b360e35bc18a68332a065a1a0568a9fca0` (`style: polish h5 live empty upcoming state`)
-- `pending-current-commit` (`fix: use theme tokens for live empty CTA`; final SHA reported after commit creation)
+- `fe25f5c3` (`fix: use theme tokens for live empty CTA`)
 
 **Review Notes**
 
