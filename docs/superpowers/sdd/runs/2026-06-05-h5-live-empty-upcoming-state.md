@@ -311,7 +311,7 @@
 **Commits**
 
 - `a430f13aff7e6da6822f864197ec8f0ae960d67f` (`feat: add h5 live upcoming empty state`)
-- `pending` (`fix: prevent live empty subscribe keyboard navigation`; to be filled after commit)
+- `93dc6236031850fd40c812585394e10779db1c6c` (`fix: prevent live empty subscribe keyboard navigation`)
 
 **Review Notes**
 
