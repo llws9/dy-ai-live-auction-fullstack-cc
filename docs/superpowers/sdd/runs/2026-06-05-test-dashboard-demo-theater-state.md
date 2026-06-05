@@ -308,7 +308,7 @@
 **Commits**
 
 - `782280f3 feat(test-dashboard): turn screen into demo theater`
-- `pending: fix(test-dashboard): keep demo theater polling alive`
+- `53de612a fix(test-dashboard): keep demo theater polling alive`
 
 **Review Notes**
 
