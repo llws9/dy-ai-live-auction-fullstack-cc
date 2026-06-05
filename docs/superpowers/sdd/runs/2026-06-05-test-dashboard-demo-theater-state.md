@@ -33,18 +33,18 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `6` |
-| Done | `1` |
+| Done | `2` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `5` |
-| Last Updated | `2026-06-05 23:55` |
+| Pending | `4` |
+| Last Updated | `2026-06-06 00:07` |
 
 ## Task Matrix
 
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Allowed Files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T000` | `Isolate Worktree` | `done` | `main-agent` | `W0` | `-` | `Create isolated worktree and initialize SDD state` | `docs/superpowers/sdd/runs/2026-06-05-test-dashboard-demo-theater-state.md` |
-| `T001` | `Add Demo Snapshot To UserJourney Report` | `pending` | `unassigned` | `W1` | `T000` | `Backend user_journey demo_snapshot report and progress metrics` | `backend/test/scenario/user_journey/orchestrator.go, backend/test/scenario/user_journey/orchestrator_test.go` |
+| `T001` | `Add Demo Snapshot To UserJourney Report` | `done` | `subagent-bfee7079` | `W1` | `T000` | `Backend user_journey demo_snapshot report and progress metrics` | `backend/test/scenario/user_journey/orchestrator.go, backend/test/scenario/user_journey/orchestrator_test.go` |
 | `T002` | `Add Test Infrastructure For Test Dashboard` | `pending` | `unassigned` | `W2` | `T000` | `Vitest and Testing Library setup for frontend/test-dashboard` | `frontend/test-dashboard/package.json, frontend/test-dashboard/package-lock.json, frontend/test-dashboard/vite.config.ts, frontend/test-dashboard/src/test/setup.ts` |
 | `T003` | `Add Demo Theater Mapping Layer` | `pending` | `unassigned` | `W3` | `T001,T002` | `Frontend UserJourney demo model mapping` | `frontend/test-dashboard/src/api/test.ts, frontend/test-dashboard/src/pages/demoTheater.ts, frontend/test-dashboard/src/pages/demoTheater.test.ts` |
 | `T004` | `Replace Screen With One-Click Demo Theater` | `pending` | `unassigned` | `W4` | `T003` | `Replace /test/screen historical dashboard with one-click demo theater` | `frontend/test-dashboard/src/pages/Screen.tsx, frontend/test-dashboard/src/pages/Screen.test.tsx` |
@@ -96,10 +96,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `subagent-bfee7079` |
+| Started At | `2026-06-05 23:57` |
+| Completed At | `2026-06-05 23:59` |
 | Branch | `feat/test-dashboard-demo-theater` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-test-dashboard-demo-theater` |
 | Depends On | `T000` |
@@ -120,7 +120,34 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `cd backend/test && go test ./scenario/user_journey -count=1` | `PASS` | `not_run` | `pending` |
+| `cd backend/test && go test ./scenario/user_journey -run 'TestRun(HappyPathProducesEvidenceReport\|EmitsDemoSnapshotInProgressMetrics)' -count=1` | `FAIL before implementation` | `FAIL with report.DemoSnapshot undefined and undefined: DemoSnapshot` | `red_passed` |
+| `cd backend/test && go test ./scenario/user_journey -run 'TestRun(HappyPathProducesEvidenceReport\|EmitsDemoSnapshotInProgressMetrics)' -count=1` | `PASS after minimal implementation` | `ok test-service/scenario/user_journey 0.544s` | `passed` |
+| `cd backend/test && go test ./scenario/user_journey -count=1` | `PASS` | `ok test-service/scenario/user_journey 0.287s` | `passed` |
+
+**Modified Files**
+
+- `backend/test/scenario/user_journey/orchestrator.go`
+- `backend/test/scenario/user_journey/orchestrator_test.go`
+
+**Commits**
+
+- `bae7c6f9 feat(test): expose user journey demo snapshot`
+
+**Review Notes**
+
+- Spec review: PASS by subagent `f765ea92`.
+- Code quality review: PASS by subagent `8bb70f8d`.
+- `demo_snapshot` is optional JSON on report and progress metrics; existing report fields remain unchanged.
+
+**Risks / Blockers**
+
+- T001 only ran `backend/test/scenario/user_journey`; full `backend/test` regression is deferred to T005.
+
+**Handoff**
+
+- Completion summary: backend `UserJourney` report and progress metrics now expose `demo_snapshot`.
+- Remaining work: frontend test infrastructure and demo theater UI.
+- First response line used: `当前分支/worktree：feat/test-dashboard-demo-theater @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-test-dashboard-demo-theater`
 
 ### T002 - `Add Test Infrastructure For Test Dashboard`
 
