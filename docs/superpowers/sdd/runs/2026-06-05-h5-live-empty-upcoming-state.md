@@ -37,7 +37,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `2` |
-| Last Updated | `2026-06-05 21:35 CST` |
+| Last Updated | `2026-06-05 21:45 CST` |
 
 ## Task Matrix
 
@@ -367,6 +367,9 @@
 | `cd frontend/h5 && npm test -- LiveLayoutCss.test.ts --runInBand` | Expected red after adding CSS regression test, because empty-state classes do not exist yet | `FAIL src/pages/Live/__tests__/LiveLayoutCss.test.ts`; `3 total`, `2 passed`, `1 failed`; failure: `.liveEmptyPage` block was empty and did not contain `background: var(--bg-page);` | `red_passed` |
 | `cd frontend/h5 && npm test -- LiveLayoutCss.test.ts --runInBand` | `PASS` after adding tokenized empty-state styles | `PASS src/pages/Live/__tests__/LiveLayoutCss.test.ts`; `3 passed`, `3 total`; `Test Suites: 1 passed, 1 total` | `green_passed` |
 | `cd frontend/h5 && npm test -- LiveLayoutCss.test.ts LiveFeedPage.test.tsx --runInBand` | `PASS` | `PASS src/pages/Live/__tests__/LiveFeedPage.test.tsx`; `PASS src/pages/Live/__tests__/LiveLayoutCss.test.ts`; `18 passed`, `18 total`; `Test Suites: 2 passed, 2 total` | `passed` |
+| `cd frontend/h5 && npm test -- LiveLayoutCss.test.ts --runInBand` | Expected red for T005 code-quality review fix: `.liveEmptyPrimaryLink` background/color declarations must use `var(...)` tokens | `FAIL src/pages/Live/__tests__/LiveLayoutCss.test.ts`; `3 total`, `2 passed`, `1 failed`; failure received `linear-gradient(135deg, #c9a96e, #d4af37)` for `background` instead of a `var(...)` declaration | `red_passed` |
+| `cd frontend/h5 && npm test -- LiveLayoutCss.test.ts --runInBand` | `PASS` after replacing CTA foreground/background with existing theme tokens | `PASS src/pages/Live/__tests__/LiveLayoutCss.test.ts`; `3 passed`, `3 total`; `Test Suites: 1 passed, 1 total` | `green_passed` |
+| `cd frontend/h5 && npm test -- LiveLayoutCss.test.ts LiveFeedPage.test.tsx --runInBand` | `PASS` | `PASS src/pages/Live/__tests__/LiveFeedPage.test.tsx`; `PASS src/pages/Live/__tests__/LiveLayoutCss.test.ts`; `18 passed`, `18 total`; `Test Suites: 2 passed, 2 total` | `passed` |
 
 **Modified Files**
 
@@ -377,6 +380,7 @@
 **Commits**
 
 - `2d0219b360e35bc18a68332a065a1a0568a9fca0` (`style: polish h5 live empty upcoming state`)
+- `pending-current-commit` (`fix: use theme tokens for live empty CTA`; final SHA reported after commit creation)
 
 **Review Notes**
 
@@ -384,6 +388,8 @@
 - Added CSS regression coverage that locks empty-state page, title, primary link, and upcoming card colors to theme-token declarations.
 - Added day/night-compatible styles for `LiveEmptyState` classes referenced by T004, including fallback panel, optional icon primitives, upcoming list/card layout, time/info text, subscribe button, focus-visible state, and disabled state.
 - Did not modify React files or business logic.
+- Code-quality review fix: replaced `.liveEmptyPrimaryLink` hardcoded `linear-gradient(... #c9a96e, #d4af37)` and `color: white` with existing token-backed `var(--gradient-primary)` and `var(--text-inverse)` declarations.
+- Strengthened the CSS regression test so `.liveEmptyPrimaryLink` asserts `var(...)` usage in both `background` and `color`, instead of accepting any `color:` declaration.
 
 **Risks / Blockers**
 

@@ -108,8 +108,8 @@
   margin-top: var(--spacing-5);
   padding: 0 var(--spacing-6);
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, #c9a96e, #d4af37);
-  color: white;
+  background: var(--gradient-primary);
+  color: var(--text-inverse);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
   text-decoration: none;

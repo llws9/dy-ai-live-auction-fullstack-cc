@@ -4,6 +4,8 @@ import { join } from 'node:path';
 describe('Live layout css', () => {
   const readLiveCss = () => readFileSync(join(__dirname, '..', 'Live.module.css'), 'utf8');
   const getClassBlock = (css: string, className: string) => css.match(new RegExp(`\\.${className}\\s*\\{[\\s\\S]*?\\n\\}`))?.[0] ?? '';
+  const getDeclaration = (block: string, property: string) =>
+    block.match(new RegExp(`${property}:\\s*([^;]+);`))?.[1] ?? '';
 
   it('places fixed-price cards at the lower-right above the bid dock and away from chat input', () => {
     const css = readLiveCss();
@@ -34,7 +36,8 @@ describe('Live layout css', () => {
     expect(liveEmptyPageCss).toContain('background: var(--bg-page);');
     expect(liveEmptyPageCss).toContain('color: var(--text-primary);');
     expect(liveEmptyTitleCss).toContain('color: var(--text-primary);');
-    expect(liveEmptyPrimaryLinkCss).toContain('color:');
+    expect(getDeclaration(liveEmptyPrimaryLinkCss, 'background')).toContain('var(');
+    expect(getDeclaration(liveEmptyPrimaryLinkCss, 'color')).toContain('var(');
     expect(upcomingCardCss).toContain('background: var(--bg-elevated);');
   });
 });
