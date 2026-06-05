@@ -36,7 +36,7 @@ func (s *FollowService) Follow(ctx context.Context, userID, liveStreamID int64) 
 	// 检查是否已关注
 	existing, _ := s.followDAO.GetByUserAndLiveStream(ctx, userID, liveStreamID)
 	if existing != nil {
-		return nil, errors.New("已经关注了该直播间")
+		return existing, nil
 	}
 
 	// 创建关注记录

@@ -370,10 +370,15 @@
 | `POST /api/test/user-journey` via `http://localhost:5174` before service restart | `UserJourney completes with demo_snapshot` | `completed but ResultJSON lacked demo_snapshot; root cause: existing 18090/18092 test-service was a stale temp go-build process, not current worktree code` | `smoke_failed_stale_service` |
 | `restart current test-service from backend/test` then `POST /api/test/user-journey` | `UserJourney completes with demo_snapshot` | `test-service from current worktree started; task 9c85d578-f2b9-4a24-8823-4a2a2daca1bc failed at fixed_price_purchase: HTTP 400` | `smoke_failed_runtime` |
 | `./scripts/start-local-backend.sh restart` then `POST /api/test/user-journey` | `UserJourney completes with demo_snapshot` | `auction/product/gateway restarted from current worktree; task c72f29cf-e660-40fa-91bc-a2f7aaeee162 failed at reminder follow: HTTP 500` | `smoke_failed_runtime` |
+| `cd backend/auction && go test ./service -run TestFollowService_Follow -count=1` after test-only change | TDD RED: duplicate follow should be idempotent and not call `Create` | `FAIL auction-service/service`; duplicate follow still returned `已经关注了该直播间` and nil follow | `red_passed` |
+| `cd backend/auction && go test ./service -run TestFollowService_Follow -count=1` | `PASS` | `ok auction-service/service 0.663s` | `passed` |
+| `cd backend/auction && go test ./service -count=1` | `PASS` | `ok auction-service/service 4.241s` | `passed` |
 
 **Modified Files**
 
 - `docs/superpowers/sdd/runs/2026-06-05-test-dashboard-demo-theater-state.md`
+- `backend/auction/service/follow_test.go`
+- `backend/auction/service/follow.go`
 
 **Smoke Notes**
 
@@ -384,13 +389,17 @@
 
 **Risks / Blockers**
 
-- Manual/live smoke did not reach the final success screen; remaining failure is in local business runtime state or backend service behavior, not in the static route, frontend unit tests, or build.
+- Root cause found for the latest live smoke blocker: repeated `UserJourney` smoke keeps the previous follow record; `FollowService.Follow` treated duplicate follow as an error; the follow handler surfaced that service error as HTTP 500.
+- Fix: `FollowService.Follow` is now idempotent for existing follow records and returns the existing `UserLiveStreamFollow` without calling `Create`.
+- Manual/live smoke was not rerun in this follow-up; unit-level regression now covers the blocker behavior and the affected `auction-service/service` package passes.
+- Earlier manual/live smoke did not reach the final success screen; non-follow runtime blockers, if still present, require a separate live smoke rerun after this unit-level fix.
 - `demo_snapshot` remains validated by backend unit tests and frontend mapping/component tests, but not by a completed live local run.
 - The current `test-service` process was restarted from this worktree during verification and left running on `18090/18092` for follow-up inspection.
 
 **Handoff**
 
 - Completion summary: T005 automated backend/frontend verification passed; `/test/screen` route and API startup path were smoke-tested; live UserJourney completion failed and is recorded as residual risk.
+- Follow-up at `2026-06-06 02:46 CST`: fixed the latest `reminder follow` HTTP 500 blocker with TDD; duplicate follow is idempotent and does not call `Create`; `go test ./service -run TestFollowService_Follow -count=1` and `go test ./service -count=1` pass in `backend/auction`.
 - First response line used: `当前分支/worktree：feat/test-dashboard-demo-theater @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-test-dashboard-demo-theater`
 
 
@@ -410,4 +419,5 @@
 - `T005 done`
 - Automated backend/frontend verification: `passed`
 - `/test/screen` route smoke: `passed`
-- Live UserJourney smoke: `failed_runtime`, recorded with root-cause evidence and residual risk
+- Latest live UserJourney follow blocker: duplicate follow idempotency fixed with unit regression evidence
+- Live UserJourney smoke: previously `failed_runtime`; full live rerun remains separate verification

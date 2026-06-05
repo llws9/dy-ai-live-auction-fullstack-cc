@@ -98,9 +98,9 @@ func TestFollowService_Follow(t *testing.T) {
 
 		follow, err := service.Follow(ctx, userID, liveStreamID)
 
-		assert.Error(t, err)
-		assert.Nil(t, follow)
-		assert.Contains(t, err.Error(), "已经关注")
+		assert.NoError(t, err)
+		assert.Same(t, existingFollow, follow)
+		mockDAO.AssertNotCalled(t, "Create", mock.Anything, mock.Anything)
 
 		mockDAO.AssertExpectations(t)
 	})
