@@ -21,7 +21,7 @@ scrape_configs:
   # Gateway 服务
   - job_name: 'gateway'
     static_configs:
-      - targets: ['gateway:8080']
+      - targets: ['gateway:9090']
     metrics_path: /metrics
 
   # Product 服务

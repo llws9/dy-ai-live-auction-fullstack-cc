@@ -17,7 +17,7 @@ func TestBusinessEventDAOCreatePersistsEvent(t *testing.T) {
 	require.NoError(t, db.AutoMigrate(&model.BusinessEvent{}))
 
 	dao := NewBusinessEventDAO(db)
-	err = dao.Create(context.Background(), &model.BusinessEvent{
+	created, err := dao.Create(context.Background(), &model.BusinessEvent{
 		UserID:        42,
 		EventType:     "live_room_enter",
 		Source:        "live_reminder",
@@ -26,6 +26,7 @@ func TestBusinessEventDAOCreatePersistsEvent(t *testing.T) {
 		Metadata:      `{"source":"test"}`,
 	})
 	require.NoError(t, err)
+	require.True(t, created)
 
 	var saved model.BusinessEvent
 	require.NoError(t, db.Where("client_event_id = ?", "evt-create-1").First(&saved).Error)
@@ -47,8 +48,12 @@ func TestBusinessEventDAOCreateIsIdempotentByClientEventID(t *testing.T) {
 		Metadata:      `{}`,
 	}
 
-	require.NoError(t, dao.Create(context.Background(), event))
-	require.NoError(t, dao.Create(context.Background(), event))
+	created, err := dao.Create(context.Background(), event)
+	require.NoError(t, err)
+	require.True(t, created)
+	created, err = dao.Create(context.Background(), event)
+	require.NoError(t, err)
+	require.False(t, created)
 
 	var count int64
 	require.NoError(t, db.Model(&model.BusinessEvent{}).Where("client_event_id = ?", "evt-dup-1").Count(&count).Error)

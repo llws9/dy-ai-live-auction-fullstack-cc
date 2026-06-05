@@ -5,6 +5,7 @@ import LiveRoomSlide from '../LiveRoomSlide';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi, skyLampApi } from '../../../services/api';
 import WebSocketService from '../../../services/websocket';
 import { useFixedPriceItems } from '../../../hooks/useFixedPriceItems';
+import { trackBusinessEvent } from '../../../utils/businessEvent';
 
 const mockShowGlobalToast = jest.fn();
 const mockNavigate = jest.fn();
@@ -53,6 +54,10 @@ jest.mock('../../../hooks/useFixedPriceItems', () => ({
   useFixedPriceItems: jest.fn(),
 }));
 
+jest.mock('../../../utils/businessEvent', () => ({
+  trackBusinessEvent: jest.fn(),
+}));
+
 jest.mock('@/utils/env', () => ({
   IS_DEV: true,
   IS_PROD: false,
@@ -97,6 +102,7 @@ const mockedLiveStreamApi = liveStreamApi as jest.Mocked<typeof liveStreamApi>;
 const mockedProductApi = productApi as jest.Mocked<typeof productApi>;
 const MockedWebSocketService = WebSocketService as jest.MockedClass<typeof WebSocketService>;
 const mockedUseFixedPriceItems = useFixedPriceItems as jest.MockedFunction<typeof useFixedPriceItems>;
+const mockedTrackBusinessEvent = trackBusinessEvent as jest.MockedFunction<typeof trackBusinessEvent>;
 
 const LocationDisplay: React.FC = () => {
   const location = useLocation();
@@ -206,6 +212,19 @@ describe('LiveRoomSlide', () => {
 
     await waitFor(() => expect(mockedAuctionApi.get).toHaveBeenCalledWith(5));
     expect(MockedWebSocketService).not.toHaveBeenCalled();
+  });
+
+  it('tracks live room entry after auction and product context are ready', async () => {
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    await waitFor(() => expect(mockedTrackBusinessEvent).toHaveBeenCalledWith('live_room_enter', {
+      source: 'live_room',
+      liveStreamId: 3,
+      auctionId: 5,
+      productId: 7,
+    }));
+    expect(mockedTrackBusinessEvent.mock.calls.filter(([event]) => event === 'live_room_enter')).toHaveLength(1);
   });
 
   it('places a bid and refreshes ranking', async () => {

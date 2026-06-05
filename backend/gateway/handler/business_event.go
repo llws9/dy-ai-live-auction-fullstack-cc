@@ -3,7 +3,9 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -15,7 +17,7 @@ import (
 )
 
 type BusinessEventStore interface {
-	Create(ctx context.Context, event *model.BusinessEvent) error
+	Create(ctx context.Context, event *model.BusinessEvent) (bool, error)
 }
 
 type BusinessEventHandler struct {
@@ -55,6 +57,21 @@ var allowedBusinessEventSources = map[string]struct{}{
 	"unknown":             {},
 }
 
+var allowedMetadataKeys = map[string]struct{}{
+	"client_event_id": {},
+	"item_id":         {},
+	"entry":           {},
+	"result":          {},
+	"trigger":         {},
+}
+
+var clientEventIDPattern = regexp.MustCompile(`^[A-Za-z0-9._:-]{1,128}$`)
+
+const (
+	maxMetadataKeys        = 8
+	maxMetadataStringBytes = 256
+)
+
 func NewBusinessEventHandler(store BusinessEventStore, m *metrics.Metrics) *BusinessEventHandler {
 	return &BusinessEventHandler{store: store, metrics: m}
 }
@@ -89,6 +106,14 @@ func (h *BusinessEventHandler) Create(ctx context.Context, c *app.RequestContext
 	if clientEventID == "" {
 		clientEventID = uuid.NewString()
 	}
+	if !validClientEventID(clientEventID) {
+		c.JSON(http.StatusBadRequest, map[string]interface{}{"code": 400, "message": "invalid client_event_id"})
+		return
+	}
+	if err := validateMetadata(req.Metadata); err != nil {
+		c.JSON(http.StatusBadRequest, map[string]interface{}{"code": 400, "message": err.Error()})
+		return
+	}
 	metadataBytes, err := json.Marshal(req.Metadata)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, map[string]interface{}{"code": 400, "message": "invalid metadata"})
@@ -106,7 +131,8 @@ func (h *BusinessEventHandler) Create(ctx context.Context, c *app.RequestContext
 		Metadata:      string(metadataBytes),
 		CreatedAt:     time.Now(),
 	}
-	if err := h.store.Create(ctx, event); err != nil {
+	inserted, err := h.store.Create(ctx, event)
+	if err != nil {
 		if h.metrics != nil {
 			h.metrics.RecordBusinessFunnelEvent(req.EventType, source, "failed")
 		}
@@ -115,7 +141,11 @@ func (h *BusinessEventHandler) Create(ctx context.Context, c *app.RequestContext
 	}
 
 	if h.metrics != nil {
-		h.metrics.RecordBusinessFunnelEvent(req.EventType, source, "success")
+		result := "success"
+		if !inserted {
+			result = "duplicate"
+		}
+		h.metrics.RecordBusinessFunnelEvent(req.EventType, source, result)
 	}
 	c.JSON(http.StatusOK, map[string]interface{}{"code": 0, "message": "success"})
 }
@@ -151,4 +181,34 @@ func metadataString(metadata map[string]interface{}, key string) string {
 		return v
 	}
 	return ""
+}
+
+func validClientEventID(value string) bool {
+	return clientEventIDPattern.MatchString(value)
+}
+
+func validateMetadata(metadata map[string]interface{}) error {
+	if len(metadata) > maxMetadataKeys {
+		return fmt.Errorf("too many metadata keys")
+	}
+	for key, value := range metadata {
+		if !isAllowed(key, allowedMetadataKeys) {
+			return fmt.Errorf("unsupported metadata key: %s", key)
+		}
+		if key == "client_event_id" {
+			if _, ok := value.(string); !ok {
+				return fmt.Errorf("client_event_id must be a string")
+			}
+		}
+		switch v := value.(type) {
+		case string:
+			if len(v) > maxMetadataStringBytes {
+				return fmt.Errorf("metadata value too long: %s", key)
+			}
+		case float64, bool, nil:
+		default:
+			return fmt.Errorf("unsupported metadata value type: %s", key)
+		}
+	}
+	return nil
 }

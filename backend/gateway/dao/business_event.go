@@ -17,9 +17,10 @@ func NewBusinessEventDAO(db *gorm.DB) *BusinessEventDAO {
 	return &BusinessEventDAO{db: db}
 }
 
-func (d *BusinessEventDAO) Create(ctx context.Context, event *model.BusinessEvent) error {
-	return d.db.WithContext(ctx).Clauses(clause.OnConflict{
+func (d *BusinessEventDAO) Create(ctx context.Context, event *model.BusinessEvent) (bool, error) {
+	result := d.db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "client_event_id"}},
 		DoNothing: true,
-	}).Create(event).Error
+	}).Create(event)
+	return result.RowsAffected > 0, result.Error
 }
