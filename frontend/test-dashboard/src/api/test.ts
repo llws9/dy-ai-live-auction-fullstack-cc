@@ -36,7 +36,7 @@ export async function startDummy(config: Record<string, unknown> = {}): Promise<
 export interface PressureConfig {
   concurrent_users: number;
   duration_sec: number;
-  target_auction_id: number;
+  target_auction_id?: number;
   bid_amount: number;
   emit_interval_ms?: number;
 }

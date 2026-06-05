@@ -3,7 +3,9 @@ package pressure
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/common/hlog"
@@ -19,6 +21,14 @@ type Bidder interface {
 // ClientFactory 提供 Bidder 实例
 type ClientFactory interface {
 	NewClient() Bidder
+}
+
+type Fixture struct {
+	AuctionID int64
+}
+
+type FixturePreparer interface {
+	PrepareFixture(ctx context.Context, cfg Config) (Fixture, error)
 }
 
 // Config 压测场景配置
@@ -49,11 +59,12 @@ func New(cf ClientFactory) *Scenario {
 func (s *Scenario) Type() string { return "pressure" }
 
 // Run 实现 runner.Scenario
-//   流程：
-//     1. 启动 N 个 worker goroutine（pool）持续打 bid
-//     2. ticker 每 EmitIntervalMs 上报一次实时指标
-//     3. context 到期或被取消 → 关闭 stop chan → worker 退出 → 等待
-//     4. 最后 emit progress=100 + 总报告
+//
+//	流程：
+//	  1. 启动 N 个 worker goroutine（pool）持续打 bid
+//	  2. ticker 每 EmitIntervalMs 上报一次实时指标
+//	  3. context 到期或被取消 → 关闭 stop chan → worker 退出 → 等待
+//	  4. 最后 emit progress=100 + 总报告
 func (s *Scenario) Run(ctx context.Context, cfgRaw json.RawMessage, p runner.ProgressEmitter) (any, error) {
 	var cfg Config
 	if err := json.Unmarshal(cfgRaw, &cfg); err != nil {
@@ -72,6 +83,21 @@ func (s *Scenario) Run(ctx context.Context, cfgRaw json.RawMessage, p runner.Pro
 		cfg.EmitIntervalMs = 1000
 	}
 
+	fixtureCreated := false
+	if preparer, ok := s.cf.(FixturePreparer); ok {
+		fixture, err := preparer.PrepareFixture(ctx, cfg)
+		if err != nil {
+			return nil, err
+		}
+		if fixture.AuctionID <= 0 {
+			return nil, fmt.Errorf("pressure fixture returned invalid auction id: %d", fixture.AuctionID)
+		}
+		cfg.TargetAuctionID = fixture.AuctionID
+		fixtureCreated = true
+	} else if cfg.TargetAuctionID <= 0 {
+		return nil, fmt.Errorf("target_auction_id is required when fixture preparer is unavailable")
+	}
+
 	hlog.Infof("[pressure] start users=%d duration=%ds auction=%d", cfg.ConcurrentUsers, cfg.DurationSec, cfg.TargetAuctionID)
 
 	metrics := NewMetrics()
@@ -83,6 +109,7 @@ func (s *Scenario) Run(ctx context.Context, cfgRaw json.RawMessage, p runner.Pro
 
 	// 启动 N 个 worker
 	var wg sync.WaitGroup
+	var bidSeq int64
 	for i := 0; i < cfg.ConcurrentUsers; i++ {
 		wg.Add(1)
 		userID := int64(100000 + i) // 测试用户 ID
@@ -94,7 +121,8 @@ func (s *Scenario) Run(ctx context.Context, cfgRaw json.RawMessage, p runner.Pro
 					return
 				default:
 				}
-				res := client.PlaceBid(runCtx, cfg.BidAmount, cfg.TargetAuctionID, userID)
+				amount := cfg.BidAmount + float64(atomic.AddInt64(&bidSeq, 1))
+				res := client.PlaceBid(runCtx, amount, cfg.TargetAuctionID, userID)
 				if res.OK {
 					metrics.RecordSuccess(res.Latency)
 				} else {
@@ -122,7 +150,7 @@ func (s *Scenario) Run(ctx context.Context, cfgRaw json.RawMessage, p runner.Pro
 					prog = 99
 				}
 				snap := metrics.Snapshot()
-				p.Emit(prog, "running", snapToMap(snap))
+				p.Emit(prog, "running", snapToMap(snap, cfg.TargetAuctionID, fixtureCreated))
 			}
 		}
 	}()
@@ -131,7 +159,7 @@ func (s *Scenario) Run(ctx context.Context, cfgRaw json.RawMessage, p runner.Pro
 	<-tickerDone
 
 	final := metrics.Snapshot()
-	p.Emit(100, "done", snapToMap(final))
+	p.Emit(100, "done", snapToMap(final, cfg.TargetAuctionID, fixtureCreated))
 	hlog.Infof("[pressure] done total=%d success=%d failure=%d qps=%.2f p99=%v",
 		final.Total, final.Success, final.Failure, final.QPS, final.P99)
 
@@ -143,18 +171,20 @@ func (s *Scenario) Run(ctx context.Context, cfgRaw json.RawMessage, p runner.Pro
 }
 
 // snapToMap 转 emit metrics map（前端友好的 ms 单位）
-func snapToMap(s Snapshot) map[string]any {
+func snapToMap(s Snapshot, auctionID int64, fixtureCreated bool) map[string]any {
 	return map[string]any{
-		"qps":         s.QPS,
-		"avg_ms":      s.Avg.Milliseconds(),
-		"p50_ms":      s.P50.Milliseconds(),
-		"p95_ms":      s.P95.Milliseconds(),
-		"p99_ms":      s.P99.Milliseconds(),
-		"total":       s.Total,
-		"success":     s.Success,
-		"failure":     s.Failure,
-		"error_codes": s.ErrorCodes,
-		"buckets":     s.Buckets,
-		"elapsed_ms":  s.ElapsedMs,
+		"qps":               s.QPS,
+		"avg_ms":            s.Avg.Milliseconds(),
+		"p50_ms":            s.P50.Milliseconds(),
+		"p95_ms":            s.P95.Milliseconds(),
+		"p99_ms":            s.P99.Milliseconds(),
+		"total":             s.Total,
+		"success":           s.Success,
+		"failure":           s.Failure,
+		"error_codes":       s.ErrorCodes,
+		"buckets":           s.Buckets,
+		"elapsed_ms":        s.ElapsedMs,
+		"target_auction_id": auctionID,
+		"fixture_created":   fixtureCreated,
 	}
 }

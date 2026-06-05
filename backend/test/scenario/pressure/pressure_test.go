@@ -3,6 +3,7 @@ package pressure
 import (
 	"context"
 	"encoding/json"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -23,7 +24,7 @@ func (e *stubEmitter) Emit(progress int, step string, metrics map[string]any) {
 
 // TestScenario_Type 类型必须为 "pressure"
 func TestScenario_Type(t *testing.T) {
-	s := New(stubClientFactory{})
+	s := New(&stubClientFactory{})
 	if s.Type() != "pressure" {
 		t.Fatalf("Type: want pressure, got %s", s.Type())
 	}
@@ -32,7 +33,7 @@ func TestScenario_Type(t *testing.T) {
 // TestScenario_RunsAndEmits 跑一段短时间，应该有多次 emit，最后 progress=100
 func TestScenario_RunsAndEmits(t *testing.T) {
 	cf := stubClientFactory{}
-	s := New(cf)
+	s := New(&cf)
 
 	cfg := Config{
 		ConcurrentUsers: 4,
@@ -51,6 +52,9 @@ func TestScenario_RunsAndEmits(t *testing.T) {
 	if res == nil {
 		t.Fatalf("expected result, got nil")
 	}
+	if cf.created != 1 {
+		t.Fatalf("fixture should be created once, got %d", cf.created)
+	}
 	// 至少 emit 过一次
 	if c := atomic.LoadInt32(&em.count); c < 2 {
 		t.Fatalf("emit count: want >= 2, got %d", c)
@@ -67,11 +71,27 @@ func TestScenario_RunsAndEmits(t *testing.T) {
 			t.Fatalf("metrics missing key: %s", k)
 		}
 	}
+	if got := em.last["target_auction_id"]; got != int64(2002) {
+		t.Fatalf("target_auction_id should come from fixture, got %v", got)
+	}
+	if got := em.last["fixture_created"]; got != true {
+		t.Fatalf("fixture_created should be true, got %v", got)
+	}
+	cf.bidder.mu.Lock()
+	defer cf.bidder.mu.Unlock()
+	if len(cf.bidder.amounts) == 0 {
+		t.Fatalf("expected bids to be sent")
+	}
+	for _, amount := range cf.bidder.amounts {
+		if amount <= cfg.BidAmount {
+			t.Fatalf("bid amount should increase above base amount, got %.2f", amount)
+		}
+	}
 }
 
 // TestScenario_Cancellation 提前取消 context，应该尽快退出且 progress 接近 100
 func TestScenario_Cancellation(t *testing.T) {
-	s := New(stubClientFactory{})
+	s := New(&stubClientFactory{})
 	cfg := Config{
 		ConcurrentUsers: 4,
 		DurationSec:     30, // 故意设长
@@ -103,15 +123,35 @@ func TestScenario_Cancellation(t *testing.T) {
 }
 
 // stubClientFactory 注入桩客户端
-type stubClientFactory struct{}
-
-func (stubClientFactory) NewClient() Bidder {
-	return stubBidder{}
+type stubClientFactory struct {
+	created int
+	bidder  *stubBidder
 }
 
-type stubBidder struct{}
+func (f *stubClientFactory) NewClient() Bidder {
+	if f.bidder == nil {
+		f.bidder = &stubBidder{}
+	}
+	return f.bidder
+}
 
-func (stubBidder) PlaceBid(ctx context.Context, amount float64, auctionID, userID int64) Result {
+func (f *stubClientFactory) PrepareFixture(ctx context.Context, cfg Config) (Fixture, error) {
+	f.created++
+	return Fixture{AuctionID: 2002}, nil
+}
+
+type stubBidder struct {
+	mu      sync.Mutex
+	amounts []float64
+}
+
+func (b *stubBidder) PlaceBid(ctx context.Context, amount float64, auctionID, userID int64) Result {
+	b.mu.Lock()
+	b.amounts = append(b.amounts, amount)
+	b.mu.Unlock()
+	if auctionID != 2002 {
+		return Result{OK: false, StatusCode: 404}
+	}
 	// 模拟 1ms 延迟成功
 	time.Sleep(time.Millisecond)
 	return Result{OK: true, StatusCode: 200, Latency: time.Millisecond}

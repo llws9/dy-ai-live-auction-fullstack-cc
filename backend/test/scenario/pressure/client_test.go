@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // TestClient_Success 成功路径：返回 2xx 与 latency
@@ -39,6 +42,37 @@ func TestClient_Success(t *testing.T) {
 	}
 	if res.Latency <= 0 {
 		t.Fatalf("Latency should be > 0")
+	}
+}
+
+// TestClient_JWTPerUser 确保压测请求按 userID 注入合法 JWT。
+func TestClient_JWTPerUser(t *testing.T) {
+	const secret = "jwt-secret"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got := r.Header.Get("Authorization")
+		if got == "" {
+			t.Fatalf("Authorization header missing")
+		}
+		tokenText := strings.TrimPrefix(got, "Bearer ")
+		claims := jwt.MapClaims{}
+		token, err := jwt.ParseWithClaims(tokenText, claims, func(token *jwt.Token) (any, error) {
+			return []byte(secret), nil
+		})
+		if err != nil || !token.Valid {
+			t.Fatalf("invalid JWT: token=%v err=%v", token, err)
+		}
+		if claims["user_id"] != float64(100123) {
+			t.Fatalf("user_id claim: want 100123, got %v", claims["user_id"])
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"code":0}`))
+	}))
+	defer srv.Close()
+
+	c := NewJWTClient(srv.URL, secret, 2*time.Second)
+	res := c.PlaceBid(context.Background(), 100, 8888, 100123)
+	if !res.OK {
+		t.Fatalf("expected OK, got err=%v code=%d", res.Err, res.StatusCode)
 	}
 }
 

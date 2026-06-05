@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -64,7 +65,7 @@ func main() {
 		broker.Publish(testID, ws.Message{Progress: progress, Step: step, Metrics: metrics})
 	})
 	r.Register(runner.NewDummyScenario(5 * time.Second))
-	r.Register(pressure.New(pressureClientFactory{gatewayURL: cfg.Target.GatewayURL}))
+	r.Register(pressure.New(pressureClientFactory{gatewayURL: cfg.Target.GatewayURL, jwtSecret: cfg.Security.JWTSecret, db: db}))
 	if db != nil {
 		seedDAO := dao.NewSeedDAO(db)
 		bizCli := auction.NewClient(cfg.Target.GatewayURL, 10*time.Second)
@@ -178,9 +179,97 @@ func isTrue(s string) bool {
 // pressureClientFactory 适配 pressure.ClientFactory，注入 gateway 地址
 type pressureClientFactory struct {
 	gatewayURL string
+	jwtSecret  string
+	db         *gorm.DB
 }
 
 func (f pressureClientFactory) NewClient() pressure.Bidder {
-	// 5s 超时；测试模式下 user_id 走请求体，不需要 Authorization
-	return pressure.NewClient(f.gatewayURL, "", 5*time.Second)
+	return pressure.NewJWTClient(f.gatewayURL, f.jwtSecret, 5*time.Second)
+}
+
+func (f pressureClientFactory) PrepareFixture(ctx context.Context, cfg pressure.Config) (pressure.Fixture, error) {
+	if f.jwtSecret == "" {
+		return pressure.Fixture{}, fmt.Errorf("JWT_SECRET is required for pressure fixture")
+	}
+	if f.db == nil {
+		return pressure.Fixture{}, fmt.Errorf("database is required for pressure fixture")
+	}
+	if err := f.ensurePressureUsers(ctx, cfg.ConcurrentUsers); err != nil {
+		return pressure.Fixture{}, err
+	}
+	cli := auction.NewClient(f.gatewayURL, 10*time.Second)
+	cli.SetJWTSecret(f.jwtSecret)
+
+	seller := auction.Actor{UserID: 9001, Username: "pressure_merchant_9001", Role: auction.RoleMerchant}
+	productStep := cli.CreateProductAs(ctx, seller, auction.CreateProductReq{
+		Name:        fmt.Sprintf("压测拍品 %d", time.Now().UnixNano()),
+		Description: "pressure auto fixture",
+		Status:      1,
+	})
+	if !productStep.OK || productStep.RefID <= 0 {
+		return pressure.Fixture{}, fmt.Errorf("pressure create product failed: %s", productStep.Message)
+	}
+
+	ruleStep := cli.CreateAuctionRule(ctx, seller, productStep.RefID, auction.CreateAuctionRuleReq{
+		StartPrice:         cfg.BidAmount,
+		Increment:          1,
+		Duration:           cfg.DurationSec + 30,
+		TriggerDelayBefore: 5,
+		DelayDuration:      5,
+		MaxDelayTime:       30,
+	})
+	if !ruleStep.OK {
+		return pressure.Fixture{}, fmt.Errorf("pressure create auction rule failed: %s", ruleStep.Message)
+	}
+
+	auctionStep := cli.CreateAuctionAs(ctx, seller, auction.CreateAuctionReq{
+		ProductID:  productStep.RefID,
+		StartPrice: cfg.BidAmount,
+		Increment:  1,
+		Duration:   cfg.DurationSec + 30,
+	})
+	if !auctionStep.OK || auctionStep.RefID <= 0 {
+		return pressure.Fixture{}, fmt.Errorf("pressure create auction failed: %s", auctionStep.Message)
+	}
+
+	if step := cli.WaitAuctionStarted(ctx, auctionStep.RefID, 100*time.Millisecond, 5*time.Second); !step.OK {
+		return pressure.Fixture{}, fmt.Errorf("pressure wait auction started failed: %s", step.Message)
+	}
+
+	return pressure.Fixture{AuctionID: auctionStep.RefID}, nil
+}
+
+func (f pressureClientFactory) ensurePressureUsers(ctx context.Context, concurrentUsers int) error {
+	const passwordHash = "$2a$10$BNzNS6qrCs4z0zPrTB01m.OlGPNBYq5o3d.8JlTrz2O5laOi6gxWy"
+	now := time.Now()
+	users := make([]map[string]any, 0, concurrentUsers)
+	for i := 0; i < concurrentUsers; i++ {
+		userID := int64(100000 + i)
+		users = append(users, map[string]any{
+			"id":         userID,
+			"name":       fmt.Sprintf("压测用户 %d", userID),
+			"avatar":     "",
+			"email":      nil,
+			"phone":      nil,
+			"password":   passwordHash,
+			"role":       0,
+			"status":     1,
+			"created_at": now,
+		})
+	}
+	for _, user := range users {
+		if err := f.db.WithContext(ctx).Exec(`
+INSERT INTO users (id, name, avatar, email, phone, password, role, status, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON DUPLICATE KEY UPDATE
+  name = VALUES(name),
+  avatar = VALUES(avatar),
+  password = VALUES(password),
+  role = VALUES(role),
+  status = VALUES(status)
+`, user["id"], user["name"], user["avatar"], user["email"], user["phone"], user["password"], user["role"], user["status"], user["created_at"]).Error; err != nil {
+			return fmt.Errorf("pressure seed user %v failed: %w", user["id"], err)
+		}
+	}
+	return nil
 }

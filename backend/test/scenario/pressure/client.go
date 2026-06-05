@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // Result 单次请求的结果
@@ -25,6 +27,7 @@ type Result struct {
 type Client struct {
 	baseURL    string
 	authHeader string
+	jwtSecret  string
 	hc         *http.Client
 }
 
@@ -46,13 +49,21 @@ func NewClient(baseURL, authHeader string, timeout time.Duration) *Client {
 	}
 }
 
+// NewJWTClient 构造按 userID 动态签发 JWT 的压测客户端。
+func NewJWTClient(baseURL, jwtSecret string, timeout time.Duration) *Client {
+	c := NewClient(baseURL, "", timeout)
+	c.jwtSecret = jwtSecret
+	return c
+}
+
 // bidResp 业务响应（统一 code 字段）
 type bidResp struct {
 	Code int `json:"code"`
 }
 
 // PlaceBid 调 gateway POST /api/v1/auctions/{id}/bids
-//   amount: 出价金额；auctionID: 拍卖 ID；userID: 出价用户 ID（测试模式）
+//
+//	amount: 出价金额；auctionID: 拍卖 ID；userID: 出价用户 ID（测试模式）
 func (c *Client) PlaceBid(ctx context.Context, amount float64, auctionID, userID int64) Result {
 	payload := map[string]any{
 		"amount":  amount,
@@ -70,12 +81,18 @@ func (c *Client) PlaceBid(ctx context.Context, amount float64, auctionID, userID
 	if err != nil {
 		return Result{OK: false, Err: err}
 	}
+	start := time.Now()
 	req.Header.Set("Content-Type", "application/json")
 	if c.authHeader != "" {
 		req.Header.Set("Authorization", c.authHeader)
+	} else if c.jwtSecret != "" && userID > 0 {
+		token, err := signUserJWT(userID, c.jwtSecret)
+		if err != nil {
+			return Result{OK: false, Latency: time.Since(start), Err: err}
+		}
+		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
-	start := time.Now()
 	resp, err := c.hc.Do(req)
 	latency := time.Since(start)
 	if err != nil {
@@ -104,4 +121,16 @@ func (c *Client) PlaceBid(ctx context.Context, amount float64, auctionID, userID
 		Latency:    latency,
 		Err:        fmt.Errorf("biz_code=%d", br.Code),
 	}
+}
+
+func signUserJWT(userID int64, secret string) (string, error) {
+	claims := jwt.MapClaims{
+		"user_id":  userID,
+		"username": "pressure_user_" + strconv.FormatInt(userID, 10),
+		"role":     0,
+		"exp":      time.Now().Add(24 * time.Hour).Unix(),
+		"iat":      time.Now().Unix(),
+		"nbf":      time.Now().Unix(),
+	}
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secret))
 }

@@ -21,7 +21,6 @@ import { cardStyle, titleStyle, primaryBtn, secondaryBtn } from '@/components/ui
 interface PressureForm {
   concurrent_users: number;
   duration_sec: number;
-  target_auction_id: number;
   bid_amount: number;
   emit_interval_ms: number;
 }
@@ -34,7 +33,6 @@ interface BucketSnap {
 const defaultForm: PressureForm = {
   concurrent_users: 100,
   duration_sec: 30,
-  target_auction_id: 1,
   bid_amount: 100,
   emit_interval_ms: 1000,
 };
@@ -109,12 +107,13 @@ export default function Pressure() {
             onChange={(v) => setField('concurrent_users', v)} />
           <NumField label="持续时间(秒)" value={form.duration_sec} min={1}
             onChange={(v) => setField('duration_sec', v)} />
-          <NumField label="目标拍卖 ID" value={form.target_auction_id} min={1}
-            onChange={(v) => setField('target_auction_id', v)} />
           <NumField label="出价金额" value={form.bid_amount} min={1}
             onChange={(v) => setField('bid_amount', v)} />
           <NumField label="上报间隔(ms)" value={form.emit_interval_ms} min={100}
             onChange={(v) => setField('emit_interval_ms', v)} />
+        </div>
+        <div style={{ marginTop: 10, color: '#6b7280', fontSize: 13 }}>
+          压测开始前会自动创建有效拍卖 fixture，并为每个压测用户注入合法 JWT。
         </div>
         <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
           <button type="button" disabled={running} onClick={handleStart} style={primaryBtn(running)}>
