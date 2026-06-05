@@ -56,14 +56,97 @@ log_file() {
   echo "$RUN_DIR/$1.log"
 }
 
+launchctl_label() {
+  local service=$1
+  echo "com.dyauction.local.$service"
+}
+
+plist_file() {
+  echo "$HOME/Library/LaunchAgents/$(launchctl_label "$1").plist"
+}
+
+xml_escape() {
+  sed \
+    -e 's/&/\&amp;/g' \
+    -e 's/</\&lt;/g' \
+    -e 's/>/\&gt;/g' \
+    -e 's/"/\&quot;/g' \
+    -e "s/'/\&apos;/g"
+}
+
+launchctl_pid() {
+  local label=$1
+  launchctl print "gui/$UID/$label" 2>/dev/null | awk -F'= ' '/pid =/ {print $2; exit}'
+}
+
+launchctl_running() {
+  local label=$1
+  [[ -n "$(launchctl_pid "$label")" ]]
+}
+
+handle_running() {
+  local handle=$1
+  if [[ "$handle" == launchctl:* ]]; then
+    launchctl_running "${handle#launchctl:}"
+    return
+  fi
+  kill -0 "$handle" >/dev/null 2>&1
+}
+
+write_launchctl_plist() {
+  local service=$1
+  local cwd=$2
+  local command=$3
+  local log=$4
+  local plist=$5
+  local label
+
+  label="$(launchctl_label "$service")"
+  cat >"$plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>$(printf '%s' "$label" | xml_escape)</string>
+  <key>WorkingDirectory</key>
+  <string>$(printf '%s' "$cwd" | xml_escape)</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>$(printf '%s' "$command" | xml_escape)</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>$(printf '%s' "$log" | xml_escape)</string>
+  <key>StandardErrorPath</key>
+  <string>$(printf '%s' "$log" | xml_escape)</string>
+</dict>
+</plist>
+EOF
+}
+
+launchctl_bootout_service() {
+  local service=$1
+  local label
+  local plist
+
+  label="$(launchctl_label "$service")"
+  plist="$(plist_file "$service")"
+  launchctl unload "$plist" >/dev/null 2>&1 || \
+    launchctl bootout "gui/$UID/$label" >/dev/null 2>&1 || true
+}
+
 cleanup_stale_pid() {
   local service=$1
   local file
   file="$(pid_file "$service")"
   if [[ -f "$file" ]]; then
-    local pid
-    pid="$(cat "$file")"
-    if ! kill -0 "$pid" >/dev/null 2>&1; then
+    local handle
+    handle="$(cat "$file")"
+    if ! handle_running "$handle"; then
       rm -f "$file"
     fi
   fi
@@ -75,10 +158,10 @@ ensure_service_not_running() {
   local file
   file="$(pid_file "$service")"
   if [[ -f "$file" ]]; then
-    local pid
-    pid="$(cat "$file")"
-    if kill -0 "$pid" >/dev/null 2>&1; then
-      echo -e "${RED}错误: $service 已在运行 (PID $pid)${NC}"
+    local handle
+    handle="$(cat "$file")"
+    if handle_running "$handle"; then
+      echo -e "${RED}错误: $service 已在运行 ($handle)${NC}"
       exit 1
     fi
   fi
@@ -87,14 +170,14 @@ ensure_service_not_running() {
 wait_for_port() {
   local port=$1
   local service=$2
-  local pid=$3
+  local handle=$3
   local log=$4
 
   for _ in $(seq 1 30); do
     if [[ -n "$(port_owner "$port")" ]]; then
       return 0
     fi
-    if ! kill -0 "$pid" >/dev/null 2>&1; then
+    if ! handle_running "$handle"; then
       echo -e "${RED}错误: $service 启动失败${NC}"
       tail -n 40 "$log" 2>/dev/null || true
       exit 1
@@ -114,22 +197,32 @@ start_service() {
   local command=$4
   local log
   local pidf
+  local plist
+  local label
+  local handle
 
   ensure_service_not_running "$service"
   log="$(log_file "$service")"
   pidf="$(pid_file "$service")"
+  plist="$(plist_file "$service")"
+  label="$(launchctl_label "$service")"
 
   echo -e "${BLUE}启动 $service ...${NC}"
-  (
-    cd "$cwd"
-    nohup bash -lc "$command" >"$log" 2>&1 &
-    echo $! >"$pidf"
-  )
+  : >"$log"
+  mkdir -p "$HOME/Library/LaunchAgents"
+  launchctl_bootout_service "$service"
+  write_launchctl_plist "$service" "$cwd" "$command" "$log" "$plist"
+  launchctl load "$plist"
+  handle="launchctl:$label"
+  echo "$handle" >"$pidf"
 
-  local pid
-  pid="$(cat "$pidf")"
-  wait_for_port "$port" "$service" "$pid" "$log"
-  echo -e "${GREEN}✓ $service 已启动 (PID $pid, 端口 $port)${NC}"
+  wait_for_port "$port" "$service" "$handle" "$log"
+  local listener_pid
+  listener_pid="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null | head -n 1)"
+  if [[ -n "$listener_pid" ]]; then
+    echo "$listener_pid" >"$pidf"
+  fi
+  echo -e "${GREEN}✓ $service 已启动 (PID ${listener_pid:-$handle}, 端口 $port)${NC}"
 }
 
 stop_service() {
@@ -138,25 +231,54 @@ stop_service() {
   file="$(pid_file "$service")"
   cleanup_stale_pid "$service"
   if [[ ! -f "$file" ]]; then
+    launchctl_bootout_service "$service"
     return
   fi
 
-  local pid
-  pid="$(cat "$file")"
-  if kill -0 "$pid" >/dev/null 2>&1; then
-    kill "$pid" >/dev/null 2>&1 || true
+  local handle
+  handle="$(cat "$file")"
+  if [[ "$handle" == launchctl:* ]]; then
+    local label
+    label="${handle#launchctl:}"
+    launchctl bootout "gui/$UID/$label" >/dev/null 2>&1 || true
     for _ in $(seq 1 10); do
-      if ! kill -0 "$pid" >/dev/null 2>&1; then
+      if ! launchctl_running "$label"; then
         break
       fi
       sleep 1
     done
-    if kill -0 "$pid" >/dev/null 2>&1; then
-      kill -9 "$pid" >/dev/null 2>&1 || true
+    echo -e "${GREEN}✓ 已停止 $service ($handle)${NC}"
+  elif kill -0 "$handle" >/dev/null 2>&1; then
+    kill "$handle" >/dev/null 2>&1 || true
+    for _ in $(seq 1 10); do
+      if ! kill -0 "$handle" >/dev/null 2>&1; then
+        break
+      fi
+      sleep 1
+    done
+    if kill -0 "$handle" >/dev/null 2>&1; then
+      kill -9 "$handle" >/dev/null 2>&1 || true
     fi
-    echo -e "${GREEN}✓ 已停止 $service (PID $pid)${NC}"
+    echo -e "${GREEN}✓ 已停止 $service (PID $handle)${NC}"
   fi
+  launchctl_bootout_service "$service"
   rm -f "$file"
+}
+
+stop_backend_ports() {
+  for port in 8080 8081 8082 8083; do
+    local pids
+    pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
+    if [[ -n "$pids" ]]; then
+      echo -e "${YELLOW}停止端口 $port 上的残留后端进程: $pids${NC}"
+      kill $pids 2>/dev/null || true
+      sleep 1
+      pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
+      if [[ -n "$pids" ]]; then
+        kill -9 $pids 2>/dev/null || true
+      fi
+    fi
+  done
 }
 
 show_status() {
@@ -165,9 +287,9 @@ show_status() {
     local file
     file="$(pid_file "$service")"
     if [[ -f "$file" ]]; then
-      local pid
-      pid="$(cat "$file")"
-      echo "$service: running (PID $pid), log=$(log_file "$service")"
+      local handle
+      handle="$(cat "$file")"
+      echo "$service: running ($handle), log=$(log_file "$service")"
     else
       echo "$service: stopped"
     fi
@@ -210,6 +332,7 @@ stop_all() {
   stop_service "gateway"
   stop_service "product"
   stop_service "auction"
+  stop_backend_ports
 }
 
 show_help() {

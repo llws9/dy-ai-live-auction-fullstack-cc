@@ -158,9 +158,132 @@ stop_conflicting_containers() {
   INTERNAL_API_TOKEN=dev docker compose stop gateway product auction >/dev/null 2>&1 || true
 }
 
+compose_project_name() {
+  basename "$PROJECT_ROOT"
+}
+
+local_compose_services() {
+  cd "$PROJECT_ROOT"
+  INTERNAL_API_TOKEN=dev docker compose config --services 2>/dev/null
+}
+
+remove_foreign_project_containers() {
+  local current_project
+  local service
+  local line
+  local id
+  local name
+  local project
+  local workdir
+
+  current_project="$(compose_project_name)"
+  while IFS= read -r service; do
+    [[ -z "$service" ]] && continue
+    while IFS='|' read -r id name project workdir; do
+      [[ -z "$id" ]] && continue
+      if [[ "$project" != "$current_project" && -n "$workdir" && "$workdir" != "$PROJECT_ROOT"* ]]; then
+        echo -e "${YELLOW}删除其他 worktree 残留的 $service 容器: $name (compose project: ${project:-unknown}, working_dir: $workdir)${NC}"
+        docker rm -f "$id" >/dev/null
+      fi
+    done < <(docker ps -a \
+      --filter "label=com.docker.compose.service=$service" \
+      --format '{{.ID}}|{{.Names}}|{{.Label "com.docker.compose.project"}}|{{.Label "com.docker.compose.project.working_dir"}}')
+  done < <(local_compose_services)
+}
+
+port_has_non_docker_listener() {
+  local port=$1
+  local pid
+  local comm
+
+  while IFS= read -r pid; do
+    [[ -z "$pid" ]] && continue
+    comm="$(ps -p "$pid" -o comm= 2>/dev/null || true)"
+    if [[ "$comm" != *com.docker* && "$comm" != *Docker* ]]; then
+      return 0
+    fi
+  done < <(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)
+
+  return 1
+}
+
+stop_non_docker_infra_ports() {
+  local port
+  local pid
+  local comm
+  local formula
+
+  for port in 3306 6379 5672; do
+    formula=""
+    case "$port" in
+      3306) formula="mysql" ;;
+      6379) formula="redis" ;;
+      5672) formula="rabbitmq" ;;
+    esac
+
+    if [[ -n "$formula" ]] && command -v brew >/dev/null 2>&1 && port_has_non_docker_listener "$port"; then
+      brew services stop "$formula" >/dev/null 2>&1 || true
+    fi
+
+    while IFS= read -r pid; do
+      [[ -z "$pid" ]] && continue
+      comm="$(ps -p "$pid" -o comm= 2>/dev/null || true)"
+      if [[ "$comm" == *com.docker* || "$comm" == *Docker* ]]; then
+        continue
+      fi
+
+      echo -e "${YELLOW}停止端口 $port 上的非 Docker 基础设施进程: $pid ($comm)${NC}"
+      kill "$pid" 2>/dev/null || true
+      sleep 1
+      if kill -0 "$pid" >/dev/null 2>&1; then
+        kill -9 "$pid" 2>/dev/null || true
+      fi
+    done < <(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)
+  done
+}
+
+wait_for_infra_ready() {
+  cd "$PROJECT_ROOT"
+  echo -e "${BLUE}等待本地基础设施就绪...${NC}"
+
+  for _ in $(seq 1 60); do
+    if INTERNAL_API_TOKEN=dev docker compose exec -T mysql mysqladmin ping -h 127.0.0.1 -uroot -proot --silent >/dev/null 2>&1; then
+      echo -e "${GREEN}✓ MySQL 已就绪${NC}"
+      break
+    fi
+    sleep 1
+  done
+  if ! INTERNAL_API_TOKEN=dev docker compose exec -T mysql mysqladmin ping -h 127.0.0.1 -uroot -proot --silent >/dev/null 2>&1; then
+    echo -e "${RED}错误: MySQL 未能在预期时间内就绪${NC}" >&2
+    INTERNAL_API_TOKEN=dev docker compose logs --tail=80 mysql >&2 || true
+    exit 1
+  fi
+
+  for _ in $(seq 1 60); do
+    if INTERNAL_API_TOKEN=dev docker compose exec -T rabbitmq rabbitmq-diagnostics -q ping >/dev/null 2>&1; then
+      echo -e "${GREEN}✓ RabbitMQ 已就绪${NC}"
+      break
+    fi
+    sleep 1
+  done
+  if ! INTERNAL_API_TOKEN=dev docker compose exec -T rabbitmq rabbitmq-diagnostics -q ping >/dev/null 2>&1; then
+    echo -e "${RED}错误: RabbitMQ 未能在预期时间内就绪${NC}" >&2
+    INTERNAL_API_TOKEN=dev docker compose logs --tail=80 rabbitmq >&2 || true
+    exit 1
+  fi
+}
+
 start_infra() {
   cd "$PROJECT_ROOT"
+  remove_foreign_project_containers
+  stop_non_docker_infra_ports
   INTERNAL_API_TOKEN=dev docker compose up -d mysql redis rabbitmq
+  wait_for_infra_ready
+}
+
+init_local_auth_users() {
+  cd "$PROJECT_ROOT"
+  ./scripts/init-local-auth-users.sh
 }
 
 start_backend() {
@@ -243,6 +366,7 @@ restart_all() {
   stop_backend
   stop_conflicting_containers
   start_infra
+  init_local_auth_users
   start_backend
   start_frontend
   verify_local

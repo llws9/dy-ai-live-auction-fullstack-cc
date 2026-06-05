@@ -15,6 +15,7 @@ REMOTE_H5_DIR="${REMOTE_H5_DIR:-/var/www/auction-h5}"
 REMOTE_ADMIN_DIR="${REMOTE_ADMIN_DIR:-/var/www/auction-admin}"
 REMOTE_NGINX_CONF="${REMOTE_NGINX_CONF:-/etc/nginx/sites-available/auction-demo.conf}"
 REMOTE_BACKUP_DIR="${REMOTE_BACKUP_DIR:-/srv/auction/backups}"
+COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-auction-demo}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -42,16 +43,42 @@ require_cmd() {
   fi
 }
 
+shell_quote() {
+  printf '%q' "$1"
+}
+
+ssh_dest() {
+  echo "$DEPLOY_USER@$DEPLOY_HOST"
+}
+
+ssh_opts() {
+  echo "-i $(shell_quote "$DEPLOY_KEY") -o BatchMode=yes -o StrictHostKeyChecking=accept-new"
+}
+
+redact_sensitive() {
+  sed -E \
+    -e 's/(ARK_API_KEY=)[^[:space:]]+/\1[REDACTED]/g' \
+    -e 's/(JWT_SECRET=)[^[:space:]]+/\1[REDACTED]/g' \
+    -e 's/(INTERNAL_API_TOKEN=)[^[:space:]]+/\1[REDACTED]/g'
+}
+
+compose_cmd() {
+  local env_file=$1
+  echo "docker compose --project-name $(shell_quote "$COMPOSE_PROJECT_NAME") --env-file $env_file -f docker-compose.demo.yml"
+}
+
 ssh_base() {
-  ssh -i "$DEPLOY_KEY" -o BatchMode=yes -o StrictHostKeyChecking=accept-new "$DEPLOY_USER@$DEPLOY_HOST" "$@"
+  local ssh_opts=(-i "$DEPLOY_KEY" -o BatchMode=yes -o StrictHostKeyChecking=accept-new)
+  ssh "${ssh_opts[@]}" "$(ssh_dest)" "$@"
 }
 
 scp_base() {
-  scp -i "$DEPLOY_KEY" -o BatchMode=yes -o StrictHostKeyChecking=accept-new "$@"
+  local ssh_opts=(-i "$DEPLOY_KEY" -o BatchMode=yes -o StrictHostKeyChecking=accept-new)
+  scp "${ssh_opts[@]}" "$@"
 }
 
 rsync_base() {
-  rsync -az --delete -e "ssh -i $DEPLOY_KEY -o BatchMode=yes -o StrictHostKeyChecking=accept-new" "$@"
+  rsync -az --delete -e "ssh $(ssh_opts)" "$@"
 }
 
 assert_key() {
@@ -68,7 +95,9 @@ local_sha() {
 }
 
 remote_sha() {
-  ssh_base "cd '$REMOTE_APP_DIR' 2>/dev/null && { cat .deploy-ref 2>/dev/null || git rev-parse HEAD 2>/dev/null || true; }"
+  local app_dir
+  app_dir="$(shell_quote "$REMOTE_APP_DIR")"
+  ssh_base "cd $app_dir 2>/dev/null && { cat .deploy-ref 2>/dev/null || git rev-parse HEAD 2>/dev/null || true; }" | redact_sensitive
 }
 
 paths_ignored() {
@@ -145,7 +174,14 @@ assert_clean_for_ref() {
 
 remote_precheck() {
   assert_key
-  ssh_base "test -d '$REMOTE_APP_DIR' && test -f '$REMOTE_ENV_FILE' && test -d '$REMOTE_H5_DIR' && test -d '$REMOTE_ADMIN_DIR' && test -f '$REMOTE_NGINX_CONF' && docker compose version >/dev/null && nginx -v >/dev/null"
+  local app_dir env_file h5_dir admin_dir nginx_conf
+  app_dir="$(shell_quote "$REMOTE_APP_DIR")"
+  env_file="$(shell_quote "$REMOTE_ENV_FILE")"
+  h5_dir="$(shell_quote "$REMOTE_H5_DIR")"
+  admin_dir="$(shell_quote "$REMOTE_ADMIN_DIR")"
+  nginx_conf="$(shell_quote "$REMOTE_NGINX_CONF")"
+  ssh_base "test -d $app_dir && test -f $env_file && test -d $h5_dir && test -d $admin_dir && test -f $nginx_conf && docker compose version >/dev/null && nginx -v >/dev/null"
+  verify_remote_compose_uniqueness
 }
 
 changed_files() {
@@ -186,6 +222,8 @@ plan() {
   require_cmd npm
   require_cmd scp
   assert_key
+  assert_clean_for_ref
+  remote_precheck
   local target
   local remote
   target="$(local_sha)"
@@ -197,22 +235,23 @@ plan() {
   echo "待部署提交: $target"
   echo "远端提交:   ${remote:-unknown}"
   echo "变更分类:   $(classify_changes)"
+  echo "预检状态:   Git/SSH/远端目录/Docker/Nginx 已通过"
   echo ""
   echo "预计动作:"
-  echo "- 构建 frontend/h5"
-  echo "- 以 --base=/admin/ 构建 frontend/admin"
+  echo "- 在 frontend/h5 执行 npm ci && npm run build"
+  echo "- 在 frontend/admin 执行 npm ci && npx vite build --base=/admin/"
   echo "- 备份远端静态资源到 $REMOTE_BACKUP_DIR"
   echo "- 同步 H5 到 $REMOTE_H5_DIR"
   echo "- 同步 Admin 到 $REMOTE_ADMIN_DIR"
   echo "- 同步仓库源码到 $REMOTE_APP_DIR"
-  echo "- 执行 docker compose --env-file $REMOTE_ENV_FILE -f docker-compose.demo.yml up -d --build"
+  echo "- 执行 docker compose --project-name $COMPOSE_PROJECT_NAME --env-file $REMOTE_ENV_FILE -f docker-compose.demo.yml up -d --build --remove-orphans"
   echo "- 执行 nginx -t && systemctl reload nginx"
   echo ""
   echo "验证:"
   echo "- curl -I http://$DEPLOY_HOST/"
   echo "- curl -I http://$DEPLOY_HOST/admin/"
   echo "- curl http://$DEPLOY_HOST/api/v1/products"
-  echo "- docker compose ps gateway product auction"
+  echo "- docker compose --project-name $COMPOSE_PROJECT_NAME ps gateway product auction"
   echo ""
   echo "回滚:"
   echo "- 前端静态资源使用 $REMOTE_BACKUP_DIR 最近备份恢复"
@@ -221,15 +260,21 @@ plan() {
 
 build_frontend() {
   cd "$PROJECT_ROOT/frontend/h5"
+  npm ci
   npm run build
   cd "$PROJECT_ROOT/frontend/admin"
+  npm ci
   npx vite build --base=/admin/
 }
 
 backup_remote() {
   local stamp
+  local backup_dir h5_dir admin_dir
   stamp="$(date +%Y%m%d%H%M%S)"
-  ssh_base "mkdir -p '$REMOTE_BACKUP_DIR/$stamp' && cp -a '$REMOTE_H5_DIR' '$REMOTE_BACKUP_DIR/$stamp/auction-h5' && cp -a '$REMOTE_ADMIN_DIR' '$REMOTE_BACKUP_DIR/$stamp/auction-admin' && echo '$stamp' > '$REMOTE_BACKUP_DIR/latest'"
+  backup_dir="$(shell_quote "$REMOTE_BACKUP_DIR/$stamp")"
+  h5_dir="$(shell_quote "$REMOTE_H5_DIR")"
+  admin_dir="$(shell_quote "$REMOTE_ADMIN_DIR")"
+  ssh_base "mkdir -p $backup_dir && cp -a $h5_dir $backup_dir/auction-h5 && cp -a $admin_dir $backup_dir/auction-admin && echo $(shell_quote "$stamp") > $(shell_quote "$REMOTE_BACKUP_DIR/latest")"
 }
 
 sync_frontend() {
@@ -246,28 +291,85 @@ sync_backend() {
     --exclude 'frontend/admin/dist/' \
     --exclude '.tmp/' \
     "$PROJECT_ROOT/" "$DEPLOY_USER@$DEPLOY_HOST:$REMOTE_APP_DIR/"
-  ssh_base "cd '$REMOTE_APP_DIR' && echo '$(local_sha)' > .deploy-ref"
+  local app_dir target
+  app_dir="$(shell_quote "$REMOTE_APP_DIR")"
+  target="$(local_sha)"
+  ssh_base "cd $app_dir && echo $(shell_quote "$target") > .deploy-ref"
 }
 
 restart_remote() {
-  ssh_base "cd '$REMOTE_APP_DIR' && docker compose --env-file '$REMOTE_ENV_FILE' -f docker-compose.demo.yml up -d --build && nginx -t && systemctl reload nginx"
+  local app_dir env_file compose
+  app_dir="$(shell_quote "$REMOTE_APP_DIR")"
+  env_file="$(shell_quote "$REMOTE_ENV_FILE")"
+  compose="$(compose_cmd "$env_file")"
+  ssh_base "cd $app_dir && $compose up -d --build --remove-orphans && nginx -t && systemctl reload nginx"
+}
+
+http_expect() {
+  local url=$1
+  local expected_regex=$2
+  local code
+  code="$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$url" || true)"
+  echo "$url -> $code"
+  [[ "$code" =~ $expected_regex ]]
+}
+
+print_remote_logs_hint() {
+  local app_dir env_file compose
+  app_dir="$(shell_quote "$REMOTE_APP_DIR")"
+  env_file="$(shell_quote "$REMOTE_ENV_FILE")"
+  compose="$(compose_cmd "$env_file")"
+  echo "远端日志排查命令:"
+  echo "ssh -i $(shell_quote "$DEPLOY_KEY") $(ssh_dest) 'cd $app_dir && $compose logs --tail=100 gateway product auction'"
+}
+
+verify_remote_compose_uniqueness() {
+  local project
+  project="$(shell_quote "$COMPOSE_PROJECT_NAME")"
+  ssh_base "target_project=$project; failed=0; for service in gateway product auction mysql redis rabbitmq; do docker ps -a --filter \"label=com.docker.compose.service=\$service\" --format '{{.ID}}|{{.Names}}|{{.Label \"com.docker.compose.project\"}}|{{.Label \"com.docker.compose.service\"}}' | awk -F'|' -v target=\"\$target_project\" 'length(\$1) > 0 && \$3 != target { printf \"duplicate compose service: service=%s container=%s project=%s expected=%s\\n\", \$4, \$2, \$3, target > \"/dev/stderr\"; bad=1 } END { exit bad }' || failed=1; done; exit \$failed" | redact_sensitive
+}
+
+verify_remote_containers() {
+  local app_dir env_file compose output failed=0
+  app_dir="$(shell_quote "$REMOTE_APP_DIR")"
+  env_file="$(shell_quote "$REMOTE_ENV_FILE")"
+  compose="$(compose_cmd "$env_file")"
+  verify_remote_compose_uniqueness
+  output="$(ssh_base "cd $app_dir && $compose ps --format json gateway product auction" | redact_sensitive)"
+  echo "$output"
+
+  for service in gateway product auction; do
+    if ! echo "$output" | grep -E "\"Service\":\"$service\"|\"Name\":\"[^\"]*$service[^\"]*\"" >/dev/null; then
+      echo -e "${RED}错误: 远端容器缺失: $service${NC}" >&2
+      failed=1
+      continue
+    fi
+    if ! echo "$output" | grep -E "\"Service\":\"$service\".*\"State\":\"running\"|\"Name\":\"[^\"]*$service[^\"]*\".*\"State\":\"running\"" >/dev/null; then
+      echo -e "${RED}错误: 远端容器未 running: $service${NC}" >&2
+      failed=1
+    fi
+  done
+
+  if [[ "$failed" -ne 0 ]]; then
+    print_remote_logs_hint >&2
+    exit 1
+  fi
 }
 
 verify_prod() {
   local failed=0
-  for url in "http://$DEPLOY_HOST/" "http://$DEPLOY_HOST/admin/" "http://$DEPLOY_HOST/api/v1/products"; do
-    local code
-    code="$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$url" || true)"
-    echo "$url -> $code"
-    if [[ "$code" == "000" ]]; then
-      failed=1
-    fi
-  done
-  ssh_base "cd '$REMOTE_APP_DIR' && docker compose --env-file '$REMOTE_ENV_FILE' -f docker-compose.demo.yml ps gateway product auction"
+
+  http_expect "http://$DEPLOY_HOST/" '^(2|3)[0-9][0-9]$' || failed=1
+  http_expect "http://$DEPLOY_HOST/admin/" '^(2|3)[0-9][0-9]$' || failed=1
+  http_expect "http://$DEPLOY_HOST/api/v1/products" '^200$' || failed=1
+
   if [[ "$failed" -ne 0 ]]; then
+    print_remote_logs_hint >&2
     echo -e "${RED}线上验证失败${NC}" >&2
     exit 1
   fi
+
+  verify_remote_containers
   echo -e "${GREEN}线上验证通过${NC}"
 }
 
@@ -289,10 +391,15 @@ apply() {
 
 rollback() {
   assert_key
-  ssh_base "test -f '$REMOTE_BACKUP_DIR/latest'"
+  local backup_latest backup_dir h5_dir admin_dir nginx_conf
+  backup_latest="$(shell_quote "$REMOTE_BACKUP_DIR/latest")"
+  ssh_base "test -f $backup_latest"
   local latest
-  latest="$(ssh_base "cat '$REMOTE_BACKUP_DIR/latest'")"
-  ssh_base "rsync -a --delete '$REMOTE_BACKUP_DIR/$latest/auction-h5/' '$REMOTE_H5_DIR/' && rsync -a --delete '$REMOTE_BACKUP_DIR/$latest/auction-admin/' '$REMOTE_ADMIN_DIR/' && nginx -t && systemctl reload nginx"
+  latest="$(ssh_base "cat $backup_latest")"
+  backup_dir="$(shell_quote "$REMOTE_BACKUP_DIR/$latest")"
+  h5_dir="$(shell_quote "$REMOTE_H5_DIR")"
+  admin_dir="$(shell_quote "$REMOTE_ADMIN_DIR")"
+  ssh_base "rsync -a --delete $backup_dir/auction-h5/ $h5_dir/ && rsync -a --delete $backup_dir/auction-admin/ $admin_dir/ && nginx -t && systemctl reload nginx"
   echo "已恢复前端静态资源备份: $latest"
   echo "如需回滚后端，请在服务器 $REMOTE_APP_DIR 中 checkout 上一提交并重新执行 docker compose up -d --build。"
 }
@@ -306,6 +413,8 @@ case "${1:-}" in
     ;;
   verify)
     require_cmd curl
+    require_cmd ssh
+    assert_key
     verify_prod
     ;;
   rollback)

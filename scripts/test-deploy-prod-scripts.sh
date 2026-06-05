@@ -1,0 +1,57 @@
+#!/bin/bash
+
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT="$ROOT/scripts/deploy-prod.sh"
+
+fail() {
+  echo "FAIL: $*" >&2
+  exit 1
+}
+
+assert_contains() {
+  local pattern=$1
+  local message=$2
+
+  if ! rg -q -- "$pattern" "$SCRIPT"; then
+    fail "$message"
+  fi
+}
+
+assert_not_contains() {
+  local pattern=$1
+  local message=$2
+
+  if rg -q -- "$pattern" "$SCRIPT"; then
+    fail "$message"
+  fi
+}
+
+assert_contains 'shell_quote\(\)' "deploy-prod.sh must shell-quote dynamic SSH/rsync paths and arguments"
+assert_contains 'ssh_dest\(\)' "deploy-prod.sh must build SSH destination through a helper"
+assert_contains 'ssh_opts=\(' "deploy-prod.sh must keep SSH options in an argv array"
+assert_contains 'remote_precheck' "deploy-prod.sh must keep remote precheck as a first-class function"
+assert_contains 'assert_clean_for_ref' "deploy-prod.sh plan/apply must check local ref and blocking changes"
+assert_contains 'redact_sensitive' "deploy-prod.sh must redact sensitive values from displayed output"
+assert_contains 'http_expect\(\)' "deploy-prod.sh verify must check expected HTTP status classes"
+assert_contains 'verify_remote_containers' "deploy-prod.sh verify must check remote gateway/product/auction containers"
+assert_contains 'COMPOSE_PROJECT_NAME="\$\{COMPOSE_PROJECT_NAME:-auction-demo\}"' "deploy-prod.sh must pin the remote compose project name"
+assert_contains 'compose_cmd\(\)' "deploy-prod.sh must centralize docker compose invocation with the pinned project name"
+assert_contains 'verify_remote_compose_uniqueness' "deploy-prod.sh must fail when duplicate auction service containers exist in another compose project"
+assert_contains 'com.docker.compose.project' "deploy-prod.sh must inspect compose project labels for uniqueness checks"
+assert_contains 'com.docker.compose.service' "deploy-prod.sh must inspect compose service labels for uniqueness checks"
+assert_contains 'compose ps --format json gateway product auction' "deploy-prod.sh must inspect remote compose services with machine-readable ps output"
+assert_contains '--remove-orphans' "deploy-prod.sh restart must remove orphan containers inside the pinned compose project"
+assert_contains 'logs --tail=100 gateway product auction' "deploy-prod.sh must provide bounded remote log evidence on verification failure"
+assert_contains 'backup_remote' "deploy-prod.sh apply must keep rollback backups before mutating static resources"
+assert_contains 'cd "\$PROJECT_ROOT/frontend/h5"' "deploy-prod.sh must build H5 from the frontend/h5 workspace"
+assert_contains 'cd "\$PROJECT_ROOT/frontend/admin"' "deploy-prod.sh must build Admin from the frontend/admin workspace"
+assert_contains 'npm ci' "deploy-prod.sh must install frontend dependencies in a clean worktree before building"
+
+assert_not_contains 'cat .*\$REMOTE_ENV_FILE' "deploy-prod.sh must not print remote .env.demo"
+assert_not_contains 'grep .*ARK_API_KEY' "deploy-prod.sh must not grep or print ARK_API_KEY"
+assert_not_contains 'grep .*JWT_SECRET' "deploy-prod.sh must not grep or print JWT_SECRET"
+assert_not_contains 'grep .*INTERNAL_API_TOKEN' "deploy-prod.sh must not grep or print INTERNAL_API_TOKEN"
+
+echo "deploy prod script checks passed"
