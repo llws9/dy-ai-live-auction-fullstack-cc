@@ -317,7 +317,7 @@
 
 - `782280f3 feat(test-dashboard): turn screen into demo theater`
 - `53de612a fix(test-dashboard): keep demo theater polling alive`
-- `pending: fix(test-dashboard): surface failed poll reports as errors`
+- `22bfda88 fix(test-dashboard): surface failed poll reports as errors`
 
 **Review Notes**
 
