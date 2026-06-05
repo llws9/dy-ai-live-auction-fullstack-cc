@@ -101,10 +101,11 @@ describe('LiveFeedPage feed 骨架', () => {
     expect(slide).toHaveTextContent('slide:4:12:undefined:true');
   });
 
-  it('list 为空时展示空态文案', async () => {
+  it('list 为空时展示可行动空态文案', async () => {
     mockedLiveStreamApi.list.mockResolvedValue({ list: [], total: 0, page: 1, page_size: 20 });
     renderFeed('/live');
-    await waitFor(() => expect(screen.getByText('暂无直播中房间')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('当前没有竞拍直播')).toBeInTheDocument());
+    expect(screen.getByRole('link', { name: '去首页看拍品' })).toHaveAttribute('href', '/');
   });
 
   it('手指上滑超过阈值切到下一个房间并 replace URL', async () => {

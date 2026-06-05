@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { liveStreamApi } from '@/services/api';
+import { auctionApi, liveStreamApi, productReminderApi } from '@/services/api';
+import { useAuth } from '@/store/authContext';
 import { useToast } from '../../components/Toast';
+import LiveEmptyState, { UpcomingAuctionItem } from './LiveEmptyState';
 import LiveRoomSlide from './LiveRoomSlide';
 import { FEED_PAGE_SIZE, LIVE_STREAM_STATUS, SWIPE_THRESHOLD_PX } from './constants';
 
@@ -18,10 +20,12 @@ interface LiveStreamFeedItem {
   current_price?: string | null;
 }
 
-const extractList = (response: any): LiveStreamFeedItem[] => {
+const extractList = <T = LiveStreamFeedItem,>(response: any): T[] => {
   if (Array.isArray(response)) return response;
   if (Array.isArray(response?.list)) return response.list;
+  if (Array.isArray(response?.items)) return response.items;
   if (Array.isArray(response?.data?.list)) return response.data.list;
+  if (Array.isArray(response?.data?.items)) return response.data.items;
   return [];
 };
 
@@ -36,14 +40,26 @@ const hasCurrentAuction = (room: LiveStreamFeedItem): boolean => {
   return Number.isFinite(auctionId) && auctionId > 0;
 };
 
+const extractReminderProductIds = (response: any) =>
+  new Set(
+    extractList<{ product_id?: number; productId?: number }>(response)
+      .map((item) => item.product_id ?? item.productId)
+      .filter((id): id is number => typeof id === 'number')
+  );
+
 const LiveFeedPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { isAuthenticated } = useAuth();
   const idParam = searchParams.get('id');
 
   const [loading, setLoading] = useState(true);
   const [rooms, setRooms] = useState<LiveStreamFeedItem[]>([]);
+  const [upcomingAuctions, setUpcomingAuctions] = useState<UpcomingAuctionItem[]>([]);
+  const [upcomingFailed, setUpcomingFailed] = useState(false);
+  const [subscribedProductIds, setSubscribedProductIds] = useState<Set<number>>(() => new Set());
+  const [reminderPendingProductId, setReminderPendingProductId] = useState<number | null>(null);
   const [total, setTotal] = useState<number | undefined>(undefined);
   const [lastPageCount, setLastPageCount] = useState(0);
   const [page, setPage] = useState(1);
@@ -80,6 +96,48 @@ const LiveFeedPage: React.FC = () => {
   }, []);
 
   const auctionRooms = useMemo(() => rooms.filter(hasCurrentAuction), [rooms]);
+  const shouldLoadEmptyState = !loading && auctionRooms.length === 0;
+
+  useEffect(() => {
+    if (!shouldLoadEmptyState) return;
+    let cancelled = false;
+    setUpcomingFailed(false);
+    auctionApi
+      .list({ status: '0', upcoming: true, page: 1, page_size: 2 })
+      .then((res) => {
+        if (cancelled) return;
+        setUpcomingAuctions(extractList<UpcomingAuctionItem>(res).slice(0, 2));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setUpcomingAuctions([]);
+        setUpcomingFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldLoadEmptyState]);
+
+  useEffect(() => {
+    if (!shouldLoadEmptyState || !isAuthenticated) {
+      setSubscribedProductIds(new Set());
+      return;
+    }
+    let cancelled = false;
+    productReminderApi
+      .list()
+      .then((response) => {
+        if (cancelled) return;
+        setSubscribedProductIds(extractReminderProductIds(response));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSubscribedProductIds(new Set());
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldLoadEmptyState, isAuthenticated]);
 
   const currentIndex = useMemo(() => {
     if (idParam == null) return 0;
@@ -183,16 +241,54 @@ const LiveFeedPage: React.FC = () => {
     handleSwipeDelta(e.clientX - start.x, e.clientY - start.y);
   };
 
+  const handleUpcomingClick = (auctionId: number) => {
+    navigate(`/detail?id=${auctionId}`);
+  };
+
+  const handleSubscribeReminder = async (productId?: number) => {
+    if (!productId) return;
+    if (!isAuthenticated) {
+      navigate(`/login?redirect=${encodeURIComponent('/live')}`);
+      return;
+    }
+
+    setReminderPendingProductId(productId);
+    try {
+      await productReminderApi.subscribe(productId);
+      setSubscribedProductIds((current) => {
+        const next = new Set(current);
+        next.add(productId);
+        return next;
+      });
+    } catch (error: any) {
+      if (typeof error?.message === 'string' && error.message.includes('已经订阅')) {
+        setSubscribedProductIds((current) => {
+          const next = new Set(current);
+          next.add(productId);
+          return next;
+        });
+      } else {
+        showToast('订阅失败，请稍后重试');
+      }
+    } finally {
+      setReminderPendingProductId(null);
+    }
+  };
+
   if (loading) {
     return <div>加载中...</div>;
   }
 
-  if (rooms.length === 0) {
-    return <div>暂无直播中房间</div>;
-  }
-
-  if (auctionRooms.length === 0) {
-    return <div>暂无正在竞拍的直播间</div>;
+  if (rooms.length === 0 || auctionRooms.length === 0) {
+    return (
+      <LiveEmptyState
+        upcomingAuctions={upcomingFailed ? [] : upcomingAuctions}
+        subscribedProductIds={subscribedProductIds}
+        pendingProductId={reminderPendingProductId}
+        onAuctionClick={handleUpcomingClick}
+        onSubscribe={handleSubscribeReminder}
+      />
+    );
   }
 
   const currentRoom = auctionRooms[currentIndex];
