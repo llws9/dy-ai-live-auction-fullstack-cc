@@ -1,0 +1,642 @@
+backend/gateway/middleware/metrics.go
+  eb1c2be1fce85d36 6,8,11,25,32-73 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22f2372ec60aa1a73a423b","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":6},{"Single":8},{"Single":11},{"Single":25},{"Range":[32,73]}]}]}
+docker-compose.yml
+  eb1c2be1fce85d36 309,312 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22f2372ec60aa1a73a423b","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":309},{"Single":312}]}]}
+backend/product/middleware/metrics_test.go
+  eb1c2be1fce85d36 1-69 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22f2372ec60aa1a73a423b","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,69]}]}]}
+backend/auction/middleware/metrics_test.go
+  eb1c2be1fce85d36 1-69 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22f2372ec60aa1a73a423b","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,69]}]}]}
+backend/auction/middleware/metrics.go
+  eb1c2be1fce85d36 1-120 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22f2372ec60aa1a73a423b","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,120]}]}]}
+observability/prometheus/prometheus.yml
+  eb1c2be1fce85d36 43-46,48-50,52-53,55 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22f2372ec60aa1a73a423b","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[43,46]},{"Range":[48,50]},{"Range":[52,53]},{"Single":55}]}]}
+observability/grafana/provisioning/dashboards/microservices-logs.json
+  eb1c2be1fce85d36 52-69,83,94,98,106-127,141,152,156,177,188,192,230,242,244 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22f2372ec60aa1a73a423b","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[52,69]},{"Single":83},{"Single":94},{"Single":98},{"Range":[106,127]},{"Single":141},{"Single":152},{"Single":156},{"Single":177},{"Single":188},{"Single":192},{"Single":230},{"Single":242},{"Single":244}]}]}
+  4f92412e47ff8d21 40,261,276,280,286,293-298,308-309,317-318,321
+observability/docker-compose.yaml
+  eb1c2be1fce85d36 42,45 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22f2372ec60aa1a73a423b","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":42},{"Single":45}]}]}
+observability/grafana/provisioning/dashboards/service-health.json
+  eb1c2be1fce85d36 446-655 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22f2372ec60aa1a73a423b","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[446,655]}]}]}
+backend/gateway/middleware/metrics_test.go
+  eb1c2be1fce85d36 1-44 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22f2372ec60aa1a73a423b","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,44]}]}]}
+backend/product/middleware/metrics.go
+  eb1c2be1fce85d36 1-120 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22f2372ec60aa1a73a423b","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,120]}]}]}
+observability/grafana/provisioning/datasources/datasources.yaml
+  eb1c2be1fce85d36 9 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22f2372ec60aa1a73a423b","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":9}]}]}
+backend/product/main.go
+  eb1c2be1fce85d36 11,13,157-158,162-164 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22f2372ec60aa1a73a423b","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":11},{"Single":13},{"Range":[157,158]},{"Range":[162,164]}]}]}
+backend/auction/main.go
+  eb1c2be1fce85d36 277-278,303 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22f2372ec60aa1a73a423b","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[277,278]},{"Single":303}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "ddf002d73fd3a355eb8ca0483f98fc6f453bc952",
+  "prompts": {
+    "4f92412e47ff8d21": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a22ceee2ec60aa1a73a25ef",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 36,
+      "overriden_lines": 0
+    },
+    "eb1c2be1fce85d36": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a22d87a2ec60aa1a73a3436",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>",
+      "messages": [],
+      "total_additions": 185,
+      "total_deletions": 8,
+      "accepted_lines": 721,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "backend/auction/main.go": [
+      {
+        "hash": "eb1c2be1fce85d36",
+        "line_ranges": [
+          {
+            "Range": [
+              277,
+              278
+            ]
+          },
+          {
+            "Single": 303
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22f2372ec60aa1a73a423b",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  277,
+                  278
+                ]
+              },
+              {
+                "Single": 303
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/middleware/metrics.go": [
+      {
+        "hash": "eb1c2be1fce85d36",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              120
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22f2372ec60aa1a73a423b",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  120
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/middleware/metrics_test.go": [
+      {
+        "hash": "eb1c2be1fce85d36",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              69
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22f2372ec60aa1a73a423b",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  69
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/gateway/middleware/metrics.go": [
+      {
+        "hash": "eb1c2be1fce85d36",
+        "line_ranges": [
+          {
+            "Single": 6
+          },
+          {
+            "Single": 8
+          },
+          {
+            "Single": 11
+          },
+          {
+            "Single": 25
+          },
+          {
+            "Range": [
+              32,
+              73
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22f2372ec60aa1a73a423b",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 6
+              },
+              {
+                "Single": 8
+              },
+              {
+                "Single": 11
+              },
+              {
+                "Single": 25
+              },
+              {
+                "Range": [
+                  32,
+                  73
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/gateway/middleware/metrics_test.go": [
+      {
+        "hash": "eb1c2be1fce85d36",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              44
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22f2372ec60aa1a73a423b",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  44
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/product/main.go": [
+      {
+        "hash": "eb1c2be1fce85d36",
+        "line_ranges": [
+          {
+            "Single": 11
+          },
+          {
+            "Single": 13
+          },
+          {
+            "Range": [
+              157,
+              158
+            ]
+          },
+          {
+            "Range": [
+              162,
+              164
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22f2372ec60aa1a73a423b",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 11
+              },
+              {
+                "Single": 13
+              },
+              {
+                "Range": [
+                  157,
+                  158
+                ]
+              },
+              {
+                "Range": [
+                  162,
+                  164
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/product/middleware/metrics.go": [
+      {
+        "hash": "eb1c2be1fce85d36",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              120
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22f2372ec60aa1a73a423b",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  120
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/product/middleware/metrics_test.go": [
+      {
+        "hash": "eb1c2be1fce85d36",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              69
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22f2372ec60aa1a73a423b",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  69
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "docker-compose.yml": [
+      {
+        "hash": "eb1c2be1fce85d36",
+        "line_ranges": [
+          {
+            "Single": 309
+          },
+          {
+            "Single": 312
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22f2372ec60aa1a73a423b",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 309
+              },
+              {
+                "Single": 312
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "observability/docker-compose.yaml": [
+      {
+        "hash": "eb1c2be1fce85d36",
+        "line_ranges": [
+          {
+            "Single": 42
+          },
+          {
+            "Single": 45
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22f2372ec60aa1a73a423b",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 42
+              },
+              {
+                "Single": 45
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "observability/grafana/provisioning/dashboards/microservices-logs.json": [
+      {
+        "hash": "eb1c2be1fce85d36",
+        "line_ranges": [
+          {
+            "Range": [
+              52,
+              69
+            ]
+          },
+          {
+            "Single": 83
+          },
+          {
+            "Single": 94
+          },
+          {
+            "Single": 98
+          },
+          {
+            "Range": [
+              106,
+              127
+            ]
+          },
+          {
+            "Single": 141
+          },
+          {
+            "Single": 152
+          },
+          {
+            "Single": 156
+          },
+          {
+            "Single": 177
+          },
+          {
+            "Single": 188
+          },
+          {
+            "Single": 192
+          },
+          {
+            "Single": 230
+          },
+          {
+            "Single": 242
+          },
+          {
+            "Single": 244
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22f2372ec60aa1a73a423b",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  52,
+                  69
+                ]
+              },
+              {
+                "Single": 83
+              },
+              {
+                "Single": 94
+              },
+              {
+                "Single": 98
+              },
+              {
+                "Range": [
+                  106,
+                  127
+                ]
+              },
+              {
+                "Single": 141
+              },
+              {
+                "Single": 152
+              },
+              {
+                "Single": 156
+              },
+              {
+                "Single": 177
+              },
+              {
+                "Single": 188
+              },
+              {
+                "Single": 192
+              },
+              {
+                "Single": 230
+              },
+              {
+                "Single": 242
+              },
+              {
+                "Single": 244
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "observability/grafana/provisioning/dashboards/service-health.json": [
+      {
+        "hash": "eb1c2be1fce85d36",
+        "line_ranges": [
+          {
+            "Range": [
+              446,
+              655
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22f2372ec60aa1a73a423b",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  446,
+                  655
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "observability/grafana/provisioning/datasources/datasources.yaml": [
+      {
+        "hash": "eb1c2be1fce85d36",
+        "line_ranges": [
+          {
+            "Single": 9
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22f2372ec60aa1a73a423b",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 9
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "observability/prometheus/prometheus.yml": [
+      {
+        "hash": "eb1c2be1fce85d36",
+        "line_ranges": [
+          {
+            "Range": [
+              43,
+              46
+            ]
+          },
+          {
+            "Range": [
+              48,
+              50
+            ]
+          },
+          {
+            "Range": [
+              52,
+              53
+            ]
+          },
+          {
+            "Single": 55
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22f2372ec60aa1a73a423b",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  43,
+                  46
+                ]
+              },
+              {
+                "Range": [
+                  48,
+                  50
+                ]
+              },
+              {
+                "Range": [
+                  52,
+                  53
+                ]
+              },
+              {
+                "Single": 55
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "eb1c2be1fce85d36": {
+      "tool": "trae",
+      "conversation_id": "6a22d87a2ec60aa1a73a3436",
+      "session_id": "6a22d87a2ec60aa1a73a3436",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
