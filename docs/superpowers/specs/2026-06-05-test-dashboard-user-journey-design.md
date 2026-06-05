@@ -76,14 +76,14 @@ backend/test/scenario/user_journey
 
 角色模型（来自 `gateway/middleware/rbac.go`）：`0=用户`、`1=商家/主播`、`2=管理员`；`RequireMerchantOnly` 是 ExactRole(1)，会主动拒绝管理员。
 
-| 造数动作            | 接口                                   | 业务期望角色 | 当前网关约束（代码现状）  |
-| --------------- | ------------------------------------ | ------ | ----------------- |
-| 创建商品            | `POST /api/v1/products`              | merchant | 无角色约束（公开 `v1` 路由，仅需登录身份） |
-| 创建直播间           | `POST /api/v1/admin/live-streams`    | merchant | `RequireMerchantOnly` |
-| 上架一口价商品         | `POST /api/v1/fixed-price/items`     | merchant | `RequireMerchantOnly` |
-| 创建竞拍            | `POST /api/v1/auctions`              | merchant | `RequireMerchantOnly` |
-| 开播              | `POST /api/v1/live-streams/:id/start`| merchant | **`RequireAdmin`（与业务设定冲突，见下）** |
-| 买家全部交易动作        | 竞拍/一口价/点天灯/订单                         | user     | 仅需登录身份 |
+| 造数动作     | 接口                                    | 业务期望角色   | 当前网关约束（代码现状）                   |
+| -------- | ------------------------------------- | -------- | ------------------------------ |
+| 创建商品     | `POST /api/v1/products`               | merchant | 无角色约束（公开 `v1` 路由，仅需登录身份）       |
+| 创建直播间    | `POST /api/v1/admin/live-streams`     | merchant | `RequireMerchantOnly`          |
+| 上架一口价商品  | `POST /api/v1/fixed-price/items`      | merchant | `RequireMerchantOnly`          |
+| 创建竞拍     | `POST /api/v1/auctions`               | merchant | `RequireMerchantOnly`          |
+| 开播       | `POST /api/v1/live-streams/:id/start` | merchant | **`RequireAdmin`（与业务设定冲突，见下）** |
+| 买家全部交易动作 | 竞拍/一口价/点天灯/订单                         | user     | 仅需登录身份                         |
 
 因此现有 `backend/test/client/auction` 写死的 `X-User-Role: "user"` 必须扩展为按调用传入角色（`user` / `merchant`），并允许传入对应的测试身份 ID。该多角色能力仅用于 `prepare` 阶段，主链路（`enter_live` 之后）仍只用买家身份，因此 P0 不验证权限矩阵的结论依然成立。
 
@@ -180,15 +180,15 @@ frontend/test-dashboard/src/pages/UserJourney.tsx
 
 P0 剧本只覆盖买家交易主链路。
 
-| 步骤                     | 目的       | 关键接口 | 核心断言                    |
-| ---------------------- | -------- | ---- | ----------------------- |
-| `prepare`              | 自动准备测试数据 | 多角色造数（见 5.1.1）+ 内部充值（见 5.1.2）+ 商家开播 | 商品、直播间(ongoing)、竞拍、一口价商品、买家余额均可用 |
-| `enter_live`           | 买家进入直播间  | `GET /api/v1/live-streams/:id`、`GET /api/v1/live-streams/:id/fixed-price/items` | 直播详情可读且状态为开播，竞拍与一口价列表非空 |
-| `reminder`             | 验证提醒链路   | `POST /api/v1/live-streams/:id/follow` + `GET /api/v1/live-streams/:id/follow-status` | 关注成功且 follow-status 反映已关注 |
-| `auction_bid`          | 验证普通竞拍   | `POST /api/v1/auctions/:id/bids` + `GET /api/v1/auctions/:id` | 出价成功，当前价/领先者更新正确 |
-| `sky_lamp`             | 验证点天灯链路  | `POST /api/v1/sky-lamp/subscriptions` + `GET /api/v1/sky-lamp/subscriptions/:id` | 订阅成功，余额与状态变化可验证 |
-| `fixed_price_purchase` | 验证一口价抢购  | `POST /api/v1/fixed-price/items/:id/purchase`（带 `X-Idempotency-Key`）+ `GET .../my-purchase` | 幂等键生效，库存扣减，订单生成，重复购买被拦截 |
-| `verify`               | 汇总验收结果   | `GET /api/v1/orders`、`GET /api/v1/user/balance` | 订单、余额、库存、竞拍状态、关键响应字段一致 |
+| 步骤                     | 目的       | 关键接口                                                                                        | 核心断言                             |
+| ---------------------- | -------- | ------------------------------------------------------------------------------------------- | -------------------------------- |
+| `prepare`              | 自动准备测试数据 | 多角色造数（见 5.1.1）+ 内部充值（见 5.1.2）+ 商家开播                                                         | 商品、直播间(ongoing)、竞拍、一口价商品、买家余额均可用 |
+| `enter_live`           | 买家进入直播间  | `GET /api/v1/live-streams/:id`、`GET /api/v1/live-streams/:id/fixed-price/items`             | 直播详情可读且状态为开播，竞拍与一口价列表非空          |
+| `reminder`             | 验证提醒链路   | `POST /api/v1/live-streams/:id/follow` + `GET /api/v1/live-streams/:id/follow-status`       | 关注成功且 follow-status 反映已关注        |
+| `auction_bid`          | 验证普通竞拍   | `POST /api/v1/auctions/:id/bids` + `GET /api/v1/auctions/:id`                               | 出价成功，当前价/领先者更新正确                 |
+| `sky_lamp`             | 验证点天灯链路  | `POST /api/v1/sky-lamp/subscriptions` + `GET /api/v1/sky-lamp/subscriptions/:id`            | 订阅成功，余额与状态变化可验证                  |
+| `fixed_price_purchase` | 验证一口价抢购  | `POST /api/v1/fixed-price/items/:id/purchase`（带 `X-Idempotency-Key`）+ `GET .../my-purchase` | 幂等键生效，库存扣减，订单生成，重复购买被拦截          |
+| `verify`               | 汇总验收结果   | `GET /api/v1/orders`、`GET /api/v1/user/balance`                                             | 订单、余额、库存、竞拍状态、关键响应字段一致           |
 
 > 备注：`reminder` 步骤 P0 只验证"关注/取消关注 + follow-status"这一条链路；`PUT /notification` 与 `/live/pending-reminder` 的提醒推送验证放入 P1，避免 P0 步骤语义发散。
 
@@ -216,7 +216,7 @@ P0 剧本只覆盖买家交易主链路。
 
 * `test_run_id`
 
-* 创建的资源 ID（product / live_stream / auction / fixed_price_item / order）
+* 创建的资源 ID（product / live\_stream / auction / fixed\_price\_item / order）
 
 * 买家/商家测试身份 ID
 
@@ -354,3 +354,4 @@ P1 完成标准：
 * T8：回归验证现有测试场景不受影响。
 
 * T9：P1 稳定性扩展。
+
