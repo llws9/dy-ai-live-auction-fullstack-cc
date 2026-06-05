@@ -2,12 +2,17 @@ package user_journey
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"regexp"
 	"time"
 
 	"test-service/client/auction"
 	"test-service/runner"
 )
+
+var uuidRe = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
 type BusinessClient interface {
 	CreateProductAs(ctx context.Context, actor auction.Actor, req auction.CreateProductReq) auction.StepResult
@@ -302,7 +307,7 @@ func (o *Orchestrator) skyLamp(ctx context.Context, rep *Report, p runner.Progre
 }
 
 func (o *Orchestrator) fixedPricePurchase(ctx context.Context, rep *Report, p runner.ProgressEmitter, buyer auction.Actor) error {
-	orderID, step := o.biz.PurchaseFixedPriceItem(ctx, buyer, rep.FixedPriceItemID, "user_journey_"+o.cfg.TestID)
+	orderID, step := o.biz.PurchaseFixedPriceItem(ctx, buyer, rep.FixedPriceItemID, fixedPriceIdemKey(o.cfg.TestID))
 	if !step.OK {
 		return o.recordAndError(rep, p, 75, "fixed_price_purchase", step, "fixed_price_purchase failed")
 	}
@@ -324,6 +329,15 @@ func (o *Orchestrator) fixedPricePurchase(ctx context.Context, rep *Report, p ru
 	o.addSeed(ctx, "order", rep.OrderID)
 	o.record(rep, p, 75, auction.StepResult{Step: "fixed_price_purchase", OK: true, RefID: rep.OrderID})
 	return nil
+}
+
+func fixedPriceIdemKey(testID string) string {
+	if uuidRe.MatchString(testID) {
+		return testID
+	}
+	sum := sha256.Sum256([]byte("user_journey:" + testID))
+	hexed := hex.EncodeToString(sum[:16])
+	return fmt.Sprintf("%s-%s-%s-%s-%s", hexed[:8], hexed[8:12], hexed[12:16], hexed[16:20], hexed[20:32])
 }
 
 func (o *Orchestrator) verify(ctx context.Context, rep *Report, p runner.ProgressEmitter, buyer auction.Actor) error {

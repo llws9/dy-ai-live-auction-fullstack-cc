@@ -214,9 +214,22 @@ func TestPrepareCreatesFastAuctionRuleForUserJourney(t *testing.T) {
 	assert.Equal(t, 1, biz.lastRuleReq.TriggerDelayBefore)
 }
 
+func TestFixedPricePurchaseUsesUUIDIdempotencyKey(t *testing.T) {
+	ctx := context.Background()
+	biz := newFakeBiz()
+
+	_, err := New(biz, &fakeInternalClient{}, &fakeSeedRecorder{}, Config{
+		TestID: "18300435-b9a3-49d5-8e7c-f1d6de821391",
+	}).Run(ctx, nil)
+	require.NoError(t, err)
+
+	assert.Regexp(t, `^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`, biz.lastPurchaseIdemKey)
+}
+
 type fakeBiz struct {
-	calls       []string
-	lastRuleReq auction.CreateAuctionRuleReq
+	calls               []string
+	lastRuleReq         auction.CreateAuctionRuleReq
+	lastPurchaseIdemKey string
 }
 
 func newFakeBiz() *fakeBiz { return &fakeBiz{calls: make([]string, 0, 16)} }
@@ -306,8 +319,9 @@ func (f *fakeBiz) SubscribeSkyLamp(_ context.Context, _ int64, auctionID int64) 
 	return okStep("subscribe_sky_lamp", 601)
 }
 
-func (f *fakeBiz) PurchaseFixedPriceItem(_ context.Context, _ auction.Actor, _ int64, _ string) (int64, auction.StepResult) {
+func (f *fakeBiz) PurchaseFixedPriceItem(_ context.Context, _ auction.Actor, _ int64, idemKey string) (int64, auction.StepResult) {
 	f.call("purchase_fixed_price_item")
+	f.lastPurchaseIdemKey = idemKey
 	return 501, okStep("purchase_fixed_price_item", 501)
 }
 

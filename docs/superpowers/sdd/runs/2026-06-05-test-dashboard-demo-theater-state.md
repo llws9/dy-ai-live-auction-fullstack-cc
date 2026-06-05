@@ -15,7 +15,7 @@
 | Base Branch | `main` |
 | Started At | `2026-06-05 23:54` |
 | Owner | `main-agent` |
-| Status | `completed_with_smoke_risk` |
+| Status | `completed` |
 
 ## Input Documents
 
@@ -37,7 +37,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-06 02:40` |
+| Last Updated | `2026-06-06 03:00` |
 
 ## Task Matrix
 
@@ -347,7 +347,7 @@
 | Status | `done` |
 | Owner | `main-agent` |
 | Started At | `2026-06-06 02:31` |
-| Completed At | `2026-06-06 02:40` |
+| Completed At | `2026-06-06 03:00` |
 | Branch | `feat/test-dashboard-demo-theater` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-test-dashboard-demo-theater` |
 | Depends On | `T004` |
@@ -373,33 +373,42 @@
 | `cd backend/auction && go test ./service -run TestFollowService_Follow -count=1` after test-only change | TDD RED: duplicate follow should be idempotent and not call `Create` | `FAIL auction-service/service`; duplicate follow still returned `已经关注了该直播间` and nil follow | `red_passed` |
 | `cd backend/auction && go test ./service -run TestFollowService_Follow -count=1` | `PASS` | `ok auction-service/service 0.663s` | `passed` |
 | `cd backend/auction && go test ./service -count=1` | `PASS` | `ok auction-service/service 4.241s` | `passed` |
+| `cd backend/test && go test ./scenario/user_journey -run TestFixedPricePurchaseUsesUUIDIdempotencyKey -count=1` after test-only change | TDD RED: fixed-price purchase idempotency key must be UUID-shaped | `FAIL: got user_journey_18300435-b9a3-49d5-8e7c-f1d6de821391` | `red_passed` |
+| `cd backend/test && go test ./scenario/user_journey -run TestFixedPricePurchaseUsesUUIDIdempotencyKey -count=1` | `PASS` | `ok test-service/scenario/user_journey 0.541s` | `passed` |
+| `cd backend/test && go test ./scenario/user_journey -count=1` | `PASS` | `ok test-service/scenario/user_journey 0.311s` | `passed` |
+| restart current `test-service` from `backend/test`, then `POST /api/test/user-journey` | `UserJourney` completes with `demo_snapshot` | `completed; test_id=b6b891a4-4a8a-4d90-bd2a-40e0107f0629; ResultJSON includes demo_snapshot and fixed_price_purchase ok` | `passed` |
+| `cd backend/test && go test ./scenario/user_journey -count=1` | Fresh final verification after state update | `ok test-service/scenario/user_journey 0.397s` | `passed` |
+| `POST /api/test/user-journey` final live smoke via gateway | Fresh final live verification | `completed; test_id=ed81aaf1-5c59-4ef6-8ec9-dd0fcc263ead; all_ok=true; fixed_price_item_id=992524; order_id=10; demo_snapshot present` | `passed` |
 
 **Modified Files**
 
 - `docs/superpowers/sdd/runs/2026-06-05-test-dashboard-demo-theater-state.md`
 - `backend/auction/service/follow_test.go`
 - `backend/auction/service/follow.go`
+- `backend/test/scenario/user_journey/orchestrator.go`
+- `backend/test/scenario/user_journey/orchestrator_test.go`
 
 **Smoke Notes**
 
 - `/test/screen` route is reachable through the test-dashboard dev server on `localhost:5174`.
 - The same API path used by the `开始演示` button can create a `user_journey` task and discover WS through gateway.
 - Browser automation was not available in this package (`frontend/test-dashboard/node_modules` has no Playwright); smoke used HTTP/API checks plus the existing React component tests.
-- Live `UserJourney` completion is not stable in the current local runtime even after replacing stale services with current worktree processes.
+- Live `UserJourney` completion is now verified in the current local runtime after replacing stale services with current worktree processes and fixing runtime blockers.
 
 **Risks / Blockers**
 
 - Root cause found for the latest live smoke blocker: repeated `UserJourney` smoke keeps the previous follow record; `FollowService.Follow` treated duplicate follow as an error; the follow handler surfaced that service error as HTTP 500.
 - Fix: `FollowService.Follow` is now idempotent for existing follow records and returns the existing `UserLiveStreamFollow` without calling `Create`.
-- Manual/live smoke was not rerun in this follow-up; unit-level regression now covers the blocker behavior and the affected `auction-service/service` package passes.
-- Earlier manual/live smoke did not reach the final success screen; non-follow runtime blockers, if still present, require a separate live smoke rerun after this unit-level fix.
-- `demo_snapshot` remains validated by backend unit tests and frontend mapping/component tests, but not by a completed live local run.
+- Root cause found for the subsequent `fixed_price_purchase` HTTP 400 blocker: `UserJourney` passed `user_journey_<testID>` as `X-Idempotency-Key`, while fixed-price service fail-closed validation accepts only UUID-shaped keys and returned `FP_INVALID_PARAM`.
+- Fix: `UserJourney` now passes the UUID `TestID` directly when available, or derives a stable UUID-shaped key from non-UUID test IDs for unit/local runs.
+- Completed live local run now validates `demo_snapshot` through the real gateway/test-service path.
 - The current `test-service` process was restarted from this worktree during verification and left running on `18090/18092` for follow-up inspection.
 
 **Handoff**
 
-- Completion summary: T005 automated backend/frontend verification passed; `/test/screen` route and API startup path were smoke-tested; live UserJourney completion failed and is recorded as residual risk.
+- Completion summary: T005 automated backend/frontend verification passed; `/test/screen` route and API startup path were smoke-tested; live UserJourney completion now passes.
 - Follow-up at `2026-06-06 02:46 CST`: fixed the latest `reminder follow` HTTP 500 blocker with TDD; duplicate follow is idempotent and does not call `Create`; `go test ./service -run TestFollowService_Follow -count=1` and `go test ./service -count=1` pass in `backend/auction`.
+- Follow-up at `2026-06-06 03:00 CST`: fixed the subsequent `fixed_price_purchase` HTTP 400 blocker with TDD; UUID idempotency key regression passes; live `UserJourney` smoke completed with `demo_snapshot`.
 - First response line used: `当前分支/worktree：feat/test-dashboard-demo-theater @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-test-dashboard-demo-theater`
 
 
@@ -420,4 +429,5 @@
 - Automated backend/frontend verification: `passed`
 - `/test/screen` route smoke: `passed`
 - Latest live UserJourney follow blocker: duplicate follow idempotency fixed with unit regression evidence
-- Live UserJourney smoke: previously `failed_runtime`; full live rerun remains separate verification
+- Latest live UserJourney fixed-price blocker: UUID idempotency key fixed with unit regression evidence
+- Live UserJourney smoke: `passed`; latest `test_id=ed81aaf1-5c59-4ef6-8ec9-dd0fcc263ead`
