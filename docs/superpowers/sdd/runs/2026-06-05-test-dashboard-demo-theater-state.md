@@ -15,7 +15,7 @@
 | Base Branch | `main` |
 | Started At | `2026-06-05 23:54` |
 | Owner | `main-agent` |
-| Status | `active` |
+| Status | `completed_with_smoke_risk` |
 
 ## Input Documents
 
@@ -33,11 +33,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `6` |
-| Done | `5` |
+| Done | `6` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `1` |
-| Last Updated | `2026-06-06 02:25` |
+| Pending | `0` |
+| Last Updated | `2026-06-06 02:40` |
 
 ## Task Matrix
 
@@ -48,7 +48,7 @@
 | `T002` | `Add Test Infrastructure For Test Dashboard` | `done` | `main-agent` | `W2` | `T000` | `Vitest and Testing Library setup for frontend/test-dashboard` | `frontend/test-dashboard/package.json, frontend/test-dashboard/package-lock.json, frontend/test-dashboard/vite.config.ts, frontend/test-dashboard/src/test/setup.ts` |
 | `T003` | `Add Demo Theater Mapping Layer` | `done` | `main-agent` | `W3` | `T001,T002` | `Frontend UserJourney demo model mapping` | `frontend/test-dashboard/src/api/test.ts, frontend/test-dashboard/src/pages/demoTheater.ts, frontend/test-dashboard/src/pages/demoTheater.test.ts` |
 | `T004` | `Replace Screen With One-Click Demo Theater` | `done` | `main-agent` | `W4` | `T003` | `Replace /test/screen historical dashboard with one-click demo theater` | `frontend/test-dashboard/src/pages/Screen.tsx, frontend/test-dashboard/src/pages/Screen.test.tsx` |
-| `T005` | `Integration Verification And SDD Evidence` | `pending` | `unassigned` | `W5` | `T004` | `Run backend/frontend verification and record evidence` | `docs/superpowers/sdd/runs/2026-06-05-test-dashboard-demo-theater-state.md` |
+| `T005` | `Integration Verification And SDD Evidence` | `done` | `main-agent` | `W5` | `T004` | `Run backend/frontend verification and record evidence` | `docs/superpowers/sdd/runs/2026-06-05-test-dashboard-demo-theater-state.md` |
 
 ## Wave Plan
 
@@ -344,10 +344,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-06 02:31` |
+| Completed At | `2026-06-06 02:40` |
 | Branch | `feat/test-dashboard-demo-theater` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-test-dashboard-demo-theater` |
 | Depends On | `T004` |
@@ -361,17 +361,45 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `cd backend/test && go test ./scenario/user_journey ./handler -run 'Test(UserJourney|RunHappyPathProducesEvidenceReport|RunEmitsDemoSnapshotInProgressMetrics)' -count=1` | `PASS` | `not_run` | `pending` |
-| `cd backend/test && go test ./client/auction ./scenario/user_journey ./handler -count=1` | `PASS` | `not_run` | `pending` |
-| `cd frontend/test-dashboard && npm run test:run && npm run build` | `PASS` | `not_run` | `pending` |
+| `cd backend/test && go test ./scenario/user_journey ./handler -run 'Test(UserJourney|RunHappyPathProducesEvidenceReport|RunEmitsDemoSnapshotInProgressMetrics)' -count=1` | `PASS` | `ok test-service/scenario/user_journey 1.048s; ok test-service/handler 0.912s [no tests to run]` | `passed` |
+| `cd backend/test && go test ./client/auction ./scenario/user_journey ./handler -count=1` | `PASS` | `ok test-service/client/auction 0.891s; ok test-service/scenario/user_journey 0.722s; ok test-service/handler 11.233s` | `passed` |
+| `cd frontend/test-dashboard && npm run test:run` | `PASS` | `3 files passed; 10 tests passed; React Router v7 future flag warnings only` | `passed` |
+| `cd frontend/test-dashboard && npm run build` | `PASS` | `tsc && vite build succeeded; existing Vite chunk size warning only` | `passed` |
+| `./scripts/deploy-dev.sh verify` | `local services reachable` | `5173=200, 5175=200, 8080/8081/8082 root=404, /api/v1/products=200, ws://localhost:8083/ws listening; local verify passed` | `passed` |
+| `curl http://localhost:5174/test/screen` | `/test/screen reachable` | `HTTP 200; Vite SPA shell served with title 测试展示控制台 and root element` | `passed` |
+| `POST /api/test/user-journey` via `http://localhost:5174` before service restart | `UserJourney completes with demo_snapshot` | `completed but ResultJSON lacked demo_snapshot; root cause: existing 18090/18092 test-service was a stale temp go-build process, not current worktree code` | `smoke_failed_stale_service` |
+| `restart current test-service from backend/test` then `POST /api/test/user-journey` | `UserJourney completes with demo_snapshot` | `test-service from current worktree started; task 9c85d578-f2b9-4a24-8823-4a2a2daca1bc failed at fixed_price_purchase: HTTP 400` | `smoke_failed_runtime` |
+| `./scripts/start-local-backend.sh restart` then `POST /api/test/user-journey` | `UserJourney completes with demo_snapshot` | `auction/product/gateway restarted from current worktree; task c72f29cf-e660-40fa-91bc-a2f7aaeee162 failed at reminder follow: HTTP 500` | `smoke_failed_runtime` |
+
+**Modified Files**
+
+- `docs/superpowers/sdd/runs/2026-06-05-test-dashboard-demo-theater-state.md`
+
+**Smoke Notes**
+
+- `/test/screen` route is reachable through the test-dashboard dev server on `localhost:5174`.
+- The same API path used by the `开始演示` button can create a `user_journey` task and discover WS through gateway.
+- Browser automation was not available in this package (`frontend/test-dashboard/node_modules` has no Playwright); smoke used HTTP/API checks plus the existing React component tests.
+- Live `UserJourney` completion is not stable in the current local runtime even after replacing stale services with current worktree processes.
+
+**Risks / Blockers**
+
+- Manual/live smoke did not reach the final success screen; remaining failure is in local business runtime state or backend service behavior, not in the static route, frontend unit tests, or build.
+- `demo_snapshot` remains validated by backend unit tests and frontend mapping/component tests, but not by a completed live local run.
+- The current `test-service` process was restarted from this worktree during verification and left running on `18090/18092` for follow-up inspection.
+
+**Handoff**
+
+- Completion summary: T005 automated backend/frontend verification passed; `/test/screen` route and API startup path were smoke-tested; live UserJourney completion failed and is recorded as residual risk.
+- First response line used: `当前分支/worktree：feat/test-dashboard-demo-theater @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-test-dashboard-demo-theater`
 
 
 ## Final Review Checklist
 
-- [ ] State file was created before subagent dispatch.
-- [ ] Every implementation task records TDD Red -> Green -> Verify evidence.
-- [ ] Every completed subagent response starts with `当前分支/worktree：`.
-- [ ] Verification commands and results are recorded.
+- [x] State file was created before subagent dispatch.
+- [x] Every implementation task records TDD Red -> Green -> Verify evidence.
+- [x] Every completed subagent response starts with `当前分支/worktree：`.
+- [x] Verification commands and results are recorded.
 
 ## Final Handoff
 
@@ -379,4 +407,7 @@
 
 **状态**
 
-- `initialized`
+- `T005 done`
+- Automated backend/frontend verification: `passed`
+- `/test/screen` route smoke: `passed`
+- Live UserJourney smoke: `failed_runtime`, recorded with root-cause evidence and residual risk
