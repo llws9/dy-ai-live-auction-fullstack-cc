@@ -20,6 +20,7 @@ interface CategoryTab {
 interface ProductSummary {
   id?: number;
   name?: string;
+  image?: string;
   images?: string[] | string;
   category?: string;
   category_name?: string;
@@ -135,7 +136,9 @@ const extractCategories = (response: any): CategoryTab[] => {
 };
 
 const getFirstImage = (product?: ProductSummary) => {
-  if (!product?.images) return '';
+  if (!product) return '';
+  if (product.image) return product.image;
+  if (!product.images) return '';
   if (Array.isArray(product.images)) return product.images[0] || '';
   return product.images;
 };
