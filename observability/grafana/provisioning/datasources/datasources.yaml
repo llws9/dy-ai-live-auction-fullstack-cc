@@ -3,9 +3,10 @@ apiVersion: 1
 datasources:
   # Loki - 日志
   - name: Loki
+    uid: loki
     type: loki
     access: proxy
-    url: http://loki:3100
+    url: http://host.docker.internal:3101
     isDefault: false
     editable: true
     jsonData:
@@ -13,6 +14,7 @@ datasources:
 
   # Prometheus - 指标
   - name: Prometheus
+    uid: prometheus
     type: prometheus
     access: proxy
     url: http://prometheus:9090

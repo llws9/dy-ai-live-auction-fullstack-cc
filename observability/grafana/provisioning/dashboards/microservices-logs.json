@@ -37,7 +37,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "{service_name=~\"$service\"} |= `$search`",
+          "expr": "{service_name=~\"$service\"} |~ \"$search\"",
           "refId": "A"
         }
       ],
@@ -48,6 +48,24 @@
       "datasource": {
         "type": "loki",
         "uid": "loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 4,
@@ -62,7 +80,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["count"],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         }
@@ -73,17 +91,39 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum(count_over_time({service_name=~\"$service\"} [$__interval]))",
+          "expr": "sum(count_over_time({service_name=~\"$service\"} [$__range]))",
           "refId": "A"
         }
       ],
-      "title": "请求总数",
+      "title": "日志总行数",
       "type": "stat"
     },
     {
       "datasource": {
         "type": "loki",
         "uid": "loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
       },
       "gridPos": {
         "h": 4,
@@ -98,7 +138,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["count"],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         }
@@ -109,11 +149,11 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "sum(count_over_time({service_name=~\"$service\", success=\"false\"} [$__interval]))",
+          "expr": "sum(count_over_time({service_name=~\"$service\"} |~ \"(?i)(error|fail|panic)\" [$__range]))",
           "refId": "A"
         }
       ],
-      "title": "错误请求",
+      "title": "错误日志行数",
       "type": "stat"
     },
     {
@@ -134,7 +174,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["mean"],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         }
@@ -145,11 +185,11 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "avg by (service_name) (rate({service_name=~\"$service\"} [$__interval]))",
+          "expr": "sum by (service_name) (rate({service_name=~\"$service\"} [5m]))",
           "refId": "A"
         }
       ],
-      "title": "请求速率",
+      "title": "日志行速率",
       "type": "stat"
     },
     {
@@ -187,96 +227,8 @@
           "refId": "A"
         }
       ],
-      "title": "请求趋势",
+      "title": "日志量趋势",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 0,
-        "y": 18
-      },
-      "id": 6,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "pieType": "pie",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "expr": "sum by (operation_type) (count_over_time({service_name=~\"$service\"} [$__range]))",
-          "legendFormat": "{{operation_type}}",
-          "refId": "A"
-        }
-      ],
-      "title": "操作类型分布",
-      "type": "piechart"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 12,
-        "y": 18
-      },
-      "id": 7,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "pieType": "pie",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "expr": "sum by (object_type) (count_over_time({service_name=~\"$service\"} [$__range]))",
-          "legendFormat": "{{object_type}}",
-          "refId": "A"
-        }
-      ],
-      "title": "对象类型分布",
-      "type": "piechart"
     },
     {
       "datasource": {
@@ -287,9 +239,9 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 18
       },
-      "id": 8,
+      "id": 6,
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
@@ -306,7 +258,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "{service_name=~\"$service\", success=\"false\"} |= `$search`",
+          "expr": "{service_name=~\"$service\"} |~ \"(?i)(error|fail|panic)\" |~ \"$search\"",
           "refId": "A"
         }
       ],
@@ -321,23 +273,29 @@
   "templating": {
     "list": [
       {
+        "allValue": ".+",
         "current": {
           "selected": true,
           "text": "All",
-          "value": "$__all"
+          "value": ".+"
         },
         "datasource": {
           "type": "loki",
           "uid": "loki"
         },
-        "definition": "label_values({service_name=~\".+\"}, service_name)",
+        "definition": "service_name",
         "hide": 0,
         "includeAll": true,
         "label": "服务",
         "multi": true,
         "name": "service",
         "options": [],
-        "query": "label_values({service_name=~\".+\"}, service_name)",
+        "query": {
+          "label": "service_name",
+          "refId": "LokiVariableQueryEditor-VariableQuery",
+          "stream": "{job=\"local-backend\"}",
+          "type": 1
+        },
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -347,8 +305,8 @@
       {
         "current": {
           "selected": false,
-          "text": "",
-          "value": ""
+          "text": ".*",
+          "value": ".*"
         },
         "hide": 0,
         "label": "搜索",
@@ -356,11 +314,11 @@
         "options": [
           {
             "selected": true,
-            "text": "",
-            "value": ""
+            "text": ".*",
+            "value": ".*"
           }
         ],
-        "query": "",
+        "query": ".*",
         "skipUrlSync": false,
         "type": "textbox"
       }

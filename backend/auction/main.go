@@ -274,6 +274,8 @@ func main() {
 		server.WithHostPorts(cfg.Server.HTTPPort),
 	)
 	h.Use(gatewayIdentityMiddleware())
+	httpMetrics := middleware.NewHTTPMetrics("auction", prometheus.DefaultRegisterer)
+	h.Use(middleware.MetricsMiddleware("auction", httpMetrics))
 
 	// 注册路由
 	registerRoutes(h, internalAPIToken, auctionHandler, bidHandler, wsHandler, userHandler, authHandler, notificationHandler, followHandler, productReminderHandler, skyLampHandler, userBalanceHandler, userAddressHandler, liveReminderHandler, liveStreamStatsHandler)
@@ -298,18 +300,7 @@ func main() {
 
 	// 注册 Prometheus metrics 端点
 	h.GET("/metrics", func(ctx context.Context, c *app.RequestContext) {
-		c.Response.Header.Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
-		// 直接采集 metrics
-		mfs, err := prometheus.DefaultGatherer.Gather()
-		if err != nil {
-			c.Response.Header.Set("Content-Type", "text/plain")
-			c.Response.SetBody([]byte(fmt.Sprintf("Error gathering metrics: %v", err)))
-			return
-		}
-		// 将 metrics 写入响应
-		for _, mf := range mfs {
-			c.Response.AppendBody([]byte(fmt.Sprintf("%s\n", mf.String())))
-		}
+		middleware.WriteMetricsResponse(c, prometheus.DefaultGatherer)
 	})
 
 	// 启动服务

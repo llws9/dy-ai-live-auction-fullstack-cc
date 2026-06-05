@@ -8,7 +8,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
@@ -152,9 +154,14 @@ func main() {
 	h := server.Default(
 		server.WithHostPorts(cfg.Server.Port),
 	)
+	httpMetrics := middleware.NewHTTPMetrics("product", prometheus.DefaultRegisterer)
+	h.Use(middleware.MetricsMiddleware("product", httpMetrics))
 
 	// 注册路由
 	registerRoutes(h, productHandler, ruleHandler, ruleTemplateHandler, orderHandler, statisticsHandler, productPublishHandler, liveStreamHandler, categoryHandler, copywritingHandler, internalHandler)
+	h.GET("/metrics", func(ctx context.Context, c *app.RequestContext) {
+		middleware.WriteMetricsResponse(c, prometheus.DefaultGatherer)
+	})
 
 	// 启动服务
 	log.Printf("Product service starting on %s", cfg.Server.Port)
