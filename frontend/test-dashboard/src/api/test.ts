@@ -200,7 +200,7 @@ export async function cancelTest(id: string): Promise<void> {
 
 // 获取 WS 真实地址（gateway 返回 endpoint discovery）
 export async function discoverWS(testID: string): Promise<string> {
-  const r = await http.get<{ data: { ws_url: string } }>(
+  const r = await axios.get<{ data: { ws_url: string } }>(
     `${import.meta.env.VITE_WS_BASE || '/ws'}/test/progress`,
     { params: { test_id: testID } },
   );
