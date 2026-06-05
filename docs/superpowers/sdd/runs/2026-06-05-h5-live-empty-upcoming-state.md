@@ -33,18 +33,18 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `7` |
-| Done | `1` |
+| Done | `2` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `6` |
-| Last Updated | `2026-06-05 20:37 CST` |
+| Pending | `5` |
+| Last Updated | `2026-06-05 20:47 CST` |
 
 ## Task Matrix
 
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Allowed Files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `Backend Upcoming Query Semantics` | `done` | `subagent-codex` | `W1` | `-` | `DAO upcoming filtering and ordering` | `backend/auction/dao/auction.go; backend/auction/dao/auction_current_test.go` |
-| `T002` | `Backend Handler Contract` | `pending` | `unassigned` | `W2` | `T001` | `upcoming=true contract forwarding` | `backend/auction/handler/auction.go; backend/auction/handler/auction_list.go; backend/auction/handler/auction_list_test.go` |
+| `T002` | `Backend Handler Contract` | `done` | `subagent-codex` | `W2` | `T001` | `upcoming=true contract forwarding` | `backend/auction/handler/auction.go; backend/auction/handler/auction_list.go; backend/auction/handler/auction_list_test.go` |
 | `T003` | `H5 API Contract and Empty-State Tests` | `pending` | `unassigned` | `W3` | `T002` | `frontend API params and failing tests` | `frontend/h5/src/services/api.ts; frontend/h5/src/pages/Live/__tests__/LiveFeedPage.test.tsx` |
 | `T004` | `H5 Empty-State Component and Feed Integration` | `pending` | `unassigned` | `W4` | `T003` | `LiveEmptyState and LiveFeedPage integration` | `frontend/h5/src/pages/Live/LiveEmptyState.tsx; frontend/h5/src/pages/Live/LiveFeedPage.tsx; frontend/h5/src/pages/Live/__tests__/LiveFeedPage.test.tsx; frontend/h5/src/services/api.ts` |
 | `T005` | `Empty-State Styling and CSS Regression` | `pending` | `unassigned` | `W5` | `T004` | `CSS modules and layout CSS tests` | `frontend/h5/src/pages/Live/Live.module.css; frontend/h5/src/pages/Live/__tests__/LiveLayoutCss.test.ts` |
@@ -134,10 +134,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `subagent-codex` |
+| Started At | `2026-06-05 20:43 CST` |
+| Completed At | `2026-06-05 20:47 CST` |
 | Branch | `feat/h5-live-empty-upcoming` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-live-empty-upcoming` |
 | Depends On | `T001` |
@@ -166,19 +166,27 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `TDD Red -> Green -> Verify evidence` | `not_run` | `pending` |
+| `cd backend/auction && go test ./handler -run TestBuildAuctionListResponse/upcoming -count=1` | Compile failure containing `unknown field Upcoming in struct literal of type ListParams` | `handler/auction_list_test.go:207:78: unknown field Upcoming in struct literal of type ListParams`; `FAIL auction-service/handler [build failed]` | `red_passed` |
+| `gofmt -w backend/auction/handler/auction.go backend/auction/handler/auction_list.go backend/auction/handler/auction_list_test.go` | Files formatted | exit `0` | `passed` |
+| `cd backend/auction && go test ./handler -run TestBuildAuctionListResponse -count=1` | `PASS` | `ok auction-service/handler 0.538s` | `green_passed` |
+| `cd backend/auction && go test ./dao -run 'TestListWithFiltersUpcomingReturnsFuturePendingByStartTime\|TestListOrdersByLiveUpcomingEndedPriority' -count=1` | `PASS` | `ok auction-service/dao 0.406s` | `passed` |
 
 **Modified Files**
 
-- `not_started`
+- `backend/auction/handler/auction.go`
+- `backend/auction/handler/auction_list.go`
+- `backend/auction/handler/auction_list_test.go`
+- `docs/superpowers/sdd/runs/2026-06-05-h5-live-empty-upcoming-state.md`
 
 **Commits**
 
-- `not_started`
+- `pending until commit is created`
 
 **Review Notes**
 
-- `not_started`
+- Added `ListParams.Upcoming` and forwarded it into `dao.AuctionFilters`.
+- `AuctionHandler.List` now parses `upcoming=true` and uses the filtered list path for upcoming-only requests.
+- Legacy direct `dao.AuctionFilters` construction includes `Upcoming`.
 
 **Risks / Blockers**
 
@@ -186,7 +194,7 @@
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `当前分支/worktree：feat/h5-live-empty-upcoming @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-live-empty-upcoming`
 
 ### T003 - `H5 API Contract and Empty-State Tests`
 

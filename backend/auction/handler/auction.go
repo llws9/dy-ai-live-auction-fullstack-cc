@@ -320,6 +320,7 @@ func (h *AuctionHandler) List(ctx context.Context, c *app.RequestContext) {
 	liveStreamName := c.Query("live_stream_name")
 	search := c.Query("search")
 	categoryIDStr := c.Query("category_id")
+	upcoming := c.Query("upcoming") == "true"
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
@@ -328,6 +329,7 @@ func (h *AuctionHandler) List(ctx context.Context, c *app.RequestContext) {
 	params := ListParams{
 		LiveStreamName: liveStreamName,
 		Search:         search,
+		Upcoming:       upcoming,
 		Page:           page,
 		PageSize:       pageSize,
 	}
@@ -380,12 +382,13 @@ func (h *AuctionHandler) List(ctx context.Context, c *app.RequestContext) {
 
 	// 旧路径：未注入 productClient 时走原有逻辑（保持向后兼容，单元测试用）
 	var filters *dao.AuctionFilters
-	if statusStr != "" || liveStreamIDStr != "" || liveStreamName != "" || search != "" {
+	if statusStr != "" || liveStreamIDStr != "" || liveStreamName != "" || search != "" || upcoming {
 		filters = &dao.AuctionFilters{
 			Status:         params.Status,
 			LiveStreamID:   params.LiveStreamID,
 			LiveStreamName: liveStreamName,
 			Search:         search,
+			Upcoming:       upcoming,
 		}
 	}
 

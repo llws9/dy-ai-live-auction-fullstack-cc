@@ -20,6 +20,7 @@ type ListParams struct {
 	LiveStreamName string
 	Search         string
 	CategoryID     *int64
+	Upcoming       bool
 	Page           int
 	PageSize       int
 }
@@ -57,6 +58,7 @@ func BuildAuctionListResponse(
 		LiveStreamID:   p.LiveStreamID,
 		LiveStreamName: p.LiveStreamName,
 		Search:         p.Search,
+		Upcoming:       p.Upcoming,
 	}
 
 	// Step 1: category 过滤
