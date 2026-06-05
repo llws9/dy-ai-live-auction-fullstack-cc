@@ -24,7 +24,12 @@ interface NavItem {
   path: string
   icon: React.ElementType
   allowedRoles?: number[]
-  children?: { title: string; path: string; allowedRoles?: number[] }[]
+  children?: {
+    title: string
+    path: string
+    allowedRoles?: number[]
+    titleByRole?: Partial<Record<number, string>>
+  }[]
 }
 
 const navItems: NavItem[] = [
@@ -52,7 +57,7 @@ const navItems: NavItem[] = [
     path: "/live",
     icon: Video,
     children: [
-      { title: "直播间列表", path: "/live/list" },
+      { title: "直播间列表", path: "/live/list", titleByRole: { [MERCHANT_ROLE]: "我的直播间" } },
       { title: "一口价上下架", path: "/live/fixed-price", allowedRoles: [MERCHANT_ROLE] },
       { title: "创建直播间", path: "/live/create", allowedRoles: [MERCHANT_ROLE] },
     ]
@@ -94,7 +99,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [expandedMenus, setExpandedMenus] = React.useState<string[]>([])
   const visibleNavItems = React.useMemo(() => navItems
     .map((item) => {
-      const visibleChildren = item.children?.filter((child) => isAllowedRole(child.allowedRoles, user?.role))
+      const visibleChildren = item.children
+        ?.filter((child) => isAllowedRole(child.allowedRoles, user?.role))
+        .map((child) => ({
+          ...child,
+          title: child.titleByRole?.[user?.role ?? 0] ?? child.title,
+        }))
       if (item.children) {
         return visibleChildren && visibleChildren.length > 0 && isAllowedRole(item.allowedRoles, user?.role)
           ? { ...item, children: visibleChildren }

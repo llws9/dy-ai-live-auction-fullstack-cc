@@ -33,12 +33,20 @@ import { useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { liveStreamApi, statisticsApi } from "@/shared/api"
 import { useAuth } from "@/shared/auth"
+import { ADMIN_ROLE } from "@/shared/auth/roles"
 
 const COLORS = ["#f59e0b", "#3b82f6", "#10b981", "#6366f1"]
+
+function formatRate(value: unknown) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "0%"
+  const normalized = value <= 1 ? value * 100 : value
+  return `${normalized.toFixed(1)}%`
+}
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const isPlatformAdmin = user?.role === ADMIN_ROLE
   const currentTime = new Date().toLocaleString("zh-CN", {
     year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit"
   })
@@ -132,73 +140,138 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="border-slate-200" onClick={() => navigate("/goods/create")}>
-            <PlusCircle className="mr-2 w-4 h-4" />
-            发布商品
-          </Button>
-          <Button className="bg-amber-500 hover:bg-amber-600 text-[#0f172a]" onClick={handleStartLive}>
-            <Video className="mr-2 w-4 h-4" />
-            开启直播
-          </Button>
+          {!isPlatformAdmin && (
+            <>
+              <Button variant="outline" className="border-slate-200" onClick={() => navigate("/goods/create")}>
+                <PlusCircle className="mr-2 w-4 h-4" />
+                发布商品
+              </Button>
+              <Button className="bg-amber-500 hover:bg-amber-600 text-[#0f172a]" onClick={handleStartLive}>
+                <Video className="mr-2 w-4 h-4" />
+                开启直播
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <KPICard
-          title="总竞拍数"
-          value={overview?.total_auctions?.toString() || '0'}
-          trend="+12%"
-          isUp={true}
-          icon={Gavel}
-          color="blue"
-          onClick={() => navigate("/auction/list")}
-        />
-        <KPICard
-          title="进行中竞拍"
-          value={overview?.ongoing_auctions?.toString() || '0'}
-          trend="+5%"
-          isUp={true}
-          icon={Clock}
-          color="amber"
-          onClick={() => navigate("/auction/list")}
-        />
-        <KPICard
-          title="总收入"
-          value={`¥${(overview?.total_revenue || 0).toLocaleString()}`}
-          trend="+18%"
-          isUp={true}
-          icon={DollarSign}
-          color="emerald"
-          onClick={() => navigate("/stats/revenue")}
-        />
-        <KPICard
-          title="参与用户"
-          value={(overview?.total_users || 0).toLocaleString()}
-          trend="+8%"
-          isUp={true}
-          icon={Users}
-          color="indigo"
-          onClick={() => navigate("/stats/user")}
-        />
-        <KPICard
-          title="今日成交"
-          value={`¥${(overview?.today_revenue || 0).toLocaleString()}`}
-          trend="+4%"
-          isUp={true}
-          icon={TrendingUp}
-          color="violet"
-          onClick={() => navigate("/stats/revenue")}
-        />
-        <KPICard
-          title="总订单数"
-          value={(overview?.total_orders || 0).toLocaleString()}
-          trend="+3%"
-          isUp={true}
-          icon={ShoppingBag}
-          color="rose"
-          onClick={() => navigate("/order/list")}
-        />
+        {isPlatformAdmin ? (
+          <>
+            <KPICard
+              title="全站竞拍单量"
+              value={overview?.total_auctions?.toString() || '0'}
+              trend="全站"
+              isUp={true}
+              icon={Gavel}
+              color="blue"
+              onClick={() => navigate("/auction/list")}
+            />
+            <KPICard
+              title="进行中竞拍"
+              value={overview?.ongoing_auctions?.toString() || '0'}
+              trend="巡检"
+              isUp={true}
+              icon={Clock}
+              color="amber"
+              onClick={() => navigate("/auction/list")}
+            />
+            <KPICard
+              title="平台累计 GMV"
+              value={`¥${(overview?.total_revenue || 0).toLocaleString()}`}
+              trend="交易"
+              isUp={true}
+              icon={DollarSign}
+              color="emerald"
+              onClick={() => navigate("/stats/revenue")}
+            />
+            <KPICard
+              title="注册用户数"
+              value={(overview?.total_users || 0).toLocaleString()}
+              trend="用户"
+              isUp={true}
+              icon={Users}
+              color="indigo"
+              onClick={() => navigate("/stats/user")}
+            />
+            <KPICard
+              title="近7日活跃用户"
+              value={(overview?.active_users || 0).toLocaleString()}
+              trend="活跃"
+              isUp={true}
+              icon={TrendingUp}
+              color="violet"
+              onClick={() => navigate("/stats/user")}
+            />
+            <KPICard
+              title="成交成功率"
+              value={formatRate(overview?.success_rate)}
+              trend="治理"
+              isUp={true}
+              icon={ShoppingBag}
+              color="rose"
+              onClick={() => navigate("/stats/auction")}
+            />
+          </>
+        ) : (
+          <>
+            <KPICard
+              title="总竞拍数"
+              value={overview?.total_auctions?.toString() || '0'}
+              trend="+12%"
+              isUp={true}
+              icon={Gavel}
+              color="blue"
+              onClick={() => navigate("/auction/list")}
+            />
+            <KPICard
+              title="进行中竞拍"
+              value={overview?.ongoing_auctions?.toString() || '0'}
+              trend="+5%"
+              isUp={true}
+              icon={Clock}
+              color="amber"
+              onClick={() => navigate("/auction/list")}
+            />
+            <KPICard
+              title="总收入"
+              value={`¥${(overview?.total_revenue || 0).toLocaleString()}`}
+              trend="+18%"
+              isUp={true}
+              icon={DollarSign}
+              color="emerald"
+              onClick={() => navigate("/stats/revenue")}
+            />
+            <KPICard
+              title="参与用户"
+              value={(overview?.total_users || 0).toLocaleString()}
+              trend="+8%"
+              isUp={true}
+              icon={Users}
+              color="indigo"
+              onClick={() => navigate("/stats/user")}
+            />
+            <KPICard
+              title="今日成交"
+              value={`¥${(overview?.today_revenue || 0).toLocaleString()}`}
+              trend="+4%"
+              isUp={true}
+              icon={TrendingUp}
+              color="violet"
+              onClick={() => navigate("/stats/revenue")}
+            />
+            <KPICard
+              title="总订单数"
+              value={(overview?.total_orders || 0).toLocaleString()}
+              trend="+3%"
+              isUp={true}
+              icon={ShoppingBag}
+              color="rose"
+              onClick={() => navigate("/order/list")}
+            />
+          </>
+        )}
       </div>
 
       {/* Charts Section */}
@@ -206,17 +279,17 @@ export default function Dashboard() {
         <Card className="lg:col-span-8 border-slate-200">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-lg font-bold">近期趋势</CardTitle>
-              <CardDescription>最近7天的收入与竞拍场次趋势</CardDescription>
+              <CardTitle className="text-lg font-bold">{isPlatformAdmin ? "平台交易趋势" : "近期趋势"}</CardTitle>
+              <CardDescription>{isPlatformAdmin ? "最近7天的全站 GMV 与成交订单走势" : "最近7天的收入与竞拍场次趋势"}</CardDescription>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-                <span className="text-xs text-slate-500">收入</span>
+                <span className="text-xs text-slate-500">{isPlatformAdmin ? "GMV" : "收入"}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                <span className="text-xs text-slate-500">场次</span>
+                <span className="text-xs text-slate-500">{isPlatformAdmin ? "订单" : "场次"}</span>
               </div>
             </div>
           </CardHeader>
@@ -250,8 +323,8 @@ export default function Dashboard() {
 
         <Card className="lg:col-span-4 border-slate-200">
           <CardHeader>
-            <CardTitle className="text-lg font-bold">收入构成</CardTitle>
-            <CardDescription>按商品类别的收入分布</CardDescription>
+            <CardTitle className="text-lg font-bold">{isPlatformAdmin ? "平台类目 GMV" : "收入构成"}</CardTitle>
+            <CardDescription>{isPlatformAdmin ? "按商品类别的全站 GMV 分布" : "按商品类别的收入分布"}</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] flex flex-col items-center justify-center">
             {loading ? (
@@ -287,60 +360,115 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="border-slate-200">
           <CardHeader>
-            <CardTitle className="text-lg font-bold">待办事项</CardTitle>
-            <CardDescription>需要立即处理的业务</CardDescription>
+            <CardTitle className="text-lg font-bold">{isPlatformAdmin ? "平台治理看板" : "待办事项"}</CardTitle>
+            <CardDescription>{isPlatformAdmin ? "需要持续关注的平台风险与运营状态" : "需要立即处理的业务"}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <TaskItem
-              title="待处理订单"
-              count={overview?.total_orders || 0}
-              description="用户已支付，等待发货"
-              color="amber"
-              onClick={() => navigate("/order/list")}
-            />
-            <TaskItem
-              title="进行中竞拍"
-              count={overview?.ongoing_auctions || 0}
-              description="当前正在进行的竞拍场次"
-              color="blue"
-              onClick={() => navigate("/auction/list")}
-            />
-            <TaskItem
-              title="查看数据报表"
-              count={0}
-              description="今日数据统计"
-              color="rose"
-              onClick={() => navigate("/stats/revenue")}
-            />
+            {isPlatformAdmin ? (
+              <>
+                <TaskItem
+                  title="进行中竞拍巡检"
+                  count={overview?.ongoing_auctions || 0}
+                  description="全站正在运行的竞拍场次"
+                  color="amber"
+                  onClick={() => navigate("/auction/list")}
+                />
+                <TaskItem
+                  title="订单履约巡检"
+                  count={overview?.total_orders || 0}
+                  description="全站订单履约与异常排查入口"
+                  color="blue"
+                  onClick={() => navigate("/order/list")}
+                />
+                <TaskItem
+                  title="用户增长观察"
+                  count={overview?.active_users || 0}
+                  description="近7日活跃用户与用户结构"
+                  color="rose"
+                  onClick={() => navigate("/stats/user")}
+                />
+              </>
+            ) : (
+              <>
+                <TaskItem
+                  title="待处理订单"
+                  count={overview?.total_orders || 0}
+                  description="用户已支付，等待发货"
+                  color="amber"
+                  onClick={() => navigate("/order/list")}
+                />
+                <TaskItem
+                  title="进行中竞拍"
+                  count={overview?.ongoing_auctions || 0}
+                  description="当前正在进行的竞拍场次"
+                  color="blue"
+                  onClick={() => navigate("/auction/list")}
+                />
+                <TaskItem
+                  title="查看数据报表"
+                  count={0}
+                  description="今日数据统计"
+                  color="rose"
+                  onClick={() => navigate("/stats/revenue")}
+                />
+              </>
+            )}
           </CardContent>
         </Card>
 
         <Card className="border-slate-200 bg-[#0f172a] text-white">
           <CardHeader>
-            <CardTitle className="text-lg font-bold text-white">快捷入口</CardTitle>
-            <CardDescription className="text-slate-400">常用功能一键直达</CardDescription>
+            <CardTitle className="text-lg font-bold text-white">{isPlatformAdmin ? "平台运营入口" : "快捷入口"}</CardTitle>
+            <CardDescription className="text-slate-400">{isPlatformAdmin ? "平台治理与统计入口" : "常用功能一键直达"}</CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-4">
-            <QuickActionBtn
-              title="发布商品"
-              icon={PlusCircle}
-              onClick={() => navigate("/goods/create")}
-            />
-            <QuickActionBtn
-              title="竞拍管理"
-              icon={Gavel}
-              onClick={() => navigate("/auction/list")}
-            />
-            <QuickActionBtn
-              title="直播间管理"
-              icon={Video}
-              onClick={() => navigate("/live/list")}
-            />
-            <QuickActionBtn
-              title="生成报表"
-              icon={BarChart3}
-              onClick={() => navigate("/stats/revenue")}
-            />
+            {isPlatformAdmin ? (
+              <>
+                <QuickActionBtn
+                  title="竞拍治理"
+                  icon={Gavel}
+                  onClick={() => navigate("/auction/list")}
+                />
+                <QuickActionBtn
+                  title="直播间治理"
+                  icon={Video}
+                  onClick={() => navigate("/live/list")}
+                />
+                <QuickActionBtn
+                  title="用户管理"
+                  icon={Users}
+                  onClick={() => navigate("/system/permission/users")}
+                />
+                <QuickActionBtn
+                  title="用户统计"
+                  icon={BarChart3}
+                  onClick={() => navigate("/stats/user")}
+                />
+              </>
+            ) : (
+              <>
+                <QuickActionBtn
+                  title="发布商品"
+                  icon={PlusCircle}
+                  onClick={() => navigate("/goods/create")}
+                />
+                <QuickActionBtn
+                  title="竞拍管理"
+                  icon={Gavel}
+                  onClick={() => navigate("/auction/list")}
+                />
+                <QuickActionBtn
+                  title="直播间管理"
+                  icon={Video}
+                  onClick={() => navigate("/live/list")}
+                />
+                <QuickActionBtn
+                  title="生成报表"
+                  icon={BarChart3}
+                  onClick={() => navigate("/stats/revenue")}
+                />
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
