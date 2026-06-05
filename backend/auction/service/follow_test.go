@@ -104,6 +104,22 @@ func TestFollowService_Follow(t *testing.T) {
 
 		mockDAO.AssertExpectations(t)
 	})
+
+	t.Run("查询关注状态失败时不创建新记录", func(t *testing.T) {
+		mockDAO := new(MockUserLiveStreamFollowDAO)
+		service := NewFollowService(mockDAO)
+
+		mockDAO.On("GetByUserAndLiveStream", ctx, userID, liveStreamID).
+			Return(nil, errors.New("数据库连接失败"))
+
+		follow, err := service.Follow(ctx, userID, liveStreamID)
+
+		assert.Error(t, err)
+		assert.Nil(t, follow)
+		assert.Contains(t, err.Error(), "检查关注状态失败")
+		mockDAO.AssertNotCalled(t, "Create", mock.Anything, mock.Anything)
+		mockDAO.AssertExpectations(t)
+	})
 }
 
 // TestFollowService_Unfollow 测试取消关注功能

@@ -7,6 +7,7 @@ import (
 
 	"auction-service/dao"
 	"auction-service/model"
+	"gorm.io/gorm"
 )
 
 type FollowDAO interface {
@@ -34,7 +35,10 @@ func NewFollowService(followDAO FollowDAO) *FollowService {
 // Follow 关注直播间
 func (s *FollowService) Follow(ctx context.Context, userID, liveStreamID int64) (*model.UserLiveStreamFollow, error) {
 	// 检查是否已关注
-	existing, _ := s.followDAO.GetByUserAndLiveStream(ctx, userID, liveStreamID)
+	existing, err := s.followDAO.GetByUserAndLiveStream(ctx, userID, liveStreamID)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("检查关注状态失败: %w", err)
+	}
 	if existing != nil {
 		return existing, nil
 	}

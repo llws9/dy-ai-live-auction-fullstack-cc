@@ -130,6 +130,18 @@ func TestCleanupFailureDoesNotOverrideBusinessSuccess(t *testing.T) {
 	assert.Empty(t, report.Error)
 }
 
+func TestSeedRecordFailureIsReportedAsWarning(t *testing.T) {
+	ctx := context.Background()
+	rec := &fakeSeedRecorder{addErr: errors.New("seed store down")}
+
+	report, err := New(newFakeBiz(), &fakeInternalClient{}, rec, Config{TestID: "tj_seed_warn"}).Run(ctx, nil)
+	require.NoError(t, err)
+
+	assert.True(t, report.AllOK)
+	assert.Contains(t, report.Warnings, "seed record failed: product 101: seed store down")
+	assert.Empty(t, report.Error)
+}
+
 func TestReminderStepUsesFollowAndFollowStatusOnly(t *testing.T) {
 	ctx := context.Background()
 	biz := newFakeBiz()
@@ -364,10 +376,14 @@ type fakeSeedRecorder struct {
 	added         []string
 	deleteCalled  bool
 	deletedTestID string
+	addErr        error
 	deleteErr     error
 }
 
 func (f *fakeSeedRecorder) Add(_ context.Context, _ string, kind string, refID int64) error {
+	if f.addErr != nil {
+		return f.addErr
+	}
 	f.added = append(f.added, kind+":"+itoa(refID))
 	return nil
 }

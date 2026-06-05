@@ -148,9 +148,31 @@ function latestSnapshot(input: BuildDemoTheaterModelInput): DemoSnapshot | undef
   const fromHistory = [...input.history]
     .reverse()
     .map((message) => message.metrics?.demo_snapshot)
-    .find(Boolean) as DemoSnapshot | undefined;
+    .find(isDemoSnapshot);
 
-  return input.report?.demo_snapshot || fromHistory;
+  return isDemoSnapshot(input.report?.demo_snapshot) ? input.report.demo_snapshot : fromHistory;
+}
+
+function isDemoSnapshot(value: unknown): value is DemoSnapshot {
+  if (!value || typeof value !== 'object') return false;
+  const snapshot = value as Record<string, unknown>;
+  return (
+    optionalString(snapshot.current_price) &&
+    optionalString(snapshot.leader_label) &&
+    optionalNumber(snapshot.bid_count) &&
+    optionalNumber(snapshot.order_count) &&
+    optionalNumber(snapshot.stock_before) &&
+    optionalNumber(snapshot.stock_after) &&
+    optionalString(snapshot.highlighted_event)
+  );
+}
+
+function optionalString(value: unknown): boolean {
+  return value === undefined || typeof value === 'string';
+}
+
+function optionalNumber(value: unknown): boolean {
+  return value === undefined || typeof value === 'number';
 }
 
 function resolveStage(input: BuildDemoTheaterModelInput): DemoStage {

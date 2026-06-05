@@ -57,6 +57,29 @@ describe('demoTheater', () => {
     expect(model.events[model.events.length - 1]?.title).toBe('点天灯触发');
   });
 
+  it('ignores malformed demo snapshot metrics', () => {
+    const model = buildDemoTheaterModel({
+      ...baseInput(),
+      connected: true,
+      testID: 'tj_bad_snapshot',
+      progress: 50,
+      step: 'auction_bid',
+      history: [
+        progress('tj_bad_snapshot', 50, 'auction_bid', {
+          demo_snapshot: {
+            current_price: 110,
+            leader_label: ['买家 2001'],
+            bid_count: '1',
+          },
+        }),
+      ],
+    });
+
+    expect(model.currentPrice).toBe('待启动');
+    expect(model.leaderLabel).toBe('等待领先者');
+    expect(model.bidCount).toBe(0);
+  });
+
   it('shows success conclusions from report', () => {
     const report: UserJourneyReport = {
       test_run_id: 'tj_done',

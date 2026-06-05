@@ -37,7 +37,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-06 03:00` |
+| Last Updated | `2026-06-06 03:16` |
 
 ## Task Matrix
 
@@ -379,6 +379,16 @@
 | restart current `test-service` from `backend/test`, then `POST /api/test/user-journey` | `UserJourney` completes with `demo_snapshot` | `completed; test_id=b6b891a4-4a8a-4d90-bd2a-40e0107f0629; ResultJSON includes demo_snapshot and fixed_price_purchase ok` | `passed` |
 | `cd backend/test && go test ./scenario/user_journey -count=1` | Fresh final verification after state update | `ok test-service/scenario/user_journey 0.397s` | `passed` |
 | `POST /api/test/user-journey` final live smoke via gateway | Fresh final live verification | `completed; test_id=ed81aaf1-5c59-4ef6-8ec9-dd0fcc263ead; all_ok=true; fixed_price_item_id=992524; order_id=10; demo_snapshot present` | `passed` |
+| `cd backend/auction && go test ./service -run TestFollowService_Follow -count=1` after review test-only change | TDD RED: DB query error in `Follow` must not continue to `Create` | `FAIL auction-service/service`; unexpected `Create` call after `GetByUserAndLiveStream` returned DB error | `red_passed` |
+| `cd backend/test && go test ./scenario/user_journey -run TestSeedRecordFailureIsReportedAsWarning -count=1` after review test-only change | TDD RED: seed recorder failure should be visible in report warnings | `FAIL`; `Warnings` did not contain `seed record failed: product 101: seed store down` | `red_passed` |
+| `cd frontend/test-dashboard && npm run test:run -- src/pages/demoTheater.test.ts` after review test-only change | TDD RED: malformed `demo_snapshot` metrics must be ignored | `FAIL`; malformed numeric `current_price` rendered as `¥110` | `red_passed` |
+| `cd backend/auction && go test ./service -run TestFollowService_Follow -count=1` | `PASS` | `ok auction-service/service 0.614s` | `passed` |
+| `cd backend/test && go test ./scenario/user_journey -run TestSeedRecordFailureIsReportedAsWarning -count=1` | `PASS` | `ok test-service/scenario/user_journey 0.588s` | `passed` |
+| `cd frontend/test-dashboard && npm run test:run -- src/pages/demoTheater.test.ts` | `PASS` | `1 file passed; 6 tests passed` | `passed` |
+| `cd backend/auction && go test ./service -count=1` | `PASS` | `ok auction-service/service 5.400s` | `passed` |
+| `cd backend/test && go test ./scenario/user_journey -count=1` | `PASS` | `ok test-service/scenario/user_journey 1.383s` | `passed` |
+| `cd frontend/test-dashboard && npm run test:run` | `PASS` | `3 files passed; 11 tests passed; React Router v7 future flag warnings only` | `passed` |
+| `cd frontend/test-dashboard && npm run build` | `PASS` | `tsc && vite build succeeded; existing Vite chunk size warning only` | `passed` |
 
 **Modified Files**
 
@@ -387,6 +397,8 @@
 - `backend/auction/service/follow.go`
 - `backend/test/scenario/user_journey/orchestrator.go`
 - `backend/test/scenario/user_journey/orchestrator_test.go`
+- `frontend/test-dashboard/src/pages/demoTheater.ts`
+- `frontend/test-dashboard/src/pages/demoTheater.test.ts`
 
 **Smoke Notes**
 
@@ -409,6 +421,7 @@
 - Completion summary: T005 automated backend/frontend verification passed; `/test/screen` route and API startup path were smoke-tested; live UserJourney completion now passes.
 - Follow-up at `2026-06-06 02:46 CST`: fixed the latest `reminder follow` HTTP 500 blocker with TDD; duplicate follow is idempotent and does not call `Create`; `go test ./service -run TestFollowService_Follow -count=1` and `go test ./service -count=1` pass in `backend/auction`.
 - Follow-up at `2026-06-06 03:00 CST`: fixed the subsequent `fixed_price_purchase` HTTP 400 blocker with TDD; UUID idempotency key regression passes; live `UserJourney` smoke completed with `demo_snapshot`.
+- Follow-up review fix at `2026-06-06 03:16 CST`: verified and fixed 3 code-review findings with TDD: `Follow` now fails closed on DB query errors, seed recorder failures are visible in report warnings, and malformed `demo_snapshot` metrics are ignored by the frontend model.
 - First response line used: `当前分支/worktree：feat/test-dashboard-demo-theater @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-test-dashboard-demo-theater`
 
 

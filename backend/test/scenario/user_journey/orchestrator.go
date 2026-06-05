@@ -182,7 +182,7 @@ func (o *Orchestrator) prepare(ctx context.Context, rep *Report, p runner.Progre
 		return o.recordAndError(rep, p, 10, "prepare", product, "prepare create_product failed")
 	}
 	rep.ProductID = product.RefID
-	o.addSeed(ctx, "product", rep.ProductID)
+	o.addSeed(ctx, rep, "product", rep.ProductID)
 
 	live := o.biz.CreateLiveStream(ctx, merchant, auction.CreateLiveStreamReq{
 		Name:        fmt.Sprintf("TEST_USER_JOURNEY_%s 直播间", o.cfg.TestID),
@@ -193,7 +193,7 @@ func (o *Orchestrator) prepare(ctx context.Context, rep *Report, p runner.Progre
 		return o.recordAndError(rep, p, 10, "prepare", live, "prepare create_live_stream failed")
 	}
 	rep.LiveStreamID = live.RefID
-	o.addSeed(ctx, "live_stream", rep.LiveStreamID)
+	o.addSeed(ctx, rep, "live_stream", rep.LiveStreamID)
 
 	rule := o.biz.CreateAuctionRule(ctx, merchant, rep.ProductID, auction.CreateAuctionRuleReq{
 		StartPrice:         100,
@@ -217,7 +217,7 @@ func (o *Orchestrator) prepare(ctx context.Context, rep *Report, p runner.Progre
 		return o.recordAndError(rep, p, 10, "prepare", auctionStep, "prepare create_auction failed")
 	}
 	rep.AuctionID = auctionStep.RefID
-	o.addSeed(ctx, "auction", rep.AuctionID)
+	o.addSeed(ctx, rep, "auction", rep.AuctionID)
 
 	fixed := o.biz.CreateFixedPriceItem(ctx, merchant, auction.CreateFixedPriceItemReq{
 		LiveStreamID: rep.LiveStreamID,
@@ -229,7 +229,7 @@ func (o *Orchestrator) prepare(ctx context.Context, rep *Report, p runner.Progre
 		return o.recordAndError(rep, p, 10, "prepare", fixed, "prepare create_fixed_price_item failed")
 	}
 	rep.FixedPriceItemID = fixed.RefID
-	o.addSeed(ctx, "fixed_price_item", rep.FixedPriceItemID)
+	o.addSeed(ctx, rep, "fixed_price_item", rep.FixedPriceItemID)
 
 	_, topUp := o.internal.TopUpUserBalance(ctx, buyer.UserID, o.cfg.BalanceTopUpAmount)
 	if !topUp.OK {
@@ -326,7 +326,7 @@ func (o *Orchestrator) fixedPricePurchase(ctx context.Context, rep *Report, p ru
 		s.StockAfter = rep.StockAfter
 		s.HighlightedEvent = "order"
 	})
-	o.addSeed(ctx, "order", rep.OrderID)
+	o.addSeed(ctx, rep, "order", rep.OrderID)
 	o.record(rep, p, 75, auction.StepResult{Step: "fixed_price_purchase", OK: true, RefID: rep.OrderID})
 	return nil
 }
@@ -397,9 +397,11 @@ func (o *Orchestrator) updateDemoSnapshot(rep *Report, mutate func(*DemoSnapshot
 	mutate(rep.DemoSnapshot)
 }
 
-func (o *Orchestrator) addSeed(ctx context.Context, kind string, refID int64) {
+func (o *Orchestrator) addSeed(ctx context.Context, rep *Report, kind string, refID int64) {
 	if o.rec != nil && refID > 0 {
-		_ = o.rec.Add(ctx, o.cfg.TestID, kind, refID)
+		if err := o.rec.Add(ctx, o.cfg.TestID, kind, refID); err != nil {
+			rep.Warnings = append(rep.Warnings, fmt.Sprintf("seed record failed: %s %d: %s", kind, refID, err.Error()))
+		}
 	}
 }
 
