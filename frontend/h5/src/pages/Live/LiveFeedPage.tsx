@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { auctionApi, liveStreamApi, productReminderApi } from '@/services/api';
 import { useAuth } from '@/store/authContext';
+import { trackBusinessEvent } from '@/utils/businessEvent';
 import { useToast } from '../../components/Toast';
 import LiveEmptyState, { UpcomingAuctionItem } from './LiveEmptyState';
 import LiveRoomSlide from './LiveRoomSlide';
@@ -245,7 +246,17 @@ const LiveFeedPage: React.FC = () => {
     navigate(`/detail?id=${auctionId}`);
   };
 
-  const handleSubscribeReminder = async (productId?: number) => {
+  const trackReminderSubscribe = (productId: number, auctionId?: number) => {
+    if (typeof auctionId !== 'number') return;
+    trackBusinessEvent('reminder_subscribe', {
+      source: 'live_room',
+      auctionId,
+      productId,
+      metadata: { entry: 'live_empty_upcoming' },
+    });
+  };
+
+  const handleSubscribeReminder = async (productId?: number, auctionId?: number) => {
     if (!productId) return;
     if (!isAuthenticated) {
       navigate(`/login?redirect=${encodeURIComponent('/live')}`);
@@ -260,6 +271,7 @@ const LiveFeedPage: React.FC = () => {
         next.add(productId);
         return next;
       });
+      trackReminderSubscribe(productId, auctionId);
     } catch (error: any) {
       if (typeof error?.message === 'string' && error.message.includes('已经订阅')) {
         setSubscribedProductIds((current) => {
@@ -267,6 +279,7 @@ const LiveFeedPage: React.FC = () => {
           next.add(productId);
           return next;
         });
+        trackReminderSubscribe(productId, auctionId);
       } else {
         showToast('订阅失败，请稍后重试');
       }

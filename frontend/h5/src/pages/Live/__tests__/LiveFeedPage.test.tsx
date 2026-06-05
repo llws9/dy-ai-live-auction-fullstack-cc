@@ -17,6 +17,11 @@ jest.mock('@/services/api', () => ({
   },
 }));
 
+const mockTrackBusinessEvent = jest.fn();
+jest.mock('@/utils/businessEvent', () => ({
+  trackBusinessEvent: (...args: any[]) => mockTrackBusinessEvent(...args),
+}));
+
 const mockAuthState = { isAuthenticated: true, loading: false };
 jest.mock('@/store/authContext', () => ({ useAuth: () => mockAuthState }));
 
@@ -250,7 +255,7 @@ describe('LiveFeedPage feed 骨架', () => {
       page_size: 20,
     });
     mockedAuctionApi.list.mockResolvedValue({
-      list: [{ id: 701, product_id: 501, product_name: '青花瓷瓶', start_time: '2026-06-05T21:00:00Z', start_price: '1200.00' }],
+      list: [{ id: 21, product_id: 501, product_name: '青花瓷瓶', start_time: '2026-06-05T21:00:00Z', start_price: '1200.00' }],
       total: 1,
       page: 1,
       page_size: 2,
@@ -262,6 +267,87 @@ describe('LiveFeedPage feed 骨架', () => {
 
     await waitFor(() => expect(mockedProductReminderApi.subscribe).toHaveBeenCalledWith(501));
     expect(screen.getByTestId('location')).toHaveTextContent('/live');
+    expect(mockTrackBusinessEvent).toHaveBeenCalledWith('reminder_subscribe', {
+      source: 'live_room',
+      auctionId: 21,
+      productId: 501,
+      metadata: { entry: 'live_empty_upcoming' },
+    });
+  });
+
+  it('后端返回已经订阅时按订阅成功上报同一个提醒事件', async () => {
+    mockedLiveStreamApi.list.mockResolvedValue({
+      list: [{ id: 3, name: '空直播间', current_auction_id: null }],
+      total: 1,
+      page: 1,
+      page_size: 20,
+    });
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [{ id: 21, product_id: 501, product_name: '青花瓷瓶', start_time: '2026-06-05T21:00:00Z', start_price: '1200.00' }],
+      total: 1,
+      page: 1,
+      page_size: 2,
+    });
+    mockedProductReminderApi.subscribe.mockRejectedValue(new Error('已经订阅'));
+
+    renderFeed('/live');
+
+    fireEvent.click(await screen.findByRole('button', { name: '订阅' }));
+
+    expect(await screen.findByRole('button', { name: '已订阅' })).toBeDisabled();
+    expect(mockTrackBusinessEvent).toHaveBeenCalledWith('reminder_subscribe', {
+      source: 'live_room',
+      auctionId: 21,
+      productId: 501,
+      metadata: { entry: 'live_empty_upcoming' },
+    });
+  });
+
+  it('未登录点击订阅跳转登录且不上报提醒事件', async () => {
+    mockAuthState.isAuthenticated = false;
+    mockedLiveStreamApi.list.mockResolvedValue({
+      list: [{ id: 3, name: '空直播间', current_auction_id: null }],
+      total: 1,
+      page: 1,
+      page_size: 20,
+    });
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [{ id: 21, product_id: 501, product_name: '青花瓷瓶', start_time: '2026-06-05T21:00:00Z', start_price: '1200.00' }],
+      total: 1,
+      page: 1,
+      page_size: 2,
+    });
+
+    renderFeed('/live');
+
+    fireEvent.click(await screen.findByRole('button', { name: '订阅' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/login?redirect=%2Flive'));
+    expect(mockedProductReminderApi.subscribe).not.toHaveBeenCalled();
+    expect(mockTrackBusinessEvent).not.toHaveBeenCalled();
+  });
+
+  it('订阅真实失败时不上报提醒事件', async () => {
+    mockedLiveStreamApi.list.mockResolvedValue({
+      list: [{ id: 3, name: '空直播间', current_auction_id: null }],
+      total: 1,
+      page: 1,
+      page_size: 20,
+    });
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [{ id: 21, product_id: 501, product_name: '青花瓷瓶', start_time: '2026-06-05T21:00:00Z', start_price: '1200.00' }],
+      total: 1,
+      page: 1,
+      page_size: 2,
+    });
+    mockedProductReminderApi.subscribe.mockRejectedValue(new Error('network failed'));
+
+    renderFeed('/live');
+
+    fireEvent.click(await screen.findByRole('button', { name: '订阅' }));
+
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith('订阅失败，请稍后重试'));
+    expect(mockTrackBusinessEvent).not.toHaveBeenCalled();
   });
 
   it.each(['Enter', ' '] as const)('订阅按钮获得焦点后按 %s 不触发预告行详情跳转', async (key) => {
