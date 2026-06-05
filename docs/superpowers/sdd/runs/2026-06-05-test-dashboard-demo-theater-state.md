@@ -37,7 +37,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `1` |
-| Last Updated | `2026-06-06 02:16` |
+| Last Updated | `2026-06-06 02:25` |
 
 ## Task Matrix
 
@@ -286,6 +286,8 @@
 
 - `frontend/test-dashboard/src/pages/Screen.tsx`
 - `frontend/test-dashboard/src/pages/Screen.test.tsx`
+- `frontend/test-dashboard/src/hooks/usePollReport.ts`
+- `frontend/test-dashboard/src/hooks/usePollReport.test.ts`
 - `docs/superpowers/sdd/runs/2026-06-05-test-dashboard-demo-theater-state.md`
 
 **Verification Evidence**
@@ -298,17 +300,24 @@
 | `cd frontend/test-dashboard && npm run test:run -- src/pages/Screen.test.tsx` | `FAIL review regression before fix` | `FAIL: connect-triggered rerender called disconnect twice because cleanup depended on unstable pollReport object` | `red_passed` |
 | `cd frontend/test-dashboard && npm run test:run -- src/pages/Screen.test.tsx` | `PASS after stable cleanup dependencies` | `PASS: 1 file, 4 tests` | `passed` |
 | `cd frontend/test-dashboard && npm run test:run && npm run build` | `PASS after review fix` | `PASS: 2 test files, 9 tests; build succeeded with existing Vite large chunk warning` | `passed` |
+| `cd frontend/test-dashboard && npm run test:run -- src/hooks/usePollReport.test.ts` | `FAIL quality review regression before fix` | `FAIL: failed report with empty ResultJSON did not call onError(ErrorMsg)` | `red_passed` |
+| `cd frontend/test-dashboard && npm run test:run -- src/hooks/usePollReport.test.ts` | `PASS after hook terminal-state fix` | `PASS: 1 file, 1 test` | `passed` |
+| `cd frontend/test-dashboard && npm run test:run -- src/pages/Screen.test.tsx src/hooks/usePollReport.test.ts` | `PASS related tests` | `PASS: 2 files, 5 tests` | `passed` |
+| `cd frontend/test-dashboard && npm run test:run && npm run build` | `PASS after quality review fix` | `PASS: 3 test files, 10 tests; build succeeded with existing Vite large chunk warning` | `passed` |
 
 **Modified Files**
 
 - `frontend/test-dashboard/src/pages/Screen.tsx`
 - `frontend/test-dashboard/src/pages/Screen.test.tsx`
+- `frontend/test-dashboard/src/hooks/usePollReport.ts`
+- `frontend/test-dashboard/src/hooks/usePollReport.test.ts`
 - `docs/superpowers/sdd/runs/2026-06-05-test-dashboard-demo-theater-state.md`
 
 **Commits**
 
 - `782280f3 feat(test-dashboard): turn screen into demo theater`
 - `53de612a fix(test-dashboard): keep demo theater polling alive`
+- `pending: fix(test-dashboard): surface failed poll reports as errors`
 
 **Review Notes**
 
@@ -317,6 +326,8 @@
 - UI exposes required judge-facing texts and keeps technical report drill-down via `/test/report/<test_id>`.
 - Review fix: `usePollReport()` returns a new wrapper object each render, so cleanup now depends on stable `cancelPollingReport` instead of the unstable `pollReport` object.
 - Regression test covers `connect()` updating WS store and triggering rerender without calling `disconnect()` or canceling report polling.
+- Quality review scope expansion: root cause is in shared hook `frontend/test-dashboard/src/hooks/usePollReport.ts`, not `Screen.tsx`; expanding T004 allowed files is required so Screen can enter failed state when `UserJourney` returns failed/cancelled with empty `ResultJSON`.
+- Hook fix: `failed` and `cancelled` terminal reports now call `onError(ErrorMsg || status)` before any JSON parse; only `completed` parses `ResultJSON`.
 
 **Risks / Blockers**
 

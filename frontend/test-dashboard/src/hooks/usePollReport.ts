@@ -32,7 +32,13 @@ export function usePollReport<T = unknown>(
         attemptRef.current += 1;
         try {
           const t = await getReport(testID);
-          if (t.Status === 'completed' || t.Status === 'failed' || t.Status === 'cancelled') {
+          if (t.Status === 'failed' || t.Status === 'cancelled') {
+            const msg = t.ErrorMsg || t.Status;
+            if (onError) onError(msg);
+            else onResult({ error: msg } as T);
+            return;
+          }
+          if (t.Status === 'completed') {
             try {
               onResult(JSON.parse(t.ResultJSON || '{}') as T);
             } catch {
