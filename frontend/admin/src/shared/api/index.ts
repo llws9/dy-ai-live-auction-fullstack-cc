@@ -85,6 +85,8 @@ export const liveStreamApi = {
 
   get: (id: number) => get<any>(`/live-streams/${id}`),
 
+  adminGet: (id: number) => get<any>(`/admin/live-streams/${id}`),
+
   getUserFollows: (params?: { page?: number; page_size?: number }) => {
     const query = buildQuery(params || {});
     return get<{ list: any[]; total: number }>(`/user/followed-live-streams?${query}`);

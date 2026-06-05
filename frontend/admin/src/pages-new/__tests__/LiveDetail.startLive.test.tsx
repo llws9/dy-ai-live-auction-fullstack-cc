@@ -10,6 +10,7 @@ jest.mock('@/shared/api', () => ({
   },
   liveStreamApi: {
     get: jest.fn(),
+    adminGet: jest.fn(),
     start: jest.fn(),
     end: jest.fn(),
     ban: jest.fn(),
@@ -26,7 +27,7 @@ function renderLiveDetailAs(role: number, liveStream: Record<string, unknown>) {
     created_at: '2026-06-05T00:00:00Z',
   }));
 
-  (liveStreamApi.get as jest.Mock).mockResolvedValue(liveStream);
+  (liveStreamApi.adminGet as jest.Mock).mockResolvedValue(liveStream);
 
   return render(
     <MemoryRouter initialEntries={['/live/detail?id=501']}>
@@ -64,6 +65,8 @@ describe('LiveDetail start live', () => {
     });
 
     expect(await screen.findByRole('heading', { name: '直播间控制台' })).toBeInTheDocument();
+    expect(liveStreamApi.adminGet).toHaveBeenCalledWith(501);
+    expect(liveStreamApi.get).not.toHaveBeenCalled();
     expect(screen.getByText(/当前版本支持通过 PC 管理端发起直播状态/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /开始直播/ }));

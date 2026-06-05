@@ -272,20 +272,28 @@
 | `2026-06-05 21:35` | `不新增后端接口，沿用 liveStreamApi.start` | 后端已实现 merchant-only + owner 校验 | 本次只改 Admin 前端 | `main-agent` |
 | `2026-06-05 21:35` | `Dashboard 不再承载开播入口` | 设计要求从手输 ID 迁移到当前直播间详情页 | Dashboard 测试需更新 | `main-agent` |
 | `2026-06-05 21:35` | `商家关闭直播不进入本期` | 现状 end/ban 均为管理员治理接口 | 本次不改后端权限 | `main-agent` |
+| `2026-06-05 21:48` | `LiveDetail 读取详情改用 admin scoped endpoint` | 管理端详情页应在读取阶段执行 owner scope，避免商家看到非本人直播间的开播动作 | 新增 `liveStreamApi.adminGet` 并更新 `LiveDetail` | `main-agent` |
 
 ## API Contract Changes
 
 | API / Field | Change | Frontend Impact | Backend Impact | Docs Updated |
 | --- | --- | --- | --- | --- |
 | `POST /api/v1/live-streams/:id/start` | `no contract change` | `LiveDetail` uses existing API for current live stream | none | yes |
+| `GET /api/v1/admin/live-streams/:id` | `no contract change; frontend now uses existing scoped endpoint` | `LiveDetail` loads management detail through `liveStreamApi.adminGet` | none | yes |
 | `LiveStream.status` comment | add `3=已封禁` comment only | clearer frontend semantics | none | yes |
 
 ## Test Commands
 
 | Area | Command | Required | Last Result | Notes |
 | --- | --- | --- | --- | --- |
-| Frontend Admin Focused | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/LiveDetail.startLive.test.tsx src/pages-new/__tests__/Dashboard.roleVisibility.test.tsx --runInBand` | yes | `passed` | PASS: 2 suites, 4 tests |
+| Frontend Admin Focused | `cd frontend/admin && npm test -- --runTestsByPath src/pages-new/__tests__/LiveDetail.startLive.test.tsx src/pages-new/__tests__/Dashboard.roleVisibility.test.tsx src/shared/api/__tests__/liveStreamApi.test.ts --runInBand` | yes | `passed` | PASS: 3 suites, 5 tests |
 | Frontend Admin Build | `cd frontend/admin && npm run build` | yes | `passed` | PASS: `tsc && vite build` |
+
+## Code Review Fixes
+
+| Time | Finding | Fix | RED Evidence | GREEN Evidence | Files |
+| --- | --- | --- | --- | --- | --- |
+| `2026-06-05 21:48` | `LiveDetail` used public `liveStreamApi.get`, allowing merchant UI to render a start action for non-owner detail pages until backend start returned 403. | Added `liveStreamApi.adminGet(id)` for `/admin/live-streams/:id`; changed `LiveDetail` to use it; updated tests to assert admin scoped fetch and no public fetch. | `adminGet is not a function`; `LiveDetail` rendered `直播间不存在` because it still called `get`. | Focused Jest: 3 suites, 5 tests passed; Admin build passed. | `frontend/admin/src/shared/api/index.ts`, `frontend/admin/src/shared/api/__tests__/liveStreamApi.test.ts`, `frontend/admin/src/pages-new/LiveDetail.tsx`, `frontend/admin/src/pages-new/__tests__/LiveDetail.startLive.test.tsx` |
 
 ## Final Review Checklist
 
@@ -306,6 +314,7 @@
 - `T001`：商家在 `LiveDetail` 对当前直播间开始直播，页面展示一期说明文案。
 - `T002`：Dashboard prompt-based 开播入口已移除。
 - `T003`：`LiveStream.status` 注释补齐 `3=已封禁`，聚焦测试与 Admin build 通过。
+- `Code Review Fix`：`LiveDetail` 改用 `/admin/live-streams/:id` 读取管理端详情，前端展示层与后端 owner scope 对齐。
 
 **未完成项**
 
@@ -313,7 +322,7 @@
 
 **验证结果**
 
-- RED 已观察；GREEN 后聚焦 Jest 测试通过；Admin build 通过。
+- RED 已观察；GREEN 后聚焦 Jest 测试通过（3 suites / 5 tests）；Admin build 通过。
 
 **建议下一步**
 

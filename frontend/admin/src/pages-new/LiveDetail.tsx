@@ -27,7 +27,7 @@ export default function LiveDetail() {
     const fetchLiveStream = async () => {
       setLoading(true)
       try {
-        const data = await liveStreamApi.get(Number(liveStreamId))
+        const data = await liveStreamApi.adminGet(Number(liveStreamId))
         setLiveStream(data)
       } catch (e) {
         console.error('获取直播间详情失败:', e)
