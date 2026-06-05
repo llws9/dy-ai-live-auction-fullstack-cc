@@ -33,11 +33,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `7` |
-| Done | `2` |
+| Done | `3` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `5` |
-| Last Updated | `2026-06-05 20:47 CST` |
+| Pending | `4` |
+| Last Updated | `2026-06-05 20:57 CST` |
 
 ## Task Matrix
 
@@ -45,7 +45,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `Backend Upcoming Query Semantics` | `done` | `subagent-codex` | `W1` | `-` | `DAO upcoming filtering and ordering` | `backend/auction/dao/auction.go; backend/auction/dao/auction_current_test.go` |
 | `T002` | `Backend Handler Contract` | `done` | `subagent-codex` | `W2` | `T001` | `upcoming=true contract forwarding` | `backend/auction/handler/auction.go; backend/auction/handler/auction_list.go; backend/auction/handler/auction_list_test.go` |
-| `T003` | `H5 API Contract and Empty-State Tests` | `pending` | `unassigned` | `W3` | `T002` | `frontend API params and failing tests` | `frontend/h5/src/services/api.ts; frontend/h5/src/pages/Live/__tests__/LiveFeedPage.test.tsx` |
+| `T003` | `H5 API Contract and Empty-State Tests` | `done` | `subagent-trae` | `W3` | `T002` | `frontend API params and failing tests` | `frontend/h5/src/services/api.ts; frontend/h5/src/pages/Live/__tests__/LiveFeedPage.test.tsx` |
 | `T004` | `H5 Empty-State Component and Feed Integration` | `pending` | `unassigned` | `W4` | `T003` | `LiveEmptyState and LiveFeedPage integration` | `frontend/h5/src/pages/Live/LiveEmptyState.tsx; frontend/h5/src/pages/Live/LiveFeedPage.tsx; frontend/h5/src/pages/Live/__tests__/LiveFeedPage.test.tsx; frontend/h5/src/services/api.ts` |
 | `T005` | `Empty-State Styling and CSS Regression` | `pending` | `unassigned` | `W5` | `T004` | `CSS modules and layout CSS tests` | `frontend/h5/src/pages/Live/Live.module.css; frontend/h5/src/pages/Live/__tests__/LiveLayoutCss.test.ts` |
 | `T006` | `Business Event Reuse` | `pending` | `unassigned` | `W6` | `T004` | `reuse reminder_subscribe tracking` | `frontend/h5/src/pages/Live/LiveFeedPage.tsx; frontend/h5/src/pages/Live/__tests__/LiveFeedPage.test.tsx` |
@@ -200,10 +200,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `subagent-trae` |
+| Started At | `2026-06-05 20:52 CST` |
+| Completed At | `2026-06-05 20:57 CST` |
 | Branch | `feat/h5-live-empty-upcoming` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-live-empty-upcoming` |
 | Depends On | `T002` |
@@ -230,27 +230,35 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `TDD Red evidence` | `not_run` | `pending` |
+| `cd frontend/h5 && npm test -- LiveFeedPage.test.tsx --runInBand` | Expected red after adding frontend behavior tests, before page implementation. Failure should show `LiveFeedPage` does not call `auctionApi.list` or render upcoming empty state yet. | `FAIL src/pages/Live/__tests__/LiveFeedPage.test.tsx`; `13 total`, `9 passed`, `4 failed`; first failure: expected `auctionApi.list({ status: '0', upcoming: true, page: 1, page_size: 2 })`, actual calls `0`; DOM still shows `暂无正在竞拍的直播间`. | `red_passed` |
+| `cd frontend/h5 && npm test -- LiveFeedPage.test.tsx --runInBand` | Expected red remains after API client serialization because T004 owns `LiveFeedPage` behavior. | `FAIL src/pages/Live/__tests__/LiveFeedPage.test.tsx`; `13 total`, `9 passed`, `4 failed`; failures remain limited to upcoming empty-state behavior: no upcoming API call, no preview row, no subscribe button, no fallback link. | `expected_red_handoff` |
 
 **Modified Files**
 
-- `not_started`
+- `frontend/h5/src/services/api.ts`
+- `frontend/h5/src/pages/Live/__tests__/LiveFeedPage.test.tsx`
+- `docs/superpowers/sdd/runs/2026-06-05-h5-live-empty-upcoming-state.md`
 
 **Commits**
 
-- `not_started`
+- `pending: commit SHA is created after this state update and will be reported in the final handoff`
 
 **Review Notes**
 
-- `not_started`
+- Extended `auctionApi.list` params with `upcoming?: boolean` and serializes provided booleans as `upcoming=true` or `upcoming=false`.
+- Extended `LiveFeedPage.test.tsx` service mocks to include `auctionApi` and `productReminderApi`.
+- Added `useAuth` mock with mutable authenticated state.
+- Added `LocationProbe` via `useLocation` to assert in-memory route changes.
+- Added expected-red coverage for upcoming empty state list truncation/API contract, preview row navigation, subscribe click propagation boundary, and upcoming failure fallback.
+- Did not implement `LiveEmptyState`, did not edit `LiveFeedPage.tsx`, and did not add CSS; behavior remains T004 scope.
 
 **Risks / Blockers**
 
-- `none`
+- Expected red tests intentionally block green verification until T004 implements `LiveEmptyState` and `LiveFeedPage` integration.
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `当前分支/worktree：feat/h5-live-empty-upcoming @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-live-empty-upcoming`
 
 ### T004 - `H5 Empty-State Component and Feed Integration`
 
