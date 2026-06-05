@@ -38,6 +38,7 @@ const navItems: NavItem[] = [
     title: "商品管理",
     path: "/goods",
     icon: Package,
+    allowedRoles: [MERCHANT_ROLE],
     children: [
       { title: "商品列表", path: "/goods/list" },
       { title: "创建商品", path: "/goods/create", allowedRoles: [MERCHANT_ROLE] },

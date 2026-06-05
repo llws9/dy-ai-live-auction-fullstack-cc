@@ -46,7 +46,7 @@ function AppContent() {
       <Layout>
         <Routes>
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/goods/list" element={<GoodsList />} />
+          <Route path="/goods/list" element={<RoleRoute allowedRoles={[MERCHANT_ROLE]}><GoodsList /></RoleRoute>} />
           <Route path="/goods/create" element={<RoleRoute allowedRoles={[MERCHANT_ROLE]}><GoodsEdit /></RoleRoute>} />
           <Route path="/goods/edit" element={<RoleRoute allowedRoles={[MERCHANT_ROLE]}><GoodsEdit /></RoleRoute>} />
           <Route path="/auction/list" element={<AuctionList />} />

@@ -18,8 +18,20 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { TrendingUp, Users, DollarSign, Gavel, Loader2 } from "lucide-react"
 import { statisticsApi } from "@/shared/api"
+import { useLocation, useNavigate } from "react-router-dom"
+
+type StatsTab = "auction" | "revenue" | "user"
+
+function tabFromPath(pathname: string): StatsTab {
+  if (pathname.endsWith("/stats/revenue")) return "revenue"
+  if (pathname.endsWith("/stats/user")) return "user"
+  return "auction"
+}
 
 export default function Stats() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const activeTab = tabFromPath(location.pathname)
   const [loading, setLoading] = React.useState(true)
   const [auctionData, setAuctionData] = React.useState<any[]>([])
   const [revenueData, setRevenueData] = React.useState<any[]>([])
@@ -117,7 +129,11 @@ export default function Stats() {
         <p className="text-sm text-slate-500">多维度分析平台经营状况与用户行为</p>
       </div>
 
-      <Tabs defaultValue="auction" className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => navigate(`/stats/${value}`)}
+        className="space-y-6"
+      >
         <TabsList className="bg-white border border-slate-200 p-1 h-12">
           <TabsTrigger value="auction" className="px-8 h-10 data-[state=active]:bg-amber-500 data-[state=active]:text-[#0f172a]">竞拍统计</TabsTrigger>
           <TabsTrigger value="revenue" className="px-8 h-10 data-[state=active]:bg-amber-500 data-[state=active]:text-[#0f172a]">收入统计</TabsTrigger>

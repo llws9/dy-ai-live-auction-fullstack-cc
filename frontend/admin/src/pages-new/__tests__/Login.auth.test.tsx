@@ -94,7 +94,7 @@ describe('Login auth flow', () => {
     expect(JSON.parse(localStorage.getItem('admin_auth_user') || '{}').name).toBe('系统管理员');
   });
 
-  it('redirects authenticated users away from role-forbidden pages', async () => {
+  it('redirects authenticated users away from role-forbidden product pages', async () => {
     localStorage.setItem('admin_auth_token', 'admin-token');
     localStorage.setItem('admin_auth_user', JSON.stringify({
       id: 1003,
@@ -105,14 +105,14 @@ describe('Login auth flow', () => {
     }));
 
     render(
-      <MemoryRouter initialEntries={['/goods/create']}>
+      <MemoryRouter initialEntries={['/goods/list']}>
         <AuthProvider>
           <Routes>
             <Route
-              path="/goods/create"
+              path="/goods/list"
               element={
                 <RequireRole allowedRoles={[1]}>
-                  <h1>创建商品</h1>
+                  <h1>商品列表</h1>
                 </RequireRole>
               }
             />
@@ -123,6 +123,6 @@ describe('Login auth flow', () => {
     );
 
     expect(await screen.findByRole('heading', { name: '经营总览' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: '创建商品' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '商品列表' })).not.toBeInTheDocument();
   });
 });
