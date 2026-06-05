@@ -1,0 +1,284 @@
+observability/prometheus/prometheus.yml
+  54451a7adfd0b70d 24,39-45 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22be792ec60aa1a73a1b13","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":24},{"Range":[39,45]}]}]}
+backend/gateway/handler/business_event_test.go
+  54451a7adfd0b70d 148-171,194-298 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22be792ec60aa1a73a1b13","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[148,171]},{"Range":[194,298]}]}]}
+docker-compose.demo.yml
+  54451a7adfd0b70d 29-36,112-117 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22be792ec60aa1a73a1b13","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[29,36]},{"Range":[112,117]}]}]}
+docker-compose.yml
+  54451a7adfd0b70d 27-34,133-138 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22be792ec60aa1a73a1b13","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[27,34]},{"Range":[133,138]}]}]}
+frontend/h5/src/pages/Live/LiveRoomSlide.tsx
+  54451a7adfd0b70d 229,244 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22be792ec60aa1a73a1b13","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":229},{"Single":244}]}]}
+backend/gateway/handler/business_event.go
+  54451a7adfd0b70d 6,192,196-201,206,210 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22be792ec60aa1a73a1b13","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":6},{"Single":192},{"Range":[196,201]},{"Single":206},{"Single":210}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "fcfb1188f2a1cad3d7129b2d5e950a6a2f15e4c2",
+  "prompts": {
+    "54451a7adfd0b70d": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a21e2742ec60aa1a739e59a",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>",
+      "messages": [],
+      "total_additions": 178,
+      "total_deletions": 19,
+      "accepted_lines": 178,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "backend/gateway/handler/business_event.go": [
+      {
+        "hash": "54451a7adfd0b70d",
+        "line_ranges": [
+          {
+            "Single": 6
+          },
+          {
+            "Single": 192
+          },
+          {
+            "Range": [
+              196,
+              201
+            ]
+          },
+          {
+            "Single": 206
+          },
+          {
+            "Single": 210
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22be792ec60aa1a73a1b13",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 6
+              },
+              {
+                "Single": 192
+              },
+              {
+                "Range": [
+                  196,
+                  201
+                ]
+              },
+              {
+                "Single": 206
+              },
+              {
+                "Single": 210
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/gateway/handler/business_event_test.go": [
+      {
+        "hash": "54451a7adfd0b70d",
+        "line_ranges": [
+          {
+            "Range": [
+              148,
+              171
+            ]
+          },
+          {
+            "Range": [
+              194,
+              298
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22be792ec60aa1a73a1b13",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  148,
+                  171
+                ]
+              },
+              {
+                "Range": [
+                  194,
+                  298
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "docker-compose.demo.yml": [
+      {
+        "hash": "54451a7adfd0b70d",
+        "line_ranges": [
+          {
+            "Range": [
+              29,
+              36
+            ]
+          },
+          {
+            "Range": [
+              112,
+              117
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22be792ec60aa1a73a1b13",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  29,
+                  36
+                ]
+              },
+              {
+                "Range": [
+                  112,
+                  117
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "docker-compose.yml": [
+      {
+        "hash": "54451a7adfd0b70d",
+        "line_ranges": [
+          {
+            "Range": [
+              27,
+              34
+            ]
+          },
+          {
+            "Range": [
+              133,
+              138
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22be792ec60aa1a73a1b13",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  27,
+                  34
+                ]
+              },
+              {
+                "Range": [
+                  133,
+                  138
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frontend/h5/src/pages/Live/LiveRoomSlide.tsx": [
+      {
+        "hash": "54451a7adfd0b70d",
+        "line_ranges": [
+          {
+            "Single": 229
+          },
+          {
+            "Single": 244
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22be792ec60aa1a73a1b13",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 229
+              },
+              {
+                "Single": 244
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "observability/prometheus/prometheus.yml": [
+      {
+        "hash": "54451a7adfd0b70d",
+        "line_ranges": [
+          {
+            "Single": 24
+          },
+          {
+            "Range": [
+              39,
+              45
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22be792ec60aa1a73a1b13",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 24
+              },
+              {
+                "Range": [
+                  39,
+                  45
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "54451a7adfd0b70d": {
+      "tool": "trae",
+      "conversation_id": "6a21e2742ec60aa1a739e59a",
+      "session_id": "6a21e2742ec60aa1a739e59a",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
