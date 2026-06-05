@@ -1,14 +1,29 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import LiveFeedPage from '../LiveFeedPage';
-import { liveStreamApi } from '@/services/api';
+import { auctionApi, liveStreamApi, productReminderApi } from '@/services/api';
 
 jest.mock('@/services/api', () => ({
   liveStreamApi: {
     list: jest.fn(),
   },
+  auctionApi: {
+    list: jest.fn(),
+  },
+  productReminderApi: {
+    list: jest.fn(),
+    subscribe: jest.fn(),
+  },
 }));
+
+const mockTrackBusinessEvent = jest.fn();
+jest.mock('@/utils/businessEvent', () => ({
+  trackBusinessEvent: (...args: any[]) => mockTrackBusinessEvent(...args),
+}));
+
+const mockAuthState = { isAuthenticated: true, loading: false };
+jest.mock('@/store/authContext', () => ({ useAuth: () => mockAuthState }));
 
 const mockShowToast = jest.fn();
 jest.mock('../../../components/Toast', () => ({
@@ -27,17 +42,27 @@ jest.mock('../LiveRoomSlide', () => ({
 }));
 
 const mockedLiveStreamApi = liveStreamApi as jest.Mocked<typeof liveStreamApi>;
+const mockedAuctionApi = auctionApi as jest.Mocked<typeof auctionApi>;
+const mockedProductReminderApi = productReminderApi as jest.Mocked<typeof productReminderApi>;
+
+const LocationProbe = () => {
+  const location = useLocation();
+  return <div data-testid="location">{location.pathname}{location.search}</div>;
+};
 
 const renderFeed = (entry: string) =>
   render(
     <MemoryRouter initialEntries={[entry]} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
       <LiveFeedPage />
+      <LocationProbe />
     </MemoryRouter>
   );
 
 describe('LiveFeedPage feed 骨架', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAuthState.isAuthenticated = true;
+    mockAuthState.loading = false;
     mockedLiveStreamApi.list.mockResolvedValue({
       list: [
         { id: 3, name: '房间A', current_auction_id: 11 },
@@ -47,6 +72,9 @@ describe('LiveFeedPage feed 骨架', () => {
       page: 1,
       page_size: 20,
     });
+    mockedAuctionApi.list.mockResolvedValue({ list: [], total: 0, page: 1, page_size: 2 });
+    mockedProductReminderApi.list.mockResolvedValue({ items: [] });
+    mockedProductReminderApi.subscribe.mockResolvedValue({ product_id: 501 });
   });
 
   it('按 URL id 初始定位到对应房间（id=4 → 房间B）', async () => {
@@ -78,10 +106,11 @@ describe('LiveFeedPage feed 骨架', () => {
     expect(slide).toHaveTextContent('slide:4:12:undefined:true');
   });
 
-  it('list 为空时展示空态文案', async () => {
+  it('list 为空时展示可行动空态文案', async () => {
     mockedLiveStreamApi.list.mockResolvedValue({ list: [], total: 0, page: 1, page_size: 20 });
     renderFeed('/live');
-    await waitFor(() => expect(screen.getByText('暂无直播中房间')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('当前没有竞拍直播')).toBeInTheDocument());
+    expect(screen.getByRole('link', { name: '去首页看拍品' })).toHaveAttribute('href', '/');
   });
 
   it('手指上滑超过阈值切到下一个房间并 replace URL', async () => {
@@ -165,5 +194,197 @@ describe('LiveFeedPage feed 骨架', () => {
     await waitFor(() =>
       expect(screen.getByTestId('live-room-slide')).toHaveTextContent('slide:4:12:12:true')
     );
+  });
+
+  it('无正在竞拍直播间且 upcoming 返回 3 条时，展示预告空态且只展示最近 2 条', async () => {
+    mockedLiveStreamApi.list.mockResolvedValue({
+      list: [{ id: 3, name: '空直播间', current_auction_id: null }],
+      total: 1,
+      page: 1,
+      page_size: 20,
+    });
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [
+        { id: 701, product_id: 501, product_name: '青花瓷瓶', start_time: '2026-06-05T21:00:00Z', start_price: '1200.00' },
+        { id: 702, product_id: 502, product_name: '紫砂壶', start_time: '2026-06-05T22:00:00Z', start_price: '800.00' },
+        { id: 703, product_id: 503, product_name: '翡翠手镯', start_time: '2026-06-05T23:00:00Z', start_price: '3000.00' },
+      ],
+      total: 3,
+      page: 1,
+      page_size: 2,
+    });
+
+    renderFeed('/live');
+
+    await waitFor(() =>
+      expect(mockedAuctionApi.list).toHaveBeenCalledWith({ status: '0', upcoming: true, page: 1, page_size: 2 })
+    );
+    expect(await screen.findByText('下一场竞拍正在准备')).toBeInTheDocument();
+    expect(screen.getByText('即将开播')).toBeInTheDocument();
+    expect(screen.getByText('青花瓷瓶')).toBeInTheDocument();
+    expect(screen.getByText('紫砂壶')).toBeInTheDocument();
+    expect(screen.queryByText('翡翠手镯')).not.toBeInTheDocument();
+  });
+
+  it('点击预告行非按钮区域跳转到竞拍详情页', async () => {
+    mockedLiveStreamApi.list.mockResolvedValue({
+      list: [{ id: 3, name: '空直播间', current_auction_id: null }],
+      total: 1,
+      page: 1,
+      page_size: 20,
+    });
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [{ id: 701, product_id: 501, product_name: '青花瓷瓶', start_time: '2026-06-05T21:00:00Z', start_price: '1200.00' }],
+      total: 1,
+      page: 1,
+      page_size: 2,
+    });
+
+    renderFeed('/live');
+
+    fireEvent.click(await screen.findByText('青花瓷瓶'));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/detail?id=701'));
+  });
+
+  it('点击订阅按钮调用商品提醒接口且不跳转', async () => {
+    mockedLiveStreamApi.list.mockResolvedValue({
+      list: [{ id: 3, name: '空直播间', current_auction_id: null }],
+      total: 1,
+      page: 1,
+      page_size: 20,
+    });
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [{ id: 21, product_id: 501, product_name: '青花瓷瓶', start_time: '2026-06-05T21:00:00Z', start_price: '1200.00' }],
+      total: 1,
+      page: 1,
+      page_size: 2,
+    });
+
+    renderFeed('/live');
+
+    fireEvent.click(await screen.findByRole('button', { name: '订阅' }));
+
+    await waitFor(() => expect(mockedProductReminderApi.subscribe).toHaveBeenCalledWith(501));
+    expect(await screen.findByRole('button', { name: '已订阅' })).toBeDisabled();
+    expect(screen.getByTestId('location')).toHaveTextContent('/live');
+    expect(mockTrackBusinessEvent).toHaveBeenCalledWith('reminder_subscribe', {
+      source: 'live_room',
+      auctionId: 21,
+      productId: 501,
+      metadata: { entry: 'live_empty_upcoming' },
+    });
+  });
+
+  it('订阅接口错误时不依赖错误文案做已订阅判断', async () => {
+    mockedLiveStreamApi.list.mockResolvedValue({
+      list: [{ id: 3, name: '空直播间', current_auction_id: null }],
+      total: 1,
+      page: 1,
+      page_size: 20,
+    });
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [{ id: 21, product_id: 501, product_name: '青花瓷瓶', start_time: '2026-06-05T21:00:00Z', start_price: '1200.00' }],
+      total: 1,
+      page: 1,
+      page_size: 2,
+    });
+    mockedProductReminderApi.subscribe.mockRejectedValue(new Error('已经订阅'));
+
+    renderFeed('/live');
+
+    fireEvent.click(await screen.findByRole('button', { name: '订阅' }));
+
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith('订阅失败，请稍后重试'));
+    expect(screen.getByRole('button', { name: '订阅' })).toBeEnabled();
+    expect(mockTrackBusinessEvent).not.toHaveBeenCalled();
+  });
+
+  it('未登录点击订阅跳转登录且不上报提醒事件', async () => {
+    mockAuthState.isAuthenticated = false;
+    mockedLiveStreamApi.list.mockResolvedValue({
+      list: [{ id: 3, name: '空直播间', current_auction_id: null }],
+      total: 1,
+      page: 1,
+      page_size: 20,
+    });
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [{ id: 21, product_id: 501, product_name: '青花瓷瓶', start_time: '2026-06-05T21:00:00Z', start_price: '1200.00' }],
+      total: 1,
+      page: 1,
+      page_size: 2,
+    });
+
+    renderFeed('/live');
+
+    fireEvent.click(await screen.findByRole('button', { name: '订阅' }));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/login?redirect=%2Flive'));
+    expect(mockedProductReminderApi.subscribe).not.toHaveBeenCalled();
+    expect(mockTrackBusinessEvent).not.toHaveBeenCalled();
+  });
+
+  it('订阅真实失败时不上报提醒事件', async () => {
+    mockedLiveStreamApi.list.mockResolvedValue({
+      list: [{ id: 3, name: '空直播间', current_auction_id: null }],
+      total: 1,
+      page: 1,
+      page_size: 20,
+    });
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [{ id: 21, product_id: 501, product_name: '青花瓷瓶', start_time: '2026-06-05T21:00:00Z', start_price: '1200.00' }],
+      total: 1,
+      page: 1,
+      page_size: 2,
+    });
+    mockedProductReminderApi.subscribe.mockRejectedValue(new Error('network failed'));
+
+    renderFeed('/live');
+
+    fireEvent.click(await screen.findByRole('button', { name: '订阅' }));
+
+    await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith('订阅失败，请稍后重试'));
+    expect(mockTrackBusinessEvent).not.toHaveBeenCalled();
+  });
+
+  it.each(['Enter', ' '] as const)('订阅按钮获得焦点后按 %s 不触发预告行详情跳转', async (key) => {
+    mockedLiveStreamApi.list.mockResolvedValue({
+      list: [{ id: 3, name: '空直播间', current_auction_id: null }],
+      total: 1,
+      page: 1,
+      page_size: 20,
+    });
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [{ id: 701, product_id: 501, product_name: '青花瓷瓶', start_time: '2026-06-05T21:00:00Z', start_price: '1200.00' }],
+      total: 1,
+      page: 1,
+      page_size: 2,
+    });
+
+    renderFeed('/live');
+
+    const subscribeButton = await screen.findByRole('button', { name: '订阅' });
+    subscribeButton.focus();
+    expect(subscribeButton).toHaveFocus();
+
+    fireEvent.keyDown(subscribeButton, { key });
+
+    expect(screen.getByTestId('location')).toHaveTextContent('/live');
+  });
+
+  it('upcoming 接口失败时降级展示去首页看拍品入口', async () => {
+    mockedLiveStreamApi.list.mockResolvedValue({
+      list: [{ id: 3, name: '空直播间', current_auction_id: null }],
+      total: 1,
+      page: 1,
+      page_size: 20,
+    });
+    mockedAuctionApi.list.mockRejectedValue(new Error('upcoming failed'));
+
+    renderFeed('/live');
+
+    expect(await screen.findByText('当前没有竞拍直播')).toBeInTheDocument();
+    const homeLink = screen.getByRole('link', { name: '去首页看拍品' });
+    expect(homeLink).toHaveAttribute('href', '/');
   });
 });

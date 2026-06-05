@@ -335,9 +335,10 @@ export const productReminderApi = {
 // 竞拍 API
 export const auctionApi = {
   // 获取竞拍列表
-  list: (params?: { status?: string; page?: number; page_size?: number; category_id?: number }) => {
+  list: (params?: { status?: string; upcoming?: boolean; page?: number; page_size?: number; category_id?: number }) => {
     const query = new URLSearchParams();
     if (params?.status) query.set('status', params.status);
+    if (params?.upcoming !== undefined) query.set('upcoming', String(params.upcoming));
     if (params?.page) query.set('page', String(params.page));
     if (params?.page_size) query.set('page_size', String(params.page_size));
     if (params?.category_id) query.set('category_id', String(params.category_id));

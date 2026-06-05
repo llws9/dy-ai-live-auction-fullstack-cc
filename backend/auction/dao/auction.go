@@ -232,7 +232,11 @@ func (d *AuctionDAO) ListWithFilters(ctx context.Context, filters *AuctionFilter
 	query := d.db.WithContext(ctx).Model(&model.Auction{})
 
 	// 状态筛选
-	if filters.Status != nil {
+	if filters.Upcoming {
+		query = query.
+			Where("status = ?", model.AuctionStatusPending).
+			Where("start_time > ?", time.Now())
+	} else if filters.Status != nil {
 		query = query.Where("status = ?", *filters.Status)
 	}
 
@@ -270,7 +274,13 @@ func (d *AuctionDAO) ListWithFilters(ctx context.Context, filters *AuctionFilter
 
 	// 分页查询
 	offset := (page - 1) * pageSize
-	err := orderByAuctionFeedPriority(query).
+	listQuery := query
+	if filters.Upcoming {
+		listQuery = listQuery.Order("start_time ASC, id ASC")
+	} else {
+		listQuery = orderByAuctionFeedPriority(listQuery)
+	}
+	err := listQuery.
 		Offset(offset).
 		Limit(pageSize).
 		Find(&auctions).Error
@@ -316,6 +326,7 @@ type AuctionFilters struct {
 	LiveStreamID   *int64
 	LiveStreamName string
 	Search         string
+	Upcoming       bool
 	// ProductIDs 仅在 category_id 过滤时由 handler 层装填，
 	// 来自 product-service /internal/products?category_id= 的 id 列表（spec C §5.2）。
 	// 为空切片表示无命中（应由调用方提前短路），nil 表示未过滤。

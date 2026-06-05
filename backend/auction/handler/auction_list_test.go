@@ -189,6 +189,31 @@ func TestBuildAuctionListResponse(t *testing.T) {
 		assert.Equal(t, int64(0), items[0].Product.ID)
 		assert.Equal(t, "", items[0].Product.Name)
 	})
+
+	t.Run("upcoming flag is forwarded to auction filters", func(t *testing.T) {
+		now := time.Now()
+		fl := &fakeLister{
+			out: []model.Auction{
+				{ID: 300, ProductID: 77, Status: model.AuctionStatusPending, CurrentPrice: decimal.NewFromInt(1200), StartTime: now.Add(time.Hour), EndTime: now.Add(2 * time.Hour)},
+			},
+			outTotal: 1,
+		}
+		fp := &fakeProductClient{
+			batchOut: map[int64]client.ProductSummary{
+				77: {ID: 77, Name: "upcoming product", Images: []string{"u77"}},
+			},
+		}
+
+		items, total, err := BuildAuctionListResponse(ctx, fp, fl.List, ListParams{Upcoming: true, Page: 1, PageSize: 2})
+		require.NoError(t, err)
+		require.Equal(t, int64(1), total)
+		require.Len(t, items, 1)
+		require.NotNil(t, fl.gotFilters)
+		assert.True(t, fl.gotFilters.Upcoming)
+		assert.Nil(t, fl.gotFilters.Status)
+		assert.Equal(t, 1, fl.gotPage)
+		assert.Equal(t, 2, fl.gotPageSize)
+	})
 }
 
 // TestAuctionListResponseShape 锁定 GET /auctions 响应字段为 list（而非 items），
