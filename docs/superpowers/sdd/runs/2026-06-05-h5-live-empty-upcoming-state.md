@@ -33,17 +33,17 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `7` |
-| Done | `0` |
+| Done | `1` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `7` |
-| Last Updated | `2026-06-05 20:27` |
+| Pending | `6` |
+| Last Updated | `2026-06-05 20:37 CST` |
 
 ## Task Matrix
 
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Allowed Files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `T001` | `Backend Upcoming Query Semantics` | `pending` | `unassigned` | `W1` | `-` | `DAO upcoming filtering and ordering` | `backend/auction/dao/auction.go; backend/auction/dao/auction_current_test.go` |
+| `T001` | `Backend Upcoming Query Semantics` | `done` | `subagent-codex` | `W1` | `-` | `DAO upcoming filtering and ordering` | `backend/auction/dao/auction.go; backend/auction/dao/auction_current_test.go` |
 | `T002` | `Backend Handler Contract` | `pending` | `unassigned` | `W2` | `T001` | `upcoming=true contract forwarding` | `backend/auction/handler/auction.go; backend/auction/handler/auction_list.go; backend/auction/handler/auction_list_test.go` |
 | `T003` | `H5 API Contract and Empty-State Tests` | `pending` | `unassigned` | `W3` | `T002` | `frontend API params and failing tests` | `frontend/h5/src/services/api.ts; frontend/h5/src/pages/Live/__tests__/LiveFeedPage.test.tsx` |
 | `T004` | `H5 Empty-State Component and Feed Integration` | `pending` | `unassigned` | `W4` | `T003` | `LiveEmptyState and LiveFeedPage integration` | `frontend/h5/src/pages/Live/LiveEmptyState.tsx; frontend/h5/src/pages/Live/LiveFeedPage.tsx; frontend/h5/src/pages/Live/__tests__/LiveFeedPage.test.tsx; frontend/h5/src/services/api.ts` |
@@ -69,10 +69,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `subagent-codex` |
+| Started At | `2026-06-05 20:34 CST` |
+| Completed At | `2026-06-05 20:37 CST` |
 | Branch | `feat/h5-live-empty-upcoming` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-live-empty-upcoming` |
 | Depends On | `-` |
@@ -101,19 +101,26 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `TDD Red -> Green -> Verify evidence` | `not_run` | `pending` |
+| `cd backend/auction && go test ./dao -run TestListWithFiltersUpcomingReturnsFuturePendingByStartTime -count=1` | Compile failure containing `unknown field Upcoming in struct literal of type AuctionFilters` | `dao/auction_current_test.go:123:62: unknown field Upcoming in struct literal of type AuctionFilters`; `FAIL auction-service/dao [build failed]` | `red_passed` |
+| `cd backend/auction && go test ./dao -run 'TestListWithFiltersUpcomingReturnsFuturePendingByStartTime\|TestListOrdersByLiveUpcomingEndedPriority' -count=1` | `PASS` | `ok auction-service/dao 0.612s` | `green_passed` |
+| `gofmt -w backend/auction/dao/auction.go backend/auction/dao/auction_current_test.go` | Files formatted | exit `0` | `passed` |
+| `cd backend/auction && go test ./dao -run 'TestListWithFiltersUpcomingReturnsFuturePendingByStartTime\|TestListOrdersByLiveUpcomingEndedPriority' -count=1` | `PASS` after formatting | `ok auction-service/dao 0.343s` | `passed` |
 
 **Modified Files**
 
-- `not_started`
+- `backend/auction/dao/auction.go`
+- `backend/auction/dao/auction_current_test.go`
+- `docs/superpowers/sdd/runs/2026-06-05-h5-live-empty-upcoming-state.md`
 
 **Commits**
 
-- `not_started`
+- `pending actual SHA after commit`
 
 **Review Notes**
 
-- `not_started`
+- Added `AuctionFilters.Upcoming` and kept existing `filters.Status` behavior under the non-upcoming branch.
+- Upcoming listing uses `status = pending`, `start_time > now`, and `start_time ASC, id ASC`.
+- Existing feed-priority ordering remains on the non-upcoming path and is covered by `TestListOrdersByLiveUpcomingEndedPriority`.
 
 **Risks / Blockers**
 
@@ -121,7 +128,7 @@
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `当前分支/worktree：feat/h5-live-empty-upcoming @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-live-empty-upcoming`
 
 ### T002 - `Backend Handler Contract`
 
@@ -462,6 +469,14 @@
 
 - First response line used: `pending`
 
+
+## Cross-Task Risks / Baseline Evidence
+
+| Time | Area | Evidence | Impact | Decision |
+| --- | --- | --- | --- | --- |
+| `2026-06-05 20:32` | Backend auction baseline | `cd backend/auction && go test ./dao ./handler -count=1` failed in pre-existing `TestNotificationHandlerHotPullErrorResponseDoesNotLeakInternalDetails`; expected 500 but actual 200 | Broad `./handler` package is not clean before this feature | Use targeted `./dao` and `TestBuildAuctionListResponse` as task gates; record broad handler failure as unrelated baseline risk |
+| `2026-06-05 20:33` | Backend targeted baseline | `cd backend/auction && go test ./dao -count=1` passed; `cd backend/auction && go test ./handler -run TestBuildAuctionListResponse -count=1` passed | Plan-specific backend baseline is clean | Proceed with SDD |
+| `2026-06-05 20:32` | H5 targeted baseline | `cd frontend/h5 && npm test -- LiveFeedPage.test.tsx LiveLayoutCss.test.ts --runInBand` passed, 11 tests | Plan-specific frontend baseline is clean | Proceed with SDD |
 
 ## Final Review Checklist
 

@@ -103,6 +103,31 @@ func TestListOrdersByLiveUpcomingEndedPriority(t *testing.T) {
 	require.Equal(t, int64(100), got[3].ID)
 }
 
+func TestListWithFiltersUpcomingReturnsFuturePendingByStartTime(t *testing.T) {
+	db := newCurrentTestDB(t)
+	dao := NewAuctionDAO(db)
+	ctx := context.Background()
+
+	now := time.Now()
+	rows := []model.Auction{
+		{ID: 401, ProductID: 401, Status: model.AuctionStatusPending, StartTime: now.Add(3 * time.Hour), EndTime: now.Add(4 * time.Hour)},
+		{ID: 402, ProductID: 402, Status: model.AuctionStatusPending, StartTime: now.Add(30 * time.Minute), EndTime: now.Add(2 * time.Hour)},
+		{ID: 403, ProductID: 403, Status: model.AuctionStatusPending, StartTime: now.Add(-30 * time.Minute), EndTime: now.Add(time.Hour)},
+		{ID: 404, ProductID: 404, Status: model.AuctionStatusOngoing, StartTime: now.Add(15 * time.Minute), EndTime: now.Add(90 * time.Minute)},
+		{ID: 405, ProductID: 405, Status: model.AuctionStatusPending, StartTime: now.Add(time.Hour), EndTime: now.Add(2 * time.Hour)},
+	}
+	for i := range rows {
+		require.NoError(t, db.Create(&rows[i]).Error)
+	}
+
+	got, total, err := dao.ListWithFilters(ctx, &AuctionFilters{Upcoming: true}, 1, 2)
+	require.NoError(t, err)
+	require.Equal(t, int64(3), total)
+	require.Len(t, got, 2)
+	require.Equal(t, int64(402), got[0].ID)
+	require.Equal(t, int64(405), got[1].ID)
+}
+
 func TestGetPendingAuctionsToStartUsesApplicationClock(t *testing.T) {
 	db := newCurrentTestDB(t)
 	dao := NewAuctionDAO(db)
