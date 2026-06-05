@@ -30,8 +30,8 @@ interface E2EReport {
 
 const defaultForm: E2EForm = {
   seller_id: 9001,
-  bidder_ids: '2001,2002,2003',
-  subscriber_id: 3001,
+  bidder_ids: '2001',
+  subscriber_id: 0,
   start_price: 100,
   increment: 10,
   duration: 30,

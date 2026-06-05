@@ -17,6 +17,7 @@ type fakeClient struct {
 
 	// 计数 / 记录
 	createProductCalls int
+	createRuleCalls    int
 	createAuctionCalls int
 	bidCalls           int
 	subCalls           int
@@ -25,6 +26,7 @@ type fakeClient struct {
 
 	// 可注入的失败开关
 	failCreateProduct bool
+	failCreateRule    bool
 	failCreateAuction bool
 	failBidFor        map[int64]bool // userID -> 是否失败
 	subscribeFail     bool
@@ -32,6 +34,9 @@ type fakeClient struct {
 	winnerID          int64
 	currentPrice      float64
 	delayUsed         int
+	lastProductActor  auction.Actor
+	lastRuleActor     auction.Actor
+	lastAuctionActor  auction.Actor
 
 	orders []auction.Order
 }
@@ -46,19 +51,40 @@ func newFakeClient() *fakeClient {
 }
 
 func (f *fakeClient) CreateProduct(ctx context.Context, userID int64, req auction.CreateProductReq) auction.StepResult {
+	return f.CreateProductAs(ctx, auction.Actor{UserID: userID, Role: auction.RoleUser}, req)
+}
+
+func (f *fakeClient) CreateProductAs(ctx context.Context, actor auction.Actor, req auction.CreateProductReq) auction.StepResult {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.createProductCalls++
+	f.lastProductActor = actor
 	if f.failCreateProduct {
 		return auction.StepResult{Step: "create_product", OK: false, Message: "stub fail"}
 	}
 	return auction.StepResult{Step: "create_product", OK: true, RefID: 9001, StatusCode: 200, DurationMs: 1}
 }
 
+func (f *fakeClient) CreateAuctionRule(ctx context.Context, actor auction.Actor, productID int64, req auction.CreateAuctionRuleReq) auction.StepResult {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.createRuleCalls++
+	f.lastRuleActor = actor
+	if f.failCreateRule {
+		return auction.StepResult{Step: "create_auction_rule", OK: false, Message: "stub fail"}
+	}
+	return auction.StepResult{Step: "create_auction_rule", OK: true, RefID: productID, StatusCode: 200, DurationMs: 1}
+}
+
 func (f *fakeClient) CreateAuction(ctx context.Context, userID int64, req auction.CreateAuctionReq) auction.StepResult {
+	return f.CreateAuctionAs(ctx, auction.Actor{UserID: userID, Role: auction.RoleUser}, req)
+}
+
+func (f *fakeClient) CreateAuctionAs(ctx context.Context, actor auction.Actor, req auction.CreateAuctionReq) auction.StepResult {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.createAuctionCalls++
+	f.lastAuctionActor = actor
 	if f.failCreateAuction {
 		return auction.StepResult{Step: "create_auction", OK: false, Message: "stub fail"}
 	}
@@ -184,8 +210,17 @@ func TestOrchestrator_HappyPath(t *testing.T) {
 	if !report.AllOK {
 		t.Fatalf("expected AllOK=true, got steps=%+v", report.Steps)
 	}
-	if fc.createProductCalls != 1 || fc.createAuctionCalls != 1 {
-		t.Fatalf("setup not called once: product=%d auction=%d", fc.createProductCalls, fc.createAuctionCalls)
+	if fc.createProductCalls != 1 || fc.createRuleCalls != 1 || fc.createAuctionCalls != 1 {
+		t.Fatalf("setup not called once: product=%d rule=%d auction=%d", fc.createProductCalls, fc.createRuleCalls, fc.createAuctionCalls)
+	}
+	if fc.lastProductActor.UserID != 2001 || fc.lastProductActor.Role != auction.RoleMerchant {
+		t.Fatalf("product must be created as merchant seller, got %+v", fc.lastProductActor)
+	}
+	if fc.lastRuleActor.UserID != 2001 || fc.lastRuleActor.Role != auction.RoleMerchant {
+		t.Fatalf("auction rule must be created as merchant seller, got %+v", fc.lastRuleActor)
+	}
+	if fc.lastAuctionActor.UserID != 2001 || fc.lastAuctionActor.Role != auction.RoleMerchant {
+		t.Fatalf("auction must be created as merchant seller, got %+v", fc.lastAuctionActor)
 	}
 	if fc.bidCalls != len(o.cfg.BidderIDs) {
 		t.Fatalf("expected %d bids, got %d", len(o.cfg.BidderIDs), fc.bidCalls)
@@ -200,7 +235,7 @@ func TestOrchestrator_HappyPath(t *testing.T) {
 		t.Fatalf("seed records too few: %+v", rec.added)
 	}
 	// 必须包含某些关键步骤
-	wantSteps := []string{"create_product", "create_auction", "wait_started", "bid", "wait_ended", "find_orders"}
+	wantSteps := []string{"create_product", "create_auction_rule", "create_auction", "wait_started", "bid", "wait_ended", "find_orders"}
 	for _, w := range wantSteps {
 		if !contains(em.events, w) {
 			t.Fatalf("emitter missing step %q in %v", w, em.events)
@@ -242,10 +277,13 @@ func TestOrchestrator_SetupFailure(t *testing.T) {
 	}
 }
 
-// TestOrchestrator_VerifyFailure: 验证阶段订单数 != 1 → AllOK=false 但 cleanup 仍执行
+// TestOrchestrator_VerifyFailure: 验证阶段订单数 > 1 → AllOK=false 但 cleanup 仍执行
 func TestOrchestrator_VerifyFailure(t *testing.T) {
 	fc := newFakeClient()
-	fc.orders = []auction.Order{} // 0 单
+	fc.orders = []auction.Order{
+		{ID: 6001, AuctionID: 8001, WinnerID: 1001, FinalPrice: 199.0, Status: 1},
+		{ID: 6002, AuctionID: 8001, WinnerID: 1001, FinalPrice: 199.0, Status: 1},
+	}
 	rec := &fakeRecorder{}
 	em := &fakeEmitter{}
 
