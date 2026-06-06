@@ -33,7 +33,7 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `9` |
-| Done | `0` |
+| Done | `1` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Review | `1` |
@@ -44,7 +44,7 @@
 
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Allowed Files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `T1` | `Product Publish 只做 Draft → Published` | `review` | `implementer` | `W1` | `-` | `Task 1` | `backend/product/service/product.go; backend/product/handler/product.go; backend/product/service/product_test.go` |
+| `T1` | `Product Publish 只做 Draft → Published` | `done` | `implementer` | `W1` | `-` | `Task 1` | `backend/product/service/product.go; backend/product/handler/product.go; backend/product/service/product_test.go` |
 | `T2` | `Product Internal API 提供商品竞拍事实与 active 直播间` | `pending` | `unassigned` | `W2` | `T1` | `Task 2` | `backend/product/service/product.go; backend/product/handler/internal.go; backend/product/main.go; backend/product/handler/internal_test.go` |
 | `T3` | `Auction ProductClient 增加商品事实与直播间方法` | `pending` | `unassigned` | `W3` | `T2` | `Task 3` | `backend/auction/client/product_client.go; backend/auction/client/product_client_test.go` |
 | `T4` | `Auction DAO 支持活跃唯一查询与 MySQL 兜底索引` | `pending` | `unassigned` | `W3` | `-` | `Task 4` | `backend/auction/dao/auction.go; backend/auction/dao/auction_schema.go; backend/auction/main.go; backend/auction/dao/auction_test.go; backend/auction/dao/auction_schema_test.go` |
@@ -87,7 +87,7 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `review` |
+| Status | `done` |
 | Owner | `implementer` |
 | Started At | `2026-06-07 03:15` |
 | Completed At | `2026-06-07 03:23` |
@@ -118,6 +118,8 @@
 | `cd backend/product && go test ./service -run 'TestRunSuite/TestPublishProduct$' -count=1 -v` | `PASS legacy suite TestPublishProduct uses owned product` | `PASS: TestRunSuite/TestPublishProduct` | `pass` |
 | `cd backend/product && go test ./service ./handler -count=1` | `PASS affected regression after review fix` | `PASS: ok product-service/service 1.598s; ok product-service/handler 1.238s` | `pass` |
 | `git diff --check` | `PASS whitespace check` | `PASS` | `pass` |
+| `spec re-review` | `APPROVED` | `APPROVED: current HEAD with ownerless fail-closed remains plan/spec compliant` | `pass` |
+| `code quality re-review` | `APPROVED` | `APPROVED: OwnerID nil fail-closed covered; no Go/test/helper/range issues` | `pass` |
 
 **Review Fix**
 
