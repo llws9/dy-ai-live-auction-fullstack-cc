@@ -1,0 +1,143 @@
+backend/auction/service/statistics.go
+  6acc9bbdac1dfe60 1-79 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a23ee432ec60aa1a73a65c7","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,79]}]}]}
+docs/superpowers/sdd/runs/2026-06-06-2026-06-06-admin-auction-statistics-real-state.md
+  6acc9bbdac1dfe60 84-85,92,100-101 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a23ee432ec60aa1a73a65c7","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[84,85]},{"Single":92},{"Range":[100,101]}]}]}
+backend/auction/service/statistics_test.go
+  6acc9bbdac1dfe60 1-41 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a23ee432ec60aa1a73a65c7","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,41]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "8a4a9d95116f5e441f5cea93ab510d52030d3131",
+  "prompts": {
+    "6acc9bbdac1dfe60": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a23e94b2ec60aa1a73a6199",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>",
+      "messages": [],
+      "total_additions": 125,
+      "total_deletions": 0,
+      "accepted_lines": 125,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "backend/auction/service/statistics.go": [
+      {
+        "hash": "6acc9bbdac1dfe60",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              79
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a23ee432ec60aa1a73a65c7",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  79
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/service/statistics_test.go": [
+      {
+        "hash": "6acc9bbdac1dfe60",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              41
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a23ee432ec60aa1a73a65c7",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  41
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "docs/superpowers/sdd/runs/2026-06-06-2026-06-06-admin-auction-statistics-real-state.md": [
+      {
+        "hash": "6acc9bbdac1dfe60",
+        "line_ranges": [
+          {
+            "Range": [
+              84,
+              85
+            ]
+          },
+          {
+            "Single": 92
+          },
+          {
+            "Range": [
+              100,
+              101
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a23ee432ec60aa1a73a65c7",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  84,
+                  85
+                ]
+              },
+              {
+                "Single": 92
+              },
+              {
+                "Range": [
+                  100,
+                  101
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "6acc9bbdac1dfe60": {
+      "tool": "trae",
+      "conversation_id": "6a23e94b2ec60aa1a73a6199",
+      "session_id": "6a23e94b2ec60aa1a73a6199",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
