@@ -214,6 +214,49 @@ func TestOrderHandler_GetUserHistory_ReturnsProductImage(t *testing.T) {
 	assert.Len(t, body.List, 1)
 	assert.Equal(t, "山海鎏金香炉", body.List[0]["product_name"])
 	assert.Equal(t, "https://cdn.example.com/products/incense-burner.jpg", body.List[0]["product_image"])
+	assert.EqualValues(t, model.OrderStatusPending, body.List[0]["status"])
+}
+
+func TestOrderHandler_GetUserHistory_ReturnsWonOrderWithoutLocalAuctionBidTables(t *testing.T) {
+	h, db := newOrderHandlerWithDB(t)
+
+	ownerID := int64(3001)
+	userID := int64(1992)
+	productID := int64(995205)
+	auctionID := int64(995305)
+	assert.NoError(t, db.Create(&model.Product{
+		ID:      productID,
+		OwnerID: &ownerID,
+		Name:    "青玉兽面纹瓶",
+		Images:  model.JSONArray{"https://cdn.example.com/products/vase.jpg"},
+		Status:  model.ProductStatusPublished,
+	}).Error)
+	assert.NoError(t, db.Create(&model.Order{
+		ID:         995057,
+		AuctionID:  auctionID,
+		ProductID:  productID,
+		SellerID:   &ownerID,
+		WinnerID:   userID,
+		FinalPrice: decimal.NewFromInt(12800),
+		Status:     model.OrderStatusPending,
+	}).Error)
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/orders/history?page=1&page_size=20")
+	c.Request.Header.Set("X-User-ID", "1992")
+
+	h.GetUserHistory(context.Background(), c)
+
+	assert.Equal(t, 200, c.Response.StatusCode())
+	var body struct {
+		List []map[string]interface{} `json:"list"`
+	}
+	assert.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.Len(t, body.List, 1)
+	assert.Equal(t, "青玉兽面纹瓶", body.List[0]["product_name"])
+	assert.EqualValues(t, auctionID, body.List[0]["auction_id"])
+	assert.EqualValues(t, true, body.List[0]["is_winner"])
 }
 
 func TestOrderHandler_Summary_XUserIDContract(t *testing.T) {
