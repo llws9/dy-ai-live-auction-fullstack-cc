@@ -18,6 +18,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { TrendingUp, Users, DollarSign, Gavel, Loader2 } from "lucide-react"
 import { statisticsApi } from "@/shared/api"
+import { useAuth } from "@/shared/auth"
+import { ADMIN_ROLE } from "@/shared/auth/roles"
 import { useLocation, useNavigate } from "react-router-dom"
 
 type StatsTab = "auction" | "revenue" | "user"
@@ -49,6 +51,9 @@ export default function Stats() {
   const location = useLocation()
   const navigate = useNavigate()
   const activeTab = tabFromPath(location.pathname)
+  const { user } = useAuth()
+  const canViewUserStats = user?.role === ADMIN_ROLE
+  const visibleActiveTab = activeTab === "user" && !canViewUserStats ? "auction" : activeTab
   const [loading, setLoading] = React.useState(true)
   const [auctionData, setAuctionData] = React.useState<any[]>([])
   const [revenueData, setRevenueData] = React.useState<any[]>([])
@@ -58,6 +63,12 @@ export default function Stats() {
     revenue: { total: 0, avgPrice: 0, commission: 0 },
     user: { total: 0, active: 0, rate: 0 },
   })
+
+  React.useEffect(() => {
+    if (activeTab === "user" && !canViewUserStats) {
+      navigate("/stats/auction", { replace: true })
+    }
+  }, [activeTab, canViewUserStats, navigate])
 
   // 获取统计数据
   React.useEffect(() => {
@@ -98,20 +109,25 @@ export default function Stats() {
         }
         setIndicators(prev => ({ ...prev, revenue: revenueIndicators }))
 
-        // 获取用户统计
-        const userStats = await statisticsApi.getUserStats()
-        const normalizedUserStats = Array.isArray(userStats) ? userStats : []
-        setUserData(normalizedUserStats.slice(-7).map((item: any) => ({
-          name: new Date(item.date).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }),
-          new: item.new_users || 0,
-          active: item.active_users || 0,
-        })))
-        const userIndicators = normalizedUserStats.reduce((acc: any, item: any) => ({
-          total: acc.total + (item.new_users || 0),
-          active: item.active_users || acc.active,
-          rate: 8.4,
-        }), { total: 0, active: 0, rate: 0 })
-        setIndicators(prev => ({ ...prev, user: userIndicators }))
+        if (canViewUserStats) {
+          // 获取用户统计
+          const userStats = await statisticsApi.getUserStats()
+          const normalizedUserStats = Array.isArray(userStats) ? userStats : []
+          setUserData(normalizedUserStats.slice(-7).map((item: any) => ({
+            name: new Date(item.date).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }),
+            new: item.new_users || 0,
+            active: item.active_users || 0,
+          })))
+          const userIndicators = normalizedUserStats.reduce((acc: any, item: any) => ({
+            total: acc.total + (item.new_users || 0),
+            active: item.active_users || acc.active,
+            rate: 8.4,
+          }), { total: 0, active: 0, rate: 0 })
+          setIndicators(prev => ({ ...prev, user: userIndicators }))
+        } else {
+          setUserData([])
+          setIndicators(prev => ({ ...prev, user: { total: 0, active: 0, rate: 0 } }))
+        }
       } catch (e) {
         console.error('获取统计数据失败:', e)
         setAuctionData([])
@@ -127,7 +143,7 @@ export default function Stats() {
       }
     }
     fetchData()
-  }, [])
+  }, [canViewUserStats])
 
   return (
     <div className="space-y-6">
@@ -137,14 +153,16 @@ export default function Stats() {
       </div>
 
       <Tabs
-        value={activeTab}
+        value={visibleActiveTab}
         onValueChange={(value) => navigate(`/stats/${value}`)}
         className="space-y-6"
       >
         <TabsList className="bg-white border border-slate-200 p-1 h-12">
           <TabsTrigger value="auction" className="px-8 h-10 data-[state=active]:bg-amber-500 data-[state=active]:text-[#0f172a]">竞拍统计</TabsTrigger>
           <TabsTrigger value="revenue" className="px-8 h-10 data-[state=active]:bg-amber-500 data-[state=active]:text-[#0f172a]">收入统计</TabsTrigger>
-          <TabsTrigger value="user" className="px-8 h-10 data-[state=active]:bg-amber-500 data-[state=active]:text-[#0f172a]">用户统计</TabsTrigger>
+          {canViewUserStats ? (
+            <TabsTrigger value="user" className="px-8 h-10 data-[state=active]:bg-amber-500 data-[state=active]:text-[#0f172a]">用户统计</TabsTrigger>
+          ) : null}
         </TabsList>
 
         <TabsContent value="auction" className="space-y-6">
@@ -217,38 +235,40 @@ export default function Stats() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="user" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <StatsIndicator title="累计注册用户" value={indicators.user.total.toString()} trend="+15%" icon={Users} />
-            <StatsIndicator title="活跃用户 (MAU)" value={indicators.user.active.toString()} trend="+22%" icon={TrendingUp} />
-            <StatsIndicator title="付费转化率" value={`${indicators.user.rate}%`} trend="+1%" icon={TrendingUp} />
-          </div>
-          <Card className="border-slate-200">
-            <CardHeader>
-              <CardTitle className="text-lg">用户增长与活跃</CardTitle>
-              <CardDescription>近期每日新增用户与活跃用户趋势</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[400px]">
-              {loading ? (
-                <div className="flex items-center justify-center h-full">
-                  <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={userData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                    <YAxis axisLine={false} tickLine={false} />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="active" name="活跃用户" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="new" name="新增用户" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {canViewUserStats ? (
+          <TabsContent value="user" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <StatsIndicator title="累计注册用户" value={indicators.user.total.toString()} trend="+15%" icon={Users} />
+              <StatsIndicator title="活跃用户 (MAU)" value={indicators.user.active.toString()} trend="+22%" icon={TrendingUp} />
+              <StatsIndicator title="付费转化率" value={`${indicators.user.rate}%`} trend="+1%" icon={TrendingUp} />
+            </div>
+            <Card className="border-slate-200">
+              <CardHeader>
+                <CardTitle className="text-lg">用户增长与活跃</CardTitle>
+                <CardDescription>近期每日新增用户与活跃用户趋势</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[400px]">
+                {loading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={userData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                      <YAxis axisLine={false} tickLine={false} />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="active" name="活跃用户" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4 }} />
+                      <Line type="monotone" dataKey="new" name="新增用户" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        ) : null}
       </Tabs>
     </div>
   )
