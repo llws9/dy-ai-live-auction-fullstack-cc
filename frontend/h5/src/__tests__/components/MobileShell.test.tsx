@@ -3,6 +3,7 @@ import { Link, MemoryRouter } from 'react-router-dom';
 import MobileContainer from '../../components/MobileShell/MobileContainer';
 import BottomNav from '../../components/MobileShell/BottomNav';
 import { useFeatureVal } from '../../hooks/useExperiment';
+import { useTouchpointNotifications } from '../../hooks/useTouchpointNotifications';
 import { notificationApi } from '../../services/notification';
 import { useAuth } from '../../store/authContext';
 import { ThemeProvider } from '../../store/themeContext';
@@ -38,6 +39,11 @@ const mockGetPendingLiveReminder = notificationApi.getPendingLiveReminder as jes
 const mockUseFeatureVal = useFeatureVal as jest.MockedFunction<typeof useFeatureVal>;
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockTrackEvent = trackEvent as jest.MockedFunction<typeof trackEvent>;
+
+function NotificationMenuBadge() {
+  const { unreadTotal } = useTouchpointNotifications();
+  return <span aria-label="个人页消息通知未读数">{unreadTotal}</span>;
+}
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void;
@@ -154,6 +160,30 @@ describe('MobileShell', () => {
         countBucket: '6_10',
       })
     );
+  });
+
+  it('deduplicates touchpoint summary for profile content and bottom nav', async () => {
+    mockGetTouchpointSummary.mockResolvedValue({
+      unreadTotal: 10,
+      pendingPayment: 1,
+      wonNotPaid: 0,
+      outbid: 9,
+      endingSoon: 0,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/profile']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <NotificationMenuBadge />
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByLabelText('个人页消息通知未读数')).toHaveTextContent('10');
+    expect(await screen.findByLabelText('10 条待处理提醒')).toHaveTextContent('10');
+    expect(mockGetTouchpointSummary).toHaveBeenCalledTimes(1);
   });
 
   it('refreshes bottom nav badge when notification summary is invalidated', async () => {
