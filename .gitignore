@@ -1,5 +1,6 @@
 .ttadk/
 .superpowers/brainstorm/
+.worktrees/
 
 # Local workspace/runtime artifacts
 .tmp/
