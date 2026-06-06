@@ -84,6 +84,45 @@ func (d *AuctionDAO) GetByProductID(ctx context.Context, productID int64) (*mode
 	return &auction, nil
 }
 
+// GetActiveByProductID returns the latest active auction for a product.
+func (d *AuctionDAO) GetActiveByProductID(ctx context.Context, productID int64) (*model.Auction, error) {
+	var auction model.Auction
+	err := d.db.WithContext(ctx).
+		Where("product_id = ? AND status IN ?", productID, []model.AuctionStatus{
+			model.AuctionStatusPending,
+			model.AuctionStatusOngoing,
+			model.AuctionStatusDelayed,
+		}).
+		Order("id DESC").
+		First(&auction).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &auction, nil
+}
+
+// GetLatestTerminalByProductID returns the latest ended or cancelled auction for a product.
+func (d *AuctionDAO) GetLatestTerminalByProductID(ctx context.Context, productID int64) (*model.Auction, error) {
+	var auction model.Auction
+	err := d.db.WithContext(ctx).
+		Where("product_id = ? AND status IN ?", productID, []model.AuctionStatus{
+			model.AuctionStatusEnded,
+			model.AuctionStatusCancelled,
+		}).
+		Order("end_time DESC, id DESC").
+		First(&auction).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &auction, nil
+}
+
 // Update 更新竞拍
 func (d *AuctionDAO) Update(ctx context.Context, auction *model.Auction) error {
 	return d.db.WithContext(ctx).Save(auction).Error

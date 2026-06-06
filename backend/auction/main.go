@@ -85,6 +85,9 @@ func main() {
 	); err != nil {
 		log.Printf("Warning: AutoMigrate failed (tables may already exist): %v", err)
 	}
+	if err := dao.EnsureAuctionActiveProductUniqueIndex(db); err != nil {
+		log.Printf("Warning: ensure active product unique index failed: %v", err)
+	}
 
 	// 初始化 DAO 层
 	auctionDAO := dao.NewAuctionDAO(db)
