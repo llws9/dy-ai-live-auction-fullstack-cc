@@ -33,10 +33,10 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `9` |
-| Done | `2` |
+| Done | `3` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Review | `1` |
+| Review | `0` |
 | Pending | `6` |
 | Last Updated | `2026-06-07 04:19` |
 
@@ -46,7 +46,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T1` | `Product Publish 只做 Draft → Published` | `done` | `implementer` | `W1` | `-` | `Task 1` | `backend/product/service/product.go; backend/product/handler/product.go; backend/product/service/product_test.go` |
 | `T2` | `Product Internal API 提供商品竞拍事实与 active 直播间` | `done` | `implementer` | `W2` | `T1` | `Task 2` | `backend/product/service/product.go; backend/product/handler/internal.go; backend/product/main.go; backend/product/handler/internal_test.go` |
-| `T3` | `Auction ProductClient 增加商品事实与直播间方法` | `review` | `implementer` | `W3` | `T2` | `Task 3` | `backend/auction/client/product_client.go; backend/auction/client/product_client_test.go` |
+| `T3` | `Auction ProductClient 增加商品事实与直播间方法` | `done` | `implementer` | `W3` | `T2` | `Task 3` | `backend/auction/client/product_client.go; backend/auction/client/product_client_test.go` |
 | `T4` | `Auction DAO 支持活跃唯一查询与 MySQL 兜底索引` | `pending` | `unassigned` | `W3` | `-` | `Task 4` | `backend/auction/dao/auction.go; backend/auction/dao/auction_schema.go; backend/auction/main.go; backend/auction/dao/auction_test.go; backend/auction/dao/auction_schema_test.go` |
 | `T5` | `AuctionService 创建竞拍 Fail-closed 校验` | `pending` | `unassigned` | `W4` | `T4` | `Task 5` | `backend/auction/service/auction.go; backend/auction/service/auction_create_test.go` |
 | `T6` | `Auction Create Handler 编排 product-service 与业务错误码` | `pending` | `unassigned` | `W5` | `T3,T5` | `Task 6` | `backend/auction/handler/auction.go; backend/auction/handler/auction_create_test.go` |
@@ -220,7 +220,7 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `review` |
+| Status | `done` |
 | Owner | `implementer` |
 | Started At | `2026-06-07 04:01` |
 | Completed At | `2026-06-07 04:04` |
@@ -252,6 +252,8 @@
 | `cd backend/auction && go test ./client -count=1` | Client package regression passes after review fix | PASS: `ok auction-service/client 0.564s` | `pass` |
 | `cd backend/auction && go test ./... -count=1` | Auction-service full regression passes after review fix | PASS: all auction-service packages passed | `pass` |
 | `git diff --check` | No whitespace errors after review fix | PASS: exit 0 | `pass` |
+| `spec re-review` | `APPROVED` | `APPROVED: client contract, fake sync, error-path tests, and state evidence satisfy Task 3` | `pass` |
+| `code quality re-review` | `APPROVED` | `APPROVED: error branches covered; implementation drains/closes body; fake sync minimal` | `pass` |
 
 **Spec Review Fix**
 
