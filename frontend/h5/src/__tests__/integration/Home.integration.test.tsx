@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import HomePage from '@/pages/Home';
 import { AuthProvider } from '@/store/authContext';
@@ -8,6 +8,9 @@ import { auctionApi, productApi } from '@/services/api';
 jest.mock('@/services/api', () => ({
   auctionApi: {
     list: jest.fn(),
+  },
+  followApi: {
+    getFollowedLiveStreams: jest.fn(),
   },
   productApi: {
     listCategories: jest.fn(),
@@ -119,9 +122,9 @@ describe('Home Page Integration', () => {
 
     // Click "收藏" tab
     const followingTab = screen.getByRole('button', { name: '收藏' });
-    followingTab.click();
+    fireEvent.click(followingTab);
 
-    expect(await screen.findByText('暂无收藏竞拍')).toBeInTheDocument();
+    expect(await screen.findByText('暂无收藏直播间')).toBeInTheDocument();
   });
 
   it('displays empty state when no auctions', async () => {

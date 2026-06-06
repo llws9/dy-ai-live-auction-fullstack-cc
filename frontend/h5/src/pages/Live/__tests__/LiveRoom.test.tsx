@@ -195,7 +195,8 @@ describe('LiveRoom migration', () => {
     await waitFor(() => expect(mockedBidApi.placeBid).toHaveBeenCalledWith(5, 1300));
     // 出价成功后 sheet 自动收起，重新展开以校验排行已刷新
     fireEvent.click(screen.getByRole('button', { name: '出价' }));
-    expect(await screen.findByText('测试用户')).toBeInTheDocument();
+    expect(await screen.findByText('我自己 (当前领先)')).toBeInTheDocument();
+    expect(screen.getAllByText('¥1,300').length).toBeGreaterThan(0);
   });
 
   it('shows a bid success flair after normal bid succeeds and closes the bid sheet', async () => {
