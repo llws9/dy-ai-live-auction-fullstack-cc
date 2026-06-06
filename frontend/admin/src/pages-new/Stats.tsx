@@ -54,6 +54,10 @@ export default function Stats() {
   const { user } = useAuth()
   const canViewUserStats = user?.role === ADMIN_ROLE
   const visibleActiveTab = activeTab === "user" && !canViewUserStats ? "auction" : activeTab
+  const scopeLabel = canViewUserStats ? "全平台维度" : "商家维度"
+  const scopeDescription = canViewUserStats
+    ? "当前统计覆盖平台内全部商家的经营数据"
+    : "当前统计仅覆盖你名下的商品、竞拍和订单数据"
   const [loading, setLoading] = React.useState(true)
   const [auctionData, setAuctionData] = React.useState<any[]>([])
   const [revenueData, setRevenueData] = React.useState<any[]>([])
@@ -74,8 +78,7 @@ export default function Stats() {
   React.useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
-      try {
-        // 获取竞拍统计
+      const fetchAuctionStats = async () => {
         const auctionStats = await statisticsApi.getAuctionStats(getDefaultAuctionRange())
         const normalizedAuctionStats = Array.isArray(auctionStats) ? auctionStats : []
         setAuctionData(normalizedAuctionStats.map((item: any) => ({
@@ -93,8 +96,9 @@ export default function Stats() {
           ...prev,
           auction: { total: totalAuctionCount, rate: avgSuccessRate, avgBids },
         }))
+      }
 
-        // 获取收入统计
+      const fetchRevenueStats = async () => {
         const revenueStats = await statisticsApi.getRevenueStats({ group_by: 'month' })
         const normalizedRevenueStats = Array.isArray(revenueStats) ? revenueStats : []
         setRevenueData(normalizedRevenueStats.map((item: any) => ({
@@ -108,9 +112,10 @@ export default function Stats() {
           commission: totalRevenue * 0.05,
         }
         setIndicators(prev => ({ ...prev, revenue: revenueIndicators }))
+      }
 
+      const fetchUserStats = async () => {
         if (canViewUserStats) {
-          // 获取用户统计
           const userStats = await statisticsApi.getUserStats()
           const normalizedUserStats = Array.isArray(userStats) ? userStats : []
           setUserData(normalizedUserStats.slice(-7).map((item: any) => ({
@@ -128,28 +133,46 @@ export default function Stats() {
           setUserData([])
           setIndicators(prev => ({ ...prev, user: { total: 0, active: 0, rate: 0 } }))
         }
-      } catch (e) {
-        console.error('获取统计数据失败:', e)
-        setAuctionData([])
-        setRevenueData([])
-        setUserData([])
-        setIndicators({
-          auction: { total: 0, rate: 0, avgBids: 0 },
-          revenue: { total: 0, avgPrice: 0, commission: 0 },
-          user: { total: 0, active: 0, rate: 0 },
-        })
-      } finally {
-        setLoading(false)
       }
+
+      await Promise.all([
+        fetchAuctionStats().catch((e) => {
+          console.error('获取竞拍统计失败:', e)
+          setAuctionData([])
+          setIndicators(prev => ({ ...prev, auction: { total: 0, rate: 0, avgBids: 0 } }))
+        }),
+        fetchRevenueStats().catch((e) => {
+          console.error('获取收入统计失败:', e)
+          setRevenueData([])
+          setIndicators(prev => ({ ...prev, revenue: { total: 0, avgPrice: 0, commission: 0 } }))
+        }),
+        fetchUserStats().catch((e) => {
+          console.error('获取用户统计失败:', e)
+          setUserData([])
+          setIndicators(prev => ({ ...prev, user: { total: 0, active: 0, rate: 0 } }))
+        }),
+      ]).finally(() => {
+        setLoading(false)
+      })
     }
     fetchData()
   }, [canViewUserStats])
 
+  const hasAuctionChartData = auctionData.some((item) => (item.count || 0) > 0 || (item.rate || 0) > 0)
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">数据统计</h1>
-        <p className="text-sm text-slate-500">多维度分析平台经营状况与用户行为</p>
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">数据统计</h1>
+          <p className="text-sm text-slate-500">多维度分析平台经营状况与用户行为</p>
+        </div>
+        <div className="flex flex-col items-start md:items-end gap-1">
+          <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+            {scopeLabel}
+          </Badge>
+          <p className="text-xs text-slate-500">{scopeDescription}</p>
+        </div>
       </div>
 
       <Tabs
@@ -173,15 +196,22 @@ export default function Stats() {
           </div>
           <Card className="border-slate-200">
             <CardHeader>
-              <CardTitle className="text-lg">竞拍热度分析</CardTitle>
-              <CardDescription>本周每日竞拍场次与成功率走势</CardDescription>
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <CardTitle className="text-lg">竞拍热度分析</CardTitle>
+                  <CardDescription>本周每日竞拍场次与成功率走势</CardDescription>
+                </div>
+                <Badge variant="outline" className="border-slate-200 text-slate-600">
+                  {scopeLabel}
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent className="h-[400px]">
               {loading ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
                 </div>
-              ) : (
+              ) : hasAuctionChartData ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={auctionData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -193,6 +223,11 @@ export default function Stats() {
                     <Bar dataKey="rate" name="成功率 (%)" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-center">
+                  <p className="text-base font-medium text-slate-700">暂无竞拍数据</p>
+                  <p className="mt-2 text-sm text-slate-500">当前统计周期内没有竞拍场次，图表为空不是渲染失败。</p>
+                </div>
               )}
             </CardContent>
           </Card>

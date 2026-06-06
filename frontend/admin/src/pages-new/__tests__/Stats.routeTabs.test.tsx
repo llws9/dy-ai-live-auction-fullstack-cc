@@ -22,8 +22,8 @@ jest.mock('recharts', () => ({
 jest.mock('@/shared/api', () => ({
   statisticsApi: {
     getAuctionStats: jest.fn(() => new Promise(() => {})),
-    getRevenueStats: jest.fn(),
-    getUserStats: jest.fn(),
+    getRevenueStats: jest.fn(() => new Promise(() => {})),
+    getUserStats: jest.fn(() => new Promise(() => {})),
   },
 }));
 
@@ -61,6 +61,7 @@ describe('Stats route tabs', () => {
 
     expect(screen.getByRole('tab', { name: '收入统计' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: '竞拍统计' })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getAllByText('全平台维度').length).toBeGreaterThan(0);
   });
 
   it('activates the user tab when the current route is /stats/user', () => {
@@ -86,5 +87,6 @@ describe('Stats route tabs', () => {
     expect(screen.queryByRole('tab', { name: '用户统计' })).not.toBeInTheDocument();
     expect(screen.getByRole('tab', { name: '竞拍统计' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: '收入统计' })).toBeInTheDocument();
+    expect(screen.getAllByText('商家维度').length).toBeGreaterThan(0);
   });
 });

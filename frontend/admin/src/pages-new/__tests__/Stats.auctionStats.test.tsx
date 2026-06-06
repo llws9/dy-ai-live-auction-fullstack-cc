@@ -94,6 +94,29 @@ describe('Stats auction statistics', () => {
     expect(screen.getByText('0.0%')).toBeInTheDocument();
   });
 
+  it('keeps auction chart data when revenue statistics API fails', async () => {
+    mockedStatisticsApi.getAuctionStats.mockResolvedValue([
+      { date: '2026-06-01', auction_count: 2, bid_count: 3, avg_price: 120, success_rate: 50 },
+    ]);
+    mockedStatisticsApi.getRevenueStats.mockRejectedValue(new Error('revenue error'));
+
+    renderStats();
+
+    await waitFor(() => expect(mockedStatisticsApi.getRevenueStats).toHaveBeenCalled());
+    expect(screen.getByTestId('bar-chart')).toHaveTextContent('"count":2');
+    expect(screen.queryByText('暂无竞拍数据')).not.toBeInTheDocument();
+  });
+
+  it('shows an explicit empty state when auction statistics has no data', async () => {
+    mockedStatisticsApi.getAuctionStats.mockResolvedValue([]);
+
+    renderStats();
+
+    await waitFor(() => expect(mockedStatisticsApi.getAuctionStats).toHaveBeenCalled());
+    expect(screen.getByText('暂无竞拍数据')).toBeInTheDocument();
+    expect(screen.getByText('当前统计周期内没有竞拍场次，图表为空不是渲染失败。')).toBeInTheDocument();
+  });
+
   it('does not call platform-only user statistics API for merchants', async () => {
     mockedUseAuth.mockReturnValue({
       user: { id: 1002, name: '商家用户', email: 'merchant@example.com', role: MERCHANT_ROLE },
