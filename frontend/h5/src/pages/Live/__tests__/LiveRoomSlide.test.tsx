@@ -243,7 +243,8 @@ describe('LiveRoomSlide', () => {
     await waitFor(() => expect(mockedBidApi.placeBid).toHaveBeenCalledWith(5, 1300));
     // 出价成功后 sheet 自动收起，重新展开以校验排行已刷新
     fireEvent.click(screen.getByRole('button', { name: '出价' }));
-    expect(await screen.findByText('测试用户')).toBeInTheDocument();
+    // 由于渲染逻辑修改，当前用户的出价在排行中会显示为 "我自己 (当前领先)"
+    expect(await screen.findByText('我自己 (当前领先)')).toBeInTheDocument();
   });
 
   it('starts sky lamp only after confirming the A+C bid drawer action', async () => {

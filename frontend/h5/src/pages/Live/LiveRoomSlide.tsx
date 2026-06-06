@@ -887,20 +887,70 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         </article>
 
         <section className={styles.rankingBlock}>
-          <h2>出价排行</h2>
-          {ranking.length === 0 ? (
-            <p className={styles.emptyText}>暂无出价记录</p>
-          ) : (
-            <div className={styles.rankingList}>
-              {ranking.slice(0, 5).map((item, index) => (
-                <div className={styles.rankingItem} key={`${item.user_id ?? item.id}-${index}`}>
-                  <span className={styles.rank}>{item.rank ?? index + 1}</span>
-                  <span className={styles.rankingName}>{item.user_name}</span>
-                  <strong>¥{formatMoney(item.amount)}</strong>
+          <div className={styles.rankingGlow}></div>
+          <h2 className={styles.rankingBlockTitle}>
+            <span className={styles.rankingTrophy}>🏆</span> 出价排行
+          </h2>
+          <div className={styles.rankingList}>
+            {[0, 1, 2].map((index) => {
+              const item = ranking[index];
+              const isFirst = index === 0;
+              const isSecond = index === 1;
+              const isEmpty = !item;
+              const isMe = isAuthenticated && item?.user_id === user?.id;
+              
+              return (
+                <div 
+                  className={`${styles.rankingItem} ${isFirst && !isEmpty ? styles.rankingItemFirst : ''} ${isEmpty ? styles.rankingItemEmpty : ''} ${isMe ? styles.rankingItemMe : ''}`} 
+                  key={item ? `${item.user_id ?? item.id}-${index}` : `empty-${index}`}
+                >
+                  <div className={styles.rankingItemLeft}>
+                    <span className={`${styles.rank} ${
+                      isFirst && !isEmpty ? styles.rankFirst : 
+                      isSecond && !isEmpty ? styles.rankSecond : 
+                      !isEmpty ? styles.rankThird :
+                      styles.rankEmpty
+                    }`}>
+                      {index + 1}
+                    </span>
+                    <span className={`${styles.rankingName} ${isEmpty ? styles.rankingNameEmpty : ''} ${isMe ? styles.rankingNameMe : ''}`}>
+                      {item ? (isMe ? '我自己 (当前领先)' : item.user_name) : '虚位以待'}
+                    </span>
+                  </div>
+                  <strong className={`${styles.rankingAmount} ${isFirst && !isEmpty ? styles.rankingAmountFirst : ''} ${isEmpty ? styles.rankingAmountEmpty : ''} ${isMe && !isFirst ? styles.rankingAmountMe : ''}`}>
+                    {item ? `¥${formatMoney(item.amount)}` : '-'}
+                  </strong>
                 </div>
-              ))}
+              );
+            })}
+          </div>
+          
+          {/* 我的出价状态 - 方案A 悬浮轻量卡片 */}
+          <div className={styles.myBidSection}>
+            <div className={styles.myBidCard}>
+              <div className={styles.myBidLeft}>
+                {isAuthenticated ? (
+                  <>
+                    <div className={styles.myBidRankCircle}>
+                      <span className={styles.myBidRank}>
+                        {ranking.findIndex(r => r.user_id === user?.id) > -1 
+                          ? ranking.findIndex(r => r.user_id === user?.id) + 1 
+                          : '-'}
+                      </span>
+                    </div>
+                    <span className={styles.myBidLabel}>当前我的排位</span>
+                  </>
+                ) : (
+                  <span className={styles.myBidLabel}>请登录后查看出价状态</span>
+                )}
+              </div>
+              <strong className={styles.myBidAmount}>
+                {isAuthenticated 
+                  ? `¥${formatMoney(ranking.find(r => r.user_id === user?.id)?.amount || 0)}` 
+                  : '-'}
+              </strong>
             </div>
-          )}
+          </div>
         </section>
 
         <section className={styles.bidBox}>

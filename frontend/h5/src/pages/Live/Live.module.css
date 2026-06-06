@@ -758,7 +758,6 @@
   font-size: 10px;
 }
 
-.rankingBlock,
 .bidBox,
 .chatBlock {
   margin-top: var(--spacing-4);
@@ -768,49 +767,254 @@
   background: var(--bg-surface);
 }
 
-.rankingBlock h2,
 .chatBlock h2 {
   margin: 0 0 var(--spacing-3);
   color: var(--text-primary);
   font-size: var(--font-size-sm);
 }
 
+/* Ranking Section - 琉璃微光风格 */
+.rankingBlock {
+  position: relative;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  padding: 16px;
+  margin: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+:global(.dark) .rankingBlock {
+  background: rgba(28, 28, 30, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.rankingGlow {
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 128px;
+  height: 128px;
+  background: rgba(255, 59, 48, 0.1);
+  border-radius: 50%;
+  filter: blur(40px);
+  z-index: 0;
+}
+
+.rankingBlockTitle {
+  position: relative;
+  z-index: 1;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rankingTrophy {
+  font-size: 20px;
+}
+
 .rankingList {
-  display: grid;
-  gap: var(--spacing-2);
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .rankingItem {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: var(--spacing-3);
-  padding: var(--spacing-2) var(--spacing-3);
-  border-radius: var(--radius-lg);
-  background: var(--bg-surface);
+  padding: 8px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.rankingItemFirst {
+  background: linear-gradient(to right, rgba(254, 240, 138, 0.3), transparent);
+}
+
+:global(.dark) .rankingItemFirst {
+  background: linear-gradient(to right, rgba(113, 63, 18, 0.3), transparent);
+}
+
+.rankingItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rankingItemEmpty {
+  opacity: 0.6;
+}
+
+.rankingItemMe {
+  box-shadow: inset 0 0 0 1px rgba(255, 59, 48, 0.3);
+  background-color: rgba(255, 59, 48, 0.05);
+}
+
+/* 呼吸闪烁动画 */
+@keyframes breatheLight {
+  0%, 100% { 
+    transform: scale(1); 
+    box-shadow: 0 4px 14px -3px rgba(250, 204, 21, 0.4); 
+  }
+  50% { 
+    transform: scale(1.15); 
+    box-shadow: 0 10px 25px -3px rgba(250, 204, 21, 0.8); 
+  }
 }
 
 .rank {
-  display: inline-flex;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-full);
-  background: #d4af37;
-  color: #111;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-bold);
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.rankFirst {
+  background-color: #facc15;
+  color: #fff;
+  animation: breatheLight 2.5s ease-in-out infinite;
+}
+
+.rankSecond {
+  background-color: #d1d5db;
+  color: #fff;
+}
+
+.rankThird {
+  background-color: #fdba74;
+  color: #fff;
+}
+
+.rankEmpty {
+  background-color: rgba(156, 163, 175, 0.2);
+  color: rgba(156, 163, 175, 0.8);
+}
+
+:global(.dark) .rankEmpty {
+  background-color: rgba(156, 163, 175, 0.1);
+  color: rgba(156, 163, 175, 0.5);
 }
 
 .rankingName {
-  flex: 1;
-  color: var(--text-primary);
-  font-size: var(--font-size-sm);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
 }
 
-.rankingItem strong {
-  color: var(--text-brand);
-  font-size: var(--font-size-sm);
+.rankingNameEmpty {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.rankingNameMe {
+  color: var(--color-primary);
+}
+
+.rankingAmount {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.rankingAmountEmpty {
+  color: var(--color-text-secondary);
+}
+
+.rankingAmountMe {
+  color: var(--color-primary);
+}
+
+.rankingAmountFirst {
+  font-size: 18px;
+  background: linear-gradient(135deg, #F9D423 0%, #FF4E50 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+:global(.dark) .rankingAmountFirst {
+  background: linear-gradient(135deg, #FFE000 0%, #799F0C 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 我的出价状态 */
+.myBidSection {
+  position: relative;
+  z-index: 1;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+:global(.dark) .myBidSection {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.myBidCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+:global(.dark) .myBidCard {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.myBidLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.myBidRankCircle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255, 59, 48, 0.2) 0%, rgba(255, 59, 48, 0.05) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.myBidRank {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.myBidLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.myBidAmount {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-primary);
 }
 
 .emptyText,
