@@ -33,10 +33,10 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `9` |
-| Done | `3` |
+| Done | `4` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Review | `1` |
+| Review | `0` |
 | Pending | `5` |
 | Last Updated | `2026-06-07 04:30` |
 
@@ -47,7 +47,7 @@
 | `T1` | `Product Publish 只做 Draft → Published` | `done` | `implementer` | `W1` | `-` | `Task 1` | `backend/product/service/product.go; backend/product/handler/product.go; backend/product/service/product_test.go` |
 | `T2` | `Product Internal API 提供商品竞拍事实与 active 直播间` | `done` | `implementer` | `W2` | `T1` | `Task 2` | `backend/product/service/product.go; backend/product/handler/internal.go; backend/product/main.go; backend/product/handler/internal_test.go` |
 | `T3` | `Auction ProductClient 增加商品事实与直播间方法` | `done` | `implementer` | `W3` | `T2` | `Task 3` | `backend/auction/client/product_client.go; backend/auction/client/product_client_test.go` |
-| `T4` | `Auction DAO 支持活跃唯一查询与 MySQL 兜底索引` | `review` | `implementer` | `W3` | `-` | `Task 4` | `backend/auction/dao/auction.go; backend/auction/dao/auction_schema.go; backend/auction/main.go; backend/auction/dao/auction_test.go; backend/auction/dao/auction_schema_test.go` |
+| `T4` | `Auction DAO 支持活跃唯一查询与 MySQL 兜底索引` | `done` | `implementer` | `W3` | `-` | `Task 4` | `backend/auction/dao/auction.go; backend/auction/dao/auction_schema.go; backend/auction/main.go; backend/auction/dao/auction_test.go; backend/auction/dao/auction_schema_test.go` |
 | `T5` | `AuctionService 创建竞拍 Fail-closed 校验` | `pending` | `unassigned` | `W4` | `T4` | `Task 5` | `backend/auction/service/auction.go; backend/auction/service/auction_create_test.go` |
 | `T6` | `Auction Create Handler 编排 product-service 与业务错误码` | `pending` | `unassigned` | `W5` | `T3,T5` | `Task 6` | `backend/auction/handler/auction.go; backend/auction/handler/auction_create_test.go` |
 | `T7` | `Product AdminList 返回派生展示状态` | `pending` | `unassigned` | `W6` | `T4` | `Task 7` | `backend/auction/handler/internal_product_auctions.go; backend/auction/main.go; backend/product/client/auction_client.go; backend/product/handler/product.go; backend/product/main.go; tests listed in plan` |
@@ -295,7 +295,7 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `review` |
+| Status | `done` |
 | Owner | `implementer` |
 | Started At | `2026-06-07 04:24` |
 | Completed At | `2026-06-07 04:30` |
@@ -320,6 +320,9 @@
 | `cd backend/auction && go test ./dao -count=1` | `PASS DAO package regression` | `PASS: ok auction-service/dao 0.413s` | `pass` |
 | `cd backend/auction && go test ./... -count=1` | `PASS auction-service regression` | `PASS: all auction-service packages passed` | `pass` |
 | `git diff --check` | `PASS whitespace check` | `PASS` | `pass` |
+| `spec review` | `APPROVED` | `APPROVED: DAO queries, MySQL helper, AutoMigrate hook, and state risk record satisfy Task 4` | `pass` |
+| `code quality review` | `APPROVED` | `APPROVED: statuses/sorting/not-found handling, sqlite skip, MySQL DDL semantics, and tests acceptable` | `pass` |
+| `scope cleanup` | `worktree clean` | `Removed uncommitted unrelated auction_result changes from isolated worktree; Task 4 commit unchanged` | `pass` |
 
 **Implementation Notes**
 
