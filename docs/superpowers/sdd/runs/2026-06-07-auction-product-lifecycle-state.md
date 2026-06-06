@@ -33,10 +33,10 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `9` |
-| Done | `1` |
+| Done | `2` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Review | `1` |
+| Review | `0` |
 | Pending | `7` |
 | Last Updated | `2026-06-07 03:54` |
 
@@ -45,7 +45,7 @@
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Allowed Files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T1` | `Product Publish 只做 Draft → Published` | `done` | `implementer` | `W1` | `-` | `Task 1` | `backend/product/service/product.go; backend/product/handler/product.go; backend/product/service/product_test.go` |
-| `T2` | `Product Internal API 提供商品竞拍事实与 active 直播间` | `review` | `implementer` | `W2` | `T1` | `Task 2` | `backend/product/service/product.go; backend/product/handler/internal.go; backend/product/main.go; backend/product/handler/internal_test.go` |
+| `T2` | `Product Internal API 提供商品竞拍事实与 active 直播间` | `done` | `implementer` | `W2` | `T1` | `Task 2` | `backend/product/service/product.go; backend/product/handler/internal.go; backend/product/main.go; backend/product/handler/internal_test.go` |
 | `T3` | `Auction ProductClient 增加商品事实与直播间方法` | `pending` | `unassigned` | `W3` | `T2` | `Task 3` | `backend/auction/client/product_client.go; backend/auction/client/product_client_test.go` |
 | `T4` | `Auction DAO 支持活跃唯一查询与 MySQL 兜底索引` | `pending` | `unassigned` | `W3` | `-` | `Task 4` | `backend/auction/dao/auction.go; backend/auction/dao/auction_schema.go; backend/auction/main.go; backend/auction/dao/auction_test.go; backend/auction/dao/auction_schema_test.go` |
 | `T5` | `AuctionService 创建竞拍 Fail-closed 校验` | `pending` | `unassigned` | `W4` | `T4` | `Task 5` | `backend/auction/service/auction.go; backend/auction/service/auction_create_test.go` |
@@ -148,7 +148,7 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `review` |
+| Status | `done` |
 | Owner | `implementer` |
 | Started At | `2026-06-07 03:43` |
 | Completed At | `2026-06-07 03:45` |
@@ -177,6 +177,8 @@
 | `cd backend/product && go test ./handler -run 'TestInternalHandler_(GetAuctionProductInfo\|GetOrCreateActiveLiveStream)' -count=1` | `PASS targeted regression after review fix` | `PASS: ok product-service/handler 0.448s` | `pass` |
 | `cd backend/product && go test ./service ./handler -count=1` | `PASS affected regression after review fix` | `PASS: ok product-service/service 0.772s; ok product-service/handler 0.634s` | `pass` |
 | `git diff --check` | `PASS whitespace check` | `PASS` | `pass` |
+| `spec re-review` | `APPROVED` | `APPROVED: auction-info/live-stream internal contracts satisfy Task 2` | `pass` |
+| `code quality re-review` | `APPROVED` | `APPROVED: 404/500 split, rule lookup failure, banned stream, route/import/test scope all acceptable` | `pass` |
 
 **Implementation Notes**
 
