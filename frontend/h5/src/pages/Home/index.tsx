@@ -565,8 +565,9 @@ const HomePage: React.FC = () => {
                         }
                       }}
                     />
-                    <div className={`${styles.statusBadge} ${statusInfo.live ? styles.statusLive : ''}`}>
+                    <div className={`${styles.statusBadge} ${statusInfo.live ? styles.statusLive : upcoming ? styles.statusUpcoming : ''}`}>
                       {statusInfo.live && <span className={styles.liveDot} />}
+                      {upcoming && <span className={styles.upcomingDot} />}
                       {statusInfo.label}
                     </div>
                   </div>

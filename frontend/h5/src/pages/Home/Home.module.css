@@ -206,12 +206,25 @@
   color: var(--text-brand);
 }
 
+.statusUpcoming {
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(59, 130, 246, 0.36);
+}
+
 .liveDot {
   width: 6px;
   height: 6px;
   border-radius: var(--radius-full);
   background: #d4af37;
   animation: pulse 1.4s infinite;
+}
+
+.upcomingDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-info-500, #3b82f6);
 }
 
 .cardBody {

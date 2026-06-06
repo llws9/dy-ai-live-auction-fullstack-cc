@@ -259,7 +259,9 @@ const ProductDetail: React.FC = () => {
           ) : (
             <div className={styles.heroFallback}>暂无商品图片</div>
           )}
-          <span className={`${styles.statusBadge} ${statusInfo.active ? styles.statusActive : ''}`}>
+          <span className={`${styles.statusBadge} ${statusInfo.active ? styles.statusActive : statusInfo.upcoming ? styles.statusUpcoming : ''}`}>
+            {statusInfo.active && <span className={styles.liveDot} />}
+            {statusInfo.upcoming && <span className={styles.upcomingDot} />}
             {statusInfo.label}
           </span>
         </div>
