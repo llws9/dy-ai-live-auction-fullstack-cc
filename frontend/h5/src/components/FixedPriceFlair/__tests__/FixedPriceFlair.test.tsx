@@ -40,6 +40,9 @@ function pushFlair(handler: FlairHandler, buyer: string, itemId: number) {
   });
 }
 
+const toUtf8Mojibake = (text: string) =>
+  encodeURIComponent(text).replace(/%([0-9A-F]{2})/g, (_, hex: string) => String.fromCharCode(parseInt(hex, 16)));
+
 describe('FixedPriceFlair', () => {
   beforeEach(() => {
     jest.useFakeTimers();
@@ -140,6 +143,28 @@ describe('FixedPriceFlair', () => {
     expect(screen.getByText(/用户 #1001/)).toBeInTheDocument();
     expect(screen.getByText(/商品 #7003/)).toBeInTheDocument();
     expect(screen.getByText(/¥88.00/)).toBeInTheDocument();
+  });
+
+  it('修复 fixed_price_flair 中的买家昵称和商品名乱码', () => {
+    const { socket } = createSubscribeSocket();
+
+    render(<FixedPriceFlair socket={socket} />);
+    const handler = socket.subscribe.mock.calls[0][1] as FlairHandler;
+
+    act(() => {
+      handler({
+        data: {
+          item_id: 7004,
+          buyer_nickname: toUtf8Mojibake('测试买家'),
+          product_title: toUtf8Mojibake('南红手串'),
+          price: '188.00',
+        },
+      });
+    });
+
+    expect(screen.getByText(/测试买家/)).toBeInTheDocument();
+    expect(screen.getByText(/南红手串/)).toBeInTheDocument();
+    expect(screen.queryByText(/æ|å|ç|è/)).not.toBeInTheDocument();
   });
 
   it('兼容 WebSocketService 的 on/off 订阅形态', () => {

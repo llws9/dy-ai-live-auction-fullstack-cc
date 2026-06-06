@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { repairUtf8Mojibake } from '../../utils/textEncoding';
 import styles from './index.module.css';
 
 const FLAIR_MESSAGE_TYPE = 'fixed_price_flair';
@@ -55,8 +56,8 @@ function normalizePayload(message: FixedPriceFlairMessage | FixedPriceFlairPaylo
     return null;
   }
 
-  const buyerNickname = candidate.buyer_nickname || (candidate.buyer_id ? `用户 #${candidate.buyer_id}` : '');
-  const productTitle = candidate.product_title || (candidate.item_id ? `商品 #${candidate.item_id}` : '');
+  const buyerNickname = repairUtf8Mojibake(candidate.buyer_nickname) || (candidate.buyer_id ? `用户 #${candidate.buyer_id}` : '');
+  const productTitle = repairUtf8Mojibake(candidate.product_title) || (candidate.item_id ? `商品 #${candidate.item_id}` : '');
 
   if (!buyerNickname || !productTitle) {
     return null;

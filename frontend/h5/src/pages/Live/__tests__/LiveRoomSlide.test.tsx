@@ -9,6 +9,7 @@ import { trackBusinessEvent } from '../../../utils/businessEvent';
 
 const mockShowGlobalToast = jest.fn();
 const mockNavigate = jest.fn();
+let mockAuthUser = { id: 9, name: '测试用户', role: 0 };
 const mockWebSocketInstance = {
   on: jest.fn(),
   off: jest.fn(),
@@ -79,7 +80,7 @@ jest.mock('react-router-dom', () => {
 jest.mock('../../../store/authContext', () => ({
   useAuth: () => ({
     isAuthenticated: true,
-    user: { id: 9, name: '测试用户', role: 0 },
+    user: mockAuthUser,
     token: 'token-1',
     loading: false,
   }),
@@ -128,6 +129,7 @@ const renderSlide = (props: Partial<React.ComponentProps<typeof LiveRoomSlide>> 
 describe('LiveRoomSlide', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAuthUser = { id: 9, name: '测试用户', role: 0 };
     mockWebSocketInstance.connect.mockResolvedValue(undefined);
     mockWebSocketInstance.onNotification.mockReturnValue(jest.fn());
     mockedUseFixedPriceItems.mockReturnValue({ items: [], byId: {}, socket: null });
@@ -286,6 +288,45 @@ describe('LiveRoomSlide', () => {
     expect(screen.getByText('测试用户 开启点天灯，自动守住领先')).toBeInTheDocument();
     expect(screen.getByTestId('bid-dock')).toHaveAttribute('data-sky-lamp-active', 'true');
     expect(screen.getByTestId('dock-sky-lamp-icon')).toBeInTheDocument();
+  });
+
+  it('repairs mojibake auth user name in the sky lamp notice', async () => {
+    mockAuthUser = { id: 9, name: toUtf8Mojibake('测试用户'), role: 0 };
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
+    fireEvent.click(screen.getByRole('button', { name: /点天灯/ }));
+    fireEvent.click(screen.getByRole('button', { name: '确认开启' }));
+
+    await waitFor(() => expect(mockedSkyLampApi.startSubscription).toHaveBeenCalledWith(5));
+    expect(screen.getByText('测试用户 开启点天灯，自动守住领先')).toBeInTheDocument();
+    expect(screen.queryByText(/æ|å|ç|è/)).not.toBeInTheDocument();
+  });
+
+  it('repairs mojibake notification toast title and content', async () => {
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    const notificationHandler = mockWebSocketInstance.onNotification.mock.calls[0][0] as (notification: any) => void;
+
+    act(() => {
+      notificationHandler({
+        id: 66,
+        type: 'auction_starting',
+        title: toUtf8Mojibake('竞拍即将开始'),
+        content: toUtf8Mojibake('商品【南红手串】的竞拍即将在30分钟后开始，不要错过！'),
+        data: { auction_id: 5 },
+      });
+    });
+
+    expect(mockShowGlobalToast).toHaveBeenCalledWith(expect.objectContaining({
+      title: '竞拍即将开始',
+      message: '商品【南红手串】的竞拍即将在30分钟后开始，不要错过！',
+    }));
+    expect(mockShowGlobalToast.mock.calls[0][0].message).not.toMatch(/æ|å|ç|è/);
   });
 
   it('treats an already-active sky lamp subscription as active UI state', async () => {

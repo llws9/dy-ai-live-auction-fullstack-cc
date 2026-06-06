@@ -140,26 +140,28 @@ const extractSkyLampSubscriptions = (response: any) =>
   (response?.subscriptions || response?.data?.subscriptions || []) as Array<{ auction_id?: number | string; status?: number | string }>;
 
 function toastPayloadFromNotification(notification: any) {
+  const title = repairUtf8Mojibake(notification.title);
+  const content = repairUtf8Mojibake(notification.content);
   switch (notification.type) {
     case 'bid_outbid':
       return {
         type: 'danger' as const,
-        title: notification.title || '您已被超价',
-        message: notification.content || '当前最高价已更新',
+        title: title || '您已被超价',
+        message: content || '当前最高价已更新',
         actionText: '重新出价',
       };
     case 'auction_won':
       return {
         type: 'success' as const,
-        title: notification.title || '恭喜中标',
-        message: notification.content || '请尽快完成支付',
+        title: title || '恭喜中标',
+        message: content || '请尽快完成支付',
         actionText: '去支付',
       };
     case 'auction_starting':
       return {
         type: 'warning' as const,
-        title: notification.title || '截拍预警',
-        message: notification.content || '拍品即将截拍',
+        title: title || '截拍预警',
+        message: content || '拍品即将截拍',
       };
     default:
       return null;
@@ -220,6 +222,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const { items: fixedPriceItems, socket: fixedPriceSocket } = useFixedPriceItems(effectiveLiveStreamId);
   const productImage = getFirstImage(product || auction?.product);
   const fixedPriceItemIds = useMemo(() => fixedPriceItems.map((item) => item.id), [fixedPriceItems]);
+  const currentUserDisplayName = useMemo(() => repairUtf8Mojibake(user?.name) || '当前用户', [user?.name]);
 
   useEffect(() => {
     setPurchasedFixedPriceItemIds(new Set());
@@ -295,7 +298,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       setBidSuccessFlair({
         id: Date.now(),
         amount,
-        userName: user?.name || '当前用户',
+        userName: currentUserDisplayName,
       });
       bidFlairHideTimerRef.current = window.setTimeout(() => {
         setBidSuccessFlair(null);
@@ -303,7 +306,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       }, BID_SUCCESS_FLAIR_VISIBLE_MS);
       bidFlairDelayTimerRef.current = null;
     }, BID_SUCCESS_FLAIR_DELAY_MS);
-  }, [user?.name]);
+  }, [currentUserDisplayName]);
 
   useEffect(() => {
     return () => {
@@ -938,7 +941,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       {skyLampNoticeVisible && (
         <div className={styles.skyLampNotice} role="status">
           <i className={styles.skyLampNoticeIcon} aria-hidden="true"><span /></i>
-          <strong>{user?.name || '当前用户'} 开启点天灯，自动守住领先</strong>
+          <strong>{currentUserDisplayName} 开启点天灯，自动守住领先</strong>
         </div>
       )}
       {bidSuccessFlair && (
