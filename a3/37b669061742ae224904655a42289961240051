@@ -1,0 +1,28 @@
+docs/superpowers/sdd/runs/2026-06-06-2026-06-06-admin-auction-statistics-real-state.md
+  6acc9bbdac1dfe60 12-17,19-35,37,39,41-45,47-59,61-62,64-92
+backend/gateway/router/admin_statistics_route_test.go
+  6acc9bbdac1dfe60 17-29,32,36-89,111-113,117-119,122-123,127-128,130-131,135-137
+backend/gateway/router/router.go
+  6acc9bbdac1dfe60 194
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "a337b669061742ae224904655a42289961240051",
+  "prompts": {
+    "6acc9bbdac1dfe60": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a23e94b2ec60aa1a73a6199",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>",
+      "total_additions": 105,
+      "total_deletions": 35,
+      "accepted_lines": 158,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
