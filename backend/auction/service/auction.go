@@ -9,6 +9,7 @@ import (
 	"auction-service/model"
 
 	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
 )
 
 // AuctionService 竞拍服务
@@ -130,30 +131,27 @@ func (s *AuctionService) StartAuction(ctx context.Context, id int64) error {
 
 // EndAuction 结束竞拍
 func (s *AuctionService) EndAuction(ctx context.Context, id int64) error {
-	auction, err := s.auctionDAO.GetByID(ctx, id)
-	if err != nil {
+	if err := s.auctionDAO.DB().Transaction(func(tx *gorm.DB) error {
+		txAuctionDAO := s.auctionDAO.WithTx(tx)
+		auction, err := txAuctionDAO.GetByID(ctx, id)
+		if err != nil {
+			return err
+		}
+
+		sm := NewStateMachine(auction)
+		if err := sm.Transition(model.AuctionStatusEnded); err != nil {
+			return err
+		}
+
+		if err := txAuctionDAO.Update(ctx, auction); err != nil {
+			return err
+		}
+		return s.settlementService.CreatePendingTaskWithTx(ctx, tx, id)
+	}); err != nil {
 		return err
 	}
 
-	sm := NewStateMachine(auction)
-	if err := sm.Transition(model.AuctionStatusEnded); err != nil {
-		return err
-	}
-
-	if err := s.settlementService.CreateOrderForAuctionResult(ctx, auction); err != nil {
-		return err
-	}
-
-	if err := s.auctionDAO.Update(ctx, auction); err != nil {
-		return err
-	}
-
-	// 发送竞拍结果通知
-	if err := s.settlementService.SendAuctionResultNotifications(ctx, auction); err != nil {
-		return err
-	}
-
-	return nil
+	return s.settlementService.FinalizeEndedAuction(ctx, id)
 }
 
 // CheckAndStartAuctions 检查并开始应该开始的竞拍

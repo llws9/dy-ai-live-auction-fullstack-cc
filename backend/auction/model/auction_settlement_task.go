@@ -7,6 +7,7 @@ type AuctionSettlementTaskStatus string
 const (
 	AuctionSettlementTaskStatusPending   AuctionSettlementTaskStatus = "pending"
 	AuctionSettlementTaskStatusOrderDone AuctionSettlementTaskStatus = "order_done"
+	AuctionSettlementTaskStatusNotifying AuctionSettlementTaskStatus = "notifying"
 	AuctionSettlementTaskStatusDone      AuctionSettlementTaskStatus = "done"
 )
 

@@ -188,3 +188,122 @@ func TestCapPriceSettlementRetryCompletesPendingTask(t *testing.T) {
 	require.NoError(t, db.First(&task, "auction_id = ?", int64(302)).Error)
 	assert.Equal(t, model.AuctionSettlementTaskStatusDone, task.Status)
 }
+
+func TestFinalizeEndedAuctionKeepsTaskRetryableWhenNotificationFails(t *testing.T) {
+	db := newBidSettlementTestDB(t)
+	winnerID := int64(2001)
+	require.NoError(t, db.Create(&model.Auction{
+		ID:           303,
+		ProductID:    403,
+		Status:       model.AuctionStatusEnded,
+		CurrentPrice: decimal.NewFromInt(100),
+		WinnerID:     &winnerID,
+		StartTime:    time.Now().Add(-time.Minute),
+		EndTime:      time.Now().Add(-time.Second),
+	}).Error)
+	require.NoError(t, db.Create(&model.Bid{AuctionID: 303, UserID: 2001, Amount: decimal.NewFromInt(100)}).Error)
+	require.NoError(t, db.Create(&model.AuctionSettlementTask{
+		AuctionID: 303,
+		Status:    model.AuctionSettlementTaskStatusPending,
+	}).Error)
+
+	auctionDAO := dao.NewAuctionDAO(db)
+	settlement := NewAuctionSettlementService(auctionDAO, dao.NewBidDAO(db))
+	settlement.SetOrderCreator(&recordingOrderCreator{})
+	settlement.SetNotificationSender(&recordingNotificationSender{err: errors.New("notification db unavailable")})
+
+	err := settlement.FinalizeEndedAuction(context.Background(), 303)
+
+	require.Error(t, err)
+	var task model.AuctionSettlementTask
+	require.NoError(t, db.First(&task, "auction_id = ?", int64(303)).Error)
+	assert.Equal(t, model.AuctionSettlementTaskStatusOrderDone, task.Status)
+	assert.Contains(t, task.LastError, "notification db unavailable")
+}
+
+func TestRetryUnfinishedRecordsOrderFailure(t *testing.T) {
+	db := newBidSettlementTestDB(t)
+	winnerID := int64(2001)
+	require.NoError(t, db.Create(&model.Auction{
+		ID:           304,
+		ProductID:    404,
+		Status:       model.AuctionStatusEnded,
+		CurrentPrice: decimal.NewFromInt(100),
+		WinnerID:     &winnerID,
+		StartTime:    time.Now().Add(-time.Minute),
+		EndTime:      time.Now().Add(-time.Second),
+	}).Error)
+	require.NoError(t, db.Create(&model.Bid{AuctionID: 304, UserID: 2001, Amount: decimal.NewFromInt(100)}).Error)
+	require.NoError(t, db.Create(&model.AuctionSettlementTask{
+		AuctionID: 304,
+		Status:    model.AuctionSettlementTaskStatusPending,
+	}).Error)
+
+	auctionDAO := dao.NewAuctionDAO(db)
+	settlement := NewAuctionSettlementService(auctionDAO, dao.NewBidDAO(db))
+	settlement.SetOrderCreator(&recordingOrderCreator{err: errors.New("product-service unavailable")})
+	settlement.SetNotificationSender(&recordingNotificationSender{})
+
+	require.NoError(t, settlement.RetryUnfinished(context.Background(), 10))
+
+	var task model.AuctionSettlementTask
+	require.NoError(t, db.First(&task, "auction_id = ?", int64(304)).Error)
+	assert.Equal(t, model.AuctionSettlementTaskStatusPending, task.Status)
+	assert.Contains(t, task.LastError, "product-service unavailable")
+}
+
+func TestRetryUnfinishedResumesNotifyingTask(t *testing.T) {
+	db := newBidSettlementTestDB(t)
+	winnerID := int64(2001)
+	require.NoError(t, db.Create(&model.Auction{
+		ID:           305,
+		ProductID:    405,
+		Status:       model.AuctionStatusEnded,
+		CurrentPrice: decimal.NewFromInt(100),
+		WinnerID:     &winnerID,
+		StartTime:    time.Now().Add(-time.Minute),
+		EndTime:      time.Now().Add(-time.Second),
+	}).Error)
+	require.NoError(t, db.Create(&model.Bid{AuctionID: 305, UserID: 2001, Amount: decimal.NewFromInt(100)}).Error)
+	require.NoError(t, db.Create(&model.AuctionSettlementTask{
+		AuctionID: 305,
+		Status:    model.AuctionSettlementTaskStatusNotifying,
+	}).Error)
+
+	notifications := &recordingNotificationSender{}
+	settlement := NewAuctionSettlementService(dao.NewAuctionDAO(db), dao.NewBidDAO(db))
+	settlement.SetOrderCreator(&recordingOrderCreator{})
+	settlement.SetNotificationSender(notifications)
+
+	require.NoError(t, settlement.RetryUnfinished(context.Background(), 10))
+
+	require.Len(t, notifications.sent, 1)
+	var task model.AuctionSettlementTask
+	require.NoError(t, db.First(&task, "auction_id = ?", int64(305)).Error)
+	assert.Equal(t, model.AuctionSettlementTaskStatusDone, task.Status)
+}
+
+func TestRecordFailureDoesNotOverwriteUnexpectedTaskStatus(t *testing.T) {
+	db := newBidSettlementTestDB(t)
+	taskDAO := dao.NewAuctionSettlementTaskDAO(db)
+	require.NoError(t, db.Create(&model.AuctionSettlementTask{
+		AuctionID: 306,
+		Status:    model.AuctionSettlementTaskStatusDone,
+	}).Error)
+
+	updated, err := taskDAO.RecordFailureIfStatus(
+		context.Background(),
+		306,
+		model.AuctionSettlementTaskStatusNotifying,
+		model.AuctionSettlementTaskStatusOrderDone,
+		errors.New("notification db unavailable"),
+	)
+
+	require.NoError(t, err)
+	assert.False(t, updated)
+
+	var task model.AuctionSettlementTask
+	require.NoError(t, db.First(&task, "auction_id = ?", int64(306)).Error)
+	assert.Equal(t, model.AuctionSettlementTaskStatusDone, task.Status)
+	assert.Empty(t, task.LastError)
+}

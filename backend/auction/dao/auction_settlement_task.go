@@ -3,6 +3,7 @@ package dao
 import (
 	"context"
 	"errors"
+	"time"
 
 	"auction-service/model"
 
@@ -65,6 +66,43 @@ func (d *AuctionSettlementTaskDAO) UpdateStatus(ctx context.Context, auctionID i
 		}).Error
 }
 
+func (d *AuctionSettlementTaskDAO) AdvanceStatus(ctx context.Context, auctionID int64, from, to model.AuctionSettlementTaskStatus) (bool, error) {
+	result := d.db.WithContext(ctx).
+		Model(&model.AuctionSettlementTask{}).
+		Where("auction_id = ? AND status = ?", auctionID, from).
+		Updates(map[string]interface{}{
+			"status":     to,
+			"last_error": "",
+			"updated_at": time.Now(),
+		})
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return result.RowsAffected == 1, nil
+}
+
+func (d *AuctionSettlementTaskDAO) RecordFailureIfStatus(ctx context.Context, auctionID int64, expectedStatus, rollbackStatus model.AuctionSettlementTaskStatus, err error) (bool, error) {
+	lastError := ""
+	if err != nil {
+		lastError = err.Error()
+	}
+	query := d.db.WithContext(ctx).
+		Model(&model.AuctionSettlementTask{}).
+		Where("auction_id = ?", auctionID)
+	if expectedStatus != "" {
+		query = query.Where("status = ?", expectedStatus)
+	}
+	result := query.Updates(map[string]interface{}{
+		"status":     rollbackStatus,
+		"last_error": lastError,
+		"updated_at": time.Now(),
+	})
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return result.RowsAffected == 1, nil
+}
+
 func (d *AuctionSettlementTaskDAO) ListUnfinished(ctx context.Context, limit int) ([]model.AuctionSettlementTask, error) {
 	if limit <= 0 {
 		limit = 100
@@ -74,6 +112,7 @@ func (d *AuctionSettlementTaskDAO) ListUnfinished(ctx context.Context, limit int
 		Where("status IN ?", []model.AuctionSettlementTaskStatus{
 			model.AuctionSettlementTaskStatusPending,
 			model.AuctionSettlementTaskStatusOrderDone,
+			model.AuctionSettlementTaskStatusNotifying,
 		}).
 		Order("updated_at ASC, auction_id ASC").
 		Limit(limit).

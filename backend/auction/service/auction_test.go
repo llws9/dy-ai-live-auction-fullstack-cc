@@ -236,23 +236,29 @@ func (r *recordingOrderCreator) CreateOrderFromAuctionResult(_ context.Context, 
 }
 
 type recordingNotificationSender struct {
-	sent []model.NotificationRequest
+	err       error
+	batchErr  error
+	sent      []model.NotificationRequest
+	batchSent []model.NotificationRequest
 }
 
 func (r *recordingNotificationSender) SendNotification(_ context.Context, req *model.NotificationRequest) error {
 	r.sent = append(r.sent, *req)
-	return nil
+	return r.err
 }
 
-func (r *recordingNotificationSender) SendBatchNotifications(_ context.Context, _ []*model.NotificationRequest) error {
-	return nil
+func (r *recordingNotificationSender) SendBatchNotifications(_ context.Context, reqs []*model.NotificationRequest) error {
+	for _, req := range reqs {
+		r.batchSent = append(r.batchSent, *req)
+	}
+	return r.batchErr
 }
 
 func newAuctionServiceTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&model.Auction{}, &model.Bid{}))
+	require.NoError(t, db.AutoMigrate(&model.Auction{}, &model.Bid{}, &model.AuctionSettlementTask{}))
 	return db
 }
 
@@ -288,9 +294,13 @@ func TestEndAuctionCreatesPendingOrderBeforeWinnerNotification(t *testing.T) {
 	assert.True(t, orderCreator.calls[0].FinalPrice.Equal(decimal.NewFromInt(110)))
 	require.Len(t, notifications.sent, 1)
 	assert.Equal(t, model.NotificationTypeAuctionWon, notifications.sent[0].Type)
+
+	var task model.AuctionSettlementTask
+	require.NoError(t, db.First(&task, "auction_id = ?", auction.ID).Error)
+	assert.Equal(t, model.AuctionSettlementTaskStatusDone, task.Status)
 }
 
-func TestEndAuctionDoesNotSendWinnerNotificationWhenOrderCreationFails(t *testing.T) {
+func TestEndAuctionKeepsSettlementTaskRetryableWhenOrderCreationFails(t *testing.T) {
 	db := newAuctionServiceTestDB(t)
 	winnerID := int64(2001)
 	auction := &model.Auction{
@@ -320,7 +330,12 @@ func TestEndAuctionDoesNotSendWinnerNotificationWhenOrderCreationFails(t *testin
 
 	var saved model.Auction
 	require.NoError(t, db.First(&saved, auction.ID).Error)
-	assert.Equal(t, model.AuctionStatusOngoing, saved.Status)
+	assert.Equal(t, model.AuctionStatusEnded, saved.Status)
+
+	var task model.AuctionSettlementTask
+	require.NoError(t, db.First(&task, "auction_id = ?", auction.ID).Error)
+	assert.Equal(t, model.AuctionSettlementTaskStatusPending, task.Status)
+	assert.Contains(t, task.LastError, "product-service unavailable")
 }
 
 // TestAuction_IsEnded 测试竞拍是否已结束

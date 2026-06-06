@@ -65,17 +65,51 @@ func (s *AuctionSettlementService) FinalizeEndedAuction(ctx context.Context, auc
 	if task.Status == model.AuctionSettlementTaskStatusPending {
 		hasResult, err := s.createOrderForAuctionResult(ctx, auction)
 		if err != nil {
+			_, _ = s.taskDAO.RecordFailureIfStatus(
+				ctx,
+				auctionID,
+				model.AuctionSettlementTaskStatusPending,
+				model.AuctionSettlementTaskStatusPending,
+				err,
+			)
 			return err
 		}
 		if !hasResult {
 			return s.taskDAO.UpdateStatus(ctx, auctionID, model.AuctionSettlementTaskStatusDone)
 		}
-		if err := s.taskDAO.UpdateStatus(ctx, auctionID, model.AuctionSettlementTaskStatusOrderDone); err != nil {
+		advanced, err := s.taskDAO.AdvanceStatus(ctx, auctionID, model.AuctionSettlementTaskStatusPending, model.AuctionSettlementTaskStatusOrderDone)
+		if err != nil {
 			return err
 		}
+		if !advanced {
+			return nil
+		}
+		task.Status = model.AuctionSettlementTaskStatusOrderDone
+	}
+
+	if task.Status == model.AuctionSettlementTaskStatusOrderDone {
+		advanced, err := s.taskDAO.AdvanceStatus(ctx, auctionID, model.AuctionSettlementTaskStatusOrderDone, model.AuctionSettlementTaskStatusNotifying)
+		if err != nil {
+			return err
+		}
+		if !advanced {
+			return nil
+		}
+		task.Status = model.AuctionSettlementTaskStatusNotifying
+	}
+
+	if task.Status != model.AuctionSettlementTaskStatusNotifying {
+		return nil
 	}
 
 	if err := s.SendAuctionResultNotifications(ctx, auction); err != nil {
+		_, _ = s.taskDAO.RecordFailureIfStatus(
+			ctx,
+			auctionID,
+			model.AuctionSettlementTaskStatusNotifying,
+			model.AuctionSettlementTaskStatusOrderDone,
+			err,
+		)
 		return err
 	}
 	return s.taskDAO.UpdateStatus(ctx, auctionID, model.AuctionSettlementTaskStatusDone)
@@ -134,7 +168,7 @@ func (s *AuctionSettlementService) SendAuctionResultNotifications(ctx context.Co
 		return nil
 	}
 
-	_ = s.notificationSender.SendNotification(ctx, &model.NotificationRequest{
+	if err := s.notificationSender.SendNotification(ctx, &model.NotificationRequest{
 		UserID:  winnerID,
 		Type:    model.NotificationTypeAuctionWon,
 		Title:   "竞拍中标",
@@ -143,13 +177,20 @@ func (s *AuctionSettlementService) SendAuctionResultNotifications(ctx context.Co
 			"auction_id":  auction.ID,
 			"final_price": finalPrice.StringFixed(2),
 		},
-	})
+	}); err != nil {
+		return fmt.Errorf("发送中标通知失败: %w", err)
+	}
 
 	var loserRequests []*model.NotificationRequest
+	seenLosers := make(map[int64]struct{})
 	for _, bid := range bids {
 		if bid.UserID == winnerID {
 			continue
 		}
+		if _, ok := seenLosers[bid.UserID]; ok {
+			continue
+		}
+		seenLosers[bid.UserID] = struct{}{}
 		loserRequests = append(loserRequests, &model.NotificationRequest{
 			UserID:  bid.UserID,
 			Type:    model.NotificationTypeAuctionLost,
@@ -163,9 +204,9 @@ func (s *AuctionSettlementService) SendAuctionResultNotifications(ctx context.Co
 	}
 
 	if len(loserRequests) > 0 {
-		go func() {
-			_ = s.notificationSender.SendBatchNotifications(ctx, loserRequests)
-		}()
+		if err := s.notificationSender.SendBatchNotifications(ctx, loserRequests); err != nil {
+			return fmt.Errorf("发送未中标通知失败: %w", err)
+		}
 	}
 
 	return nil
