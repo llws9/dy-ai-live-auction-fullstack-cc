@@ -38,7 +38,7 @@
 | In Progress | `0` |
 | Review | `1` |
 | Pending | `4` |
-| Last Updated | `2026-06-07 05:05` |
+| Last Updated | `2026-06-07 05:15` |
 
 ## Task Matrix
 
@@ -382,8 +382,13 @@
 | `cd backend/auction && go test ./service -run 'TestIsActiveAuctionUniqueConflict' -count=1` | `RED fail before quality review fix` | `FAIL: mysql_duplicate_on_other_key_is_not_active_auction_conflict expected false, actual true` | `red_confirmed` |
 | `cd backend/auction && go test ./service -run 'TestAuctionService_CreateAuctionValidatesProductLifecycle\|TestIsActiveAuctionUniqueConflict' -count=1` | `PASS targeted lifecycle and unique-conflict review tests` | `PASS: ok auction-service/service 1.573s` | `pass` |
 | `cd backend/auction && go test ./service -count=1` | `PASS service package regression after review fix` | `PASS: ok auction-service/service 5.242s` | `pass` |
-| `cd backend/auction && go test ./... -count=1` | `PASS auction-service full regression after admin route compatibility fix` | `PASS: auction-service root/client/config/dao/handler/lock/middleware/model/pkg/metrics/service/service/cron/websocket all passed; docs/mq/pkg/dbmetrics/pkg/experiment/pkg/logger/pkg/nacos/seed no test files` | `pass` |
+| `cd backend/auction && go test ./... -count=1` | `PASS auction-service full regression after admin route compatibility fix` | `INVALIDATED by spec review on 2026-06-07 05:12: current HEAD still had pre-T6 handler/test callers using CreateAuctionRequest{StartTime, EndTime}; the later full-pass record did not reflect the reviewed HEAD` | `invalidated` |
 | `git diff --check` | `PASS whitespace check after review fix` | `PASS` | `pass` |
+| `cd backend/auction && go test ./... -count=1` | `RED spec review blocker before compile bridge` | `FAIL: handler/auction.go:89 unknown field StartTime; handler/auction.go:90 unknown field EndTime in service.CreateAuctionRequest` | `red_confirmed` |
+| `cd backend/auction && go test ./service -run TestAuctionService_CreateAuctionValidatesProductLifecycle -count=1` | `RED deprecated-field compatibility test before bridge` | `FAIL: service/auction_create_test.go unknown field StartTime/EndTime in CreateAuctionRequest` | `red_confirmed` |
+| `cd backend/auction && go test ./service -run 'TestAuctionService_CreateAuctionValidatesProductLifecycle\|TestIsActiveAuctionUniqueConflict' -count=1` | `PASS compile bridge targeted lifecycle and unique-conflict tests` | `PASS: ok auction-service/service 0.930s` | `pass` |
+| `cd backend/auction && go test ./service -count=1` | `PASS service package after compile bridge` | `PASS: ok auction-service/service 6.116s` | `pass` |
+| `cd backend/auction && go test ./... -count=1` | `PASS full auction-service regression after compile bridge` | `FAIL: compile bridge fixed StartTime/EndTime build error, but handler package runtime tests now fail in auction_admin_scope_test.go because out-of-scope pre-T6 tests call service.CreateAuction with only deprecated StartTime/EndTime and omit T5 fail-closed fields; changing those tests or handler orchestration is outside this bridge scope` | `blocked` |
 
 **Implementation Attempt**
 
@@ -416,18 +421,21 @@
 
 **Known T6 Dependency**
 
-- T5 review fix did not modify handler business orchestration.
-- Current worktree now passes `cd backend/auction && go test ./... -count=1`; the remaining T6 work stays scoped to handler orchestration and product-service integration behavior, not root package compilation.
+- Spec review blocker: current HEAD was not compile-compatible because `backend/auction/handler/auction.go` still constructed `service.CreateAuctionRequest{StartTime, EndTime}` before T6 handler migration.
+- Compile bridge added deprecated `StartTime`/`EndTime` fields back to `service.CreateAuctionRequest` for pre-T6 handler/tests, with comments that `CreateAuction` ignores them and T6 will migrate callers.
+- `CreateAuction` still computes `StartTime` from `now := time.Now()` and `EndTime` from `Duration`; `auction_create_test.go` now passes deprecated past times in the success case and asserts the created start time is close to current time.
+- Full `cd backend/auction && go test ./... -count=1` no longer fails on unknown `StartTime`/`EndTime`, but remains blocked by out-of-scope handler admin-scope tests that call service directly with only deprecated fields and omit required T5 lifecycle facts. Making those tests pass requires either migrating handler tests/callers in T6 scope or weakening service fail-closed defaults, so it was not changed in this bridge.
 
 **Risks**
 
+- Until T6 migrates handler callers/tests to provide `Duration`, product ownership/status/rule binding, and live stream facts, full auction-service regression remains blocked outside the allowed file scope.
 - `productStatusPublished` mirrors product-service `model.ProductStatusPublished` by value because auction-service must not import product internals directly.
 - `isActiveAuctionUniqueConflict` is intentionally key-name based; if MySQL error formatting changes or the index is renamed, the mapping must be updated with the schema change.
 
 **Handoff**
 
 - First response line used: `当前分支/worktree：feat/auction-product-lifecycle @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-auction-product-lifecycle`
-- Result: `REVIEW`
+- Result: `BLOCKED`
 
 ### T6 - `Auction Create Handler 编排 product-service 与业务错误码`
 

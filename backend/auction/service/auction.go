@@ -75,6 +75,12 @@ type CreateAuctionRequest struct {
 	ProductStatus  int
 	RuleBound      bool
 	LiveStreamID   int64
+	// Deprecated: compatibility for pre-T6 handler/tests. Ignored by CreateAuction;
+	// Task 6 will migrate callers to Duration-based scheduling.
+	StartTime time.Time
+	// Deprecated: compatibility for pre-T6 handler/tests. Ignored by CreateAuction;
+	// Task 6 will migrate callers to Duration-based scheduling.
+	EndTime time.Time
 }
 
 // CreateAuction 创建竞拍

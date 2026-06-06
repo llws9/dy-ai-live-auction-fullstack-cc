@@ -31,6 +31,7 @@ func TestAuctionService_CreateAuctionValidatesProductLifecycle(t *testing.T) {
 			req: &CreateAuctionRequest{
 				ProductID: 11, CreatorID: &merchantID, Duration: 3600,
 				ProductOwnerID: 1001, ProductStatus: 1, RuleBound: true, LiveStreamID: 77,
+				StartTime: time.Now().Add(-24 * time.Hour), EndTime: time.Now().Add(-23 * time.Hour),
 			},
 			wantCreated: true,
 		},
@@ -156,6 +157,7 @@ func TestAuctionService_CreateAuctionValidatesProductLifecycle(t *testing.T) {
 			assert.Equal(t, int64(77), *got.LiveStreamID)
 			assert.True(t, got.CurrentPrice.Equal(decimal.Zero))
 			assert.False(t, got.StartTime.IsZero())
+			assert.WithinDuration(t, time.Now(), got.StartTime, 2*time.Second)
 			assert.WithinDuration(t, got.StartTime.Add(time.Hour), got.EndTime, time.Second)
 		})
 	}
