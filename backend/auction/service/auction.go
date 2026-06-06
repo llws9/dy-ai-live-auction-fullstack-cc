@@ -21,6 +21,8 @@ var (
 	ErrSoldProductCannotBeReauctioned = errors.New("已成交商品不能再次创建竞拍")
 )
 
+const productStatusPublished = 1 // mirrors product-service model.ProductStatusPublished
+
 // AuctionService 竞拍服务
 type AuctionService struct {
 	auctionDAO        *dao.AuctionDAO
@@ -92,7 +94,7 @@ func (s *AuctionService) CreateAuction(ctx context.Context, req *CreateAuctionRe
 	if req.ProductOwnerID != *req.CreatorID {
 		return nil, ErrProductOwnershipMismatch
 	}
-	if req.ProductStatus != 1 {
+	if req.ProductStatus != productStatusPublished {
 		return nil, ErrProductNotSchedulable
 	}
 	if !req.RuleBound {
@@ -145,8 +147,7 @@ func isActiveAuctionUniqueConflict(err error) bool {
 	if err == nil {
 		return false
 	}
-	msg := err.Error()
-	return strings.Contains(msg, "uk_active_product") || strings.Contains(msg, "Duplicate entry")
+	return strings.Contains(err.Error(), "uk_active_product")
 }
 
 // GetAuction 获取竞拍详情

@@ -33,12 +33,12 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `9` |
-| Done | `5` |
+| Done | `4` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Review | `0` |
+| Review | `1` |
 | Pending | `4` |
-| Last Updated | `2026-06-07 04:50` |
+| Last Updated | `2026-06-07 05:05` |
 
 ## Task Matrix
 
@@ -48,7 +48,7 @@
 | `T2` | `Product Internal API 提供商品竞拍事实与 active 直播间` | `done` | `implementer` | `W2` | `T1` | `Task 2` | `backend/product/service/product.go; backend/product/handler/internal.go; backend/product/main.go; backend/product/handler/internal_test.go` |
 | `T3` | `Auction ProductClient 增加商品事实与直播间方法` | `done` | `implementer` | `W3` | `T2` | `Task 3` | `backend/auction/client/product_client.go; backend/auction/client/product_client_test.go` |
 | `T4` | `Auction DAO 支持活跃唯一查询与 MySQL 兜底索引` | `done` | `implementer` | `W3` | `-` | `Task 4` | `backend/auction/dao/auction.go; backend/auction/dao/auction_schema.go; backend/auction/main.go; backend/auction/dao/auction_test.go; backend/auction/dao/auction_schema_test.go` |
-| `T5` | `AuctionService 创建竞拍 Fail-closed 校验` | `done_with_concerns` | `implementer` | `W4` | `T4` | `Task 5` | `backend/auction/service/auction.go; backend/auction/service/auction_create_test.go; backend/auction/service/auction_test.go; backend/auction/service/auction_admin_scope_test.go` |
+| `T5` | `AuctionService 创建竞拍 Fail-closed 校验` | `review` | `implementer` | `W4` | `T4` | `Task 5` | `backend/auction/service/auction.go; backend/auction/service/auction_create_test.go; backend/auction/service/auction_test.go; backend/auction/service/auction_admin_scope_test.go` |
 | `T6` | `Auction Create Handler 编排 product-service 与业务错误码` | `pending` | `unassigned` | `W5` | `T3,T5` | `Task 6` | `backend/auction/handler/auction.go; backend/auction/handler/auction_create_test.go` |
 | `T7` | `Product AdminList 返回派生展示状态` | `pending` | `unassigned` | `W6` | `T4` | `Task 7` | `backend/auction/handler/internal_product_auctions.go; backend/auction/main.go; backend/product/client/auction_client.go; backend/product/handler/product.go; backend/product/main.go; tests listed in plan` |
 | `T8` | `Admin 前端文案、筛选与错误展示` | `pending` | `unassigned` | `W7` | `T7` | `Task 8` | `frontend/admin/src/shared/api/types.ts; frontend/admin/src/pages-new/GoodsList.tsx; frontend/admin/src/pages-new/AuctionList.tsx; frontend admin tests` |
@@ -353,7 +353,7 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `done_with_concerns` |
+| Status | `review` |
 | Owner | `implementer` |
 | Started At | `2026-06-07 04:38` |
 | Completed At | `2026-06-07 04:50` |
@@ -379,6 +379,11 @@
 | `cd backend/auction && go test ./service -count=1` | `PASS service package regression` | `PASS: ok auction-service/service 4.358s` | `pass` |
 | `cd backend/auction && go test ./... -count=1` | `PASS or known T6 dependency recorded` | `FAIL: auction-service/handler compile fails because handler/auction.go still constructs service.CreateAuctionRequest with removed StartTime/EndTime fields; handler migration is T6 scope and was not modified` | `known_t6_dependency` |
 | `git diff --check` | `PASS whitespace check` | `PASS` | `pass` |
+| `cd backend/auction && go test ./service -run 'TestIsActiveAuctionUniqueConflict' -count=1` | `RED fail before quality review fix` | `FAIL: mysql_duplicate_on_other_key_is_not_active_auction_conflict expected false, actual true` | `red_confirmed` |
+| `cd backend/auction && go test ./service -run 'TestAuctionService_CreateAuctionValidatesProductLifecycle\|TestIsActiveAuctionUniqueConflict' -count=1` | `PASS targeted lifecycle and unique-conflict review tests` | `PASS: ok auction-service/service 1.573s` | `pass` |
+| `cd backend/auction && go test ./service -count=1` | `PASS service package regression after review fix` | `PASS: ok auction-service/service 5.242s` | `pass` |
+| `cd backend/auction && go test ./... -count=1` | `PASS auction-service full regression after admin route compatibility fix` | `PASS: auction-service root/client/config/dao/handler/lock/middleware/model/pkg/metrics/service/service/cron/websocket all passed; docs/mq/pkg/dbmetrics/pkg/experiment/pkg/logger/pkg/nacos/seed no test files` | `pass` |
+| `git diff --check` | `PASS whitespace check after review fix` | `PASS` | `pass` |
 
 **Implementation Attempt**
 
@@ -386,6 +391,13 @@
 - Updated `backend/auction/service/auction.go` with the new `CreateAuctionRequest` fields, fail-closed business invariant checks, active/latest terminal auction checks, live stream assignment, `now + duration` scheduling, and MySQL active-product unique conflict normalization.
 - Recovered from BLOCKED by migrating old service tests that directly constructed `CreateAuctionRequest{StartTime, EndTime}` to the new explicit lifecycle fields: `ProductID`, `CreatorID`, `Duration`, `ProductOwnerID`, `ProductStatus=1`, `RuleBound=true`, and positive `LiveStreamID`.
 - Removed out-of-scope dirty handler/DAO/auction-result changes from the worktree; T5 now only carries allowed service/state files.
+
+**Quality Review Fix**
+
+- Migrated `backend/auction/admin_route_test.go` from removed `StartTime`/`EndTime` request fields to explicit lifecycle inputs: `ProductID`, `CreatorID`, `Duration`, `ProductOwnerID`, `ProductStatus=1`, `RuleBound=true`, and positive `LiveStreamID`.
+- Added `TestIsActiveAuctionUniqueConflict` positive/negative coverage. The RED run confirmed the old implementation mapped any MySQL `Duplicate entry` to `ErrActiveAuctionExists`.
+- Tightened `isActiveAuctionUniqueConflict` to require the active-product unique key name `uk_active_product`; unrelated duplicate key errors are no longer normalized to active auction conflicts.
+- Added `productStatusPublished` local constant to document the product-service status coupling.
 
 **Modified Files**
 
@@ -395,19 +407,27 @@
 - `backend/auction/service/auction_test.go`
 - `docs/superpowers/sdd/runs/2026-06-07-auction-product-lifecycle-state.md`
 
+**Quality Review Fix Modified Files**
+
+- `backend/auction/admin_route_test.go`
+- `backend/auction/service/auction.go`
+- `backend/auction/service/auction_create_test.go`
+- `docs/superpowers/sdd/runs/2026-06-07-auction-product-lifecycle-state.md`
+
 **Known T6 Dependency**
 
-- `cd backend/auction && go test ./... -count=1` still fails outside T5 because `backend/auction/handler/auction.go` constructs `service.CreateAuctionRequest` with removed `StartTime`/`EndTime` fields.
-- Per task instruction, handler implementation is T6 scope and was not modified.
+- T5 review fix did not modify handler business orchestration.
+- Current worktree now passes `cd backend/auction && go test ./... -count=1`; the remaining T6 work stays scoped to handler orchestration and product-service integration behavior, not root package compilation.
 
 **Risks**
 
-- Full `backend/auction` package remains `DONE_WITH_CONCERNS` until T6 migrates handler create orchestration to the new service request contract.
+- `productStatusPublished` mirrors product-service `model.ProductStatusPublished` by value because auction-service must not import product internals directly.
+- `isActiveAuctionUniqueConflict` is intentionally key-name based; if MySQL error formatting changes or the index is renamed, the mapping must be updated with the schema change.
 
 **Handoff**
 
 - First response line used: `当前分支/worktree：feat/auction-product-lifecycle @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-auction-product-lifecycle`
-- Result: `DONE_WITH_CONCERNS`
+- Result: `REVIEW`
 
 ### T6 - `Auction Create Handler 编排 product-service 与业务错误码`
 

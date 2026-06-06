@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -156,6 +157,36 @@ func TestAuctionService_CreateAuctionValidatesProductLifecycle(t *testing.T) {
 			assert.True(t, got.CurrentPrice.Equal(decimal.Zero))
 			assert.False(t, got.StartTime.IsZero())
 			assert.WithinDuration(t, got.StartTime.Add(time.Hour), got.EndTime, time.Second)
+		})
+	}
+}
+
+func TestIsActiveAuctionUniqueConflict(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "mysql duplicate on active product key",
+			err:  errors.New("Error 1062 (23000): Duplicate entry '11' for key 'uk_active_product'"),
+			want: true,
+		},
+		{
+			name: "mysql duplicate on other key is not active auction conflict",
+			err:  errors.New("Error 1062 (23000): Duplicate entry 'A-001' for key 'uk_other_unique_key'"),
+			want: false,
+		},
+		{
+			name: "unrelated error",
+			err:  errors.New("database connection lost"),
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isActiveAuctionUniqueConflict(tt.err))
 		})
 	}
 }
