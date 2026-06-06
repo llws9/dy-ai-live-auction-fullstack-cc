@@ -1,0 +1,38 @@
+backend/auction/websocket/time_sync_test.go
+  s_547d9eeab612af::t_a01a22727cf15d 1-32
+docs/superpowers/plans/2026-06-06-antisnipe-delay-visibility.md
+  s_547d9eeab612af::t_b0940a07486253 630-631
+docs/superpowers/sdd/runs/2026-06-06-antisnipe-delay-visibility-task4-state.md
+  s_547d9eeab612af::t_9489179438a5a3 1-36,38-87,106-109,90,95,97,105
+  s_547d9eeab612af::t_3c0faf41de27cc 88,96,98-104
+  s_547d9eeab612af::t_c4a679ff31ddfc 37,89,91-94
+frontend/h5/src/pages/Live/__tests__/LiveRoomSlide.test.tsx
+  s_547d9eeab612af::t_faf4d6495bb8b9 129-132,424,441-553
+  s_547d9eeab612af::t_e6407b14cbe880 554-592
+backend/auction/service/bid.go
+  s_547d9eeab612af::t_2b574725782211 367,371,403,17,353,360-365,368-370,373-378,380-383,385-393,405-409,412,417
+  s_547d9eeab612af::t_a0897e1f7836c1 418,557-570,379,384,394,404
+  s_547d9eeab612af::t_7d2d56d31b267c 571
+backend/auction/websocket/message.go
+  s_547d9eeab612af::t_e6ff34fac539e7 114,250,252
+backend/auction/websocket/time_sync.go
+  s_547d9eeab612af::t_582c24e89dc1f9 43-44,53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "fab38adb0897099a43b86cae5ed78fa11ba72461",
+  "prompts": {},
+  "sessions": {
+    "s_547d9eeab612af": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a24410400057ea64ca26a40",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
