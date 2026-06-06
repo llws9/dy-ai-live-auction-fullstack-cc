@@ -40,6 +40,7 @@ func TestPendingReminderPublicRouteDoesNotTrustForgedUserHeader(t *testing.T) {
 		&handler.UserAddressHandler{},
 		handler.NewLiveReminderHandler(&routeReminderProvider{}),
 		&handler.LiveStreamStatsHandler{},
+		nil,
 	)
 
 	w := ut.PerformRequest(

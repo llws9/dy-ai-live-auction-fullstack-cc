@@ -83,6 +83,9 @@
 | `cd backend/auction && go test ./dao -run TestStatisticsDAOListAuctionDailyStats -count=1` | `PASS after DAO implementation` | `ok auction-service/dao 0.638s` | `pass` |
 | `cd backend/auction && go test ./service -run 'TestAuctionStatisticsBuildSeries\|TestValidateAuctionStatisticsRange' -count=1` | `FAIL before service exists` | `FAIL: undefined: buildAuctionDailySeries / validateAuctionStatisticsRange` | `red_passed` |
 | `cd backend/auction && go test ./service -run 'TestAuctionStatisticsBuildSeries\|TestValidateAuctionStatisticsRange' -count=1` | `PASS after service implementation` | `ok auction-service/service 1.250s` | `pass` |
+| `cd backend/auction && go test ./handler -run 'TestStatisticsHandler\|TestDefaultAuctionStatisticsRange' -count=1` | `FAIL before handler exists` | `FAIL: undefined: NewStatisticsHandler / defaultAuctionStatisticsRange` | `red_passed` |
+| `cd backend/auction && go test ./handler -run 'TestStatisticsHandler\|TestDefaultAuctionStatisticsRange' -count=1` | `PASS after handler implementation` | `ok auction-service/handler 1.129s` | `pass` |
+| `cd backend/auction && go test . -run '^$'` | `main package compiles after route registration` | `ok auction-service 0.689s [no tests to run]` | `pass` |
 
 **Progress Log**
 
@@ -90,6 +93,7 @@
 - `2026-06-06 17:54` completed Gateway route slice: `/statistics/auctions` now routes to auction-service while overview/revenue/users stay on product-service.
 - `2026-06-06 17:59` completed DAO slice: `StatisticsDAO` aggregates daily auction stats from `auctions` and `bids` without join amplification.
 - `2026-06-06 18:02` completed service slice: date range validation, missing-date zero fill, and one-decimal success rate calculation.
+- `2026-06-06 18:08` completed handler slice: `/api/v1/statistics/auctions` is exposed in auction-service behind internal auth, with role-scope and query validation in handler.
 
 **Modified Files**
 
@@ -99,6 +103,11 @@
 - `backend/auction/dao/statistics_test.go`
 - `backend/auction/service/statistics.go`
 - `backend/auction/service/statistics_test.go`
+- `backend/auction/handler/statistics.go`
+- `backend/auction/handler/statistics_test.go`
+- `backend/auction/main.go`
+- `backend/auction/admin_route_test.go`
+- `backend/auction/route_internal_test.go`
 - `docs/superpowers/sdd/runs/2026-06-06-2026-06-06-admin-auction-statistics-real-state.md`
 
 **Handoff**

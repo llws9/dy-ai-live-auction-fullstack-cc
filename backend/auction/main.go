@@ -97,6 +97,7 @@ func main() {
 	userBalanceDAO := dao.NewUserBalanceDAO(db)
 	userAddressDAO := dao.NewUserAddressDAO(db)
 	liveStreamReminderReceiptDAO := dao.NewLiveStreamReminderReceiptDAO(db)
+	statisticsDAO := dao.NewStatisticsDAO(db)
 
 	// 初始化 WebSocket Hub
 	hub := websocket.NewHub()
@@ -195,6 +196,7 @@ func main() {
 	userAddressHandler := handler.NewUserAddressHandler(userAddressDAO)
 	internalUserHandler := handler.NewInternalUserHandler(userDAO)
 	currentAuctionHandler := handler.NewInternalCurrentAuctionHandler(handler.NewCurrentAuctionDAOFetcher(auctionDAO))
+	statisticsHandler := handler.NewStatisticsHandler(service.NewStatisticsService(statisticsDAO))
 
 	// 一口价秒杀（A5 M1）：dao + Redis 库存/幂等 + service + handler。
 	fixedPriceItemDAO := dao.NewFixedPriceItemDAO(db)
@@ -287,7 +289,7 @@ func main() {
 	h.Use(middleware.MetricsMiddleware("auction", httpMetrics))
 
 	// 注册路由
-	registerRoutes(h, internalAPIToken, auctionHandler, bidHandler, wsHandler, userHandler, authHandler, notificationHandler, followHandler, productReminderHandler, skyLampHandler, userBalanceHandler, userAddressHandler, liveReminderHandler, liveStreamStatsHandler)
+	registerRoutes(h, internalAPIToken, auctionHandler, bidHandler, wsHandler, userHandler, authHandler, notificationHandler, followHandler, productReminderHandler, skyLampHandler, userBalanceHandler, userAddressHandler, liveReminderHandler, liveStreamStatsHandler, statisticsHandler)
 
 	// 一口价秒杀路由（A5 M1）：挂在 /api/v1/fixed-price 下。
 	handler.RegisterFixedPriceRoutes(h.Group("/api/v1"), fixedPriceHandler)
@@ -395,7 +397,7 @@ func parseGatewayRole(role string) int {
 }
 
 // registerRoutes 注册路由
-func registerRoutes(h *server.Hertz, internalAPIToken string, auctionHandler *handler.AuctionHandler, bidHandler *handler.BidHandler, wsHandler *handler.WSHandler, userHandler *handler.UserHandler, authHandler *handler.AuthHandler, notificationHandler *handler.NotificationHandler, followHandler *handler.FollowHandler, productReminderHandler *handler.ProductReminderHandler, skyLampHandler *handler.SkyLampHandler, userBalanceHandler *handler.UserBalanceHandler, userAddressHandler *handler.UserAddressHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler) {
+func registerRoutes(h *server.Hertz, internalAPIToken string, auctionHandler *handler.AuctionHandler, bidHandler *handler.BidHandler, wsHandler *handler.WSHandler, userHandler *handler.UserHandler, authHandler *handler.AuthHandler, notificationHandler *handler.NotificationHandler, followHandler *handler.FollowHandler, productReminderHandler *handler.ProductReminderHandler, skyLampHandler *handler.SkyLampHandler, userBalanceHandler *handler.UserBalanceHandler, userAddressHandler *handler.UserAddressHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler, statisticsHandler *handler.StatisticsHandler) {
 
 	v1 := h.Group("/api/v1")
 
@@ -417,6 +419,9 @@ func registerRoutes(h *server.Hertz, internalAPIToken string, auctionHandler *ha
 	internalAuth := middleware.InternalAuthMiddleware(internalAPIToken)
 	v1.GET("/admin/auctions", internalAuth, auctionHandler.AdminList)
 	v1.GET("/admin/auctions/:id", internalAuth, auctionHandler.AdminGet)
+	if statisticsHandler != nil {
+		v1.GET("/statistics/auctions", internalAuth, statisticsHandler.GetAuctionStatistics)
+	}
 
 	// 出价相关路由
 	v1.POST("/auctions/:id/bids", bidHandler.PlaceBid)
