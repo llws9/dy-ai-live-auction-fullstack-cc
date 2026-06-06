@@ -121,22 +121,31 @@ func (f *UserStatsFetcher) fetchOrderHistory(ctx context.Context, userID int64) 
 	// 兼容两种 shape：扁平 / data 包裹
 	var flat struct {
 		Items []map[string]interface{} `json:"items"`
+		List  []map[string]interface{} `json:"list"`
 		Total int64                    `json:"total"`
 	}
 	var wrapped struct {
 		Code int `json:"code"`
 		Data struct {
 			Items []map[string]interface{} `json:"items"`
+			List  []map[string]interface{} `json:"list"`
 			Total int64                    `json:"total"`
 		} `json:"data"`
 	}
-	if err := json.Unmarshal(body, &flat); err == nil && flat.Items != nil {
-		return flat.Total, countWinners(flat.Items), nil
+	if err := json.Unmarshal(body, &flat); err == nil && (flat.Items != nil || flat.List != nil) {
+		return flat.Total, countWinners(firstNonNilHistoryItems(flat.Items, flat.List)), nil
 	}
 	if err := json.Unmarshal(body, &wrapped); err == nil {
-		return wrapped.Data.Total, countWinners(wrapped.Data.Items), nil
+		return wrapped.Data.Total, countWinners(firstNonNilHistoryItems(wrapped.Data.Items, wrapped.Data.List)), nil
 	}
 	return 0, 0, fmt.Errorf("decode order history")
+}
+
+func firstNonNilHistoryItems(items, list []map[string]interface{}) []map[string]interface{} {
+	if items != nil {
+		return items
+	}
+	return list
 }
 
 func countWinners(items []map[string]interface{}) int64 {

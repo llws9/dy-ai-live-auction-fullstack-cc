@@ -56,6 +56,35 @@ func TestBuildUserStats(t *testing.T) {
 		assert.Equal(t, int64(2), got.WonCount)
 	})
 
+	t.Run("product history list shape: aggregates won count from product-service contract", func(t *testing.T) {
+		auctionSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"code": 200,
+				"data": map[string]interface{}{"items": []interface{}{}, "total": 0},
+			})
+		}))
+		defer auctionSrv.Close()
+
+		productSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"list": []interface{}{
+					map[string]interface{}{"auction_id": 101, "is_winner": true},
+					map[string]interface{}{"auction_id": 102, "is_winner": true},
+					map[string]interface{}{"auction_id": 103, "is_winner": false},
+				},
+				"total": 3,
+			})
+		}))
+		defer productSrv.Close()
+
+		fetcher := NewUserStatsFetcher(auctionSrv.URL, productSrv.URL, 2*time.Second)
+		got, err := fetcher.Fetch(ctx, 7)
+
+		require.NoError(t, err)
+		assert.Equal(t, int64(3), got.AuctionHistoryCount)
+		assert.Equal(t, int64(2), got.WonCount)
+	})
+
 	t.Run("auction down: returns error", func(t *testing.T) {
 		auctionSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			http.Error(w, "boom", 500)

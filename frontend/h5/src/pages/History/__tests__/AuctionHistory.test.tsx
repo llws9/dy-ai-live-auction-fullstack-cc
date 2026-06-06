@@ -69,4 +69,18 @@ describe('AuctionHistory migration', () => {
     expect(screen.queryByText(/模拟支付/)).not.toBeInTheDocument();
     await waitFor(() => expect(mockedOrderApi.history).toHaveBeenCalledWith({ page: 1, page_size: 20 }));
   });
+
+  it('opens won filter from profile deep link', async () => {
+    render(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/history?filter=won']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+          <HistoryPage />
+        </MemoryRouter>
+      </ThemeProvider>
+    );
+
+    expect(await screen.findByText('鎏金香炉')).toBeInTheDocument();
+    expect(screen.queryByText('宋瓷盏')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '竞拍成功' })).toHaveClass('filterActive');
+  });
 });

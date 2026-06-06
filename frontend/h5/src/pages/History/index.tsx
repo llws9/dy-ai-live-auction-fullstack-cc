@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { orderApi } from '../../services/api';
 import PageHeader from '@/components/shared/PageHeader';
 import styles from './AuctionHistory.module.css';
@@ -87,12 +87,18 @@ const filters: Array<{ key: FilterKey; label: string }> = [
   { key: 'lost', label: '未中标' },
 ];
 
+function readFilter(value: string | null): FilterKey {
+  if (value === 'won' || value === 'lost') return value;
+  return 'all';
+}
+
 const AuctionHistoryPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [records, setRecords] = useState<HistoryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
+  const [activeFilter, setActiveFilter] = useState<FilterKey>(() => readFilter(searchParams.get('filter')));
 
   useEffect(() => {
     let alive = true;

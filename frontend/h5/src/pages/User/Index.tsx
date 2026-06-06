@@ -238,10 +238,10 @@ const UserCenter: React.FC = () => {
           <strong>{statValue(stats?.auction_history_count)}</strong>
           <span>竞拍记录</span>
         </Link>
-        <div className={styles.statCard}>
+        <Link to="/history?filter=won" className={styles.statCard}>
           <strong>{statValue(stats?.won_count)}</strong>
           <span>中标</span>
-        </div>
+        </Link>
       </div>
 
       <section className={styles.walletCard} aria-label="钱包余额">
