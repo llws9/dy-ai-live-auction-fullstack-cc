@@ -82,6 +82,10 @@ func (s *Scheduler) checkAuctions() {
 	if err := s.auctionService.CheckAndEndAuctions(ctx); err != nil {
 		log.Printf("Error checking auctions to end: %v", err)
 	}
+
+	if err := s.auctionService.RetryUnfinishedSettlements(ctx, 100); err != nil {
+		log.Printf("Error retrying unfinished auction settlements: %v", err)
+	}
 }
 
 // broadcastTimeSync 广播时间同步消息

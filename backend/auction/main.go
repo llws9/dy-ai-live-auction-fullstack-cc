@@ -81,6 +81,7 @@ func main() {
 		&model.ProductReminderReceipt{},
 		&model.FixedPriceItem{},
 		&model.FixedPricePurchase{},
+		&model.AuctionSettlementTask{},
 	); err != nil {
 		log.Printf("Warning: AutoMigrate failed (tables may already exist): %v", err)
 	}
@@ -110,6 +111,9 @@ func main() {
 	// 初始化 Service 层
 	auctionService := service.NewAuctionService(auctionDAO)
 	bidService := service.NewBidService(auctionDAO, bidDAO, ruleDAO, userDAO)
+	settlementService := service.NewAuctionSettlementService(auctionDAO, bidDAO)
+	auctionService.SetSettlementService(settlementService)
+	bidService.SetSettlementService(settlementService)
 	notificationService := service.NewNotificationService(notificationDAO, dao.GetRedis())
 	batchNotificationService := service.NewBatchNotificationService(userLiveStreamFollowDAO, notificationDAO, notificationService)
 	followService := service.NewFollowService(userLiveStreamFollowDAO)

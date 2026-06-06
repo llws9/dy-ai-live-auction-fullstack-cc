@@ -32,6 +32,7 @@ type BidService struct {
 	notificationSender NotificationSender      // 通知发送接口
 	metrics            *metrics.AuctionMetrics // 新增：指标收集器
 	skyLampTrigger     SkyLampTrigger          // 点天灯触发接口
+	settlementService  *AuctionSettlementService
 }
 
 // SkyLampTrigger 点天灯触发接口
@@ -42,11 +43,12 @@ type SkyLampTrigger interface {
 // NewBidService 创建出价服务
 func NewBidService(auctionDAO *dao.AuctionDAO, bidDAO *dao.BidDAO, ruleDAO *dao.AuctionRuleDAO, userDAO *dao.UserDAO) *BidService {
 	return &BidService{
-		auctionDAO:   auctionDAO,
-		bidDAO:       bidDAO,
-		ruleDAO:      ruleDAO,
-		userDAO:      userDAO,
-		rankThrottle: NewRankingThrottle(),
+		auctionDAO:        auctionDAO,
+		bidDAO:            bidDAO,
+		ruleDAO:           ruleDAO,
+		userDAO:           userDAO,
+		rankThrottle:      NewRankingThrottle(),
+		settlementService: NewAuctionSettlementService(auctionDAO, bidDAO),
 	}
 }
 
@@ -63,11 +65,18 @@ func (s *BidService) SetHub(hub *websocket.Hub) {
 // SetNotificationSender 设置通知发送服务
 func (s *BidService) SetNotificationSender(sender NotificationSender) {
 	s.notificationSender = sender
+	if s.settlementService != nil {
+		s.settlementService.SetNotificationSender(sender)
+	}
 }
 
 // SetSkyLampTrigger 设置点天灯触发服务
 func (s *BidService) SetSkyLampTrigger(trigger SkyLampTrigger) {
 	s.skyLampTrigger = trigger
+}
+
+func (s *BidService) SetSettlementService(settlementService *AuctionSettlementService) {
+	s.settlementService = settlementService
 }
 
 // PlaceBidRequest 出价请求
@@ -426,6 +435,13 @@ func (s *BidService) handleCapPriceBid(ctx context.Context, auction *model.Aucti
 			return fmt.Errorf("更新竞拍状态失败: %w", err)
 		}
 
+		if s.settlementService == nil {
+			return errors.New("竞拍收尾服务未初始化")
+		}
+		if err := s.settlementService.CreatePendingTaskWithTx(ctx, tx, req.AuctionID); err != nil {
+			return fmt.Errorf("创建竞拍收尾任务失败: %w", err)
+		}
+
 		result = &PlaceBidResult{
 			Success:      true,
 			Message:      "达到封顶价，竞拍成交！",
@@ -438,6 +454,10 @@ func (s *BidService) handleCapPriceBid(ctx context.Context, auction *model.Aucti
 
 	if txErr != nil {
 		return nil, txErr
+	}
+
+	if err := s.settlementService.FinalizeEndedAuction(ctx, req.AuctionID); err != nil {
+		return nil, err
 	}
 
 	return result, nil
