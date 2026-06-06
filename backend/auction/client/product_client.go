@@ -30,6 +30,22 @@ type ProductSummary struct {
 	CategoryID *int64   `json:"category_id"`
 }
 
+// AuctionProductInfo 是创建竞拍前从 product-service 获取的商品事实。
+type AuctionProductInfo struct {
+	ID        int64 `json:"id"`
+	OwnerID   int64 `json:"owner_id"`
+	Status    int   `json:"status"`
+	RuleBound bool  `json:"rule_bound"`
+}
+
+// LiveStreamInfo 是 product-service 内部直播间 get-or-create 接口返回的直播间事实。
+type LiveStreamInfo struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	CreatorID int64  `json:"creator_id"`
+	Status    int    `json:"status"`
+}
+
 // ProductClient 抽象 auction-service 对 product-service 的依赖，便于测试替换。
 type ProductClient interface {
 	// ListProductIDsByCategory 调 GET /internal/products?category_id=
@@ -40,6 +56,12 @@ type ProductClient interface {
 	// 返回 map[id]ProductSummary 便于按 product_id 回填。
 	// 当 ids 为空时不发起 HTTP 调用，直接返回空 map。
 	BatchGetSummaries(ctx context.Context, ids []int64) (map[int64]ProductSummary, error)
+
+	// GetAuctionProductInfo 调 GET /internal/products/:id/auction-info 获取创建竞拍所需商品事实。
+	GetAuctionProductInfo(ctx context.Context, productID int64) (*AuctionProductInfo, error)
+
+	// GetOrCreateActiveLiveStream 调 POST /internal/live-streams/get-or-create 获取或创建 active 直播间。
+	GetOrCreateActiveLiveStream(ctx context.Context, creatorID int64, creatorName string) (*LiveStreamInfo, error)
 }
 
 // HTTPProductClient 基于 net/http 的实现。
@@ -83,6 +105,18 @@ type internalBatchResponse struct {
 		Items []ProductSummary `json:"items"`
 	} `json:"data"`
 	Message string `json:"message"`
+}
+
+type internalAuctionProductInfoResponse struct {
+	Code    int                `json:"code"`
+	Data    AuctionProductInfo `json:"data"`
+	Message string             `json:"message"`
+}
+
+type internalLiveStreamResponse struct {
+	Code    int            `json:"code"`
+	Data    LiveStreamInfo `json:"data"`
+	Message string         `json:"message"`
 }
 
 type internalOrderResponse struct {
@@ -160,6 +194,74 @@ func (c *HTTPProductClient) BatchGetSummaries(ctx context.Context, ids []int64) 
 		out[it.ID] = it
 	}
 	return out, nil
+}
+
+// GetAuctionProductInfo 实现见接口注释。
+func (c *HTTPProductClient) GetAuctionProductInfo(ctx context.Context, productID int64) (*AuctionProductInfo, error) {
+	endpoint := fmt.Sprintf("%s/internal/products/%d/auction-info", c.baseURL, productID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	if c.internalToken != "" {
+		req.Header.Set("X-Internal-Token", c.internalToken)
+	}
+
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("call product-service: %w", err)
+	}
+	defer resp.Body.Close()
+	defer io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("product-service returned status %d", resp.StatusCode)
+	}
+	var body internalAuctionProductInfoResponse
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	if body.Code != 0 && body.Code != http.StatusOK {
+		return nil, fmt.Errorf("product-service business code %d: %s", body.Code, body.Message)
+	}
+	return &body.Data, nil
+}
+
+// GetOrCreateActiveLiveStream 实现见接口注释。
+func (c *HTTPProductClient) GetOrCreateActiveLiveStream(ctx context.Context, creatorID int64, creatorName string) (*LiveStreamInfo, error) {
+	payload, err := json.Marshal(map[string]interface{}{
+		"creator_id":   creatorID,
+		"creator_name": creatorName,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("marshal request: %w", err)
+	}
+	endpoint := c.baseURL + "/internal/live-streams/get-or-create"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.internalToken != "" {
+		req.Header.Set("X-Internal-Token", c.internalToken)
+	}
+
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("call product-service: %w", err)
+	}
+	defer resp.Body.Close()
+	defer io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("product-service returned status %d", resp.StatusCode)
+	}
+	var body internalLiveStreamResponse
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	if body.Code != 0 && body.Code != http.StatusOK {
+		return nil, fmt.Errorf("product-service business code %d: %s", body.Code, body.Message)
+	}
+	return &body.Data, nil
 }
 
 func (c *HTTPProductClient) CreateOrderFromAuctionResult(ctx context.Context, req model.AuctionOrderRequest) error {

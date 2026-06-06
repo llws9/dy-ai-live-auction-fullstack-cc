@@ -137,6 +137,96 @@ func TestBatchGetSummaries(t *testing.T) {
 	})
 }
 
+func TestHTTPProductClient_GetAuctionProductInfo(t *testing.T) {
+	var capturedMethod string
+	var capturedPath string
+	var capturedToken string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedMethod = r.Method
+		capturedPath = r.URL.Path
+		capturedToken = r.Header.Get("X-Internal-Token")
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"code":    200,
+			"message": "success",
+			"data": map[string]interface{}{
+				"id":         11,
+				"owner_id":   1001,
+				"status":     1,
+				"rule_bound": true,
+			},
+		})
+	}))
+	defer srv.Close()
+
+	c := NewHTTPProductClient(srv.URL, time.Second)
+	c.SetInternalToken("test-token")
+	info, err := c.GetAuctionProductInfo(context.Background(), 11)
+
+	require.NoError(t, err)
+	require.NotNil(t, info)
+	assert.Equal(t, http.MethodGet, capturedMethod)
+	assert.Equal(t, "/internal/products/11/auction-info", capturedPath)
+	assert.Equal(t, "test-token", capturedToken)
+	assert.Equal(t, int64(11), info.ID)
+	assert.Equal(t, int64(1001), info.OwnerID)
+	assert.Equal(t, 1, info.Status)
+	assert.True(t, info.RuleBound)
+}
+
+func TestHTTPProductClient_GetOrCreateActiveLiveStream(t *testing.T) {
+	var capturedBody map[string]interface{}
+	var capturedToken string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/internal/live-streams/get-or-create", r.URL.Path)
+		capturedToken = r.Header.Get("X-Internal-Token")
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&capturedBody))
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"code":    200,
+			"message": "success",
+			"data": map[string]interface{}{
+				"id":         77,
+				"creator_id": 1001,
+				"status":     1,
+				"name":       "merchant_1001的直播间",
+			},
+		})
+	}))
+	defer srv.Close()
+
+	c := NewHTTPProductClient(srv.URL, time.Second)
+	c.SetInternalToken("test-token")
+	live, err := c.GetOrCreateActiveLiveStream(context.Background(), 1001, "merchant_1001")
+
+	require.NoError(t, err)
+	require.NotNil(t, live)
+	assert.Equal(t, "test-token", capturedToken)
+	assert.Equal(t, float64(1001), capturedBody["creator_id"])
+	assert.Equal(t, "merchant_1001", capturedBody["creator_name"])
+	assert.Equal(t, int64(77), live.ID)
+	assert.Equal(t, int64(1001), live.CreatorID)
+	assert.Equal(t, 1, live.Status)
+	assert.Equal(t, "merchant_1001的直播间", live.Name)
+}
+
+func TestHTTPProductClient_GetOrCreateActiveLiveStreamReturnsErrorOnBusinessCode(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"code":    409,
+			"message": "live stream is disabled",
+		})
+	}))
+	defer srv.Close()
+
+	c := NewHTTPProductClient(srv.URL, time.Second)
+	_, err := c.GetOrCreateActiveLiveStream(context.Background(), 1001, "merchant_1001")
+
+	require.Error(t, err)
+}
+
 func TestCreateOrderFromAuctionResult(t *testing.T) {
 	var capturedToken string
 	var capturedBody map[string]interface{}

@@ -36,9 +36,9 @@
 | Done | `2` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Review | `0` |
-| Pending | `7` |
-| Last Updated | `2026-06-07 03:54` |
+| Review | `1` |
+| Pending | `6` |
+| Last Updated | `2026-06-07 04:04` |
 
 ## Task Matrix
 
@@ -46,7 +46,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T1` | `Product Publish 只做 Draft → Published` | `done` | `implementer` | `W1` | `-` | `Task 1` | `backend/product/service/product.go; backend/product/handler/product.go; backend/product/service/product_test.go` |
 | `T2` | `Product Internal API 提供商品竞拍事实与 active 直播间` | `done` | `implementer` | `W2` | `T1` | `Task 2` | `backend/product/service/product.go; backend/product/handler/internal.go; backend/product/main.go; backend/product/handler/internal_test.go` |
-| `T3` | `Auction ProductClient 增加商品事实与直播间方法` | `pending` | `unassigned` | `W3` | `T2` | `Task 3` | `backend/auction/client/product_client.go; backend/auction/client/product_client_test.go` |
+| `T3` | `Auction ProductClient 增加商品事实与直播间方法` | `review` | `implementer` | `W3` | `T2` | `Task 3` | `backend/auction/client/product_client.go; backend/auction/client/product_client_test.go` |
 | `T4` | `Auction DAO 支持活跃唯一查询与 MySQL 兜底索引` | `pending` | `unassigned` | `W3` | `-` | `Task 4` | `backend/auction/dao/auction.go; backend/auction/dao/auction_schema.go; backend/auction/main.go; backend/auction/dao/auction_test.go; backend/auction/dao/auction_schema_test.go` |
 | `T5` | `AuctionService 创建竞拍 Fail-closed 校验` | `pending` | `unassigned` | `W4` | `T4` | `Task 5` | `backend/auction/service/auction.go; backend/auction/service/auction_create_test.go` |
 | `T6` | `Auction Create Handler 编排 product-service 与业务错误码` | `pending` | `unassigned` | `W5` | `T3,T5` | `Task 6` | `backend/auction/handler/auction.go; backend/auction/handler/auction_create_test.go` |
@@ -220,10 +220,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `review` |
+| Owner | `implementer` |
+| Started At | `2026-06-07 04:01` |
+| Completed At | `2026-06-07 04:04` |
 | Branch | `feat/auction-product-lifecycle` |
 | Worktree | `/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-auction-product-lifecycle` |
 | Depends On | `T2` |
@@ -240,11 +240,26 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `TDD Red -> Green -> Verify evidence` | `not_run` | `pending` |
+| `cd backend/auction && go test ./client -run 'TestHTTPProductClient_(GetAuctionProductInfo\|GetOrCreateActiveLiveStream)' -count=1` | RED: fail because new methods are undefined | FAIL: `c.GetAuctionProductInfo undefined`; `c.GetOrCreateActiveLiveStream undefined` | `pass` |
+| `cd backend/auction && go test ./client -run 'TestHTTPProductClient_(GetAuctionProductInfo\|GetOrCreateActiveLiveStream)' -count=1` | GREEN: new client contract tests pass | PASS: `ok auction-service/client 0.603s` | `pass` |
+| `cd backend/auction && go test ./client -count=1` | Client package regression passes | PASS: `ok auction-service/client 0.677s` | `pass` |
+| `git diff --check` | No whitespace errors | PASS: exit 0 | `pass` |
+
+**Modified Files**
+
+- `backend/auction/client/product_client.go`
+- `backend/auction/client/product_client_test.go`
+- `docs/superpowers/sdd/runs/2026-06-07-auction-product-lifecycle-state.md`
+
+**Risks**
+
+- `ProductClient` interface expansion will require any downstream test fakes to implement the two new methods when they compile against the expanded interface.
+- End-to-end create-auction orchestration is outside T3 scope and remains covered by later `T6`.
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `当前分支/worktree：feat/auction-product-lifecycle @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-auction-product-lifecycle`
+- Result: `DONE`
 
 ### T4 - `Auction DAO 支持活跃唯一查询与 MySQL 兜底索引`
 
