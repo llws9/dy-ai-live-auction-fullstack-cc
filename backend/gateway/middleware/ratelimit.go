@@ -53,6 +53,8 @@ func (rl *RateLimiter) Middleware() app.HandlerFunc {
 		// 第一次请求时设置过期时间
 		if count == 1 {
 			rl.redis.Expire(ctx, key, rl.window)
+		} else {
+			rl.ensureTTL(ctx, key)
 		}
 
 		// 超过限制返回 429
@@ -67,6 +69,20 @@ func (rl *RateLimiter) Middleware() app.HandlerFunc {
 
 		c.Next(ctx)
 	}
+}
+
+func (rl *RateLimiter) ensureTTL(ctx context.Context, key string) {
+	ttl, err := rl.redis.TTL(ctx, key).Result()
+	if err != nil {
+		return
+	}
+	if shouldRefreshRateLimitTTL(ttl) {
+		rl.redis.Expire(ctx, key, rl.window)
+	}
+}
+
+func shouldRefreshRateLimitTTL(ttl time.Duration) bool {
+	return ttl < 0
 }
 
 // IPRateLimit IP 级别限流中间件
@@ -91,6 +107,8 @@ func PathRateLimit(redis *redis.Client, limit int, window time.Duration) app.Han
 		}
 
 		if count == 1 {
+			redis.Expire(ctx, key, window)
+		} else if ttl, err := redis.TTL(ctx, key).Result(); err == nil && shouldRefreshRateLimitTTL(ttl) {
 			redis.Expire(ctx, key, window)
 		}
 

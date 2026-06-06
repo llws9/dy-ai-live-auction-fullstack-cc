@@ -3,6 +3,7 @@ package pressure
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -80,6 +81,7 @@ func TestClient_JWTPerUser(t *testing.T) {
 func TestClient_HTTPError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"code":500,"message":"server error"}`))
 	}))
 	defer srv.Close()
 
@@ -90,6 +92,32 @@ func TestClient_HTTPError(t *testing.T) {
 	}
 	if res.StatusCode != 500 {
 		t.Fatalf("StatusCode: want 500, got %d", res.StatusCode)
+	}
+}
+
+func TestClient_HTTPErrorDrainsBodyForConnectionReuse(t *testing.T) {
+	var newConns int32
+	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusTooManyRequests)
+		_, _ = w.Write([]byte(strings.Repeat("x", 1024)))
+	}))
+	srv.Config.ConnState = func(_ net.Conn, state http.ConnState) {
+		if state == http.StateNew {
+			atomic.AddInt32(&newConns, 1)
+		}
+	}
+	srv.Start()
+	defer srv.Close()
+
+	c := NewClient(srv.URL, "", 2*time.Second)
+	for i := 0; i < 20; i++ {
+		res := c.PlaceBid(context.Background(), 100, 1, int64(i+1))
+		if res.StatusCode != http.StatusTooManyRequests {
+			t.Fatalf("StatusCode: want 429, got %d", res.StatusCode)
+		}
+	}
+	if got := atomic.LoadInt32(&newConns); got > 3 {
+		t.Fatalf("expected HTTP error responses to reuse connections, new connections=%d", got)
 	}
 }
 
@@ -126,6 +154,24 @@ func TestClient_Timeout(t *testing.T) {
 	}
 	if res.Err == nil {
 		t.Fatalf("expected error, got nil")
+	}
+}
+
+func TestClient_NegativeTimeoutDisablesHTTPClientTimeout(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(80 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"code":400,"message":"price too low"}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, "", -1)
+	res := c.PlaceBid(context.Background(), 100, 1, 1)
+	if res.StatusCode != 400 {
+		t.Fatalf("StatusCode: want 400, got %d", res.StatusCode)
+	}
+	if !strings.Contains(res.Err.Error(), "biz_code=400") {
+		t.Fatalf("expected business error instead of client timeout, got err=%v", res.Err)
 	}
 }
 

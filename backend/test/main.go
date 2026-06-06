@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
@@ -184,7 +185,7 @@ type pressureClientFactory struct {
 }
 
 func (f pressureClientFactory) NewClient() pressure.Bidder {
-	return pressure.NewJWTClient(f.gatewayURL, f.jwtSecret, 5*time.Second)
+	return pressure.NewJWTClient(f.gatewayURL, f.jwtSecret, -1)
 }
 
 func (f pressureClientFactory) PrepareFixture(ctx context.Context, cfg pressure.Config) (pressure.Fixture, error) {
@@ -197,17 +198,67 @@ func (f pressureClientFactory) PrepareFixture(ctx context.Context, cfg pressure.
 	if err := f.ensurePressureUsers(ctx, cfg.ConcurrentUsers); err != nil {
 		return pressure.Fixture{}, err
 	}
+
+	auctionCount := 1
+	if cfg.Scenario == "throughput" {
+		auctionCount = cfg.ConcurrentUsers
+		if cfg.FixtureCount > 0 && cfg.FixtureCount < auctionCount {
+			auctionCount = cfg.FixtureCount
+		}
+	}
+	if auctionCount < 1 {
+		auctionCount = 1
+	}
+
 	cli := auction.NewClient(f.gatewayURL, 10*time.Second)
 	cli.SetJWTSecret(f.jwtSecret)
 
 	seller := auction.Actor{UserID: 9001, Username: "pressure_merchant_9001", Role: auction.RoleMerchant}
+	if auctionCount == 1 {
+		auctionID, err := f.createPressureAuction(ctx, cli, seller, cfg, 0)
+		if err != nil {
+			return pressure.Fixture{}, err
+		}
+		return pressure.Fixture{AuctionID: auctionID, AuctionIDs: []int64{auctionID}}, nil
+	}
+
+	auctionIDs := make([]int64, auctionCount)
+	errs := make(chan error, auctionCount)
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 8)
+	for i := 0; i < auctionCount; i++ {
+		wg.Add(1)
+		i := i
+		go func() {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			auctionID, err := f.createPressureAuction(ctx, cli, seller, cfg, i)
+			if err != nil {
+				errs <- err
+				return
+			}
+			auctionIDs[i] = auctionID
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			return pressure.Fixture{}, err
+		}
+	}
+	return pressure.Fixture{AuctionID: auctionIDs[0], AuctionIDs: auctionIDs}, nil
+}
+
+func (f pressureClientFactory) createPressureAuction(ctx context.Context, cli *auction.Client, seller auction.Actor, cfg pressure.Config, index int) (int64, error) {
 	productStep := cli.CreateProductAs(ctx, seller, auction.CreateProductReq{
-		Name:        fmt.Sprintf("压测拍品 %d", time.Now().UnixNano()),
+		Name:        fmt.Sprintf("压测拍品 %d-%d", time.Now().UnixNano(), index),
 		Description: "pressure auto fixture",
 		Status:      1,
 	})
 	if !productStep.OK || productStep.RefID <= 0 {
-		return pressure.Fixture{}, fmt.Errorf("pressure create product failed: %s", productStep.Message)
+		return 0, fmt.Errorf("pressure create product failed: %s", productStep.Message)
 	}
 
 	ruleStep := cli.CreateAuctionRule(ctx, seller, productStep.RefID, auction.CreateAuctionRuleReq{
@@ -219,7 +270,7 @@ func (f pressureClientFactory) PrepareFixture(ctx context.Context, cfg pressure.
 		MaxDelayTime:       30,
 	})
 	if !ruleStep.OK {
-		return pressure.Fixture{}, fmt.Errorf("pressure create auction rule failed: %s", ruleStep.Message)
+		return 0, fmt.Errorf("pressure create auction rule failed: %s", ruleStep.Message)
 	}
 
 	auctionStep := cli.CreateAuctionAs(ctx, seller, auction.CreateAuctionReq{
@@ -229,14 +280,14 @@ func (f pressureClientFactory) PrepareFixture(ctx context.Context, cfg pressure.
 		Duration:   cfg.DurationSec + 30,
 	})
 	if !auctionStep.OK || auctionStep.RefID <= 0 {
-		return pressure.Fixture{}, fmt.Errorf("pressure create auction failed: %s", auctionStep.Message)
+		return 0, fmt.Errorf("pressure create auction failed: %s", auctionStep.Message)
 	}
 
 	if step := cli.WaitAuctionStarted(ctx, auctionStep.RefID, 100*time.Millisecond, 5*time.Second); !step.OK {
-		return pressure.Fixture{}, fmt.Errorf("pressure wait auction started failed: %s", step.Message)
+		return 0, fmt.Errorf("pressure wait auction started failed: %s", step.Message)
 	}
 
-	return pressure.Fixture{AuctionID: auctionStep.RefID}, nil
+	return auctionStep.RefID, nil
 }
 
 func (f pressureClientFactory) ensurePressureUsers(ctx context.Context, concurrentUsers int) error {

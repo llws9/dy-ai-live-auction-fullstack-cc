@@ -27,6 +27,7 @@ jest.mock('../../../services/api', () => ({
 jest.mock('../../../services/notification', () => ({
   notificationApi: {
     getUnreadCount: jest.fn(),
+    getTouchpointSummary: jest.fn(),
     hotPull: jest.fn(),
   },
 }));
@@ -66,6 +67,7 @@ const mockAuthAuthenticated = () => {
     isAuthenticated: true,
     loading: false,
     user: { id: 1, role: 'user' },
+    token: 'token-1',
     login: jest.fn(),
     logout: jest.fn(),
   } as unknown as ReturnType<typeof useAuth>);
@@ -76,9 +78,18 @@ const mockAuthAnonymous = () => {
     isAuthenticated: false,
     loading: false,
     user: null,
+    token: null,
     login: jest.fn(),
     logout: jest.fn(),
   } as unknown as ReturnType<typeof useAuth>);
+};
+
+const emptyTouchpointSummary = {
+  unreadTotal: 0,
+  pendingPayment: 0,
+  wonNotPaid: 0,
+  outbid: 0,
+  endingSoon: 0,
 };
 
 describe('HomePage 分类联动 (T2.10)', () => {
@@ -91,6 +102,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
     ]);
     mockedFollowApi.getFollowedLiveStreams.mockResolvedValue({ list: [] });
     mockedNotificationApi.getUnreadCount.mockResolvedValue({ count: 0 });
+    mockedNotificationApi.getTouchpointSummary.mockResolvedValue(emptyTouchpointSummary);
     mockedNotificationApi.hotPull.mockResolvedValue({ notifications: [], has_more: false });
     mockedProductReminderApi.list.mockResolvedValue({ items: [] });
     mockAuthAuthenticated();
@@ -475,20 +487,44 @@ describe('HomePage 未读消息红点 (T3.6 / F-D2)', () => {
     mockedProductApi.listCategories.mockResolvedValue([]);
     mockedFollowApi.getFollowedLiveStreams.mockResolvedValue({ list: [] });
     mockedNotificationApi.getUnreadCount.mockResolvedValue({ count: 0 });
+    mockedNotificationApi.getTouchpointSummary.mockResolvedValue(emptyTouchpointSummary);
     mockedNotificationApi.hotPull.mockResolvedValue({ notifications: [], has_more: false });
+    mockedProductReminderApi.list.mockResolvedValue({ items: [] });
     mockAuthAuthenticated();
   });
 
-  it('登录后 mount 先 hot-pull 商品提醒，再刷新 getUnreadCount', async () => {
-    mockedNotificationApi.getUnreadCount.mockResolvedValue({ count: 1 });
+  it('登录后 mount 热拉商品提醒，并刷新共享通知汇总', async () => {
+    mockedNotificationApi.getTouchpointSummary
+      .mockResolvedValueOnce(emptyTouchpointSummary)
+      .mockResolvedValueOnce({
+        ...emptyTouchpointSummary,
+        unreadTotal: 1,
+      });
 
     renderHome();
     await waitFor(() => expect(mockedNotificationApi.hotPull).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(mockedNotificationApi.getUnreadCount).toHaveBeenCalledTimes(1));
-    expect(mockedNotificationApi.hotPull.mock.invocationCallOrder[0]).toBeLessThan(
-      mockedNotificationApi.getUnreadCount.mock.invocationCallOrder[0]
-    );
+    await waitFor(() => expect(mockedNotificationApi.getTouchpointSummary).toHaveBeenCalledTimes(2));
+    expect(mockedNotificationApi.getUnreadCount).not.toHaveBeenCalled();
     expect(await screen.findByLabelText('1 条待处理提醒')).toBeInTheDocument();
+  });
+
+  it('hot-pull 后使用共享汇总刷新首页通知红点，避免和底部导航不同步', async () => {
+    mockedNotificationApi.getTouchpointSummary
+      .mockResolvedValueOnce({
+        ...emptyTouchpointSummary,
+        unreadTotal: 83,
+      })
+      .mockResolvedValueOnce({
+        ...emptyTouchpointSummary,
+        unreadTotal: 84,
+      });
+    mockedNotificationApi.getUnreadCount.mockResolvedValue({ count: 84 });
+
+    renderHome();
+
+    await waitFor(() => expect(mockedNotificationApi.hotPull).toHaveBeenCalledTimes(1));
+    expect(await screen.findByLabelText('84 条待处理提醒')).toBeInTheDocument();
+    await waitFor(() => expect(mockedNotificationApi.getTouchpointSummary).toHaveBeenCalledTimes(2));
   });
 
   it('未登录时不调用 getUnreadCount，且不渲染 BadgeDot', async () => {
@@ -502,47 +538,62 @@ describe('HomePage 未读消息红点 (T3.6 / F-D2)', () => {
     expect(screen.queryByLabelText(/条待处理提醒/)).not.toBeInTheDocument();
   });
 
-  it('count>0 时通知图标右上角渲染未读数红点', async () => {
-    mockedNotificationApi.getUnreadCount.mockResolvedValue({ count: 8 });
+  it('summary unreadTotal>0 时通知图标右上角渲染未读数红点', async () => {
+    mockedNotificationApi.getTouchpointSummary.mockResolvedValue({
+      ...emptyTouchpointSummary,
+      unreadTotal: 8,
+    });
 
     renderHome();
 
     expect(await screen.findByLabelText('8 条待处理提醒')).toBeInTheDocument();
   });
 
-  it('count=0 时不渲染红点', async () => {
-    mockedNotificationApi.getUnreadCount.mockResolvedValue({ count: 0 });
+  it('summary unreadTotal=0 时不渲染红点', async () => {
+    mockedNotificationApi.getTouchpointSummary.mockResolvedValue(emptyTouchpointSummary);
 
     renderHome();
 
-    await waitFor(() => expect(mockedNotificationApi.getUnreadCount).toHaveBeenCalled());
+    await waitFor(() => expect(mockedNotificationApi.getTouchpointSummary).toHaveBeenCalled());
     expect(screen.queryByLabelText(/条待处理提醒/)).not.toBeInTheDocument();
   });
 
-  it('getUnreadCount 失败时仅 console.warn，不渲染红点（容错）', async () => {
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    mockedNotificationApi.getUnreadCount.mockRejectedValueOnce(new Error('network down'));
+  it('getTouchpointSummary 失败时不渲染红点（容错）', async () => {
+    mockedNotificationApi.getTouchpointSummary.mockRejectedValueOnce(new Error('network down'));
 
     renderHome();
 
-    await waitFor(() => expect(mockedNotificationApi.getUnreadCount).toHaveBeenCalled());
+    await waitFor(() => expect(mockedNotificationApi.getTouchpointSummary).toHaveBeenCalled());
     expect(screen.queryByLabelText(/条待处理提醒/)).not.toBeInTheDocument();
-    expect(warnSpy).toHaveBeenCalled();
-    warnSpy.mockRestore();
   });
 
-  it('页面回到前台（visibilitychange → visible）时再次拉取未读数', async () => {
-    mockedNotificationApi.getUnreadCount.mockResolvedValue({ count: 1 });
+  it('页面回到前台（visibilitychange → visible）时再次热拉并刷新共享汇总', async () => {
+    mockedNotificationApi.getTouchpointSummary
+      .mockResolvedValueOnce({
+        ...emptyTouchpointSummary,
+        unreadTotal: 1,
+      })
+      .mockResolvedValueOnce({
+        ...emptyTouchpointSummary,
+        unreadTotal: 1,
+      })
+      .mockResolvedValueOnce({
+        ...emptyTouchpointSummary,
+        unreadTotal: 2,
+      });
 
     renderHome();
-    await waitFor(() => expect(mockedNotificationApi.getUnreadCount).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockedNotificationApi.hotPull).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockedNotificationApi.getTouchpointSummary).toHaveBeenCalledTimes(2));
 
     Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
     await act(async () => {
       document.dispatchEvent(new Event('visibilitychange'));
     });
 
-    await waitFor(() => expect(mockedNotificationApi.getUnreadCount).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockedNotificationApi.hotPull).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockedNotificationApi.getTouchpointSummary).toHaveBeenCalledTimes(3));
+    expect(await screen.findByLabelText('2 条待处理提醒')).toBeInTheDocument();
   });
 
   it('点击通知铃铛时记录首页入口点击埋点', async () => {

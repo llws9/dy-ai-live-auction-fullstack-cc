@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/stretchr/testify/assert"
@@ -208,4 +209,18 @@ func TestNewProxyHandler(t *testing.T) {
 
 		assert.NotNil(t, proxy.client)
 	})
+}
+
+func TestNewProxyHTTPClient_BoundsOutboundConnections(t *testing.T) {
+	client := newProxyHTTPClient()
+
+	tr, ok := client.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("expected *http.Transport, got %T", client.Transport)
+	}
+	assert.Equal(t, 0*time.Second, client.Timeout)
+	assert.Equal(t, 2048, tr.MaxIdleConns)
+	assert.Equal(t, 512, tr.MaxIdleConnsPerHost)
+	assert.Equal(t, 512, tr.MaxConnsPerHost)
+	assert.Equal(t, 90*time.Second, tr.IdleConnTimeout)
 }

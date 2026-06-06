@@ -77,6 +77,9 @@ func TestScenario_RunsAndEmits(t *testing.T) {
 	if got := em.last["fixture_created"]; got != true {
 		t.Fatalf("fixture_created should be true, got %v", got)
 	}
+	if got := em.last["scenario"]; got != "hot_auction" {
+		t.Fatalf("scenario should default to hot_auction, got %v", got)
+	}
 	cf.bidder.mu.Lock()
 	defer cf.bidder.mu.Unlock()
 	if len(cf.bidder.amounts) == 0 {
@@ -86,6 +89,91 @@ func TestScenario_RunsAndEmits(t *testing.T) {
 		if amount <= cfg.BidAmount {
 			t.Fatalf("bid amount should increase above base amount, got %.2f", amount)
 		}
+	}
+}
+
+func TestScenario_ThroughputUsesFixtureShards(t *testing.T) {
+	cf := stubClientFactory{}
+	s := New(&cf)
+
+	cfg := Config{
+		ConcurrentUsers: 4,
+		DurationSec:     1,
+		Scenario:        "throughput",
+		BidAmount:       100,
+		EmitIntervalMs:  200,
+	}
+	raw, _ := json.Marshal(cfg)
+
+	em := &stubEmitter{}
+	if _, err := s.Run(context.Background(), raw, em); err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+
+	if got := em.last["fixture_count"]; got != 2 {
+		t.Fatalf("fixture_count should come from fixture shards, got %v", got)
+	}
+	cf.bidder.mu.Lock()
+	defer cf.bidder.mu.Unlock()
+	seen := map[int64]bool{}
+	for _, auctionID := range cf.bidder.auctionIDs {
+		seen[auctionID] = true
+	}
+	if !seen[3001] || !seen[3002] {
+		t.Fatalf("expected bids to be distributed to throughput fixture shards, got %v", seen)
+	}
+}
+
+func TestScenario_IgnoresExpectedStopCancellation(t *testing.T) {
+	cf := &cancelOnStopFactory{}
+	s := New(cf)
+
+	cfg := Config{
+		ConcurrentUsers: 4,
+		DurationSec:     1,
+		TargetAuctionID: 2002,
+		BidAmount:       100,
+		EmitIntervalMs:  200,
+	}
+	raw, _ := json.Marshal(cfg)
+
+	em := &stubEmitter{}
+	res, err := s.Run(context.Background(), raw, em)
+	if err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+	report := res.(Report)
+	if report.Snapshot.Failure != 0 {
+		t.Fatalf("expected stop cancellation not to be counted as failure, got %d", report.Snapshot.Failure)
+	}
+	if got := report.Snapshot.ErrorCodes[0]; got != 0 {
+		t.Fatalf("expected error code 0 to be omitted for expected stop cancellation, got %d", got)
+	}
+}
+
+func TestScenario_IgnoresResponsesCompletedAfterStop(t *testing.T) {
+	cf := &respondAfterStopFactory{}
+	s := New(cf)
+
+	cfg := Config{
+		ConcurrentUsers: 4,
+		DurationSec:     1,
+		TargetAuctionID: 2002,
+		BidAmount:       100,
+		EmitIntervalMs:  200,
+	}
+	raw, _ := json.Marshal(cfg)
+
+	res, err := s.Run(context.Background(), raw, &stubEmitter{})
+	if err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+	report := res.(Report)
+	if report.Snapshot.Failure != 0 {
+		t.Fatalf("expected responses after stop not to be counted, got %d", report.Snapshot.Failure)
+	}
+	if got := report.Snapshot.ErrorCodes[500]; got != 0 {
+		t.Fatalf("expected post-stop 500 to be omitted, got %d", got)
 	}
 }
 
@@ -137,22 +225,55 @@ func (f *stubClientFactory) NewClient() Bidder {
 
 func (f *stubClientFactory) PrepareFixture(ctx context.Context, cfg Config) (Fixture, error) {
 	f.created++
+	if cfg.Scenario == "throughput" {
+		return Fixture{AuctionID: 3001, AuctionIDs: []int64{3001, 3002}}, nil
+	}
 	return Fixture{AuctionID: 2002}, nil
 }
 
 type stubBidder struct {
-	mu      sync.Mutex
-	amounts []float64
+	mu         sync.Mutex
+	amounts    []float64
+	auctionIDs []int64
 }
 
 func (b *stubBidder) PlaceBid(ctx context.Context, amount float64, auctionID, userID int64) Result {
 	b.mu.Lock()
 	b.amounts = append(b.amounts, amount)
+	b.auctionIDs = append(b.auctionIDs, auctionID)
 	b.mu.Unlock()
-	if auctionID != 2002 {
+	if auctionID != 2002 && auctionID != 3001 && auctionID != 3002 {
 		return Result{OK: false, StatusCode: 404}
 	}
 	// 模拟 1ms 延迟成功
 	time.Sleep(time.Millisecond)
 	return Result{OK: true, StatusCode: 200, Latency: time.Millisecond}
+}
+
+type cancelOnStopFactory struct{}
+
+func (f *cancelOnStopFactory) NewClient() Bidder {
+	return cancelOnStopBidder{}
+}
+
+type cancelOnStopBidder struct{}
+
+func (b cancelOnStopBidder) PlaceBid(ctx context.Context, amount float64, auctionID, userID int64) Result {
+	start := time.Now()
+	<-ctx.Done()
+	return Result{OK: false, Latency: time.Since(start), Err: ctx.Err()}
+}
+
+type respondAfterStopFactory struct{}
+
+func (f *respondAfterStopFactory) NewClient() Bidder {
+	return respondAfterStopBidder{}
+}
+
+type respondAfterStopBidder struct{}
+
+func (b respondAfterStopBidder) PlaceBid(ctx context.Context, amount float64, auctionID, userID int64) Result {
+	start := time.Now()
+	<-ctx.Done()
+	return Result{OK: false, StatusCode: 500, Latency: time.Since(start)}
 }

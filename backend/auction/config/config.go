@@ -39,9 +39,13 @@ type DatabaseConfig struct {
 
 // RedisConfig Redis配置
 type RedisConfig struct {
-	Addr     string
-	Password string
-	DB       int
+	Addr           string
+	Password       string
+	DB             int
+	PoolSize       int
+	MinIdleConns   int
+	MaxIdleConns   int
+	MaxActiveConns int
 }
 
 // RabbitMQConfig RabbitMQ配置
@@ -90,9 +94,13 @@ func DefaultConfig() *Config {
 			MaxOpenConns: 100,
 		},
 		Redis: RedisConfig{
-			Addr:     "localhost:6379",
-			Password: "",
-			DB:       0,
+			Addr:           "localhost:6379",
+			Password:       "",
+			DB:             0,
+			PoolSize:       128,
+			MinIdleConns:   16,
+			MaxIdleConns:   128,
+			MaxActiveConns: 128,
 		},
 		RabbitMQ: RabbitMQConfig{
 			Host:     "localhost",
@@ -156,6 +164,18 @@ func LoadFromEnv() *Config {
 	cfg.Redis.Password = getEnvOrDefault("REDIS_PASSWORD", cfg.Redis.Password)
 	if v := getEnvInt("REDIS_DB"); v != nil {
 		cfg.Redis.DB = *v
+	}
+	if v := getEnvInt("REDIS_POOL_SIZE"); v != nil {
+		cfg.Redis.PoolSize = *v
+	}
+	if v := getEnvInt("REDIS_MIN_IDLE_CONNS"); v != nil {
+		cfg.Redis.MinIdleConns = *v
+	}
+	if v := getEnvInt("REDIS_MAX_IDLE_CONNS"); v != nil {
+		cfg.Redis.MaxIdleConns = *v
+	}
+	if v := getEnvInt("REDIS_MAX_ACTIVE_CONNS"); v != nil {
+		cfg.Redis.MaxActiveConns = *v
 	}
 
 	// RabbitMQ配置

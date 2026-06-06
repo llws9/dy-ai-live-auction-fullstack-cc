@@ -54,6 +54,14 @@ const LiveFeedPage: React.FC = () => {
   const { showToast } = useToast();
   const { isAuthenticated } = useAuth();
   const idParam = searchParams.get('id');
+  const auctionIdParam = searchParams.get('auction_id');
+  const targetLiveStreamId = Number(idParam);
+  const targetAuctionId = Number(auctionIdParam);
+  const hasDirectTarget =
+    Number.isFinite(targetLiveStreamId) &&
+    targetLiveStreamId > 0 &&
+    Number.isFinite(targetAuctionId) &&
+    targetAuctionId > 0;
 
   const [loading, setLoading] = useState(true);
   const [rooms, setRooms] = useState<LiveStreamFeedItem[]>([]);
@@ -97,7 +105,19 @@ const LiveFeedPage: React.FC = () => {
   }, []);
 
   const auctionRooms = useMemo(() => rooms.filter(hasCurrentAuction), [rooms]);
-  const shouldLoadEmptyState = !loading && auctionRooms.length === 0;
+  const feedRooms = useMemo(() => {
+    if (!hasDirectTarget || auctionRooms.some((room) => room.id === targetLiveStreamId)) {
+      return auctionRooms;
+    }
+    return [
+      {
+        id: targetLiveStreamId,
+        current_auction_id: targetAuctionId,
+      },
+      ...auctionRooms,
+    ];
+  }, [auctionRooms, hasDirectTarget, targetAuctionId, targetLiveStreamId]);
+  const shouldLoadEmptyState = !loading && feedRooms.length === 0;
 
   useEffect(() => {
     if (!shouldLoadEmptyState) return;
@@ -143,9 +163,9 @@ const LiveFeedPage: React.FC = () => {
   const currentIndex = useMemo(() => {
     if (idParam == null) return 0;
     const targetId = Number(idParam);
-    const idx = auctionRooms.findIndex((room) => room.id === targetId);
+    const idx = feedRooms.findIndex((room) => room.id === targetId);
     return idx >= 0 ? idx : 0;
-  }, [idParam, auctionRooms]);
+  }, [idParam, feedRooms]);
 
   const hasMore = useMemo(() => {
     if (typeof total === 'number') return rooms.length < total;
@@ -155,7 +175,7 @@ const LiveFeedPage: React.FC = () => {
   // 接近末尾预拉下一页
   useEffect(() => {
     if (rooms.length === 0 || !hasMore) return;
-    if (currentIndex < auctionRooms.length - 2) return;
+    if (currentIndex < feedRooms.length - 2) return;
     if (loadingMoreRef.current) return;
     loadingMoreRef.current = true;
     const nextPage = page + 1;
@@ -186,10 +206,10 @@ const LiveFeedPage: React.FC = () => {
       cancelled = true;
       loadingMoreRef.current = false;
     };
-  }, [currentIndex, rooms.length, auctionRooms.length, hasMore, page]);
+  }, [currentIndex, rooms.length, feedRooms.length, hasMore, page]);
 
   const goToRoom = (index: number) => {
-    const next = auctionRooms[index];
+    const next = feedRooms[index];
     if (!next) return;
     navigate(`/live?id=${next.id}&auction_id=${next.current_auction_id ?? ''}`, { replace: true });
   };
@@ -203,7 +223,7 @@ const LiveFeedPage: React.FC = () => {
 
     if (deltaY <= -SWIPE_THRESHOLD_PX) {
       // 上滑 → 下一个
-      if (currentIndex >= auctionRooms.length - 1) {
+      if (currentIndex >= feedRooms.length - 1) {
         if (!hasMore) showToast('没有更多直播间');
         return;
       }
@@ -283,7 +303,7 @@ const LiveFeedPage: React.FC = () => {
     return <div>加载中...</div>;
   }
 
-  if (rooms.length === 0 || auctionRooms.length === 0) {
+  if (feedRooms.length === 0) {
     return (
       <LiveEmptyState
         upcomingAuctions={upcomingFailed ? [] : upcomingAuctions}
@@ -295,8 +315,8 @@ const LiveFeedPage: React.FC = () => {
     );
   }
 
-  const currentRoom = auctionRooms[currentIndex];
-  const urlAuctionIdRaw = Number(searchParams.get('auction_id'));
+  const currentRoom = feedRooms[currentIndex];
+  const urlAuctionIdRaw = Number(auctionIdParam);
   const urlAuctionId = Number.isFinite(urlAuctionIdRaw) && urlAuctionIdRaw > 0 ? urlAuctionIdRaw : undefined;
 
   return (

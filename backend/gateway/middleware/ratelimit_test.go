@@ -93,6 +93,13 @@ func TestRateLimiter_WindowReset(t *testing.T) {
 	})
 }
 
+func TestRateLimiter_ShouldRefreshMissingTTL(t *testing.T) {
+	assert.True(t, shouldRefreshRateLimitTTL(-1*time.Second))
+	assert.True(t, shouldRefreshRateLimitTTL(-2*time.Second))
+	assert.False(t, shouldRefreshRateLimitTTL(0))
+	assert.False(t, shouldRefreshRateLimitTTL(time.Second))
+}
+
 func TestIPRateLimit(t *testing.T) {
 	t.Run("should use IP as rate limit key", func(t *testing.T) {
 		// Key should be based on IP

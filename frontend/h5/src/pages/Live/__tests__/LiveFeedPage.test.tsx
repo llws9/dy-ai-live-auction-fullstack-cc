@@ -113,6 +113,16 @@ describe('LiveFeedPage feed 骨架', () => {
     expect(screen.getByRole('link', { name: '去首页看拍品' })).toHaveAttribute('href', '/');
   });
 
+  it('从首页带 auction_id 进入延时竞拍时，即使 feed 列表未返回目标房间也渲染目标直播间', async () => {
+    mockedLiveStreamApi.list.mockResolvedValue({ list: [], total: 0, page: 1, page_size: 20 });
+
+    renderFeed('/live?id=77&auction_id=88');
+
+    const slide = await screen.findByTestId('live-room-slide');
+    expect(slide).toHaveTextContent('slide:77:88:88:true');
+    expect(screen.queryByText('当前没有竞拍直播')).not.toBeInTheDocument();
+  });
+
   it('手指上滑超过阈值切到下一个房间并 replace URL', async () => {
     renderFeed('/live?id=3');
     const slide = await screen.findByTestId('live-room-slide');

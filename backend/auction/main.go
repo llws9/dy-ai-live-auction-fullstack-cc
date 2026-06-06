@@ -50,7 +50,15 @@ func main() {
 	}
 
 	// 初始化 Redis 连接
-	_, err = dao.InitRedis(cfg.Redis.Addr, cfg.Redis.Password)
+	_, err = dao.InitRedisWithConfig(&dao.RedisConfig{
+		Addr:           cfg.Redis.Addr,
+		Password:       cfg.Redis.Password,
+		DB:             cfg.Redis.DB,
+		PoolSize:       cfg.Redis.PoolSize,
+		MinIdleConns:   cfg.Redis.MinIdleConns,
+		MaxIdleConns:   cfg.Redis.MaxIdleConns,
+		MaxActiveConns: cfg.Redis.MaxActiveConns,
+	})
 	if err != nil {
 		log.Fatalf("Failed to connect redis: %v", err)
 	}

@@ -24,7 +24,8 @@ type ClientFactory interface {
 }
 
 type Fixture struct {
-	AuctionID int64
+	AuctionID  int64
+	AuctionIDs []int64
 }
 
 type FixturePreparer interface {
@@ -35,7 +36,9 @@ type FixturePreparer interface {
 type Config struct {
 	ConcurrentUsers int     `json:"concurrent_users"` // 并发用户数
 	DurationSec     int     `json:"duration_sec"`     // 持续秒数
+	Scenario        string  `json:"scenario"`         // hot_auction | throughput
 	TargetAuctionID int64   `json:"target_auction_id"`
+	FixtureCount    int     `json:"fixture_count"`
 	BidAmount       float64 `json:"bid_amount"`
 	EmitIntervalMs  int     `json:"emit_interval_ms"` // 上报间隔，默认 1000ms
 }
@@ -79,26 +82,34 @@ func (s *Scenario) Run(ctx context.Context, cfgRaw json.RawMessage, p runner.Pro
 	if cfg.BidAmount <= 0 {
 		cfg.BidAmount = 100
 	}
+	if cfg.Scenario == "" {
+		cfg.Scenario = "hot_auction"
+	}
 	if cfg.EmitIntervalMs <= 0 {
 		cfg.EmitIntervalMs = 1000
 	}
 
 	fixtureCreated := false
+	auctionIDs := []int64{cfg.TargetAuctionID}
 	if preparer, ok := s.cf.(FixturePreparer); ok {
 		fixture, err := preparer.PrepareFixture(ctx, cfg)
 		if err != nil {
 			return nil, err
 		}
-		if fixture.AuctionID <= 0 {
-			return nil, fmt.Errorf("pressure fixture returned invalid auction id: %d", fixture.AuctionID)
+		auctionIDs = normalizeAuctionIDs(fixture)
+		if len(auctionIDs) == 0 {
+			return nil, fmt.Errorf("pressure fixture returned no valid auction ids")
 		}
-		cfg.TargetAuctionID = fixture.AuctionID
+		cfg.TargetAuctionID = auctionIDs[0]
 		fixtureCreated = true
 	} else if cfg.TargetAuctionID <= 0 {
 		return nil, fmt.Errorf("target_auction_id is required when fixture preparer is unavailable")
+	} else {
+		auctionIDs = []int64{cfg.TargetAuctionID}
 	}
 
-	hlog.Infof("[pressure] start users=%d duration=%ds auction=%d", cfg.ConcurrentUsers, cfg.DurationSec, cfg.TargetAuctionID)
+	hlog.Infof("[pressure] start scenario=%s users=%d duration=%ds auctions=%d primary_auction=%d",
+		cfg.Scenario, cfg.ConcurrentUsers, cfg.DurationSec, len(auctionIDs), cfg.TargetAuctionID)
 
 	metrics := NewMetrics()
 	client := s.cf.NewClient()
@@ -110,9 +121,11 @@ func (s *Scenario) Run(ctx context.Context, cfgRaw json.RawMessage, p runner.Pro
 	// 启动 N 个 worker
 	var wg sync.WaitGroup
 	var bidSeq int64
+	var transportErrSamples int64
 	for i := 0; i < cfg.ConcurrentUsers; i++ {
 		wg.Add(1)
 		userID := int64(100000 + i) // 测试用户 ID
+		auctionID := auctionIDs[i%len(auctionIDs)]
 		go func() {
 			defer wg.Done()
 			for {
@@ -122,10 +135,17 @@ func (s *Scenario) Run(ctx context.Context, cfgRaw json.RawMessage, p runner.Pro
 				default:
 				}
 				amount := cfg.BidAmount + float64(atomic.AddInt64(&bidSeq, 1))
-				res := client.PlaceBid(runCtx, amount, cfg.TargetAuctionID, userID)
+				res := client.PlaceBid(runCtx, amount, auctionID, userID)
+				if shouldIgnoreStopResult(runCtx, res) {
+					return
+				}
 				if res.OK {
 					metrics.RecordSuccess(res.Latency)
 				} else {
+					if res.StatusCode == 0 && res.Err != nil && atomic.AddInt64(&transportErrSamples, 1) <= 5 {
+						hlog.Warnf("[pressure] transport error sample scenario=%s auction_id=%d user_id=%d latency=%s err=%v",
+							cfg.Scenario, auctionID, userID, res.Latency, res.Err)
+					}
 					metrics.RecordFailure(res.Latency, res.StatusCode)
 				}
 			}
@@ -150,7 +170,7 @@ func (s *Scenario) Run(ctx context.Context, cfgRaw json.RawMessage, p runner.Pro
 					prog = 99
 				}
 				snap := metrics.Snapshot()
-				p.Emit(prog, "running", snapToMap(snap, cfg.TargetAuctionID, fixtureCreated))
+				p.Emit(prog, "running", snapToMap(snap, cfg, auctionIDs, fixtureCreated))
 			}
 		}
 	}()
@@ -159,7 +179,7 @@ func (s *Scenario) Run(ctx context.Context, cfgRaw json.RawMessage, p runner.Pro
 	<-tickerDone
 
 	final := metrics.Snapshot()
-	p.Emit(100, "done", snapToMap(final, cfg.TargetAuctionID, fixtureCreated))
+	p.Emit(100, "done", snapToMap(final, cfg, auctionIDs, fixtureCreated))
 	hlog.Infof("[pressure] done total=%d success=%d failure=%d qps=%.2f p99=%v",
 		final.Total, final.Success, final.Failure, final.QPS, final.P99)
 
@@ -170,8 +190,12 @@ func (s *Scenario) Run(ctx context.Context, cfgRaw json.RawMessage, p runner.Pro
 	return Report{Snapshot: final}, nil
 }
 
+func shouldIgnoreStopResult(ctx context.Context, res Result) bool {
+	return ctx.Err() != nil
+}
+
 // snapToMap 转 emit metrics map（前端友好的 ms 单位）
-func snapToMap(s Snapshot, auctionID int64, fixtureCreated bool) map[string]any {
+func snapToMap(s Snapshot, cfg Config, auctionIDs []int64, fixtureCreated bool) map[string]any {
 	return map[string]any{
 		"qps":               s.QPS,
 		"avg_ms":            s.Avg.Milliseconds(),
@@ -184,7 +208,29 @@ func snapToMap(s Snapshot, auctionID int64, fixtureCreated bool) map[string]any 
 		"error_codes":       s.ErrorCodes,
 		"buckets":           s.Buckets,
 		"elapsed_ms":        s.ElapsedMs,
-		"target_auction_id": auctionID,
+		"scenario":          cfg.Scenario,
+		"target_auction_id": cfg.TargetAuctionID,
+		"fixture_count":     len(auctionIDs),
 		"fixture_created":   fixtureCreated,
 	}
+}
+
+func normalizeAuctionIDs(fixture Fixture) []int64 {
+	seen := map[int64]struct{}{}
+	ids := make([]int64, 0, len(fixture.AuctionIDs)+1)
+	if fixture.AuctionID > 0 {
+		seen[fixture.AuctionID] = struct{}{}
+		ids = append(ids, fixture.AuctionID)
+	}
+	for _, id := range fixture.AuctionIDs {
+		if id <= 0 {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	return ids
 }

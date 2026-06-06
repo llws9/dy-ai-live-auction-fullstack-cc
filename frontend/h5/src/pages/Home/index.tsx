@@ -2,10 +2,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auctionApi, followApi, productApi, productReminderApi } from '@/services/api';
 import { notificationApi } from '@/services/notification';
+import { useTouchpointNotifications } from '@/hooks/useTouchpointNotifications';
 import { useAuth } from '@/store/authContext';
 import PageHeader from '@/components/shared/PageHeader';
 import BadgeDot from '@/components/BadgeDot';
 import { trackEvent } from '@/utils/trackEvent';
+import { notifyTouchpointSummaryInvalidated } from '@/utils/touchpointSummaryEvents';
 import { repairUtf8Mojibake } from '@/utils/textEncoding';
 import styles from './Home.module.css';
 
@@ -263,15 +265,14 @@ const HomePage: React.FC = () => {
   const [auctions, setAuctions] = useState<HomeAuction[]>([]);
   const [favoriteLiveStreams, setFavoriteLiveStreams] = useState<LiveStream[]>([]);
   const [loading, setLoading] = useState(true);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [subscribedProductIds, setSubscribedProductIds] = useState<Set<number>>(() => new Set());
   const [reminderPendingProductId, setReminderPendingProductId] = useState<number | null>(null);
   const { isAuthenticated } = useAuth();
+  const { unreadTotal } = useTouchpointNotifications();
 
-  // F-D2：登录后拉取未读消息数（mount + 回到前台），失败时降级为 0
+  // F-D2：登录后热拉通知（mount + 回到前台），成功后刷新共享触达汇总。
   useEffect(() => {
     if (!isAuthenticated) {
-      setUnreadCount(0);
       setSubscribedProductIds(new Set());
       return;
     }
@@ -279,16 +280,10 @@ const HomePage: React.FC = () => {
     const refresh = async () => {
       try {
         await notificationApi.hotPull();
+        if (cancelled) return;
+        notifyTouchpointSummaryInvalidated();
       } catch (error) {
         console.warn('热拉通知失败:', error);
-      }
-
-      try {
-        const res = await notificationApi.getUnreadCount();
-        if (cancelled) return;
-        setUnreadCount(res?.count ?? 0);
-      } catch (error) {
-        console.warn('获取未读消息数失败:', error);
       }
     };
     refresh();
@@ -454,8 +449,8 @@ const HomePage: React.FC = () => {
               }
             >
               <BellIcon />
-              {unreadCount > 0 && (
-                <BadgeDot count={unreadCount} className={styles.notificationBadge} />
+              {unreadTotal > 0 && (
+                <BadgeDot count={unreadTotal} className={styles.notificationBadge} />
               )}
             </Link>
           </>

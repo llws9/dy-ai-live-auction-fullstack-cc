@@ -1,4 +1,4 @@
-// Package antisnipe 真实 AuctionFactory 实现：通过业务 SDK 创建拍品 + 拍卖。
+// Package antisnipe 真实 AuctionFactory 实现：通过业务 SDK 创建拍品 + 竞拍规则 + 拍卖。
 package antisnipe
 
 import (
@@ -27,9 +27,15 @@ func NewSDKAuctionFactory(cli *auction.Client, seller int64, dur int) *SDKAuctio
 	return &SDKAuctionFactory{cli: cli, sellerID: seller, duration: dur}
 }
 
-// Prepare 创建一个商品和拍卖
+// Prepare 创建一个商品、竞拍规则和拍卖。
 func (f *SDKAuctionFactory) Prepare(ctx context.Context, name string) (int64, error) {
-	prod := f.cli.CreateProduct(ctx, f.sellerID, auction.CreateProductReq{
+	seller := auction.Actor{
+		UserID:   f.sellerID,
+		Username: fmt.Sprintf("merchant_%d", f.sellerID),
+		Role:     auction.RoleMerchant,
+	}
+
+	prod := f.cli.CreateProductAs(ctx, seller, auction.CreateProductReq{
 		Name:        fmt.Sprintf("AntiSnipe %s %d", name, time.Now().UnixNano()),
 		Description: "anti-snipe scenario auto-generated",
 		Status:      1,
@@ -37,7 +43,20 @@ func (f *SDKAuctionFactory) Prepare(ctx context.Context, name string) (int64, er
 	if !prod.OK {
 		return 0, fmt.Errorf("create_product: %s", prod.Message)
 	}
-	au := f.cli.CreateAuction(ctx, f.sellerID, auction.CreateAuctionReq{
+
+	rule := f.cli.CreateAuctionRule(ctx, seller, prod.RefID, auction.CreateAuctionRuleReq{
+		StartPrice:         100,
+		Increment:          10,
+		Duration:           f.duration,
+		TriggerDelayBefore: 5,
+		DelayDuration:      5,
+		MaxDelayTime:       30,
+	})
+	if !rule.OK {
+		return 0, fmt.Errorf("create_auction_rule: %s", rule.Message)
+	}
+
+	au := f.cli.CreateAuctionAs(ctx, seller, auction.CreateAuctionReq{
 		ProductID:  prod.RefID,
 		StartPrice: 100,
 		Increment:  10,
@@ -45,6 +64,9 @@ func (f *SDKAuctionFactory) Prepare(ctx context.Context, name string) (int64, er
 	})
 	if !au.OK {
 		return 0, fmt.Errorf("create_auction: %s", au.Message)
+	}
+	if started := f.cli.WaitAuctionStarted(ctx, au.RefID, 100*time.Millisecond, 5*time.Second); !started.OK {
+		return 0, fmt.Errorf("wait_auction_started: %s", started.Message)
 	}
 	return au.RefID, nil
 }

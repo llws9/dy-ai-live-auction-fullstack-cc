@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 
@@ -26,8 +27,18 @@ type ProxyHandler struct {
 func NewProxyHandler(targetURL string) *ProxyHandler {
 	return &ProxyHandler{
 		targetURL: targetURL,
-		client: &http.Client{
-			Timeout: 0, // 不设置超时，由客户端控制
+		client:    newProxyHTTPClient(),
+	}
+}
+
+func newProxyHTTPClient() *http.Client {
+	return &http.Client{
+		Timeout: 0, // 不设置整体超时，由调用方请求上下文控制。
+		Transport: &http.Transport{
+			MaxIdleConns:        2048,
+			MaxIdleConnsPerHost: 512,
+			MaxConnsPerHost:     512,
+			IdleConnTimeout:     90 * time.Second,
 		},
 	}
 }

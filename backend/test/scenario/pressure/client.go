@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -33,8 +34,10 @@ type Client struct {
 
 // NewClient 构造
 func NewClient(baseURL, authHeader string, timeout time.Duration) *Client {
-	if timeout <= 0 {
+	if timeout == 0 {
 		timeout = 5 * time.Second
+	} else if timeout < 0 {
+		timeout = 0
 	}
 	tr := &http.Transport{
 		MaxIdleConns:        2048,
@@ -98,7 +101,7 @@ func (c *Client) PlaceBid(ctx context.Context, amount float64, auctionID, userID
 	if err != nil {
 		return Result{OK: false, Latency: latency, Err: err}
 	}
-	defer resp.Body.Close()
+	defer drainAndClose(resp.Body)
 
 	// HTTP 错误码：直接返回失败
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -121,6 +124,11 @@ func (c *Client) PlaceBid(ctx context.Context, amount float64, auctionID, userID
 		Latency:    latency,
 		Err:        fmt.Errorf("biz_code=%d", br.Code),
 	}
+}
+
+func drainAndClose(body io.ReadCloser) {
+	_, _ = io.Copy(io.Discard, io.LimitReader(body, 1<<20))
+	_ = body.Close()
 }
 
 func signUserJWT(userID int64, secret string) (string, error) {
