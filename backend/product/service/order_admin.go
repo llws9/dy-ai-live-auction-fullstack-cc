@@ -28,12 +28,37 @@ type OrderAdminVO struct {
 	SellerID     *int64            `json:"seller_id,omitempty"`
 	WinnerID     int64             `json:"winner_id"`
 	UserID       int64             `json:"user_id"`
+	UserName     string            `json:"user_name,omitempty"`
+	UserAvatar   string            `json:"user_avatar,omitempty"`
 	FinalPrice   decimal.Decimal   `json:"final_price"`
 	Status       model.OrderStatus `json:"status"`
 	PaidAt       *time.Time        `json:"paid_at,omitempty"`
 	ShippedAt    *time.Time        `json:"shipped_at,omitempty"`
 	CompletedAt  *time.Time        `json:"completed_at,omitempty"`
 	CreatedAt    time.Time         `json:"created_at"`
+}
+
+type OrderAdminSummary struct {
+	PendingPaymentCount int64 `json:"pending_payment_count"`
+	PaidCount           int64 `json:"paid_count"`
+	ShippedCount        int64 `json:"shipped_count"`
+	CompletedCount      int64 `json:"completed_count"`
+}
+
+type AdminOrderListResult struct {
+	Items   []OrderAdminVO
+	Total   int64
+	Summary OrderAdminSummary
+}
+
+type UserSummary struct {
+	ID       int64
+	Username string
+	Avatar   string
+}
+
+type UserSummaryProvider interface {
+	BatchGetUserSummaries(ctx context.Context, ids []int64) (map[int64]UserSummary, error)
 }
 
 func toAdminVO(row dao.OrderAdminRow) OrderAdminVO {
@@ -52,6 +77,15 @@ func toAdminVO(row dao.OrderAdminRow) OrderAdminVO {
 		ShippedAt:    row.ShippedAt,
 		CompletedAt:  row.CompletedAt,
 		CreatedAt:    row.CreatedAt,
+	}
+}
+
+func toAdminSummary(summary dao.OrderAdminSummary) OrderAdminSummary {
+	return OrderAdminSummary{
+		PendingPaymentCount: summary.PendingPaymentCount,
+		PaidCount:           summary.PaidCount,
+		ShippedCount:        summary.ShippedCount,
+		CompletedCount:      summary.CompletedCount,
 	}
 }
 
@@ -74,22 +108,64 @@ func firstProductImage(raw string) string {
 //   - 入参 status 与 userID 均为可选过滤条件；userID 等价于 winner_id 过滤（admin 想查某用户）；
 //   - adminDAO 未注入时返回错误，避免 admin 接口静默降级成空列表。
 func (s *OrderService) ListAdminOrders(ctx context.Context, status *model.OrderStatus, userID *int64, page, pageSize int) ([]OrderAdminVO, int64, error) {
-	return s.ListAdminOrdersScoped(ctx, status, userID, nil, page, pageSize)
-}
-
-func (s *OrderService) ListAdminOrdersScoped(ctx context.Context, status *model.OrderStatus, userID *int64, sellerID *int64, page, pageSize int) ([]OrderAdminVO, int64, error) {
-	if s.adminDAO == nil {
-		return nil, 0, ErrAdminDAOMissing
-	}
-	rows, total, err := s.adminDAO.ListAdminOrdersScoped(ctx, status, userID, sellerID, page, pageSize)
+	result, err := s.ListAdminOrdersScoped(ctx, status, userID, nil, "", page, pageSize)
 	if err != nil {
 		return nil, 0, err
+	}
+	return result.Items, result.Total, nil
+}
+
+func (s *OrderService) ListAdminOrdersScoped(ctx context.Context, status *model.OrderStatus, userID *int64, sellerID *int64, search string, page, pageSize int) (*AdminOrderListResult, error) {
+	if s.adminDAO == nil {
+		return nil, ErrAdminDAOMissing
+	}
+	rows, total, summary, err := s.adminDAO.ListAdminOrdersScoped(ctx, status, userID, sellerID, search, page, pageSize)
+	if err != nil {
+		return nil, err
 	}
 	vos := make([]OrderAdminVO, 0, len(rows))
 	for _, r := range rows {
 		vos = append(vos, toAdminVO(r))
 	}
-	return vos, total, nil
+	s.enrichAdminOrderBuyers(ctx, vos)
+	return &AdminOrderListResult{
+		Items:   vos,
+		Total:   total,
+		Summary: toAdminSummary(summary),
+	}, nil
+}
+
+func (s *OrderService) enrichAdminOrderBuyers(ctx context.Context, items []OrderAdminVO) {
+	if s.userSummaryProvider == nil || len(items) == 0 {
+		return
+	}
+	ids := make([]int64, 0, len(items))
+	seen := make(map[int64]struct{}, len(items))
+	for _, item := range items {
+		if item.UserID <= 0 {
+			continue
+		}
+		if _, ok := seen[item.UserID]; ok {
+			continue
+		}
+		seen[item.UserID] = struct{}{}
+		ids = append(ids, item.UserID)
+	}
+	if len(ids) == 0 {
+		return
+	}
+	summaries, err := s.userSummaryProvider.BatchGetUserSummaries(ctx, ids)
+	if err != nil {
+		return
+	}
+	for i := range items {
+		summary, ok := summaries[items[i].UserID]
+		if !ok {
+			continue
+		}
+		items[i].UserName = summary.Username
+		items[i].UserAvatar = summary.Avatar
+	}
 }
 
 // GetAdminOrder admin 端订单详情。
@@ -106,5 +182,8 @@ func (s *OrderService) GetAdminOrderScoped(ctx context.Context, id int64, seller
 		return nil, err
 	}
 	vo := toAdminVO(*row)
+	items := []OrderAdminVO{vo}
+	s.enrichAdminOrderBuyers(ctx, items)
+	vo = items[0]
 	return &vo, nil
 }

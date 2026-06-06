@@ -51,9 +51,20 @@ export const auctionApi = {
 // 订单API
 export const orderApi = {
   // admin 端订单列表：使用 /admin/orders（不被 X-User-ID 过滤），可透传 user_id 筛某用户。
-  list: (params?: { user_id?: number; status?: number; page?: number; page_size?: number }) => {
+  list: (params?: { user_id?: number; status?: number; search?: string; page?: number; page_size?: number }) => {
     const query = buildQuery(params || {});
-    return get<{ list: any[]; total: number; page: number; page_size: number }>(`/admin/orders?${query}`);
+    return get<{
+      list: any[];
+      total: number;
+      page: number;
+      page_size: number;
+      summary?: {
+        pending_payment_count?: number;
+        paid_count?: number;
+        shipped_count?: number;
+        completed_count?: number;
+      };
+    }>(`/admin/orders?${query}`);
   },
 
   // admin 端订单详情：使用 /admin/orders/:id（不被 winner_id 过滤）。

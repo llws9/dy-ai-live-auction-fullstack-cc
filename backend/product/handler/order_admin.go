@@ -77,9 +77,10 @@ func (h *OrderHandler) AdminList(ctx context.Context, c *app.RequestContext) {
 	if actor.Role == "merchant" {
 		sellerIDPtr = &actor.UserID
 	}
-	items, total, err := h.orderService.ListAdminOrdersScoped(ctx, statusPtr, userIDPtr, sellerIDPtr, page, pageSize)
+	search := string(c.Query("search"))
+	result, err := h.orderService.ListAdminOrdersScoped(ctx, statusPtr, userIDPtr, sellerIDPtr, search, page, pageSize)
 	if err != nil {
-		log.Printf("AdminList failed: status=%v userID=%v page=%d pageSize=%d err=%v", statusPtr, userIDPtr, page, pageSize, err)
+		log.Printf("AdminList failed: status=%v userID=%v search=%q page=%d pageSize=%d err=%v", statusPtr, userIDPtr, search, page, pageSize, err)
 		c.JSON(500, map[string]interface{}{
 			"code":    500,
 			"message": "获取订单列表失败",
@@ -91,10 +92,11 @@ func (h *OrderHandler) AdminList(ctx context.Context, c *app.RequestContext) {
 		"code":    200,
 		"message": "success",
 		"data": map[string]interface{}{
-			"list":      items,
-			"total":     total,
+			"list":      result.Items,
+			"total":     result.Total,
 			"page":      page,
 			"page_size": pageSize,
+			"summary":   result.Summary,
 		},
 	})
 }
