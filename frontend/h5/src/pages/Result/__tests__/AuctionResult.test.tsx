@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import ResultPage from '../index';
 import { auctionApi, orderApi, productApi } from '../../../services/api';
@@ -77,7 +77,7 @@ describe('AuctionResult migration', () => {
     });
   });
 
-  it('loads authoritative result and pays the winner order', async () => {
+  it('loads authoritative result and shows payment placeholder dialog for winner', async () => {
     render(
       <MemoryRouter
         initialEntries={['/result?id=12']}
@@ -94,10 +94,15 @@ describe('AuctionResult migration', () => {
     expect(mockedAuctionApi.getResult).toHaveBeenCalledWith(12);
     expect(mockedProductApi.get).toHaveBeenCalledWith(34);
 
-    fireEvent.click(screen.getByRole('button', { name: '立即支付' }));
+    expect(screen.queryByRole('button', { name: '订单待生成' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '订单生成中' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '查看订单' })).not.toBeInTheDocument();
 
-    await waitFor(() => expect(mockedOrderApi.pay).toHaveBeenCalledWith(56));
-    expect(await screen.findByText('支付成功，订单已更新')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '去支付' }));
+
+    expect(await screen.findByRole('dialog', { name: '支付链路待完善' })).toBeInTheDocument();
+    expect(screen.getByText('当前支付链路仍在建设中，暂时无法在 H5 内完成支付。')).toBeInTheDocument();
+    expect(mockedOrderApi.pay).not.toHaveBeenCalled();
   });
 
   it('repairs mojibake product name on result page', async () => {
@@ -120,7 +125,25 @@ describe('AuctionResult migration', () => {
     expect(screen.queryByText('ç¨€æœ‰ç å®')).not.toBeInTheDocument();
   });
 
-  it('shows 查看订单 button that navigates to /order/:id when order_id exists (T3.6)', async () => {
+  it('repairs mojibake winner name and renders bid time value before label', async () => {
+    mockedAuctionApi.getResult.mockResolvedValueOnce({
+      auction_id: 12,
+      id: 12,
+      product_id: 34,
+      status: 3,
+      final_price: 6800,
+      winner_id: 9,
+      order_id: 56,
+      ended_at: new Date('2026-06-07T02:20:00Z').toISOString(),
+      won_bid: {
+        id: 7,
+        user_id: 9,
+        user_name: 'æœ¬åœ°æµ‹è¯•ç”¨æˆ·',
+        amount: 6800,
+        created_at: new Date('2026-06-07T02:16:40Z').toISOString(),
+      },
+    });
+
     render(
       <MemoryRouter
         initialEntries={['/result?id=12']}
@@ -130,13 +153,30 @@ describe('AuctionResult migration', () => {
       </MemoryRouter>
     );
 
-    const viewOrderBtn = await screen.findByRole('button', { name: '查看订单' });
-    expect(viewOrderBtn).not.toBeDisabled();
-    fireEvent.click(viewOrderBtn);
-    expect(mockNavigate).toHaveBeenCalledWith('/order/56');
+    expect(await screen.findByText('本地测试用户')).toBeInTheDocument();
+    expect(screen.queryByText('æœ¬åœ°æµ‹è¯•ç”¨æˆ·')).not.toBeInTheDocument();
+
+    const bidTimeLabel = screen.getByText('出价时间');
+    const bidTimeValue = bidTimeLabel.previousElementSibling;
+    expect(bidTimeValue?.tagName).toBe('STRONG');
+    expect(bidTimeValue).toHaveTextContent('2026');
   });
 
-  it('disables 查看订单 with 订单生成中 fallback when order_id is missing (T3.6)', async () => {
+  it('does not show 查看订单 action when order_id exists', async () => {
+    render(
+      <MemoryRouter
+        initialEntries={['/result?id=12']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <ResultPage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('button', { name: '去支付' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '查看订单' })).not.toBeInTheDocument();
+  });
+
+  it('shows enabled 去支付 action when order_id is missing', async () => {
     mockedAuctionApi.getResult.mockResolvedValueOnce({
       auction_id: 12,
       id: 12,
@@ -156,8 +196,10 @@ describe('AuctionResult migration', () => {
       </MemoryRouter>
     );
 
-    const fallbackBtn = await screen.findByRole('button', { name: '订单生成中' });
-    expect(fallbackBtn).toBeDisabled();
+    const payButton = await screen.findByRole('button', { name: '去支付' });
+    expect(payButton).toBeEnabled();
+    expect(screen.queryByRole('button', { name: '订单待生成' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '订单生成中' })).not.toBeInTheDocument();
   });
 
   it('shows a single primary 返回首页 action instead of 继续竞拍 for ended non-winner result', async () => {
