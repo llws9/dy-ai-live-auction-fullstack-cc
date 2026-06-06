@@ -111,6 +111,7 @@ type AuctionEndedData struct {
 
 // TimeSyncData 时间同步数据
 type TimeSyncData struct {
+	AuctionID  int64 `json:"auction_id"`
 	ServerTime int64 `json:"server_time"`
 	EndTime    int64 `json:"end_time,omitempty"`
 }
@@ -246,8 +247,9 @@ func NewAuctionEndedMessage(data *AuctionEndedData) *Message {
 }
 
 // NewTimeSyncMessage 创建时间同步消息
-func NewTimeSyncMessage(serverTime, endTime int64) *Message {
+func NewTimeSyncMessage(auctionID, serverTime, endTime int64) *Message {
 	return NewMessage(MessageTypeTimeSync, &TimeSyncData{
+		AuctionID:  auctionID,
 		ServerTime: serverTime,
 		EndTime:    endTime,
 	})

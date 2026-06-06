@@ -14,6 +14,7 @@ import (
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // isVersionConflictError 检查是否是乐观锁版本冲突错误
@@ -349,40 +350,48 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 // tryExtendAuction 后台异步检测并触发延时。
 // 设计要点:
 //   - 使用独立 context (默认 5s 超时),解耦于出价请求的生命周期;
-//   - 重新读取最新 auction/rule,避免基于陈旧数据决策;
+//   - 事务内加锁重新读取最新 auction,避免基于陈旧数据重复延时;
 //   - 通过状态机 ShouldTriggerDelay/CanDelay 防止重复延时,事务保证 ExtendEndTime+UpdateStatus 原子执行。
 func (s *BidService) tryExtendAuction(auctionID, productID int64, triggerDelayBefore, maxDelayTime, delayDuration int) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	auction, err := s.auctionDAO.GetByID(ctx, auctionID)
-	if err != nil {
-		return
-	}
-
 	// 重新获取 rule,避免使用陈旧规则数据;失败则回退到调用方传入的快照参数
-	if freshRule, ruleErr := s.ruleDAO.GetByProductID(ctx, productID); ruleErr == nil {
-		triggerDelayBefore = freshRule.TriggerDelayBefore
-		maxDelayTime = freshRule.MaxDelayTime
-		delayDuration = freshRule.DelayDuration
+	if s.ruleDAO != nil {
+		if freshRule, ruleErr := s.ruleDAO.GetByProductID(ctx, productID); ruleErr == nil && freshRule != nil {
+			triggerDelayBefore = freshRule.TriggerDelayBefore
+			maxDelayTime = freshRule.MaxDelayTime
+			delayDuration = freshRule.DelayDuration
+		}
 	}
 
-	sm := NewStateMachine(auction)
-	if !sm.ShouldTriggerDelay(triggerDelayBefore) || !sm.CanDelay(maxDelayTime) {
-		return
-	}
-
-	// 计算可延时时长,确保不超过 MaxDelayTime 限制
-	remainingDelay := sm.GetRemainingDelayTime(maxDelayTime)
-	actualDelay := delayDuration
-	if actualDelay > remainingDelay {
-		actualDelay = remainingDelay
-	}
-	if actualDelay <= 0 {
-		return
-	}
+	var actualDelay int
+	var newEndTime time.Time
+	var remainingDelay int
 
 	txErr := s.auctionDAO.DB().Transaction(func(tx *gorm.DB) error {
+		var auction model.Auction
+		if err := tx.WithContext(ctx).
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(&auction, auctionID).Error; err != nil {
+			return err
+		}
+
+		sm := NewStateMachine(&auction)
+		if !sm.ShouldTriggerDelay(triggerDelayBefore) || !sm.CanDelay(maxDelayTime) {
+			return nil
+		}
+
+		// 计算可延时时长,确保不超过 MaxDelayTime 限制
+		remainingDelay = sm.GetRemainingDelayTime(maxDelayTime)
+		actualDelay = delayDuration
+		if actualDelay > remainingDelay {
+			actualDelay = remainingDelay
+		}
+		if actualDelay <= 0 {
+			return nil
+		}
+
 		txDAO := s.auctionDAO.WithTx(tx)
 		if err := txDAO.ExtendEndTime(ctx, auctionID, actualDelay); err != nil {
 			return err
@@ -392,22 +401,20 @@ func (s *BidService) tryExtendAuction(auctionID, productID int64, triggerDelayBe
 				return err
 			}
 		}
+
+		newEndTime = auction.EndTime.Add(time.Duration(actualDelay) * time.Second)
+		remainingDelay -= actualDelay
+		if remainingDelay < 0 {
+			remainingDelay = 0
+		}
 		return nil
 	})
-	if txErr != nil {
+	if txErr != nil || actualDelay <= 0 {
 		return
 	}
 
 	fmt.Printf("Auction %d delayed by %d seconds\n", auctionID, actualDelay)
-
-	updated, err := s.auctionDAO.GetByID(ctx, auctionID)
-	if err == nil {
-		remainingDelay := maxDelayTime - updated.DelayUsed
-		if remainingDelay < 0 {
-			remainingDelay = 0
-		}
-		s.broadcastDelayTriggered(auctionID, actualDelay, updated.EndTime, remainingDelay, maxDelayTime)
-	}
+	s.broadcastDelayTriggered(auctionID, actualDelay, newEndTime, remainingDelay, maxDelayTime)
 
 	if s.metrics != nil {
 		s.metrics.RecordDelayTriggered(auctionID)

@@ -34,7 +34,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-07 00:37` |
+| Last Updated | `2026-06-07 final-review-fix` |
 
 ## Task Records
 
@@ -85,6 +85,23 @@
 **Risks / Blockers**
 
 - Manual browser E2E was not run; see note above.
+
+**Final Review Fixes**
+
+- `time_sync` payload now carries `auction_id`, allowing H5 `belongsToThisRoom` to reject cross-room sync messages.
+- `tryExtendAuction` now reads the latest auction row with `FOR UPDATE` inside the transaction and performs `ShouldTriggerDelay` / `CanDelay` / `GetRemainingDelayTime` before updating `end_time` and `status`.
+- `delay_triggered` broadcast, metric recording, and `fmt.Printf` run only after a transaction actually extends the auction.
+- Plan Self-Review no longer claims manual smoke coverage; manual browser E2E remains not executed.
+
+**Final Review Fix Verification**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `cd backend/auction && go test ./service/ -run TestDelayBroadcast -v` | PASS | PASS | `pass` |
+| `cd backend/auction && go test ./websocket ./service -run 'Test.*TimeSync\|TestDelayBroadcast\|Test.*Delay' -count=1` | PASS | PASS | `pass` |
+| `cd frontend/h5 && npm test -- LiveRoomSlide.test.tsx --runInBand` | PASS | PASS: 18 tests passed | `pass` |
+| `cd frontend/h5 && npm run build` | PASS | PASS: `tsc && vite build` | `pass` |
+| `cd backend/auction && go test ./...` | PASS | PASS | `pass` |
 
 **Handoff**
 

@@ -555,6 +555,41 @@ describe('LiveRoomSlide', () => {
     dateNowSpy.mockRestore();
   });
 
+  it('ignores time_sync from another auction room', async () => {
+    const baseNow = new Date('2026-06-06T00:00:00.000Z').getTime();
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(baseNow);
+    mockedAuctionApi.get.mockResolvedValue({
+      id: 5,
+      product_id: 7,
+      live_stream_id: 3,
+      status: 2,
+      current_price: 1200,
+      end_time: new Date(baseNow + 30_000).toISOString(),
+    });
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
+    expect(await screen.findByText('00:30')).toBeInTheDocument();
+
+    const timeSyncHandler = getWebSocketHandler('time_sync');
+    expect(timeSyncHandler).toBeDefined();
+
+    act(() => {
+      timeSyncHandler!({
+        auction_id: 999,
+        server_time: baseNow,
+        end_time: baseNow + 120_000,
+      });
+    });
+
+    expect(screen.getByText('00:30')).toBeInTheDocument();
+    expect(screen.queryByText('02:00')).not.toBeInTheDocument();
+
+    dateNowSpy.mockRestore();
+  });
+
   it('opens sheet via URL push and clears it on bid success', async () => {
     renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
 

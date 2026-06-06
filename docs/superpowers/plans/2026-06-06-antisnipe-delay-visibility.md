@@ -627,4 +627,5 @@ Expected: only intentional committed changes remain clean, or only unrelated pre
 - Spec C3 coverage: Task 2 broadcasts `time_sync` for Ongoing and Delayed; Task 3 consumes `time_sync` as silent fallback.
 - Cross-room safety: Task 3 reuses `belongsToThisRoom` for both event handlers.
 - Type consistency: backend sends UnixMilli `new_end_time`; frontend converts numeric and string timestamps to ISO `end_time`.
-- Verification coverage: backend broadcast unit tests, frontend WS handler tests, backend full tests, H5 build, manual smoke.
+- Verification coverage: backend broadcast unit tests, frontend WS handler tests, backend full tests, H5 build.
+- Manual smoke: not executed; residual browser E2E risk is tracked in Task 4 state.
