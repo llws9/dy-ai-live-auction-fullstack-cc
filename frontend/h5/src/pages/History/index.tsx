@@ -76,9 +76,36 @@ function isWon(record: HistoryRecord) {
   return ['success', 'won', 'winner', 'win'].includes(normalized);
 }
 
+function isPendingOrderStatus(status: HistoryRecord['status']) {
+  const normalized = String(status ?? '').toLowerCase();
+  return ['0', 'pending', 'pending_payment', 'unpaid'].includes(normalized);
+}
+
+function isPendingWonRecord(record: HistoryRecord) {
+  return isWon(record) && isPendingOrderStatus(record.status);
+}
+
 function bidSummary(record: HistoryRecord) {
   if (record.my_highest_bid !== undefined) return `最高出价 ${formatCurrency(record.my_highest_bid)}`;
   return `出价 ${toNumber(record.bid_count)} 次`;
+}
+
+function getRecordStateLabel(record: HistoryRecord) {
+  if (isPendingWonRecord(record)) return '待处理';
+  if (isWon(record)) return '已处理';
+  return '未中标';
+}
+
+function getBadgeText(record: HistoryRecord) {
+  if (isPendingWonRecord(record)) return '待处理';
+  if (isWon(record)) return '竞拍成功';
+  return '未中标';
+}
+
+function getActionText(record: HistoryRecord) {
+  if (isPendingWonRecord(record)) return '查看并处理';
+  if (isWon(record)) return '查看结果';
+  return '查看详情';
 }
 
 const filters: Array<{ key: FilterKey; label: string }> = [
@@ -208,10 +235,23 @@ const AuctionHistoryPage: React.FC = () => {
             {filteredRecords.map((record) => {
               const recordId = getRecordId(record);
               const won = isWon(record);
+              const pendingWon = isPendingWonRecord(record);
               const image = getProductImage(record);
+              const recordCardClassName = pendingWon
+                ? `${styles.recordCard} ${styles.unreadRecordCard}`
+                : styles.recordCard;
+              const badgeClassName = pendingWon
+                ? styles.pendingWonBadge
+                : won
+                  ? styles.wonBadge
+                  : styles.lostBadge;
 
               return (
-                <article className={styles.recordCard} key={String(recordId)}>
+                <article
+                  className={recordCardClassName}
+                  key={String(recordId)}
+                  aria-label={`LOT ${recordId} ${getRecordStateLabel(record)}`}
+                >
                   <div className={styles.cardMeta}>
                     <span>LOT {recordId}</span>
                     <time dateTime={record.ended_at || record.created_at}>{formatTime(record.ended_at || record.created_at)}</time>
@@ -220,7 +260,7 @@ const AuctionHistoryPage: React.FC = () => {
                   <div className={styles.cardBody}>
                     <div className={styles.imageFrame}>
                       {image ? <img src={image} alt={getProductName(record)} /> : <span>藏品</span>}
-                      <strong className={won ? styles.wonBadge : styles.lostBadge}>{won ? '竞拍成功' : '未中标'}</strong>
+                      <strong className={badgeClassName}>{getBadgeText(record)}</strong>
                     </div>
 
                     <div className={styles.recordInfo}>
@@ -240,7 +280,7 @@ const AuctionHistoryPage: React.FC = () => {
 
                   <div className={styles.cardActions}>
                     <Link className={won ? styles.primaryAction : styles.secondaryAction} to={won ? `/result?id=${recordId}` : `/detail?id=${recordId}`}>
-                      {won ? '查看结果' : '查看详情'}
+                      {getActionText(record)}
                     </Link>
                   </div>
                 </article>
