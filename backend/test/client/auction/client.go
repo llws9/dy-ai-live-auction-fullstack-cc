@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/shopspring/decimal"
 )
 
 const (
@@ -138,14 +139,19 @@ type FixedPricePurchase struct {
 
 // Auction 拍卖快照（仅 E2E/AntiSnipe 关心的字段）
 type Auction struct {
-	ID           int64     `json:"id"`
-	ProductID    int64     `json:"product_id"`
-	Status       int       `json:"status"` // 0=Pending 1=Ongoing 2=Delayed 3=Ended 4=Cancelled
-	CurrentPrice float64   `json:"current_price"`
-	WinnerID     int64     `json:"winner_id"`
-	DelayUsed    int       `json:"delay_used"`
-	StartTime    time.Time `json:"start_time"`
-	EndTime      time.Time `json:"end_time"`
+	ID           int64         `json:"id"`
+	ProductID    int64         `json:"product_id"`
+	Status       int           `json:"status"` // 0=Pending 1=Ongoing 2=Delayed 3=Ended 4=Cancelled
+	CurrentPrice float64       `json:"current_price"`
+	WinnerID     int64         `json:"winner_id"`
+	DelayUsed    int           `json:"delay_used"`
+	Rules        *AuctionRules `json:"rules,omitempty"`
+	StartTime    time.Time     `json:"start_time"`
+	EndTime      time.Time     `json:"end_time"`
+}
+
+type AuctionRules struct {
+	Increment decimal.Decimal `json:"increment"`
 }
 
 type AuctionResult struct {

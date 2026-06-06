@@ -1,0 +1,72 @@
+import { rechargeDemoUser, triggerFollowBid } from '../demoApi';
+
+describe('demoApi', () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    localStorage.clear();
+    localStorage.setItem('auth_token', 'tk-123');
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    localStorage.clear();
+    jest.restoreAllMocks();
+  });
+
+  it('posts follow-bid to /api/test/demo/follow-bid without /api/v1 baseURL', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    } as Response);
+    global.fetch = fetchMock;
+
+    await triggerFollowBid({ auctionId: 42, amount: 110, increment: 5 });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/test/demo/follow-bid');
+    expect(url).not.toContain('/api/v1');
+    expect(init).toMatchObject({
+      method: 'POST',
+      headers: expect.objectContaining({
+        Authorization: 'Bearer tk-123',
+        'Content-Type': 'application/json',
+      }),
+    });
+    expect(JSON.parse(init.body as string)).toEqual({
+      auction_id: 42,
+      amount: '110',
+      increment: '5',
+    });
+  });
+
+  it('posts recharge with amount preserved as a decimal string', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    } as Response);
+    global.fetch = fetchMock;
+
+    await rechargeDemoUser({ userId: 9101, amount: '100.00' });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/test/demo/recharge');
+    expect(JSON.parse(init.body as string)).toEqual({
+      user_id: 9101,
+      amount: '100.00',
+    });
+  });
+
+  it('throws a readable Error on demo API error responses', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: '跟价冲突，请重试' }),
+    } as Response);
+
+    await expect(triggerFollowBid({ auctionId: 42 })).rejects.toThrow('跟价冲突，请重试');
+  });
+});

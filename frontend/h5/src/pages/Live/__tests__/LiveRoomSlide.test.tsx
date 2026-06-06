@@ -6,9 +6,11 @@ import { auctionApi, bidApi, followApi, liveStreamApi, productApi, skyLampApi } 
 import WebSocketService from '../../../services/websocket';
 import { useFixedPriceItems } from '../../../hooks/useFixedPriceItems';
 import { trackBusinessEvent } from '../../../utils/businessEvent';
+import { useDemo } from '../../../store/demoContext';
 
 const mockShowGlobalToast = jest.fn();
 const mockNavigate = jest.fn();
+const mockSetCurrentAuctionId = jest.fn();
 let mockAuthUser = { id: 9, name: '测试用户', role: 0 };
 const mockWebSocketInstance = {
   on: jest.fn(),
@@ -59,6 +61,19 @@ jest.mock('../../../utils/businessEvent', () => ({
   trackBusinessEvent: jest.fn(),
 }));
 
+jest.mock('../../../components/LiveChat/ChatPanel', () => ({
+  ChatPanel: () => <div data-testid="chat-panel" />,
+}));
+
+jest.mock('../../../store/liveChatStore', () => ({
+  useLiveChatStore: {
+    getState: () => ({
+      receive: jest.fn(),
+      reset: jest.fn(),
+    }),
+  },
+}));
+
 jest.mock('@/utils/env', () => ({
   IS_DEV: true,
   IS_PROD: false,
@@ -86,6 +101,10 @@ jest.mock('../../../store/authContext', () => ({
   }),
 }));
 
+jest.mock('../../../store/demoContext', () => ({
+  useDemo: jest.fn(),
+}));
+
 jest.mock('../../../components/Toast', () => ({
   __esModule: true,
   useToast: () => ({
@@ -104,6 +123,7 @@ const mockedProductApi = productApi as jest.Mocked<typeof productApi>;
 const MockedWebSocketService = WebSocketService as jest.MockedClass<typeof WebSocketService>;
 const mockedUseFixedPriceItems = useFixedPriceItems as jest.MockedFunction<typeof useFixedPriceItems>;
 const mockedTrackBusinessEvent = trackBusinessEvent as jest.MockedFunction<typeof trackBusinessEvent>;
+const mockedUseDemo = useDemo as jest.MockedFunction<typeof useDemo>;
 
 const LocationDisplay: React.FC = () => {
   const location = useLocation();
@@ -134,6 +154,10 @@ describe('LiveRoomSlide', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAuthUser = { id: 9, name: '测试用户', role: 0 };
+    mockedUseDemo.mockReturnValue({
+      currentAuctionId: null,
+      setCurrentAuctionId: mockSetCurrentAuctionId,
+    });
     mockWebSocketInstance.connect.mockResolvedValue(undefined);
     mockWebSocketInstance.onNotification.mockReturnValue(jest.fn());
     mockedUseFixedPriceItems.mockReturnValue({ items: [], byId: {}, socket: null });
@@ -231,6 +255,16 @@ describe('LiveRoomSlide', () => {
       productId: 7,
     }));
     expect(mockedTrackBusinessEvent.mock.calls.filter(([event]) => event === 'live_room_enter')).toHaveLength(1);
+  });
+
+  it('publishes the resolved auction id to DemoContext and clears it on unmount', async () => {
+    const { unmount } = renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    await waitFor(() => expect(mockSetCurrentAuctionId).toHaveBeenCalledWith(5));
+
+    unmount();
+
+    expect(mockSetCurrentAuctionId).toHaveBeenLastCalledWith(null);
   });
 
   it('places a bid and refreshes ranking', async () => {

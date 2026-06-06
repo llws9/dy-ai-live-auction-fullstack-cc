@@ -8,6 +8,7 @@ import { useFixedPriceItems } from '@/hooks/useFixedPriceItems';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi, skyLampApi } from '@/services/api';
 import WebSocketService from '@/services/websocket';
 import { useAuth } from '@/store/authContext';
+import { useDemo } from '@/store/demoContext';
 import { useToast } from '../../components/Toast';
 import { ChatPanel } from '../../components/LiveChat/ChatPanel';
 import { useLiveChatStore } from '../../store/liveChatStore';
@@ -191,6 +192,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated, token, user } = useAuth();
+  const { setCurrentAuctionId } = useDemo();
 
   const [auctionId, setAuctionId] = useState(0);
   const [auction, setAuction] = useState<Auction | null>(null);
@@ -241,6 +243,14 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   useEffect(() => {
     setPurchasedFixedPriceItemIds(new Set());
   }, [effectiveLiveStreamId]);
+
+  useEffect(() => {
+    setCurrentAuctionId(active && auctionId > 0 ? auctionId : null);
+
+    return () => {
+      setCurrentAuctionId(null);
+    };
+  }, [active, auctionId, setCurrentAuctionId]);
 
   useEffect(() => {
     const eventProductId = auction?.product_id ?? auction?.product?.id;
