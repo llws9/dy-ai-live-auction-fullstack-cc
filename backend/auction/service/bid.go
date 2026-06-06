@@ -399,6 +399,16 @@ func (s *BidService) tryExtendAuction(auctionID, productID int64, triggerDelayBe
 	}
 
 	fmt.Printf("Auction %d delayed by %d seconds\n", auctionID, actualDelay)
+
+	updated, err := s.auctionDAO.GetByID(ctx, auctionID)
+	if err == nil {
+		remainingDelay := maxDelayTime - updated.DelayUsed
+		if remainingDelay < 0 {
+			remainingDelay = 0
+		}
+		s.broadcastDelayTriggered(auctionID, actualDelay, updated.EndTime, remainingDelay, maxDelayTime)
+	}
+
 	if s.metrics != nil {
 		s.metrics.RecordDelayTriggered(auctionID)
 	}
@@ -536,4 +546,20 @@ func (s *BidService) broadcastRanking(ctx context.Context, auctionID int64) {
 	// 广播排名更新消息
 	message := websocket.NewRankUpdateMessage(auctionID, rankItems)
 	s.hub.BroadcastToRoom(auctionID, message)
+}
+
+// broadcastDelayTriggered 广播防狙击延时消息，使前端实时更新倒计时。
+// 仅依赖 hub，便于单测；hub 为 nil 时安全跳过。
+func (s *BidService) broadcastDelayTriggered(auctionID int64, delayDuration int, newEndTime time.Time, remainingDelay, maxDelay int) {
+	if s.hub == nil {
+		return
+	}
+	msg := websocket.NewDelayTriggeredMessage(&websocket.DelayTriggeredData{
+		AuctionID:      auctionID,
+		DelayDuration:  delayDuration,
+		NewEndTime:     newEndTime.UnixMilli(),
+		RemainingDelay: remainingDelay,
+		MaxDelay:       maxDelay,
+	})
+	s.hub.BroadcastToRoom(auctionID, msg)
 }
