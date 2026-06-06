@@ -33,17 +33,17 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `9` |
-| Done | `0` |
+| Done | `1` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `9` |
-| Last Updated | `2026-06-07 03:15` |
+| Pending | `8` |
+| Last Updated | `2026-06-07 03:23` |
 
 ## Task Matrix
 
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Allowed Files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `T1` | `Product Publish 只做 Draft → Published` | `pending` | `unassigned` | `W1` | `-` | `Task 1` | `backend/product/service/product.go; backend/product/handler/product.go; backend/product/service/product_test.go` |
+| `T1` | `Product Publish 只做 Draft → Published` | `done` | `implementer` | `W1` | `-` | `Task 1` | `backend/product/service/product.go; backend/product/handler/product.go; backend/product/service/product_test.go` |
 | `T2` | `Product Internal API 提供商品竞拍事实与 active 直播间` | `pending` | `unassigned` | `W2` | `T1` | `Task 2` | `backend/product/service/product.go; backend/product/handler/internal.go; backend/product/main.go; backend/product/handler/internal_test.go` |
 | `T3` | `Auction ProductClient 增加商品事实与直播间方法` | `pending` | `unassigned` | `W3` | `T2` | `Task 3` | `backend/auction/client/product_client.go; backend/auction/client/product_client_test.go` |
 | `T4` | `Auction DAO 支持活跃唯一查询与 MySQL 兜底索引` | `pending` | `unassigned` | `W3` | `-` | `Task 4` | `backend/auction/dao/auction.go; backend/auction/dao/auction_schema.go; backend/auction/main.go; backend/auction/dao/auction_test.go; backend/auction/dao/auction_schema_test.go` |
@@ -86,10 +86,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `implementer` |
+| Started At | `2026-06-07 03:15` |
+| Completed At | `2026-06-07 03:23` |
 | Branch | `feat/auction-product-lifecycle` |
 | Worktree | `/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-auction-product-lifecycle` |
 | Depends On | `-` |
@@ -106,11 +106,26 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `TDD Red -> Green -> Verify evidence` | `not_run` | `pending` |
+| `cd backend/product && go test ./service -run 'TestProductService_PublishProduct' -count=1` | `RED fail before implementation` | `FAIL: old PublishProduct returned non-nil liveStream and created 1 live_streams row` | `red_confirmed` |
+| `cd backend/product && go test ./service -run 'TestProductService_PublishProduct' -count=1` | `PASS after minimal implementation` | `PASS: ok product-service/service 0.594s` | `pass` |
+| `cd backend/product && go test ./service ./handler -count=1` | `PASS affected regression` | `PASS: ok product-service/service 0.631s; ok product-service/handler 1.044s` | `pass` |
+
+**Modified Files**
+
+- `backend/product/service/product.go`
+- `backend/product/handler/product.go`
+- `backend/product/service/product_test.go`
+- `docs/superpowers/sdd/runs/2026-06-07-auction-product-lifecycle-state.md`
+
+**Risks**
+
+- `PublishProduct` keeps the `startTime *time.Time` parameter for handler compatibility, but intentionally ignores it.
+- Handler response shape remains compatible with `data.product` and `data.live_stream`; clients must tolerate `live_stream: null`.
+- First targeted run after adding suite methods matched no tests because existing tests are under `TestRunSuite`; T1 tests were converted to top-level functions so the planned `-run` command now exercises them.
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `当前分支/worktree：feat/auction-product-lifecycle @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-auction-product-lifecycle`
 
 ### T2 - `Product Internal API 提供商品竞拍事实与 active 直播间`
 

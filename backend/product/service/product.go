@@ -61,51 +61,24 @@ func NewProductService(productDAO *dao.ProductDAO, ruleDAO *dao.AuctionRuleDAO, 
 	}
 }
 
-// PublishProduct 发布商品到直播间
+// PublishProduct 将草稿商品设为可排期。
 func (s *ProductService) PublishProduct(ctx context.Context, productID, creatorID int64, startTime *time.Time) (*model.Product, *model.LiveStream, error) {
-	// 1. 验证商品状态为草稿
 	product, err := s.productDAO.GetByID(ctx, productID)
 	if err != nil {
 		return nil, nil, err
 	}
-
 	if product.Status != model.ProductStatusDraft {
 		return nil, nil, errors.New("商品状态不正确，只有草稿状态的商品可以发布")
 	}
-
-	// 2. 获取或创建直播间
-	liveStream, err := s.liveStreamDAO.GetOrCreateByCreatorID(ctx, creatorID, "")
-	if err != nil {
-		return nil, nil, err
+	if product.OwnerID != nil && *product.OwnerID != creatorID {
+		return nil, nil, errors.New("商品不存在或不属于当前商家")
 	}
 
-	// 3. 检查直播间状态
-	if !liveStream.IsActive() {
-		return nil, nil, errors.New("直播间已被禁用，无法发布商品")
-	}
-
-	// 4. 获取竞拍规则（已配置则验证，未配置将使用默认规则）
-	_, err = s.ruleDAO.GetByProductID(ctx, productID)
-	if err != nil {
-		// 未配置规则不影响发布，auction-service会使用默认规则
-	}
-
-	// 5. 设置竞拍开始时间
-	if startTime == nil {
-		defaultStartTime := time.Now().Add(30 * time.Minute) // 默认30分钟后开始
-		startTime = &defaultStartTime
-	}
-
-	// 6. 更新商品状态
 	product.Status = model.ProductStatusPublished
 	if err := s.productDAO.Update(ctx, product); err != nil {
 		return nil, nil, err
 	}
-
-	// 注意：实际的竞拍记录创建将在 auction-service 中完成
-	// 这里通过 HTTP 调用或消息队列通知 auction-service
-
-	return product, liveStream, nil
+	return product, nil, nil
 }
 
 // UnpublishProduct 下架商品

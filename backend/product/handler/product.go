@@ -432,7 +432,7 @@ func (h *ProductHandler) PublishHandler(ctx context.Context, c *app.RequestConte
 		startTime = &t
 	}
 
-	product, liveStream, err := h.productService.PublishProduct(ctx, productID, userID, startTime)
+	product, _, err := h.productService.PublishProduct(ctx, productID, userID, startTime)
 	if err != nil {
 		c.JSON(500, map[string]interface{}{
 			"code":    500,
@@ -443,13 +443,10 @@ func (h *ProductHandler) PublishHandler(ctx context.Context, c *app.RequestConte
 
 	c.JSON(200, map[string]interface{}{
 		"code":    200,
-		"message": "发布成功",
+		"message": "商品已进入竞拍池，可创建竞拍场次",
 		"data": map[string]interface{}{
-			"product": product,
-			"live_stream": map[string]interface{}{
-				"id":   liveStream.ID,
-				"name": liveStream.Name,
-			},
+			"product":     product,
+			"live_stream": nil,
 		},
 	})
 }
