@@ -42,6 +42,13 @@ type CreateAuctionRuleRequest struct {
 	TriggerDelayBefore int     `json:"trigger_delay_before,omitempty"`
 }
 
+type ProductAuctionInfo struct {
+	ID        int64               `json:"id"`
+	OwnerID   int64               `json:"owner_id"`
+	Status    model.ProductStatus `json:"status"`
+	RuleBound bool                `json:"rule_bound"`
+}
+
 // ProductService 商品服务
 type ProductService struct {
 	productDAO        *dao.ProductDAO
@@ -276,6 +283,31 @@ func (s *ProductService) CreateAuctionRule(ctx context.Context, req *CreateAucti
 // GetAuctionRule 获取竞拍规则
 func (s *ProductService) GetAuctionRule(ctx context.Context, productID int64) (*model.AuctionRule, error) {
 	return s.ruleDAO.GetByProductID(ctx, productID)
+}
+
+func (s *ProductService) GetProductAuctionInfo(ctx context.Context, productID int64) (*ProductAuctionInfo, error) {
+	product, err := s.productDAO.GetByID(ctx, productID)
+	if err != nil {
+		return nil, err
+	}
+	if product.OwnerID == nil {
+		return nil, errors.New("商品缺少 owner_id")
+	}
+
+	rule, err := s.ruleDAO.GetByProductID(ctx, productID)
+	if err != nil {
+		return nil, err
+	}
+	return &ProductAuctionInfo{
+		ID:        product.ID,
+		OwnerID:   *product.OwnerID,
+		Status:    product.Status,
+		RuleBound: rule != nil,
+	}, nil
+}
+
+func (s *ProductService) GetOrCreateLiveStream(ctx context.Context, creatorID int64, creatorName string) (*model.LiveStream, error) {
+	return s.liveStreamService.GetOrCreateLiveStream(ctx, creatorID, creatorName)
 }
 
 // MaxBatchProductIDs 是 GetProductsByIDs 单次允许的最大 id 数。

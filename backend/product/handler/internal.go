@@ -95,6 +95,11 @@ type BatchByIDsRequest struct {
 	IDs []int64 `json:"ids"`
 }
 
+type getOrCreateLiveStreamRequest struct {
+	CreatorID   int64  `json:"creator_id"`
+	CreatorName string `json:"creator_name"`
+}
+
 // BatchByIDs 处理 POST /internal/products/batch，按 id 列表批量取摘要。
 func (h *InternalHandler) BatchByIDs(ctx context.Context, c *app.RequestContext) {
 	var req BatchByIDsRequest
@@ -126,6 +131,20 @@ func (h *InternalHandler) BatchByIDs(ctx context.Context, c *app.RequestContext)
 			"items": summaries,
 		},
 	})
+}
+
+func (h *InternalHandler) GetAuctionProductInfo(ctx context.Context, c *app.RequestContext) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "无效的商品ID"})
+		return
+	}
+	info, err := h.productService.GetProductAuctionInfo(ctx, id)
+	if err != nil {
+		c.JSON(404, map[string]interface{}{"code": 404, "message": err.Error()})
+		return
+	}
+	c.JSON(200, map[string]interface{}{"code": 200, "message": "success", "data": info})
 }
 
 // liveStreamSummary 是 /internal/live-streams/batch 的返回单元（spec B §4.1 契约）。
@@ -189,4 +208,34 @@ func (h *InternalHandler) BatchLiveStreams(ctx context.Context, c *app.RequestCo
 			"items": summaries,
 		},
 	})
+}
+
+func (h *InternalHandler) GetOrCreateActiveLiveStream(ctx context.Context, c *app.RequestContext) {
+	var req getOrCreateLiveStreamRequest
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "请求参数错误: " + err.Error()})
+		return
+	}
+	if req.CreatorID <= 0 {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "creator_id 必填"})
+		return
+	}
+
+	liveStream, err := h.productService.GetOrCreateLiveStream(ctx, req.CreatorID, req.CreatorName)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "获取直播间失败: " + err.Error()})
+		return
+	}
+	if !liveStream.IsActive() {
+		c.JSON(409, map[string]interface{}{"code": 409, "message": "直播间已被禁用，无法创建竞拍"})
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{"code": 200, "message": "success", "data": liveStreamSummary{
+		ID:         liveStream.ID,
+		Name:       liveStream.Name,
+		CoverImage: liveStream.CoverImage,
+		Status:     int(liveStream.Status),
+		CreatorID:  liveStream.CreatorID,
+	}})
 }

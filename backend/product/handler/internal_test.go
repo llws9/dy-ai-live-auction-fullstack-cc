@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/route/param"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/sqlite"
@@ -22,13 +25,14 @@ import (
 // from the shared :memory: database used elsewhere.
 func newInternalHandlerWithSeed(t *testing.T, seed func(db *gorm.DB)) *InternalHandler {
 	t.Helper()
-	db, err := gorm.Open(sqlite.Open("file::memory:?mode=memory&cache=shared"), &gorm.Config{})
+	dbName := strings.NewReplacer("/", "_", " ", "_").Replace(t.Name())
+	db, err := gorm.Open(sqlite.Open("file:"+dbName+"?mode=memory&cache=shared"), &gorm.Config{})
 	require.NoError(t, err)
 	require.NoError(t, db.AutoMigrate(&model.Product{}, &model.Category{}, &model.AuctionRule{}, &model.LiveStream{}))
-	// Clean slate; ":memory:?cache=shared" is shared across the process so tests
-	// must reset the table before seeding.
 	db.Exec("DELETE FROM products")
 	db.Exec("DELETE FROM categories")
+	db.Exec("DELETE FROM auction_rules")
+	db.Exec("DELETE FROM live_streams")
 	if seed != nil {
 		seed(db)
 	}
@@ -37,6 +41,97 @@ func newInternalHandlerWithSeed(t *testing.T, seed func(db *gorm.DB)) *InternalH
 }
 
 func ptr64(v int64) *int64 { return &v }
+
+// --- GET /internal/products/:id/auction-info -------------------------------
+
+func TestInternalHandler_GetAuctionProductInfo(t *testing.T) {
+	var productID int64
+	const ownerID int64 = 1001
+	h := newInternalHandlerWithSeed(t, func(db *gorm.DB) {
+		product := &model.Product{OwnerID: ptr64(ownerID), Name: "schedulable", Status: model.ProductStatusPublished}
+		require.NoError(t, db.Create(product).Error)
+		productID = product.ID
+		require.NoError(t, db.Create(&model.AuctionRule{
+			ProductID:  product.ID,
+			StartPrice: 100,
+			Increment:  10,
+			Duration:   3600,
+		}).Error)
+	})
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/internal/products/" + strconv.FormatInt(productID, 10) + "/auction-info")
+	c.Params = append(c.Params, param.Param{Key: "id", Value: strconv.FormatInt(productID, 10)})
+
+	h.GetAuctionProductInfo(context.Background(), c)
+
+	require.Equal(t, 200, c.Response.StatusCode())
+	var body struct {
+		Code int `json:"code"`
+		Data struct {
+			ID        int64 `json:"id"`
+			OwnerID   int64 `json:"owner_id"`
+			Status    int   `json:"status"`
+			RuleBound bool  `json:"rule_bound"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.Equal(t, 200, body.Code)
+	assert.Equal(t, productID, body.Data.ID)
+	assert.Equal(t, ownerID, body.Data.OwnerID)
+	assert.Equal(t, int(model.ProductStatusPublished), body.Data.Status)
+	assert.True(t, body.Data.RuleBound)
+}
+
+// --- POST /internal/live-streams/get-or-create -----------------------------
+
+func TestInternalHandler_GetOrCreateActiveLiveStream(t *testing.T) {
+	h := newInternalHandlerWithSeed(t, nil)
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("POST")
+	c.Request.SetRequestURI("/internal/live-streams/get-or-create")
+	c.Request.Header.SetContentTypeBytes([]byte("application/json"))
+	c.Request.SetBodyString(`{"creator_id":1001,"creator_name":"merchant_1001"}`)
+
+	h.GetOrCreateActiveLiveStream(context.Background(), c)
+
+	require.Equal(t, 200, c.Response.StatusCode())
+	var body struct {
+		Code int `json:"code"`
+		Data struct {
+			ID        int64 `json:"id"`
+			CreatorID int64 `json:"creator_id"`
+			Status    int   `json:"status"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.Equal(t, 200, body.Code)
+	assert.NotZero(t, body.Data.ID)
+	assert.Equal(t, int64(1001), body.Data.CreatorID)
+	assert.Equal(t, int(model.LiveStreamStatusActive), body.Data.Status)
+}
+
+func TestInternalHandler_GetOrCreateActiveLiveStreamRejectsBanned(t *testing.T) {
+	h := newInternalHandlerWithSeed(t, func(db *gorm.DB) {
+		require.NoError(t, db.Create(&model.LiveStream{
+			CreatorID: 1001,
+			Name:      "banned",
+			Status:    model.LiveStreamStatusBanned,
+		}).Error)
+	})
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("POST")
+	c.Request.SetRequestURI("/internal/live-streams/get-or-create")
+	c.Request.Header.SetContentTypeBytes([]byte("application/json"))
+	c.Request.SetBodyString(`{"creator_id":1001,"creator_name":"merchant_1001"}`)
+
+	h.GetOrCreateActiveLiveStream(context.Background(), c)
+
+	assert.Equal(t, 409, c.Response.StatusCode())
+}
 
 // --- GET /internal/products?category_id= -----------------------------------
 

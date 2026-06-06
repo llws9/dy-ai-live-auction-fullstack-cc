@@ -37,15 +37,15 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Review | `1` |
-| Pending | `8` |
-| Last Updated | `2026-06-07 03:34` |
+| Pending | `7` |
+| Last Updated | `2026-06-07 03:45` |
 
 ## Task Matrix
 
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Allowed Files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T1` | `Product Publish 只做 Draft → Published` | `done` | `implementer` | `W1` | `-` | `Task 1` | `backend/product/service/product.go; backend/product/handler/product.go; backend/product/service/product_test.go` |
-| `T2` | `Product Internal API 提供商品竞拍事实与 active 直播间` | `pending` | `unassigned` | `W2` | `T1` | `Task 2` | `backend/product/service/product.go; backend/product/handler/internal.go; backend/product/main.go; backend/product/handler/internal_test.go` |
+| `T2` | `Product Internal API 提供商品竞拍事实与 active 直播间` | `review` | `implementer` | `W2` | `T1` | `Task 2` | `backend/product/service/product.go; backend/product/handler/internal.go; backend/product/main.go; backend/product/handler/internal_test.go` |
 | `T3` | `Auction ProductClient 增加商品事实与直播间方法` | `pending` | `unassigned` | `W3` | `T2` | `Task 3` | `backend/auction/client/product_client.go; backend/auction/client/product_client_test.go` |
 | `T4` | `Auction DAO 支持活跃唯一查询与 MySQL 兜底索引` | `pending` | `unassigned` | `W3` | `-` | `Task 4` | `backend/auction/dao/auction.go; backend/auction/dao/auction_schema.go; backend/auction/main.go; backend/auction/dao/auction_test.go; backend/auction/dao/auction_schema_test.go` |
 | `T5` | `AuctionService 创建竞拍 Fail-closed 校验` | `pending` | `unassigned` | `W4` | `T4` | `Task 5` | `backend/auction/service/auction.go; backend/auction/service/auction_create_test.go` |
@@ -148,10 +148,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `review` |
+| Owner | `implementer` |
+| Started At | `2026-06-07 03:43` |
+| Completed At | `2026-06-07 03:45` |
 | Branch | `feat/auction-product-lifecycle` |
 | Worktree | `/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-auction-product-lifecycle` |
 | Depends On | `T1` |
@@ -168,11 +168,34 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `TDD Red -> Green -> Verify evidence` | `not_run` | `pending` |
+| `code review input check` | `GetOrCreateByCreatorID returns existing original status so banned -> 409 is reachable` | `PASS: backend/product/dao/live_stream.go returns existing liveStream without status mutation` | `pass` |
+| `cd backend/product && go test ./handler -run 'TestInternalHandler_(GetAuctionProductInfo\|GetOrCreateActiveLiveStream)' -count=1` | `RED fail before implementation` | `FAIL: h.GetAuctionProductInfo and h.GetOrCreateActiveLiveStream undefined` | `red_confirmed` |
+| `cd backend/product && go test ./handler -run 'TestInternalHandler_(GetAuctionProductInfo\|GetOrCreateActiveLiveStream)' -count=1` | `PASS after minimal implementation` | `PASS: ok product-service/handler 0.736s` | `pass` |
+| `cd backend/product && go test ./service ./handler -count=1` | `PASS affected regression` | `PASS: ok product-service/service 1.209s; ok product-service/handler 0.926s` | `pass` |
+
+**Implementation Notes**
+
+- Added `GET /internal/products/:id/auction-info` returning `id`, `owner_id`, `status`, `rule_bound`.
+- `ProductService.GetProductAuctionInfo` fails closed when `Product.OwnerID == nil`; handler maps lookup/owner failures to 404.
+- Added `POST /internal/live-streams/get-or-create`; `creator_id` is required, created/reused stream must satisfy `IsActive()`, otherwise returns 409.
+- Existing banned live stream is covered by `TestInternalHandler_GetOrCreateActiveLiveStreamRejectsBanned`.
+
+**Modified Files**
+
+- `backend/product/service/product.go`
+- `backend/product/handler/internal.go`
+- `backend/product/main.go`
+- `backend/product/handler/internal_test.go`
+- `docs/superpowers/sdd/runs/2026-06-07-auction-product-lifecycle-state.md`
+
+**Risks**
+
+- `AuctionRuleDAO.GetByProductID` currently returns `(nil, nil)` for missing rules; `rule_bound=false` depends on that existing DAO contract.
+- Internal routes are registered behind existing `internalAuth`; downstream T3 client must send the internal token.
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `当前分支/worktree：feat/auction-product-lifecycle @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-auction-product-lifecycle`
 
 ### T3 - `Auction ProductClient 增加商品事实与直播间方法`
 

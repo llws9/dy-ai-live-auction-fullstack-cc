@@ -267,6 +267,8 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	internal := h.Group("/internal", internalAuth)
 	internal.GET("/products", internalHandler.ListByCategory)
 	internal.POST("/products/batch", internalHandler.BatchByIDs)
+	internal.GET("/products/:id/auction-info", internalHandler.GetAuctionProductInfo)
 	internal.POST("/live-streams/batch", internalHandler.BatchLiveStreams)
+	internal.POST("/live-streams/get-or-create", internalHandler.GetOrCreateActiveLiveStream)
 	internal.POST("/orders/from-auction-result", orderHandler.CreateFromAuctionResult)
 }
