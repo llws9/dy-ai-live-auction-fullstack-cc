@@ -45,6 +45,16 @@ function renderStats() {
   );
 }
 
+function renderStatsAt(path: string) {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <Routes>
+        <Route path="/stats/:kind" element={<Stats />} />
+      </Routes>
+    </MemoryRouter>
+  );
+}
+
 describe('Stats auction statistics', () => {
   let consoleErrorSpy: jest.SpyInstance;
 
@@ -134,5 +144,28 @@ describe('Stats auction statistics', () => {
     await waitFor(() => expect(mockedStatisticsApi.getAuctionStats).toHaveBeenCalled());
     expect(mockedStatisticsApi.getRevenueStats).toHaveBeenCalled();
     expect(mockedStatisticsApi.getUserStats).not.toHaveBeenCalled();
+  });
+
+  it('renders admin user statistics from object API contract', async () => {
+    mockedStatisticsApi.getAuctionStats.mockResolvedValue([]);
+    mockedStatisticsApi.getUserStats.mockResolvedValue({
+      total_users: 120,
+      active_users: 42,
+      new_users: 9,
+      paid_conversion_rate: 35.5,
+      daily_users: [
+        { date: '2026-06-01', new_users: 3, active_users: 12 },
+        { date: '2026-06-02', new_users: 6, active_users: 18 },
+      ],
+    });
+
+    renderStatsAt('/stats/user');
+
+    await waitFor(() => expect(mockedStatisticsApi.getUserStats).toHaveBeenCalled());
+    expect(screen.getByText('120')).toBeInTheDocument();
+    expect(screen.getByText('42')).toBeInTheDocument();
+    expect(screen.getByText('35.5%')).toBeInTheDocument();
+    expect(screen.getByTestId('line-chart')).toHaveTextContent('"new":3');
+    expect(screen.getByTestId('line-chart')).toHaveTextContent('"active":18');
   });
 });

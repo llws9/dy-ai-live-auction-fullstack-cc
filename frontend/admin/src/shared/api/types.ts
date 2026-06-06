@@ -161,11 +161,18 @@ export interface RevenueStatistics {
 }
 
 // 用户统计
-export interface UserStatistics {
+export interface DailyUserStatistics {
   date: string;
   new_users: number;
   active_users: number;
-  bid_users: number;
+}
+
+export interface UserStatistics {
+  total_users: number;
+  active_users: number;
+  new_users: number;
+  paid_conversion_rate: number;
+  daily_users: DailyUserStatistics[];
 }
 
 // WebSocket消息类型

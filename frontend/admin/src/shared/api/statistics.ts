@@ -29,6 +29,6 @@ export const statisticsApi = {
   // 获取用户统计
   getUserStats: (params?: StatisticsParams) => {
     const query = buildQuery(params || {});
-    return get<UserStatistics[]>(`/statistics/users?${query}`);
+    return get<UserStatistics>(`/statistics/users?${query}`);
   },
 };

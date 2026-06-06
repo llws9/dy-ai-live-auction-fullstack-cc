@@ -209,7 +209,7 @@ export const statisticsApi = {
 
   getUserStats: (params?: { start_date?: string; end_date?: string }) => {
     const query = buildQuery(params || {});
-    return get<any[]>(`/statistics/users?${query}`);
+    return get<any>(`/statistics/users?${query}`);
   },
 };
 

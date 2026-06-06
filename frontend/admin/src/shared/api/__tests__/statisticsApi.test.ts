@@ -52,4 +52,22 @@ describe('statisticsApi response normalization', () => {
     expect(get).toHaveBeenCalledWith('/statistics/revenue?group_by=category');
     expect(result).toEqual(categoryDistribution);
   });
+
+  it('returns user statistics object contract unchanged', async () => {
+    const userStats = {
+      total_users: 120,
+      active_users: 42,
+      new_users: 9,
+      paid_conversion_rate: 35.5,
+      daily_users: [
+        { date: '2026-06-01', new_users: 3, active_users: 12 },
+      ],
+    };
+    (get as jest.Mock).mockResolvedValue(userStats);
+
+    const result = await statisticsApi.getUserStats({ start_date: '2026-06-01', end_date: '2026-06-07' });
+
+    expect(get).toHaveBeenCalledWith('/statistics/users?start_date=2026-06-01&end_date=2026-06-07');
+    expect(result).toEqual(userStats);
+  });
 });

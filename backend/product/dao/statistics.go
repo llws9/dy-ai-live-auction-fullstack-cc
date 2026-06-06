@@ -66,10 +66,19 @@ type CategoryRevenue struct {
 
 // UserStatistics 用户统计
 type UserStatistics struct {
-	TotalUsers      int64      `json:"total_users"`
-	ActiveUsers     int64      `json:"active_users"`
-	NewUsers        int64      `json:"new_users"`
-	BidDistribution []BidRange `json:"bid_distribution"`
+	TotalUsers         int64           `json:"total_users"`
+	ActiveUsers        int64           `json:"active_users"`
+	NewUsers           int64           `json:"new_users"`
+	PaidConversionRate float64         `json:"paid_conversion_rate"`
+	DailyUsers         []DailyUserStat `json:"daily_users"`
+	BidDistribution    []BidRange      `json:"bid_distribution"`
+}
+
+// DailyUserStat 每日用户统计
+type DailyUserStat struct {
+	Date        string `json:"date"`
+	NewUsers    int64  `json:"new_users"`
+	ActiveUsers int64  `json:"active_users"`
 }
 
 // BidRange 出价区间
@@ -230,27 +239,58 @@ func (d *StatisticsDAO) scopedOrderQuery(ctx context.Context, sellerID *int64) *
 // GetUserStatistics 获取用户统计
 func (d *StatisticsDAO) GetUserStatistics(ctx context.Context, startDate, endDate *time.Time) (*UserStatistics, error) {
 	var stats UserStatistics
+	start, end := userStatisticsRange(startDate, endDate, time.Now())
 
 	// 总用户数
 	var totalUsers int64
 	d.db.WithContext(ctx).Model(&model.User{}).Count(&totalUsers)
 	stats.TotalUsers = totalUsers
 
-	// 活跃用户数（近7天有订单）
+	// 活跃用户数（统计周期内有订单）
 	var activeUsers int64
-	sevenDaysAgo := time.Now().AddDate(0, 0, -7)
 	d.db.WithContext(ctx).Model(&model.Order{}).
-		Where("created_at >= ?", sevenDaysAgo).
+		Where("created_at >= ? AND created_at <= ?", start, end).
 		Distinct("winner_id").
 		Count(&activeUsers)
 	stats.ActiveUsers = activeUsers
 
-	// 新用户数（近7天注册）
+	// 新用户数（统计周期内注册）
 	var newUsers int64
 	d.db.WithContext(ctx).Model(&model.User{}).
-		Where("created_at >= ?", sevenDaysAgo).
+		Where("created_at >= ? AND created_at <= ?", start, end).
 		Count(&newUsers)
 	stats.NewUsers = newUsers
+
+	// 付费转化率：有已支付订单的去重用户数 / 总用户数
+	var paidUsers int64
+	d.db.WithContext(ctx).Model(&model.Order{}).
+		Where("status >= ? AND created_at >= ? AND created_at <= ?", model.OrderStatusPaid, start, end).
+		Distinct("winner_id").
+		Count(&paidUsers)
+	if totalUsers > 0 {
+		stats.PaidConversionRate = float64(paidUsers) / float64(totalUsers) * 100
+	}
+
+	stats.DailyUsers = make([]DailyUserStat, 0, int(end.Sub(start).Hours()/24)+1)
+	for day := start; !day.After(end); day = day.AddDate(0, 0, 1) {
+		dateStr := day.Format("2006-01-02")
+		var dailyNewUsers int64
+		d.db.WithContext(ctx).Model(&model.User{}).
+			Where("DATE(created_at) = ?", dateStr).
+			Count(&dailyNewUsers)
+
+		var dailyActiveUsers int64
+		d.db.WithContext(ctx).Model(&model.Order{}).
+			Where("DATE(created_at) = ?", dateStr).
+			Distinct("winner_id").
+			Count(&dailyActiveUsers)
+
+		stats.DailyUsers = append(stats.DailyUsers, DailyUserStat{
+			Date:        dateStr,
+			NewUsers:    dailyNewUsers,
+			ActiveUsers: dailyActiveUsers,
+		})
+	}
 
 	// 出价分布
 	stats.BidDistribution = []BidRange{
@@ -261,4 +301,21 @@ func (d *StatisticsDAO) GetUserStatistics(ctx context.Context, startDate, endDat
 	}
 
 	return &stats, nil
+}
+
+func userStatisticsRange(startDate, endDate *time.Time, now time.Time) (time.Time, time.Time) {
+	end := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, int(time.Second-time.Nanosecond), now.Location())
+	start := end.AddDate(0, 0, -6)
+	start = time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
+
+	if startDate != nil {
+		start = time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, startDate.Location())
+	}
+	if endDate != nil {
+		end = time.Date(endDate.Year(), endDate.Month(), endDate.Day(), 23, 59, 59, int(time.Second-time.Nanosecond), endDate.Location())
+	}
+	if end.Before(start) {
+		end = start
+	}
+	return start, end
 }

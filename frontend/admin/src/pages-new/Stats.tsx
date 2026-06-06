@@ -117,18 +117,20 @@ export default function Stats() {
       const fetchUserStats = async () => {
         if (canViewUserStats) {
           const userStats = await statisticsApi.getUserStats()
-          const normalizedUserStats = Array.isArray(userStats) ? userStats : []
-          setUserData(normalizedUserStats.slice(-7).map((item: any) => ({
+          const dailyUsers = Array.isArray(userStats?.daily_users) ? userStats.daily_users : []
+          setUserData(dailyUsers.slice(-7).map((item: any) => ({
             name: new Date(item.date).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }),
             new: item.new_users || 0,
             active: item.active_users || 0,
           })))
-          const userIndicators = normalizedUserStats.reduce((acc: any, item: any) => ({
-            total: acc.total + (item.new_users || 0),
-            active: item.active_users || acc.active,
-            rate: 8.4,
-          }), { total: 0, active: 0, rate: 0 })
-          setIndicators(prev => ({ ...prev, user: userIndicators }))
+          setIndicators(prev => ({
+            ...prev,
+            user: {
+              total: userStats?.total_users || 0,
+              active: userStats?.active_users || 0,
+              rate: userStats?.paid_conversion_rate || 0,
+            },
+          }))
         } else {
           setUserData([])
           setIndicators(prev => ({ ...prev, user: { total: 0, active: 0, rate: 0 } }))
