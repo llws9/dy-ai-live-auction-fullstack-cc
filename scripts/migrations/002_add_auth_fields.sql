@@ -25,17 +25,8 @@ CREATE TABLE IF NOT EXISTS login_logs (
     INDEX idx_login_at (login_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='登录日志表';
 
--- 创建管理员账号
--- 注意：这里的密码哈希是 'admin123' 使用bcrypt成本因子10生成的
--- 在生产环境中，应该通过应用程序创建管理员账号
-INSERT INTO users (id, name, email, password, role, status, created_at) VALUES
-(999, '系统管理员', 'admin@example.com', '$2a$10$P767XYZO9ntqyLwbxTfwnOM0HEvWp0b/RJdojahFCvGojW4joj3vS', 2, 1, NOW())
-ON DUPLICATE KEY UPDATE
-    name = '系统管理员',
-    email = 'admin@example.com',
-    password = '$2a$10$P767XYZO9ntqyLwbxTfwnOM0HEvWp0b/RJdojahFCvGojW4joj3vS',
-    role = 2,
-    status = 1;
+-- 演示账号不在迁移中写入，避免绕过 scripts/init-demo-users.sh 的 fail-closed 冲突保护。
+-- 统一演示账号的唯一 SSOT 是 scripts/init-demo-users.sh。
 
 -- 为现有用户设置默认密码（空密码，需要用户重新设置）
 UPDATE users SET password = '' WHERE password IS NULL OR password = '';
