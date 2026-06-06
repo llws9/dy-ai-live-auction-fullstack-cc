@@ -191,7 +191,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 
 	// ========== 统计服务路由 ==========
 	authGroup.GET("/statistics/overview", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
-	authGroup.GET("/statistics/auctions", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
+	authGroup.GET("/statistics/auctions", middleware.RequireMerchantOrAdmin(), adminAuctionProxy.Forward)
 	authGroup.GET("/statistics/revenue", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
 	authGroup.GET("/statistics/users", middleware.RequireAdmin(), adminProductProxy.Forward)
 
