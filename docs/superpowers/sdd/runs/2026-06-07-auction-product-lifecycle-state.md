@@ -38,7 +38,7 @@
 | In Progress | `0` |
 | Review | `1` |
 | Pending | `6` |
-| Last Updated | `2026-06-07 04:04` |
+| Last Updated | `2026-06-07 04:09` |
 
 ## Task Matrix
 
@@ -244,16 +244,26 @@
 | `cd backend/auction && go test ./client -run 'TestHTTPProductClient_(GetAuctionProductInfo\|GetOrCreateActiveLiveStream)' -count=1` | GREEN: new client contract tests pass | PASS: `ok auction-service/client 0.603s` | `pass` |
 | `cd backend/auction && go test ./client -count=1` | Client package regression passes | PASS: `ok auction-service/client 0.677s` | `pass` |
 | `git diff --check` | No whitespace errors | PASS: exit 0 | `pass` |
+| `cd backend/auction && go test ./handler -count=1` | Spec review fix: handler test fakes compile against expanded `ProductClient` | PASS: `ok auction-service/handler 1.159s` | `pass` |
+| `cd backend/auction && go test ./... -count=1` | Auction-service regression passes after fake sync | PASS: all auction-service packages passed | `pass` |
+| `git diff --check` | No whitespace errors after fake sync | PASS: exit 0 | `pass` |
+
+**Spec Review Fix**
+
+- Review blocker: expanding `client.ProductClient` with `GetAuctionProductInfo` and `GetOrCreateActiveLiveStream` broke existing handler tests because `fakeProductClient` in `backend/auction/handler/auction_list_test.go` no longer implemented the interface.
+- Fix scope: synchronized only the handler test fake by adding no-op implementations returning `nil, nil`; these methods are not called by the existing list/result/fixed-price tests and do not change test semantics.
+- Status remains `review` after the blocker fix and verification.
 
 **Modified Files**
 
 - `backend/auction/client/product_client.go`
 - `backend/auction/client/product_client_test.go`
+- `backend/auction/handler/auction_list_test.go`
 - `docs/superpowers/sdd/runs/2026-06-07-auction-product-lifecycle-state.md`
 
 **Risks**
 
-- `ProductClient` interface expansion will require any downstream test fakes to implement the two new methods when they compile against the expanded interface.
+- Handler package test fake is now synchronized with the expanded `ProductClient`; any future additional fakes must also be kept in sync with the interface.
 - End-to-end create-auction orchestration is outside T3 scope and remains covered by later `T6`.
 
 **Handoff**
