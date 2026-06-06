@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/route/param"
@@ -32,15 +31,28 @@ func setupAuctionAdminScopeHandlerWithDB(t *testing.T) (*AuctionHandler, *gorm.D
 	return NewAuctionHandler(svc), db
 }
 
+func createAdminScopeAuction(t *testing.T, ctx context.Context, h *AuctionHandler, productID, ownerID int64) *model.Auction {
+	t.Helper()
+	auction, err := h.auctionService.CreateAuction(ctx, &service.CreateAuctionRequest{
+		ProductID:      productID,
+		CreatorID:      &ownerID,
+		Duration:       3600,
+		ProductOwnerID: ownerID,
+		ProductStatus:  1,
+		RuleBound:      true,
+		LiveStreamID:   ownerID,
+	})
+	require.NoError(t, err)
+	return auction
+}
+
 func TestAuctionHandlerAdminListMerchantOnlyOwnAuctions(t *testing.T) {
 	h := setupAuctionAdminScopeHandler(t)
 	ctx := context.Background()
 	ownerA := int64(1001)
 	ownerB := int64(1002)
-	_, err := h.auctionService.CreateAuction(ctx, &service.CreateAuctionRequest{ProductID: 1, CreatorID: &ownerA, StartTime: time.Now(), EndTime: time.Now().Add(time.Hour)})
-	require.NoError(t, err)
-	_, err = h.auctionService.CreateAuction(ctx, &service.CreateAuctionRequest{ProductID: 2, CreatorID: &ownerB, StartTime: time.Now(), EndTime: time.Now().Add(time.Hour)})
-	require.NoError(t, err)
+	createAdminScopeAuction(t, ctx, h, 1, ownerA)
+	createAdminScopeAuction(t, ctx, h, 2, ownerB)
 
 	c := app.NewContext(0)
 	c.Request.SetRequestURI("/api/v1/admin/auctions")
@@ -63,8 +75,7 @@ func TestAuctionHandlerAdminGetMerchantRejectsOtherOwner(t *testing.T) {
 	h := setupAuctionAdminScopeHandler(t)
 	ctx := context.Background()
 	owner := int64(1001)
-	auction, err := h.auctionService.CreateAuction(ctx, &service.CreateAuctionRequest{ProductID: 1, CreatorID: &owner, StartTime: time.Now(), EndTime: time.Now().Add(time.Hour)})
-	require.NoError(t, err)
+	auction := createAdminScopeAuction(t, ctx, h, 1, owner)
 
 	c := app.NewContext(0)
 	c.Request.SetRequestURI("/api/v1/admin/auctions/1")
@@ -81,8 +92,7 @@ func TestAuctionHandlerCancelMerchantRejectsOtherOwner(t *testing.T) {
 	h := setupAuctionAdminScopeHandler(t)
 	ctx := context.Background()
 	owner := int64(1001)
-	auction, err := h.auctionService.CreateAuction(ctx, &service.CreateAuctionRequest{ProductID: 1, CreatorID: &owner, StartTime: time.Now(), EndTime: time.Now().Add(time.Hour)})
-	require.NoError(t, err)
+	auction := createAdminScopeAuction(t, ctx, h, 1, owner)
 
 	c := app.NewContext(0)
 	c.Request.SetRequestURI("/api/v1/auctions/1/cancel")
@@ -102,8 +112,7 @@ func TestAuctionHandlerCancelEndedAuctionReturnsConflict(t *testing.T) {
 	h, db := setupAuctionAdminScopeHandlerWithDB(t)
 	ctx := context.Background()
 	owner := int64(1001)
-	auction, err := h.auctionService.CreateAuction(ctx, &service.CreateAuctionRequest{ProductID: 1, CreatorID: &owner, StartTime: time.Now().Add(-2 * time.Hour), EndTime: time.Now().Add(-time.Hour)})
-	require.NoError(t, err)
+	auction := createAdminScopeAuction(t, ctx, h, 1, owner)
 	require.NoError(t, db.Model(&model.Auction{}).Where("id = ?", auction.ID).Update("status", model.AuctionStatusEnded).Error)
 
 	c := app.NewContext(0)

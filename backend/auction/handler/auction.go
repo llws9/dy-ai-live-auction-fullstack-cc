@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"strconv"
-	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"gorm.io/gorm"
@@ -40,10 +39,8 @@ func (h *AuctionHandler) SetRuleFetcher(fetcher auctionRuleFetcher) {
 
 // CreateAuctionRequest 创建竞拍请求
 type CreateAuctionRequest struct {
-	ProductID  int64   `json:"product_id" binding:"required"`
-	StartPrice float64 `json:"start_price"`
-	Increment  float64 `json:"increment"`
-	Duration   int     `json:"duration" binding:"required"`
+	ProductID int64 `json:"product_id" binding:"required"`
+	Duration  int   `json:"duration" binding:"required"`
 }
 
 const (
@@ -69,10 +66,30 @@ type adminActor struct {
 // @Failure 500 {object} map[string]interface{}
 // @Router /auctions [post]
 func (h *AuctionHandler) Create(ctx context.Context, c *app.RequestContext) {
-	var creatorID *int64
-	if id, ok := userIDFromHeader(c); ok {
-		creatorID = &id
+	creatorID, ok := userIDFromHeader(c)
+	if !ok {
+		c.JSON(401, map[string]interface{}{
+			"code":    401,
+			"message": "未认证，请先登录",
+		})
+		return
 	}
+	role := string(c.GetHeader("X-User-Role"))
+	if role != merchantRole {
+		c.JSON(403, map[string]interface{}{
+			"code":    403,
+			"message": "权限不足",
+		})
+		return
+	}
+	if h.productClient == nil {
+		c.JSON(500, map[string]interface{}{
+			"code":    500,
+			"message": "商品服务不可用",
+		})
+		return
+	}
+
 	var req CreateAuctionRequest
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(400, map[string]interface{}{
@@ -82,24 +99,52 @@ func (h *AuctionHandler) Create(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	// 创建竞拍场次请求
-	auctionReq := &service.CreateAuctionRequest{
-		ProductID: req.ProductID,
-		CreatorID: creatorID,
-		StartTime: time.Now(),
-		EndTime:   time.Now().Add(time.Duration(req.Duration) * time.Second),
+	info, err := h.productClient.GetAuctionProductInfo(ctx, req.ProductID)
+	if err != nil || info == nil {
+		c.JSON(400, map[string]interface{}{
+			"code":    400,
+			"message": "商品不存在或不属于当前商家",
+		})
+		return
 	}
-
-	auction, err := h.auctionService.CreateAuction(ctx, auctionReq)
-	if err != nil {
-		c.JSON(500, map[string]interface{}{
-			"code":    500,
-			"message": "创建竞拍失败: " + err.Error(),
+	live, err := h.productClient.GetOrCreateActiveLiveStream(ctx, creatorID, "merchant_"+strconv.FormatInt(creatorID, 10))
+	if err != nil || live == nil {
+		c.JSON(409, map[string]interface{}{
+			"code":    409,
+			"message": "直播间已被禁用，无法创建竞拍",
 		})
 		return
 	}
 
+	auction, err := h.auctionService.CreateAuction(ctx, &service.CreateAuctionRequest{
+		ProductID:      req.ProductID,
+		CreatorID:      &creatorID,
+		Duration:       req.Duration,
+		ProductOwnerID: info.OwnerID,
+		ProductStatus:  info.Status,
+		RuleBound:      info.RuleBound,
+		LiveStreamID:   live.ID,
+	})
+	if err != nil {
+		writeCreateAuctionError(c, err)
+		return
+	}
+
 	c.JSON(201, auction)
+}
+
+func writeCreateAuctionError(c *app.RequestContext, err error) {
+	switch {
+	case errors.Is(err, service.ErrActiveAuctionExists):
+		c.JSON(409, map[string]interface{}{"code": 409, "message": err.Error()})
+	case errors.Is(err, service.ErrProductOwnershipMismatch),
+		errors.Is(err, service.ErrProductNotSchedulable),
+		errors.Is(err, service.ErrAuctionRuleNotBound),
+		errors.Is(err, service.ErrSoldProductCannotBeReauctioned):
+		c.JSON(400, map[string]interface{}{"code": 400, "message": err.Error()})
+	default:
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "创建竞拍失败: " + err.Error()})
+	}
 }
 
 func (h *AuctionHandler) AdminList(ctx context.Context, c *app.RequestContext) {

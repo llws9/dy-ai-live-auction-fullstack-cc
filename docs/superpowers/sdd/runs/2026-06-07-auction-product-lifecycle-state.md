@@ -36,9 +36,9 @@
 | Done | `4` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Review | `1` |
-| Pending | `4` |
-| Last Updated | `2026-06-07 05:15` |
+| Review | `2` |
+| Pending | `3` |
+| Last Updated | `2026-06-07 05:22` |
 
 ## Task Matrix
 
@@ -49,7 +49,7 @@
 | `T3` | `Auction ProductClient 增加商品事实与直播间方法` | `done` | `implementer` | `W3` | `T2` | `Task 3` | `backend/auction/client/product_client.go; backend/auction/client/product_client_test.go` |
 | `T4` | `Auction DAO 支持活跃唯一查询与 MySQL 兜底索引` | `done` | `implementer` | `W3` | `-` | `Task 4` | `backend/auction/dao/auction.go; backend/auction/dao/auction_schema.go; backend/auction/main.go; backend/auction/dao/auction_test.go; backend/auction/dao/auction_schema_test.go` |
 | `T5` | `AuctionService 创建竞拍 Fail-closed 校验` | `review` | `implementer` | `W4` | `T4` | `Task 5` | `backend/auction/service/auction.go; backend/auction/service/auction_create_test.go; backend/auction/service/auction_test.go; backend/auction/service/auction_admin_scope_test.go` |
-| `T6` | `Auction Create Handler 编排 product-service 与业务错误码` | `pending` | `unassigned` | `W5` | `T3,T5` | `Task 6` | `backend/auction/handler/auction.go; backend/auction/handler/auction_create_test.go` |
+| `T6` | `Auction Create Handler 编排 product-service 与业务错误码` | `review` | `implementer` | `W5` | `T3,T5` | `Task 6` | `backend/auction/handler/auction.go; backend/auction/handler/auction_create_test.go; backend/auction/handler/auction_admin_scope_test.go` |
 | `T7` | `Product AdminList 返回派生展示状态` | `pending` | `unassigned` | `W6` | `T4` | `Task 7` | `backend/auction/handler/internal_product_auctions.go; backend/auction/main.go; backend/product/client/auction_client.go; backend/product/handler/product.go; backend/product/main.go; tests listed in plan` |
 | `T8` | `Admin 前端文案、筛选与错误展示` | `pending` | `unassigned` | `W7` | `T7` | `Task 8` | `frontend/admin/src/shared/api/types.ts; frontend/admin/src/pages-new/GoodsList.tsx; frontend/admin/src/pages-new/AuctionList.tsx; frontend admin tests` |
 | `T9` | `数据一致性检查与 test-service 约束固化` | `pending` | `unassigned` | `W8` | `T6` | `Task 9` | `backend/test/scenario/antisnipe/factory.go; scripts/check-auction-product-consistency.sql` |
@@ -379,6 +379,9 @@
 | `cd backend/auction && go test ./service -count=1` | `PASS service package regression` | `PASS: ok auction-service/service 4.358s` | `pass` |
 | `cd backend/auction && go test ./... -count=1` | `PASS or known T6 dependency recorded` | `FAIL: auction-service/handler compile fails because handler/auction.go still constructs service.CreateAuctionRequest with removed StartTime/EndTime fields; handler migration is T6 scope and was not modified` | `known_t6_dependency` |
 | `git diff --check` | `PASS whitespace check` | `PASS` | `pass` |
+| `spec review` | `APPROVED` | `APPROVED for service scope; later re-review found full auction package still blocked by handler tests` | `partial` |
+| `code quality review` | `CHANGES_REQUESTED` | `Requires repo compile, tighter duplicate-key matching, and full validation evidence` | `changes_requested` |
+| `quality fix` | `backend/auction go test ./...` | `FAIL shifted to handler tests using old call path; service package remains PASS` | `blocked_by_T6` |
 | `cd backend/auction && go test ./service -run 'TestIsActiveAuctionUniqueConflict' -count=1` | `RED fail before quality review fix` | `FAIL: mysql_duplicate_on_other_key_is_not_active_auction_conflict expected false, actual true` | `red_confirmed` |
 | `cd backend/auction && go test ./service -run 'TestAuctionService_CreateAuctionValidatesProductLifecycle\|TestIsActiveAuctionUniqueConflict' -count=1` | `PASS targeted lifecycle and unique-conflict review tests` | `PASS: ok auction-service/service 1.573s` | `pass` |
 | `cd backend/auction && go test ./service -count=1` | `PASS service package regression after review fix` | `PASS: ok auction-service/service 5.242s` | `pass` |
@@ -389,6 +392,7 @@
 | `cd backend/auction && go test ./service -run 'TestAuctionService_CreateAuctionValidatesProductLifecycle\|TestIsActiveAuctionUniqueConflict' -count=1` | `PASS compile bridge targeted lifecycle and unique-conflict tests` | `PASS: ok auction-service/service 0.930s` | `pass` |
 | `cd backend/auction && go test ./service -count=1` | `PASS service package after compile bridge` | `PASS: ok auction-service/service 6.116s` | `pass` |
 | `cd backend/auction && go test ./... -count=1` | `PASS full auction-service regression after compile bridge` | `FAIL: compile bridge fixed StartTime/EndTime build error, but handler package runtime tests now fail in auction_admin_scope_test.go because out-of-scope pre-T6 tests call service.CreateAuction with only deprecated StartTime/EndTime and omit T5 fail-closed fields; changing those tests or handler orchestration is outside this bridge scope` | `blocked` |
+| `cd backend/auction && go test ./... -count=1` | `PASS full auction-service regression after T6 handler migration` | `PASS: ok auction-service and all subpackages; T6 migrated handler/admin-scope callers and unblocked T5` | `unblocked_by_T6` |
 
 **Implementation Attempt**
 
@@ -435,16 +439,17 @@
 **Handoff**
 
 - First response line used: `当前分支/worktree：feat/auction-product-lifecycle @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-auction-product-lifecycle`
-- Result: `BLOCKED`
+- Result: `REVIEW`
+- T6 unblocked full auction-service regression; ready for main agent review.
 
 ### T6 - `Auction Create Handler 编排 product-service 与业务错误码`
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `review` |
+| Owner | `implementer` |
+| Started At | `2026-06-07 05:18` |
+| Completed At | `2026-06-07 05:22` |
 | Branch | `feat/auction-product-lifecycle` |
 | Worktree | `/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-auction-product-lifecycle` |
 | Depends On | `T3,T5` |
@@ -461,11 +466,37 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `TDD Red -> Green -> Verify evidence` | `not_run` | `pending` |
+| `cd backend/auction && go test ./handler -run 'TestAuctionHandler_Create' -count=1` | `RED fail before implementation` | `FAIL: success case returned 500 and non-merchant returned 500 because handler still used old CreateAuction path without merchant/product-client orchestration` | `red_confirmed` |
+| `cd backend/auction && go test ./handler -run 'TestAuctionHandler_Create' -count=1` | `PASS after minimal implementation` | `PASS: ok auction-service/handler 0.532s` | `pass` |
+| `cd backend/auction && go test ./handler -run 'TestAuctionHandlerAdmin\|TestAuctionHandlerCancel\|TestAuctionHandler_Create' -count=1` | `PASS migrated old handler/admin-scope service request callers` | `PASS: ok auction-service/handler 0.765s` | `pass` |
+| `cd backend/auction && go test ./handler -count=1` | `PASS handler package regression` | `PASS: ok auction-service/handler 0.647s; initial run had transient ws_test i/o timeout, rerun passed without code changes` | `pass` |
+| `cd backend/auction && go test ./... -count=1` | `PASS full auction-service regression` | `PASS: ok auction-service and all subpackages` | `pass` |
+| `git diff --check` | `PASS whitespace check` | `PASS` | `pass` |
+
+**Implementation**
+
+- Added handler create tests for merchant success, product-client orchestration, live_stream_id persistence, and non-merchant 403.
+- Restricted create request binding to `product_id` and `duration`.
+- Added handler entry checks for missing `X-User-ID` -> 401, non-merchant `X-User-Role` -> 403, and missing `productClient` -> 500.
+- Orchestrated `GetAuctionProductInfo` and `GetOrCreateActiveLiveStream` before `service.CreateAuction`, passing product facts and live stream ID into the T5 service request.
+- Added create business error mapping: active auction -> 409; ownership/status/rule/sold terminal errors -> 400; default -> 500.
+- Migrated `auction_admin_scope_test.go` service request fixtures to explicit lifecycle fields so full handler/package tests no longer depend on deprecated `StartTime`/`EndTime`.
+
+**Modified Files**
+
+- `backend/auction/handler/auction.go`
+- `backend/auction/handler/auction_create_test.go`
+- `backend/auction/handler/auction_admin_scope_test.go`
+- `docs/superpowers/sdd/runs/2026-06-07-auction-product-lifecycle-state.md`
+
+**Risks**
+
+- The first full handler package run hit a transient `ws_test` read timeout; rerunning `go test ./handler -count=1` and full `go test ./... -count=1` passed without code changes.
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `当前分支/worktree：feat/auction-product-lifecycle @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-auction-product-lifecycle`
+- Result: `DONE`
 
 ### T7 - `Product AdminList 返回派生展示状态`
 
