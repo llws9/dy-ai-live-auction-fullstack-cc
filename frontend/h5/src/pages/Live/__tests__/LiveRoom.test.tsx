@@ -6,6 +6,7 @@ import { fetchMyPurchase, purchase } from '../../../api/fixedPrice';
 import { useFixedPriceItems } from '../../../hooks/useFixedPriceItems';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi, skyLampApi } from '../../../services/api';
 import WebSocketService from '../../../services/websocket';
+import { DemoProvider } from '../../../store/demoContext';
 import { useLiveChatStore } from '../../../store/liveChatStore';
 
 const mockShowGlobalToast = jest.fn();
@@ -172,7 +173,9 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        <DemoProvider>
+          <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        </DemoProvider>
       </MemoryRouter>
     );
 
@@ -204,7 +207,9 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        <DemoProvider>
+          <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        </DemoProvider>
       </MemoryRouter>
     );
 
@@ -225,7 +230,9 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        <DemoProvider>
+          <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        </DemoProvider>
       </MemoryRouter>
     );
 
@@ -255,7 +262,9 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        <DemoProvider>
+          <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        </DemoProvider>
       </MemoryRouter>
     );
 
@@ -281,7 +290,9 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        <DemoProvider>
+          <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        </DemoProvider>
       </MemoryRouter>
     );
 
@@ -323,7 +334,9 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        <DemoProvider>
+          <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        </DemoProvider>
       </MemoryRouter>
     );
 
@@ -361,7 +374,9 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        <DemoProvider>
+          <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        </DemoProvider>
       </MemoryRouter>
     );
 
@@ -421,7 +436,9 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        <DemoProvider>
+          <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        </DemoProvider>
       </MemoryRouter>
     );
 
@@ -480,7 +497,9 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        <DemoProvider>
+          <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        </DemoProvider>
       </MemoryRouter>
     );
 
@@ -505,7 +524,9 @@ describe('LiveRoom migration', () => {
         initialEntries={['/live?id=3&auction_id=5']}
         future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
       >
-        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        <DemoProvider>
+          <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        </DemoProvider>
       </MemoryRouter>
     );
 

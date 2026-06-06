@@ -67,12 +67,14 @@ func main() {
 	})
 	r.Register(runner.NewDummyScenario(5 * time.Second))
 	r.Register(pressure.New(pressureClientFactory{gatewayURL: cfg.Target.GatewayURL, jwtSecret: cfg.Security.JWTSecret, db: db}))
+	var bizCli *auction.Client
+	var internalCli *auction.Client
 	if db != nil {
 		seedDAO := dao.NewSeedDAO(db)
-		bizCli := auction.NewClient(cfg.Target.GatewayURL, 10*time.Second)
+		bizCli = auction.NewClient(cfg.Target.GatewayURL, 10*time.Second)
 		bizCli.SetJWTSecret(cfg.Security.JWTSecret)
 		r.Register(e2e.NewScenario(bizCli, seedDAO))
-		internalCli := auction.NewClient(cfg.Target.AuctionURL, 10*time.Second)
+		internalCli = auction.NewClient(cfg.Target.AuctionURL, 10*time.Second)
 		internalCli.SetInternalToken(cfg.Security.InternalToken)
 		r.Register(user_journey.NewScenario(bizCli, internalCli, seedDAO))
 
@@ -113,6 +115,7 @@ func main() {
 
 	if resultDAO != nil {
 		th := handler.NewTestHandler(r, resultDAO)
+		demoHandler := handler.NewDemoHandler(bizCli, internalCli, cfg.Security.JWTSecret)
 		api := h.Group("/api/test")
 		api.POST("/dummy", th.PostDummy)
 		api.POST("/pressure", th.PostPressure)
@@ -127,6 +130,9 @@ func main() {
 		api.GET("/history", th.GetHistory)
 		api.GET("/report/:id", th.GetReport)
 		api.POST("/cancel/:id", th.PostCancel)
+		demo := api.Group("/demo")
+		demo.POST("/follow-bid", demoHandler.PostFollowBid)
+		demo.POST("/recharge", demoHandler.PostRecharge)
 		hlog.Infof("[boot] /api/test/* registered")
 	} else {
 		hlog.Warnf("[boot] /api/test/* disabled (no DB)")
