@@ -7,7 +7,8 @@ import GoodsEdit from "@/pages-new/GoodsEdit"
 import AuctionList from "@/pages-new/AuctionList"
 import AuctionDetail from "@/pages-new/AuctionDetail"
 import AuctionRules from "@/pages-new/AuctionRules"
-import LiveList from "@/pages-new/LiveList"
+import MerchantLiveList from "@/pages-new/MerchantLiveList"
+import PlatformLiveList from "@/pages-new/PlatformLiveList"
 import LiveDetail from "@/pages-new/LiveDetail"
 import LiveStreamFixedPrice from "@/pages/LiveStreamFixedPrice"
 import OrderList from "@/pages-new/OrderList"
@@ -15,7 +16,7 @@ import OrderDetail from "@/pages-new/OrderDetail"
 import Stats from "@/pages-new/Stats"
 import Profile from "@/pages-new/Profile"
 import Permissions from "@/pages-new/Permissions"
-import { RequireAuth, RequireRole, AuthProvider } from "@/shared/auth"
+import { RequireAuth, RequireRole, AuthProvider, useAuth } from "@/shared/auth"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
 import { GrowthBookContextProvider } from "@/shared/growthbook"
 import { ADMIN_ROLE, MERCHANT_ROLE } from "@/shared/auth/roles"
@@ -26,6 +27,20 @@ function RoleRoute({ allowedRoles, children }: { allowedRoles: number[]; childre
       {children}
     </RequireRole>
   )
+}
+
+function LiveListRoute() {
+  const { user } = useAuth()
+
+  if (user?.role === MERCHANT_ROLE) {
+    return <Navigate to="/live/my" replace />
+  }
+
+  if (user?.role === ADMIN_ROLE) {
+    return <PlatformLiveList />
+  }
+
+  return <Navigate to="/dashboard" replace />
 }
 
 function AppContent() {
@@ -54,10 +69,11 @@ function AppContent() {
           <Route path="/auction/rules" element={<RoleRoute allowedRoles={[MERCHANT_ROLE]}><AuctionRules /></RoleRoute>} />
           <Route path="/auction/rules/create" element={<RoleRoute allowedRoles={[MERCHANT_ROLE]}><AuctionRules /></RoleRoute>} />
           <Route path="/auction/rules/edit" element={<RoleRoute allowedRoles={[MERCHANT_ROLE]}><AuctionRules /></RoleRoute>} />
-          <Route path="/live/list" element={<LiveList />} />
+          <Route path="/live/list" element={<LiveListRoute />} />
+          <Route path="/live/my" element={<RoleRoute allowedRoles={[MERCHANT_ROLE]}><MerchantLiveList /></RoleRoute>} />
           <Route path="/live/detail" element={<LiveDetail />} />
           <Route path="/live/fixed-price" element={<RoleRoute allowedRoles={[MERCHANT_ROLE]}><LiveStreamFixedPrice /></RoleRoute>} />
-          <Route path="/live/create" element={<RoleRoute allowedRoles={[MERCHANT_ROLE]}><LiveList /></RoleRoute>} />
+          <Route path="/live/create" element={<RoleRoute allowedRoles={[MERCHANT_ROLE]}><MerchantLiveList /></RoleRoute>} />
           <Route path="/order/list" element={<OrderList />} />
           <Route path="/order/detail" element={<OrderDetail />} />
           <Route path="/stats/auction" element={<Stats />} />

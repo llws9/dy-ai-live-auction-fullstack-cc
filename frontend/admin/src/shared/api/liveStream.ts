@@ -9,6 +9,15 @@ export interface LiveStreamListParams {
   status?: number;
 }
 
+export interface LiveStreamCreateData {
+  name: string;
+  description?: string;
+  cover_image?: string;
+  video_url?: string;
+  streamer_name?: string;
+  streamer_avatar?: string;
+}
+
 export const liveStreamApi = {
   // 管理端获取直播间列表
   adminList: (params?: LiveStreamListParams) => {
@@ -18,6 +27,9 @@ export const liveStreamApi = {
 
   // 获取直播间详情
   get: (id: number) => get<LiveStream>(`/live-streams/${id}`),
+
+  // 商家创建或获取自己的直播间
+  create: (data: LiveStreamCreateData) => post<LiveStream>('/admin/live-streams', data),
 
   // 用户关注的直播间列表
   getUserFollows: (params?: LiveStreamListParams) => {

@@ -58,7 +58,8 @@ const navItems: NavItem[] = [
     path: "/live",
     icon: Video,
     children: [
-      { title: "直播间列表", path: "/live/list", titleByRole: { [MERCHANT_ROLE]: "我的直播间" } },
+      { title: "直播间列表", path: "/live/list", allowedRoles: [ADMIN_ROLE] },
+      { title: "我的直播间", path: "/live/my", allowedRoles: [MERCHANT_ROLE] },
       { title: "一口价上下架", path: "/live/fixed-price", allowedRoles: [MERCHANT_ROLE] },
       { title: "创建直播间", path: "/live/create", allowedRoles: [MERCHANT_ROLE] },
     ]

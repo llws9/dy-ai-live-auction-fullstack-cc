@@ -14,12 +14,33 @@ const statusMap: Record<number, { label: string; badgeClass: string }> = {
   3: { label: "已封禁", badgeClass: "destructive" },
 }
 
-export default function LiveList() {
+interface LiveListViewProps {
+  title: string
+  description: string
+  showCreateActions: boolean
+  onCreateLiveStream?: () => Promise<void>
+}
+
+export function LiveListView({ title, description, showCreateActions, onCreateLiveStream }: LiveListViewProps) {
   const navigate = useNavigate()
   const [liveStreams, setLiveStreams] = React.useState<any[]>([])
   const [loading, setLoading] = React.useState(true)
+  const [creating, setCreating] = React.useState(false)
   const [page, setPage] = React.useState(1)
   const pageSize = 20
+
+  const handleCreateLiveStream = async () => {
+    if (!onCreateLiveStream || creating) return
+    setCreating(true)
+    try {
+      await onCreateLiveStream()
+    } catch (e: any) {
+      console.error('创建直播间失败:', e)
+      alert(e.message || '创建直播间失败')
+    } finally {
+      setCreating(false)
+    }
+  }
 
   // 获取直播间列表
   React.useEffect(() => {
@@ -41,14 +62,19 @@ export default function LiveList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">直播间管理</h1>
-          <p className="text-sm text-slate-500">管理您的直播间和直播排期</p>
+          <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
+          <p className="text-sm text-slate-500">{description}</p>
         </div>
-        {/* 创建直播间 - 后端无接口，暂空置 */}
-        <Button className="bg-amber-500 hover:bg-amber-600 text-[#0f172a]" disabled>
-          <Plus className="mr-2 w-4 h-4" />
-          创建直播间
-        </Button>
+        {showCreateActions && (
+          <Button
+            className="bg-amber-500 hover:bg-amber-600 text-[#0f172a]"
+            disabled={creating}
+            onClick={handleCreateLiveStream}
+          >
+            <Plus className="mr-2 w-4 h-4" />
+            {creating ? "创建中..." : "创建直播间"}
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -135,17 +161,19 @@ export default function LiveList() {
             )
           })}
 
-          {/* 创建新直播间卡片 - 后端无接口，暂空置 */}
-          <button
-            className="aspect-video rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-3 group hover:border-amber-400 transition-colors cursor-not-allowed opacity-50"
-            disabled
-          >
-            <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-slate-400 group-hover:bg-amber-100 group-hover:text-amber-600 transition-colors">
-              <Plus className="w-6 h-6" />
-            </div>
-            <p className="text-sm font-semibold text-slate-900">创建新直播间</p>
-            <p className="text-xs text-slate-400">(功能暂未开放)</p>
-          </button>
+          {showCreateActions && (
+            <button
+              className="aspect-video rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-3 group hover:border-amber-400 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={creating}
+              onClick={handleCreateLiveStream}
+            >
+              <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-slate-400 group-hover:bg-amber-100 group-hover:text-amber-600 transition-colors">
+                <Plus className="w-6 h-6" />
+              </div>
+              <p className="text-sm font-semibold text-slate-900">创建新直播间</p>
+              <p className="text-xs text-slate-400">(功能暂未开放)</p>
+            </button>
+          )}
         </div>
       )}
 
@@ -172,5 +200,15 @@ export default function LiveList() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function LiveList() {
+  return (
+    <LiveListView
+      title="平台直播间管理"
+      description="管理平台直播间和直播排期"
+      showCreateActions={false}
+    />
   )
 }

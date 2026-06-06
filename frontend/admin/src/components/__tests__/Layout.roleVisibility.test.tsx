@@ -30,14 +30,14 @@ describe('Layout role visibility', () => {
   });
 
   it('hides platform-only and admin-forbidden operation entries for merchants', async () => {
-    renderLayoutWithUser(1, '/live/list');
+    renderLayoutWithUser(1, '/live/my');
 
     expect(await screen.findByText('商家用户')).toBeInTheDocument();
     expect(screen.getByText('商家/主播')).toBeInTheDocument();
 
     expect(screen.getByRole('button', { name: '商品管理' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '竞拍管理' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '我的直播间' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '我的直播间' })).toHaveAttribute('href', '/live/my');
     expect(screen.queryByRole('link', { name: '直播间列表' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: '用户统计' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: '角色管理' })).not.toBeInTheDocument();
@@ -52,7 +52,7 @@ describe('Layout role visibility', () => {
 
     expect(screen.queryByRole('button', { name: '商品管理' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '竞拍管理' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '直播间列表' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '直播间列表' })).toHaveAttribute('href', '/live/list');
     expect(screen.queryByRole('link', { name: '我的直播间' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: '创建商品' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: '规则模板' })).not.toBeInTheDocument();

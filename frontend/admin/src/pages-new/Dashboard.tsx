@@ -438,7 +438,7 @@ export default function Dashboard() {
                 <QuickActionBtn
                   title="直播间管理"
                   icon={Video}
-                  onClick={() => navigate("/live/list")}
+                  onClick={() => navigate("/live/my")}
                 />
                 <QuickActionBtn
                   title="生成报表"

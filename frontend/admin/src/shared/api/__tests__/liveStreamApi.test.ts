@@ -1,4 +1,4 @@
-import { get } from '../request';
+import { get, post } from '../request';
 import { liveStreamApi } from '../index';
 
 jest.mock('../request', () => ({
@@ -25,5 +25,18 @@ describe('liveStreamApi', () => {
     await liveStreamApi.adminGet(501);
 
     expect(get).toHaveBeenCalledWith('/admin/live-streams/501');
+  });
+
+  it('creates merchant live streams through the admin live-stream endpoint', async () => {
+    const payload = {
+      name: '商家直播间',
+      description: '默认直播排期',
+      streamer_name: '商家用户',
+    };
+    (post as jest.Mock).mockResolvedValue({ id: 601, ...payload });
+
+    await liveStreamApi.create(payload);
+
+    expect(post).toHaveBeenCalledWith('/admin/live-streams', payload);
   });
 });

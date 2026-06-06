@@ -14,6 +14,8 @@ import { Badge, type BadgeProps } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useNavigate } from "react-router-dom"
 import { auctionApi, statisticsApi } from "@/shared/api"
+import { useAuth } from "@/shared/auth"
+import { MERCHANT_ROLE } from "@/shared/auth/roles"
 
 const statusMap: Record<number, { label: string; variant: BadgeProps["variant"] }> = {
   0: { label: "待开始", variant: "blue" },
@@ -25,6 +27,7 @@ const statusMap: Record<number, { label: string; variant: BadgeProps["variant"] 
 
 export default function AuctionList() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [auctions, setAuctions] = React.useState<any[]>([])
   const [loading, setLoading] = React.useState(true)
   const [statusFilter, setStatusFilter] = React.useState<number | undefined>(undefined)
@@ -39,6 +42,7 @@ export default function AuctionList() {
     totalParticipants: 0,
     avgPrice: 0,
   })
+  const isMerchant = user?.role === MERCHANT_ROLE
 
   // 获取竞拍列表
   const fetchAuctions = React.useCallback(async () => {
@@ -105,15 +109,16 @@ export default function AuctionList() {
           <h1 className="text-2xl font-bold text-slate-900">竞拍管理</h1>
           <p className="text-sm text-slate-500">监控和管理所有竞拍场次</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" className="border-slate-200" onClick={() => navigate("/auction/rules")}>
-            规则模板
-          </Button>
-          {/* 创建竞拍场次 - 后端无接口，暂空置 */}
-          <Button className="bg-amber-500 hover:bg-amber-600 text-[#0f172a]" disabled>
-            创建竞拍场次
-          </Button>
-        </div>
+        {isMerchant && (
+          <div className="flex items-center gap-3">
+            <Button variant="outline" className="border-slate-200" onClick={() => navigate("/auction/rules")}>
+              规则模板
+            </Button>
+            <Button className="bg-amber-500 hover:bg-amber-600 text-[#0f172a]" disabled>
+              创建竞拍场次
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

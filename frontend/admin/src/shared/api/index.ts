@@ -87,6 +87,9 @@ export const liveStreamApi = {
 
   adminGet: (id: number) => get<any>(`/admin/live-streams/${id}`),
 
+  create: (data: { name: string; description?: string; cover_image?: string; video_url?: string; streamer_name?: string; streamer_avatar?: string }) =>
+    post<any>('/admin/live-streams', data),
+
   getUserFollows: (params?: { page?: number; page_size?: number }) => {
     const query = buildQuery(params || {});
     return get<{ list: any[]; total: number }>(`/user/followed-live-streams?${query}`);
