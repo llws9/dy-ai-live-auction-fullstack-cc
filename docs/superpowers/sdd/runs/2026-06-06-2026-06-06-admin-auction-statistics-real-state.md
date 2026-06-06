@@ -86,6 +86,8 @@
 | `cd backend/auction && go test ./handler -run 'TestStatisticsHandler\|TestDefaultAuctionStatisticsRange' -count=1` | `FAIL before handler exists` | `FAIL: undefined: NewStatisticsHandler / defaultAuctionStatisticsRange` | `red_passed` |
 | `cd backend/auction && go test ./handler -run 'TestStatisticsHandler\|TestDefaultAuctionStatisticsRange' -count=1` | `PASS after handler implementation` | `ok auction-service/handler 1.129s` | `pass` |
 | `cd backend/auction && go test . -run '^$'` | `main package compiles after route registration` | `ok auction-service 0.689s [no tests to run]` | `pass` |
+| `cd frontend/admin && npm test -- Stats.auctionStats.test.tsx --runInBand` | `FAIL before frontend fix: wrong success rate and static fallback remains` | `FAIL: expected 75.0%, got 62.5%; found \"count\":35 fallback` | `red_passed` |
+| `cd frontend/admin && npm test -- Stats.auctionStats.test.tsx --runInBand` | `PASS after frontend fix` | `PASS src/pages-new/__tests__/Stats.auctionStats.test.tsx, 2 tests` | `pass` |
 
 **Progress Log**
 
@@ -94,6 +96,7 @@
 - `2026-06-06 17:59` completed DAO slice: `StatisticsDAO` aggregates daily auction stats from `auctions` and `bids` without join amplification.
 - `2026-06-06 18:02` completed service slice: date range validation, missing-date zero fill, and one-decimal success rate calculation.
 - `2026-06-06 18:08` completed handler slice: `/api/v1/statistics/auctions` is exposed in auction-service behind internal auth, with role-scope and query validation in handler.
+- `2026-06-06 18:13` completed Admin frontend slice: auction stats request now sends recent 7-day day-group params, computes indicators from real array data, and removes static fallback data on API failure.
 
 **Modified Files**
 
@@ -108,6 +111,9 @@
 - `backend/auction/main.go`
 - `backend/auction/admin_route_test.go`
 - `backend/auction/route_internal_test.go`
+- `frontend/admin/src/pages-new/Stats.tsx`
+- `frontend/admin/src/pages-new/__tests__/Stats.auctionStats.test.tsx`
+- `frontend/admin/src/shared/api/index.ts`
 - `docs/superpowers/sdd/runs/2026-06-06-2026-06-06-admin-auction-statistics-real-state.md`
 
 **Handoff**

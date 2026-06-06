@@ -171,7 +171,7 @@ export const notificationApi = {
 export const statisticsApi = {
   getOverview: () => get<any>('/statistics/overview'),
 
-  getAuctionStats: (params?: { start_date?: string; end_date?: string }) => {
+  getAuctionStats: (params?: { start_date?: string; end_date?: string; group_by?: string }) => {
     const query = buildQuery(params || {});
     return get<any[]>(`/statistics/auctions?${query}`);
   },

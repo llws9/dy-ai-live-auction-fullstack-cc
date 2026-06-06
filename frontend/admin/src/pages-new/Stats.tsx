@@ -28,6 +28,23 @@ function tabFromPath(pathname: string): StatsTab {
   return "auction"
 }
 
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function getDefaultAuctionRange(now = new Date()) {
+  const start = new Date(now)
+  start.setDate(now.getDate() - 6)
+  return {
+    start_date: formatLocalDate(start),
+    end_date: formatLocalDate(now),
+    group_by: "day",
+  }
+}
+
 export default function Stats() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -48,73 +65,63 @@ export default function Stats() {
       setLoading(true)
       try {
         // 获取竞拍统计
-        const auctionStats = await statisticsApi.getAuctionStats()
-        setAuctionData(auctionStats.slice(-7).map((item: any) => ({
+        const auctionStats = await statisticsApi.getAuctionStats(getDefaultAuctionRange())
+        const normalizedAuctionStats = Array.isArray(auctionStats) ? auctionStats : []
+        setAuctionData(normalizedAuctionStats.map((item: any) => ({
           name: new Date(item.date).toLocaleDateString('zh-CN', { weekday: 'short' }),
           count: item.auction_count || 0,
           rate: item.success_rate || 0,
         })))
-        const auctionIndicators = auctionStats.reduce((acc: any, item: any) => ({
-          total: acc.total + (item.auction_count || 0),
-          rate: (acc.rate + (item.success_rate || 0)) / auctionStats.length,
-          avgBids: (acc.avgBids + (item.bid_count || 0)) / auctionStats.length,
-        }), { total: 0, rate: 0, avgBids: 0 })
-        setIndicators(prev => ({ ...prev, auction: auctionIndicators }))
+        const totalAuctionCount = normalizedAuctionStats.reduce((sum: number, item: any) => sum + (item.auction_count || 0), 0)
+        const totalBidCount = normalizedAuctionStats.reduce((sum: number, item: any) => sum + (item.bid_count || 0), 0)
+        const avgSuccessRate = normalizedAuctionStats.length > 0
+          ? normalizedAuctionStats.reduce((sum: number, item: any) => sum + (item.success_rate || 0), 0) / normalizedAuctionStats.length
+          : 0
+        const avgBids = totalAuctionCount > 0 ? totalBidCount / totalAuctionCount : 0
+        setIndicators(prev => ({
+          ...prev,
+          auction: { total: totalAuctionCount, rate: avgSuccessRate, avgBids },
+        }))
 
         // 获取收入统计
         const revenueStats = await statisticsApi.getRevenueStats({ group_by: 'month' })
-        setRevenueData(revenueStats.map((item: any) => ({
+        const normalizedRevenueStats = Array.isArray(revenueStats) ? revenueStats : []
+        setRevenueData(normalizedRevenueStats.map((item: any) => ({
           month: item.date,
           value: item.revenue || 0,
         })))
-        const revenueIndicators = revenueStats.reduce((acc: any, item: any) => ({
-          total: acc.total + (item.revenue || 0),
-          avgPrice: acc.total / revenueStats.length,
-          commission: acc.total * 0.05,
-        }), { total: 0, avgPrice: 0, commission: 0 })
+        const totalRevenue = normalizedRevenueStats.reduce((sum: number, item: any) => sum + (item.revenue || 0), 0)
+        const revenueIndicators = {
+          total: totalRevenue,
+          avgPrice: normalizedRevenueStats.length > 0 ? totalRevenue / normalizedRevenueStats.length : 0,
+          commission: totalRevenue * 0.05,
+        }
         setIndicators(prev => ({ ...prev, revenue: revenueIndicators }))
 
         // 获取用户统计
         const userStats = await statisticsApi.getUserStats()
-        setUserData(userStats.slice(-7).map((item: any) => ({
+        const normalizedUserStats = Array.isArray(userStats) ? userStats : []
+        setUserData(normalizedUserStats.slice(-7).map((item: any) => ({
           name: new Date(item.date).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }),
           new: item.new_users || 0,
           active: item.active_users || 0,
         })))
-        const userIndicators = userStats.reduce((acc: any, item: any) => ({
+        const userIndicators = normalizedUserStats.reduce((acc: any, item: any) => ({
           total: acc.total + (item.new_users || 0),
-          active: item.active_users || 0,
+          active: item.active_users || acc.active,
           rate: 8.4,
         }), { total: 0, active: 0, rate: 0 })
         setIndicators(prev => ({ ...prev, user: userIndicators }))
       } catch (e) {
         console.error('获取统计数据失败:', e)
-        // 使用默认数据
-        setAuctionData([
-          { name: "周一", count: 12, rate: 85 },
-          { name: "周二", count: 15, rate: 92 },
-          { name: "周三", count: 10, rate: 88 },
-          { name: "周四", count: 18, rate: 95 },
-          { name: "周五", count: 22, rate: 90 },
-          { name: "周六", count: 35, rate: 96 },
-          { name: "周日", count: 28, rate: 94 },
-        ])
-        setRevenueData([
-          { month: "1月", value: 1200000 },
-          { month: "2月", value: 1500000 },
-          { month: "3月", value: 1100000 },
-          { month: "4月", value: 1800000 },
-          { month: "5月", value: 2400000 },
-        ])
-        setUserData([
-          { name: "5-21", new: 120, active: 850 },
-          { name: "5-22", new: 150, active: 920 },
-          { name: "5-23", new: 110, active: 880 },
-          { name: "5-24", new: 180, active: 1100 },
-          { name: "5-25", new: 220, active: 1250 },
-          { name: "5-26", new: 350, active: 1800 },
-          { name: "5-27", new: 280, active: 1600 },
-        ])
+        setAuctionData([])
+        setRevenueData([])
+        setUserData([])
+        setIndicators({
+          auction: { total: 0, rate: 0, avgBids: 0 },
+          revenue: { total: 0, avgPrice: 0, commission: 0 },
+          user: { total: 0, active: 0, rate: 0 },
+        })
       } finally {
         setLoading(false)
       }
