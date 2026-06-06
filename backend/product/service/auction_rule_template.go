@@ -13,11 +13,22 @@ import (
 )
 
 type AuctionRuleTemplateService struct {
-	dao *dao.AuctionRuleTemplateDAO
+	dao        *dao.AuctionRuleTemplateDAO
+	productDAO *dao.ProductDAO
+	ruleDAO    *dao.AuctionRuleDAO
 }
 
-func NewAuctionRuleTemplateService(dao *dao.AuctionRuleTemplateDAO) *AuctionRuleTemplateService {
-	return &AuctionRuleTemplateService{dao: dao}
+func NewAuctionRuleTemplateService(templateDAO *dao.AuctionRuleTemplateDAO, deps ...interface{}) *AuctionRuleTemplateService {
+	s := &AuctionRuleTemplateService{dao: templateDAO}
+	for _, dep := range deps {
+		switch v := dep.(type) {
+		case *dao.ProductDAO:
+			s.productDAO = v
+		case *dao.AuctionRuleDAO:
+			s.ruleDAO = v
+		}
+	}
+	return s
 }
 
 type CreateAuctionRuleTemplateRequest struct {
@@ -33,6 +44,10 @@ type CreateAuctionRuleTemplateRequest struct {
 }
 
 type UpdateAuctionRuleTemplateRequest = CreateAuctionRuleTemplateRequest
+
+type ApplyAuctionRuleTemplateRequest struct {
+	TemplateID int64 `json:"template_id"`
+}
 
 type AuctionRuleTemplateResponse struct {
 	ID                 int64  `json:"id"`
@@ -103,6 +118,46 @@ func (s *AuctionRuleTemplateService) Update(ctx context.Context, ownerID, id int
 
 func (s *AuctionRuleTemplateService) Delete(ctx context.Context, ownerID, id int64) error {
 	return s.dao.DeleteByIDAndOwner(ctx, id, ownerID)
+}
+
+func (s *AuctionRuleTemplateService) ApplyToProduct(ctx context.Context, ownerID, productID, templateID int64) (*model.AuctionRule, error) {
+	if s.productDAO == nil || s.ruleDAO == nil {
+		return nil, errors.New("规则模板应用依赖未初始化")
+	}
+	if productID <= 0 {
+		return nil, errors.New("商品ID无效")
+	}
+	if templateID <= 0 {
+		return nil, errors.New("规则模板ID无效")
+	}
+	if _, err := s.productDAO.GetByIDAndOwnerID(ctx, productID, ownerID); err != nil {
+		return nil, err
+	}
+	template, err := s.dao.GetByIDAndOwner(ctx, templateID, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	startPrice, _ := template.StartPrice.Float64()
+	increment, _ := template.Increment.Float64()
+	var capPrice *float64
+	if template.CapPrice != nil {
+		v, _ := template.CapPrice.Float64()
+		capPrice = &v
+	}
+	rule := &model.AuctionRule{
+		ProductID:          productID,
+		StartPrice:         startPrice,
+		Increment:          increment,
+		CapPrice:           capPrice,
+		Duration:           template.Duration,
+		DelayDuration:      template.DelayDuration,
+		MaxDelayTime:       template.MaxDelayTime,
+		TriggerDelayBefore: template.TriggerDelayBefore,
+	}
+	if err := s.ruleDAO.Upsert(ctx, rule); err != nil {
+		return nil, err
+	}
+	return rule, nil
 }
 
 func buildAuctionRuleTemplate(ownerID int64, req CreateAuctionRuleTemplateRequest) (*model.AuctionRuleTemplate, error) {

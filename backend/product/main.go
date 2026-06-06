@@ -108,7 +108,7 @@ func main() {
 
 	// 初始化 Service 层
 	productService := service.NewProductService(productDAO, ruleDAO, liveStreamDAO)
-	ruleTemplateService := service.NewAuctionRuleTemplateService(ruleTemplateDAO)
+	ruleTemplateService := service.NewAuctionRuleTemplateService(ruleTemplateDAO, productDAO, ruleDAO)
 	orderService := service.NewOrderService(orderDAO, historyDAO)
 	orderService.SetAdminOrderDAO(orderAdminDAO)
 	orderService.SetProductDAO(productDAO)
@@ -235,6 +235,7 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	v1.POST("/admin/auction-rule-templates", internalAuth, ruleTemplateHandler.Create)
 	v1.PUT("/admin/auction-rule-templates/:id", internalAuth, ruleTemplateHandler.Update)
 	v1.DELETE("/admin/auction-rule-templates/:id", internalAuth, ruleTemplateHandler.Delete)
+	v1.POST("/admin/products/:id/apply-rule-template", internalAuth, ruleTemplateHandler.ApplyToProduct)
 	v1.GET("/admin/orders", internalAuth, orderHandler.AdminList)
 	v1.GET("/admin/orders/:id", internalAuth, orderHandler.AdminGet)
 

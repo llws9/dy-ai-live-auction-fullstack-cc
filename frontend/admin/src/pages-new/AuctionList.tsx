@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Badge, type BadgeProps } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useNavigate } from "react-router-dom"
-import { auctionApi, statisticsApi } from "@/shared/api"
+import { auctionApi, auctionRuleTemplateApi, productApi, statisticsApi, type AuctionRuleTemplate } from "@/shared/api"
 import { useAuth } from "@/shared/auth"
 import { MERCHANT_ROLE } from "@/shared/auth/roles"
 
@@ -34,6 +34,17 @@ export default function AuctionList() {
   const [searchTerm, setSearchTerm] = React.useState("")
   const [page, setPage] = React.useState(1)
   const [total, setTotal] = React.useState(0)
+  const [createOpen, setCreateOpen] = React.useState(false)
+  const [createLoading, setCreateLoading] = React.useState(false)
+  const [createSubmitting, setCreateSubmitting] = React.useState(false)
+  const [createError, setCreateError] = React.useState("")
+  const [products, setProducts] = React.useState<any[]>([])
+  const [templates, setTemplates] = React.useState<AuctionRuleTemplate[]>([])
+  const [createForm, setCreateForm] = React.useState({
+    product_id: "",
+    template_id: "",
+    duration: 3600,
+  })
   const pageSize = 20
 
   // 统计数据
@@ -93,6 +104,68 @@ export default function AuctionList() {
     setPage(1)
   }
 
+  const openCreateAuction = async () => {
+    setCreateOpen(true)
+    setCreateLoading(true)
+    setCreateError("")
+    try {
+      const [productResponse, templateResponse] = await Promise.all([
+        productApi.list({ status: 1, page: 1, page_size: 100 }),
+        auctionRuleTemplateApi.list({ page: 1, page_size: 100 }),
+      ])
+      const nextProducts = productResponse.list || []
+      const nextTemplates = templateResponse.list || []
+      setProducts(nextProducts)
+      setTemplates(nextTemplates)
+      const defaultTemplate = nextTemplates.find((item) => item.is_default) || nextTemplates[0]
+      setCreateForm({
+        product_id: nextProducts[0]?.id ? String(nextProducts[0].id) : "",
+        template_id: defaultTemplate?.id ? String(defaultTemplate.id) : "",
+        duration: defaultTemplate?.duration || 3600,
+      })
+    } catch (e) {
+      console.error('加载创建竞拍依赖失败:', e)
+      setCreateError("加载商品或规则模板失败，请稍后重试")
+    } finally {
+      setCreateLoading(false)
+    }
+  }
+
+  const handleTemplateChange = (templateID: string) => {
+    const selected = templates.find((template) => String(template.id) === templateID)
+    setCreateForm((current) => ({
+      ...current,
+      template_id: templateID,
+      duration: selected?.duration || current.duration,
+    }))
+  }
+
+  const submitCreateAuction = async (event: React.FormEvent) => {
+    event.preventDefault()
+    const productID = Number(createForm.product_id)
+    const templateID = Number(createForm.template_id)
+    const duration = Number(createForm.duration)
+    if (!productID || !templateID || duration <= 0) {
+      setCreateError("请选择商品、规则模板并填写有效竞拍时长")
+      return
+    }
+
+    setCreateSubmitting(true)
+    setCreateError("")
+    try {
+      await productApi.applyRuleTemplate(productID, templateID)
+      await auctionApi.create({ product_id: productID, duration })
+      setCreateOpen(false)
+      await fetchAuctions()
+      await fetchStats()
+    } catch (e) {
+      console.error('创建竞拍场次失败:', e)
+      setCreateError("创建竞拍场次失败，请检查商品和规则模板后重试")
+    } finally {
+      setCreateSubmitting(false)
+    }
+  }
+
   // 本地搜索过滤
   const filteredAuctions = React.useMemo(() => {
     if (!searchTerm) return auctions
@@ -114,12 +187,76 @@ export default function AuctionList() {
             <Button variant="outline" className="border-slate-200" onClick={() => navigate("/auction/rules")}>
               规则模板
             </Button>
-            <Button className="bg-amber-500 hover:bg-amber-600 text-[#0f172a]" disabled>
+            <Button className="bg-amber-500 hover:bg-amber-600 text-[#0f172a]" onClick={openCreateAuction}>
               创建竞拍场次
             </Button>
           </div>
         )}
       </div>
+
+      {createOpen && (
+        <Card className="border-amber-200">
+          <CardContent className="p-6">
+            <form className="space-y-4" onSubmit={submitCreateAuction}>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">创建竞拍场次</h2>
+                <p className="text-sm text-slate-500">先将规则模板应用到商品，再创建真实竞拍场次</p>
+              </div>
+              {createError && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{createError}</div>}
+              {createLoading ? (
+                <div className="text-sm text-slate-500">加载商品和模板中...</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <label className="space-y-1 text-sm text-slate-600">
+                    <span>竞拍商品</span>
+                    <select
+                      aria-label="竞拍商品"
+                      className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
+                      value={createForm.product_id}
+                      onChange={(e) => setCreateForm((current) => ({ ...current, product_id: e.target.value }))}
+                    >
+                      {products.map((product) => (
+                        <option key={product.id} value={product.id}>{product.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="space-y-1 text-sm text-slate-600">
+                    <span>规则模板</span>
+                    <select
+                      aria-label="规则模板"
+                      className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
+                      value={createForm.template_id}
+                      onChange={(e) => handleTemplateChange(e.target.value)}
+                    >
+                      {templates.map((template) => (
+                        <option key={template.id} value={template.id}>{template.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="space-y-1 text-sm text-slate-600">
+                    <span>竞拍时长</span>
+                    <Input
+                      aria-label="竞拍时长"
+                      type="number"
+                      min={1}
+                      value={createForm.duration}
+                      onChange={(e) => setCreateForm((current) => ({ ...current, duration: Number(e.target.value) }))}
+                    />
+                  </label>
+                </div>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+                  取消
+                </Button>
+                <Button type="submit" disabled={createLoading || createSubmitting} className="bg-amber-500 hover:bg-amber-600 text-[#0f172a]">
+                  {createSubmitting ? "创建中..." : "确认创建竞拍"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard title="总竞拍场次" value={stats.totalAuctions.toString()} subValue="累计" />

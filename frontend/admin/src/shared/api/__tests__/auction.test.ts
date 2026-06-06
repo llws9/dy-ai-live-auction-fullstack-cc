@@ -1,4 +1,13 @@
 import { auctionApi } from '../index';
+import { post } from '../request';
+
+jest.mock('../request', () => {
+  const actual = jest.requireActual('../request');
+  return {
+    ...actual,
+    post: jest.fn(),
+  };
+});
 
 describe('auctionApi.list', () => {
   beforeEach(() => {
@@ -43,5 +52,13 @@ describe('auctionApi.list', () => {
       description: '精选拍品',
     });
     expect(result.list[0].live_stream_name).toBe('翡翠专场');
+  });
+
+  it('creates auction with duration contract', async () => {
+    (post as jest.Mock).mockResolvedValue({ id: 7001, product_id: 501, status: 0 });
+
+    await auctionApi.create({ product_id: 501, duration: 3600 });
+
+    expect(post).toHaveBeenCalledWith('/auctions', { product_id: 501, duration: 3600 });
   });
 });

@@ -35,7 +35,7 @@ export const auctionApi = {
 
   get: (id: number) => get<any>(`/auctions/${id}`).then(normalizeAuctionText),
 
-  create: (data: { product_id: number; live_stream_id: number }) => post<any>('/auctions', data).then(normalizeAuctionText),
+  create: (data: { product_id: number; duration: number; live_stream_id?: number }) => post<any>('/auctions', data).then(normalizeAuctionText),
 
   getBids: (id: number) => get<any[]>(`/auctions/${id}/bids`),
 
@@ -162,6 +162,41 @@ export const fixedPriceAdminApi = {
     }),
 
   offline: (itemId: number) => post<{ id: number; status: FixedPriceAdminStatus }>(`/fixed-price/items/${itemId}/offline`),
+}
+
+export interface AuctionRuleTemplate {
+  id: number
+  name: string
+  start_price: string
+  increment: string
+  cap_price?: string
+  duration: number
+  delay_duration: number
+  max_delay_time: number
+  trigger_delay_before: number
+  is_default: boolean
+}
+
+export type AuctionRuleTemplatePayload = Omit<AuctionRuleTemplate, 'id'>
+
+export const auctionRuleTemplateApi = {
+  list: (params?: { page?: number; page_size?: number }) => {
+    const query = buildQuery(params || {})
+    const suffix = query ? `?${query}` : ''
+    return get<{ list: AuctionRuleTemplate[]; total: number; page: number; page_size: number }>(
+      `/admin/auction-rule-templates${suffix}`
+    )
+  },
+
+  get: (id: number) => get<AuctionRuleTemplate>(`/admin/auction-rule-templates/${id}`),
+
+  create: (data: AuctionRuleTemplatePayload) =>
+    post<AuctionRuleTemplate>('/admin/auction-rule-templates', data),
+
+  update: (id: number, data: AuctionRuleTemplatePayload) =>
+    put<AuctionRuleTemplate>(`/admin/auction-rule-templates/${id}`, data),
+
+  delete: (id: number) => del<void>(`/admin/auction-rule-templates/${id}`),
 }
 
 // 通知API

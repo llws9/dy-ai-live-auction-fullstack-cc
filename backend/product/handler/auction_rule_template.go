@@ -103,6 +103,29 @@ func (h *AuctionRuleTemplateHandler) Delete(ctx context.Context, c *app.RequestC
 	c.JSON(200, map[string]interface{}{"code": 200, "message": "删除成功"})
 }
 
+func (h *AuctionRuleTemplateHandler) ApplyToProduct(ctx context.Context, c *app.RequestContext) {
+	actor, ok := requireMerchantActor(c)
+	if !ok {
+		return
+	}
+	productID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || productID <= 0 {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "无效的商品ID"})
+		return
+	}
+	var req service.ApplyAuctionRuleTemplateRequest
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "请求参数错误: " + err.Error()})
+		return
+	}
+	rule, err := h.service.ApplyToProduct(ctx, actor.UserID, productID, req.TemplateID)
+	if err != nil {
+		writeRuleTemplateError(c, err)
+		return
+	}
+	c.JSON(200, map[string]interface{}{"code": 200, "message": "success", "data": rule})
+}
+
 func (h *AuctionRuleTemplateHandler) requireActorAndID(c *app.RequestContext) (AdminActor, int64, bool) {
 	actor, ok := requireMerchantActor(c)
 	if !ok {

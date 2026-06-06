@@ -90,4 +90,8 @@ export const productApi = {
 
   // 创建竞拍规则
   createRules: (productId: number, data: RuleCreateData) => post<AuctionRule>(`/products/${productId}/rules`, data),
+
+  // 将商家规则模板应用为商品的真实竞拍规则
+  applyRuleTemplate: (productId: number, templateId: number) =>
+    post<AuctionRule>(`/admin/products/${productId}/apply-rule-template`, { template_id: templateId }),
 };

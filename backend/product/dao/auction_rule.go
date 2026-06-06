@@ -59,8 +59,30 @@ func (d *AuctionRuleDAO) Delete(ctx context.Context, id int64) error {
 
 // Upsert 创建或更新竞拍规则
 func (d *AuctionRuleDAO) Upsert(ctx context.Context, rule *model.AuctionRule) error {
-	return d.db.WithContext(ctx).
-		Where("product_id = ?", rule.ProductID).
-		Assign(rule).
-		FirstOrCreate(rule).Error
+	existing, err := d.GetByProductID(ctx, rule.ProductID)
+	if err != nil {
+		return err
+	}
+	if existing == nil {
+		return d.Create(ctx, rule)
+	}
+
+	updates := map[string]interface{}{
+		"start_price":          rule.StartPrice,
+		"increment":            rule.Increment,
+		"cap_price":            rule.CapPrice,
+		"duration":             rule.Duration,
+		"delay_duration":       rule.DelayDuration,
+		"max_delay_time":       rule.MaxDelayTime,
+		"trigger_delay_before": rule.TriggerDelayBefore,
+	}
+	if err := d.db.WithContext(ctx).
+		Model(&model.AuctionRule{}).
+		Where("id = ?", existing.ID).
+		Updates(updates).Error; err != nil {
+		return err
+	}
+	rule.ID = existing.ID
+	rule.CreatedAt = existing.CreatedAt
+	return nil
 }

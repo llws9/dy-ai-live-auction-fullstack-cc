@@ -117,6 +117,26 @@ describe('productApi category contract', () => {
     expect(get).toHaveBeenCalledWith('/categories');
     expect(result).toEqual(categories);
   });
+
+  it('applies rule template through merchant admin endpoint', async () => {
+    const rule = {
+      id: 301,
+      product_id: 501,
+      start_price: 100,
+      increment: 10,
+      cap_price: 0,
+      duration: 3600,
+      delay_duration: 30,
+      max_delay_time: 180,
+      trigger_delay_before: 30,
+    };
+    (post as jest.Mock).mockResolvedValue(rule);
+
+    const result = await productApi.applyRuleTemplate(501, 301);
+
+    expect(post).toHaveBeenCalledWith('/admin/products/501/apply-rule-template', { template_id: 301 });
+    expect(result).toEqual(rule);
+  });
 });
 
 describe('productApi.list', () => {
