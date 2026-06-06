@@ -22,6 +22,8 @@ import (
 const (
 	RoleUser     = "user"
 	RoleMerchant = "merchant"
+
+	defaultFixtureProductImage = "https://copilot-cn.bytedance.net/api/ide/v1/text_to_image?prompt=professional%20auction%20catalog%20photo%20of%20premium%20antique%20collectible%2C%20warm%20studio%20lighting%2C%20realistic%20product%20photography%2C%20mobile%20ecommerce%20card%20cover&image_size=landscape_4_3"
 )
 
 // StepResult E2E 单步结果（同 spec §M3.2 StepResult）
@@ -255,6 +257,9 @@ func (c *Client) CreateProductAs(ctx context.Context, actor Actor, req CreatePro
 	path := "/api/v1/products"
 	if actor.role() == RoleMerchant {
 		path = "/api/v1/admin/products"
+	}
+	if len(req.Images) == 0 {
+		req.Images = []string{defaultFixtureProductImage}
 	}
 	step := c.doAs(ctx, "create_product", http.MethodPost, path, actor, req, nil, &resp)
 	step.RefID = firstNonZero(resp.ID, resp.Data.ID)

@@ -148,6 +148,74 @@ func TestOrderHandler_GetUserHistory_AuthContract(t *testing.T) {
 	})
 }
 
+func TestOrderHandler_GetUserHistory_ReturnsProductImage(t *testing.T) {
+	h, db := newOrderHandlerWithDB(t)
+	assert.NoError(t, db.Exec(`
+                CREATE TABLE IF NOT EXISTS auctions (
+                        id INTEGER PRIMARY KEY,
+                        product_id INTEGER NOT NULL,
+                        status INTEGER NOT NULL,
+                        created_at DATETIME NOT NULL
+                )
+        `).Error)
+	assert.NoError(t, db.Exec(`
+                CREATE TABLE IF NOT EXISTS bids (
+                        id INTEGER PRIMARY KEY,
+                        auction_id INTEGER NOT NULL,
+                        user_id INTEGER NOT NULL
+                )
+        `).Error)
+
+	ownerID := int64(3001)
+	userID := int64(1991)
+	productID := int64(995204)
+	auctionID := int64(995304)
+	assert.NoError(t, db.Exec("DELETE FROM bids WHERE id = ? OR auction_id = ?", 995001, auctionID).Error)
+	assert.NoError(t, db.Exec("DELETE FROM orders WHERE id = ? OR auction_id = ?", 995056, auctionID).Error)
+	assert.NoError(t, db.Exec("DELETE FROM products WHERE id = ?", productID).Error)
+	assert.NoError(t, db.Exec("DELETE FROM auctions WHERE id = ?", auctionID).Error)
+	assert.NoError(t, db.Create(&model.Product{
+		ID:      productID,
+		OwnerID: &ownerID,
+		Name:    "山海鎏金香炉",
+		Images:  model.JSONArray{"https://cdn.example.com/products/incense-burner.jpg"},
+		Status:  model.ProductStatusPublished,
+	}).Error)
+	assert.NoError(t, db.Exec(
+		"INSERT INTO auctions (id, product_id, status, created_at) VALUES (?, ?, ?, ?)",
+		auctionID, productID, dao.AuctionStatusEnded, "2026-05-29T12:00:00Z",
+	).Error)
+	assert.NoError(t, db.Exec(
+		"INSERT INTO bids (id, auction_id, user_id) VALUES (?, ?, ?)",
+		995001, auctionID, userID,
+	).Error)
+	assert.NoError(t, db.Create(&model.Order{
+		ID:         995056,
+		AuctionID:  auctionID,
+		ProductID:  productID,
+		SellerID:   &ownerID,
+		WinnerID:   userID,
+		FinalPrice: decimal.NewFromInt(6800),
+		Status:     model.OrderStatusPending,
+	}).Error)
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/orders/history?page=1&page_size=20")
+	c.Request.Header.Set("X-User-ID", "1991")
+
+	h.GetUserHistory(context.Background(), c)
+
+	assert.Equal(t, 200, c.Response.StatusCode())
+	var body struct {
+		List []map[string]interface{} `json:"list"`
+	}
+	assert.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.Len(t, body.List, 1)
+	assert.Equal(t, "山海鎏金香炉", body.List[0]["product_name"])
+	assert.Equal(t, "https://cdn.example.com/products/incense-burner.jpg", body.List[0]["product_image"])
+}
+
 func TestOrderHandler_Summary_XUserIDContract(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
 	assert.NoError(t, err)

@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -25,12 +26,14 @@ func NewHistoryDAO(db *gorm.DB) *HistoryDAO {
 
 // UserHistoryItem 用户历史记录项
 type UserHistoryItem struct {
-	AuctionID   int64   `json:"auction_id" gorm:"column:auction_id"`
-	ProductName string  `json:"product_name" gorm:"column:product_name"`
-	FinalPrice  float64 `json:"final_price" gorm:"column:final_price"`
-	IsWinner    bool    `json:"is_winner" gorm:"column:is_winner"`
-	BidCount    int     `json:"bid_count" gorm:"column:bid_count"`
-	CreatedAt   string  `json:"created_at" gorm:"column:created_at"`
+	AuctionID         int64   `json:"auction_id" gorm:"column:auction_id"`
+	ProductName       string  `json:"product_name" gorm:"column:product_name"`
+	ProductImage      string  `json:"product_image" gorm:"-"`
+	ProductImagesJSON string  `json:"-" gorm:"column:product_images"`
+	FinalPrice        float64 `json:"final_price" gorm:"column:final_price"`
+	IsWinner          bool    `json:"is_winner" gorm:"column:is_winner"`
+	BidCount          int     `json:"bid_count" gorm:"column:bid_count"`
+	CreatedAt         string  `json:"created_at" gorm:"column:created_at"`
 }
 
 // QueryUserHistory 查询用户竞拍历史
@@ -46,6 +49,7 @@ func (d *HistoryDAO) QueryUserHistory(ctx context.Context, userID int64, page, p
 		SELECT
 			a.id as auction_id,
 			p.name as product_name,
+                        p.images as product_images,
 			COALESCE(o.final_price, 0) as final_price,
 			CASE WHEN o.winner_id = ? THEN 1 ELSE 0 END as is_winner,
 			(SELECT COUNT(*) FROM bids b WHERE b.auction_id = a.id AND b.user_id = ?) as bid_count,
@@ -62,6 +66,7 @@ func (d *HistoryDAO) QueryUserHistory(ctx context.Context, userID int64, page, p
 	if err := d.db.WithContext(ctx).Raw(query, userID, userID, userID, pageSize, offset).Scan(&items).Error; err != nil {
 		return nil, 0, fmt.Errorf("query user history failed: %w", err)
 	}
+	fillProductImages(items)
 
 	// 查询总数
 	countQuery := `
@@ -124,14 +129,18 @@ func (d *HistoryDAO) QueryUserHistoryGORM(ctx context.Context, userID int64, pag
 			CreatedAt: a.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		}
 
-		// 获取商品名
-		var productName string
+		// 获取商品名和首图来源
+		var productInfo struct {
+			Name   string `gorm:"column:name"`
+			Images string `gorm:"column:images"`
+		}
 		if err := d.db.WithContext(ctx).
 			Table("products").
-			Select("name").
+			Select("name, images").
 			Where("id = ?", a.ProductID).
-			Scan(&productName).Error; err == nil {
-			item.ProductName = productName
+			Scan(&productInfo).Error; err == nil {
+			item.ProductName = productInfo.Name
+			item.ProductImagesJSON = productInfo.Images
 		}
 
 		// 获取订单信息
@@ -158,6 +167,7 @@ func (d *HistoryDAO) QueryUserHistoryGORM(ctx context.Context, userID int64, pag
 
 		items = append(items, item)
 	}
+	fillProductImages(items)
 
 	// 获取总数
 	d.db.WithContext(ctx).
@@ -166,4 +176,21 @@ func (d *HistoryDAO) QueryUserHistoryGORM(ctx context.Context, userID int64, pag
 		Count(&total)
 
 	return items, total, nil
+}
+
+func fillProductImages(items []UserHistoryItem) {
+	for i := range items {
+		items[i].ProductImage = firstHistoryProductImage(items[i].ProductImagesJSON)
+	}
+}
+
+func firstHistoryProductImage(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	var images []string
+	if err := json.Unmarshal([]byte(raw), &images); err != nil || len(images) == 0 {
+		return ""
+	}
+	return images[0]
 }

@@ -99,6 +99,62 @@ func TestSDK_CreateProductAsMerchantUsesAdminProductAPI(t *testing.T) {
 	}
 }
 
+func TestSDK_CreateProductAsAddsDefaultImageWhenMissing(t *testing.T) {
+	var captured CreateProductReq
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/admin/products" || r.Method != http.MethodPost {
+			t.Fatalf("path/method: %s %s", r.Method, r.URL.Path)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&captured); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"code":201,"data":{"id":42}}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	step := c.CreateProductAs(context.Background(), Actor{UserID: 9001, Role: RoleMerchant}, CreateProductReq{
+		Name:        "fixture product",
+		Description: "auto generated fixture",
+		Status:      1,
+	})
+	if !step.OK {
+		t.Fatalf("CreateProductAs failed: %s err=%v", step.Message, step.Err)
+	}
+	if len(captured.Images) != 1 {
+		t.Fatalf("default image count: want 1, got %d (%#v)", len(captured.Images), captured.Images)
+	}
+	if !strings.Contains(captured.Images[0], "text_to_image") {
+		t.Fatalf("default image should use generated website image URL, got %q", captured.Images[0])
+	}
+}
+
+func TestSDK_CreateProductAsPreservesExplicitImages(t *testing.T) {
+	var captured CreateProductReq
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&captured); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"code":201,"data":{"id":42}}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	step := c.CreateProductAs(context.Background(), Actor{UserID: 9001, Role: RoleMerchant}, CreateProductReq{
+		Name:   "fixture product",
+		Images: []string{"https://cdn.example.com/custom-product.jpg"},
+		Status: 1,
+	})
+	if !step.OK {
+		t.Fatalf("CreateProductAs failed: %s err=%v", step.Message, step.Err)
+	}
+	if len(captured.Images) != 1 || captured.Images[0] != "https://cdn.example.com/custom-product.jpg" {
+		t.Fatalf("explicit images should be preserved, got %#v", captured.Images)
+	}
+}
+
 // TestSDK_CreateAuction 创建拍卖 → 201 + 返回 ID
 func TestSDK_CreateAuction(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
