@@ -110,6 +110,7 @@ describe('LiveFeedPage feed 骨架', () => {
     mockedLiveStreamApi.list.mockResolvedValue({ list: [], total: 0, page: 1, page_size: 20 });
     renderFeed('/live');
     await waitFor(() => expect(screen.getByText('当前没有竞拍直播')).toBeInTheDocument());
+    expect(screen.getByRole('img', { name: '直播空态图标' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '去首页看拍品' })).toHaveAttribute('href', '/');
   });
 
@@ -230,6 +231,7 @@ describe('LiveFeedPage feed 骨架', () => {
       expect(mockedAuctionApi.list).toHaveBeenCalledWith({ status: '0', upcoming: true, page: 1, page_size: 2 })
     );
     expect(await screen.findByText('下一场竞拍正在准备')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '直播空态图标' })).toBeInTheDocument();
     expect(screen.getByText('即将开播')).toBeInTheDocument();
     expect(screen.getByText('青花瓷瓶')).toBeInTheDocument();
     expect(screen.getByText('紫砂壶')).toBeInTheDocument();

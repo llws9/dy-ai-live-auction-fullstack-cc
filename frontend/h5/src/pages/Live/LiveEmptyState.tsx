@@ -67,6 +67,13 @@ const isFromNestedInteractive = (event: React.KeyboardEvent<HTMLElement>) => {
   return Boolean(interactive && interactive !== event.currentTarget);
 };
 
+const EmptyLiveIcon = () => (
+  <div className={styles.liveEmptyIcon} role="img" aria-label="直播空态图标">
+    <span className={styles.liveEmptyIconRing} aria-hidden="true" />
+    <span className={styles.liveEmptyIconCamera} aria-hidden="true" />
+  </div>
+);
+
 const LiveEmptyState: React.FC<LiveEmptyStateProps> = ({
   upcomingAuctions,
   subscribedProductIds,
@@ -80,6 +87,7 @@ const LiveEmptyState: React.FC<LiveEmptyStateProps> = ({
     return (
       <section className={styles.liveEmptyPage} aria-live="polite">
         <div className={styles.liveEmptyPanel}>
+          <EmptyLiveIcon />
           <h1 className={styles.liveEmptyTitle}>当前没有竞拍直播</h1>
           <p className={styles.liveEmptyText}>可以先看看正在预热的拍品，开拍提醒会第一时间通知你。</p>
           <Link className={styles.liveEmptyPrimaryLink} to="/">
@@ -93,6 +101,7 @@ const LiveEmptyState: React.FC<LiveEmptyStateProps> = ({
   return (
     <section className={styles.liveEmptyPage} aria-live="polite">
       <div className={styles.liveEmptyPanel}>
+        <EmptyLiveIcon />
         <h1 className={styles.liveEmptyTitle}>下一场竞拍正在准备</h1>
         <p className={styles.liveEmptyText}>当前没有正在竞拍的直播间。先订阅感兴趣的预告场次，开拍前会提醒你回来。</p>
         <div className={styles.upcomingHeader}>即将开播</div>

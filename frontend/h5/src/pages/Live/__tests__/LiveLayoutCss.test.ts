@@ -44,4 +44,11 @@ describe('Live layout css', () => {
     expect(getDeclaration(liveEmptyPrimaryLinkCss, 'box-shadow')).toContain('var(');
     expect(upcomingCardCss).toContain('background: var(--bg-elevated);');
   });
+
+  it('keeps live empty state anchored near the top instead of vertically centered', () => {
+    const css = readLiveCss();
+    const liveEmptyPageCss = getClassBlock(css, 'liveEmptyPage');
+
+    expect(liveEmptyPageCss).toContain('align-items: flex-start;');
+  });
 });
