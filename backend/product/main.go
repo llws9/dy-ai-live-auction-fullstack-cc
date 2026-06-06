@@ -37,6 +37,24 @@ func (a categoryNameAdapter) GetNameByID(ctx context.Context, id int64) (string,
 	return cat.Name, true, nil
 }
 
+type auctionUserSummaryAdapter struct{ client *client.AuctionClient }
+
+func (a auctionUserSummaryAdapter) BatchGetUserSummaries(ctx context.Context, ids []int64) (map[int64]service.UserSummary, error) {
+	items, err := a.client.BatchGetUserSummaries(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[int64]service.UserSummary, len(items))
+	for id, item := range items {
+		result[id] = service.UserSummary{
+			ID:       item.ID,
+			Username: item.Username,
+			Avatar:   item.Avatar,
+		}
+	}
+	return result, nil
+}
+
 func main() {
 	// 从 Nacos 加载配置（失败时使用环境变量）
 	cfg, nacosLoader := config.LoadFromNacosWithFallback()
@@ -136,6 +154,7 @@ func main() {
 	}
 	auctionClient := client.NewAuctionClient(auctionSvcURL, 2*time.Second)
 	auctionClient.SetInternalToken(os.Getenv("INTERNAL_API_TOKEN"))
+	orderService.SetUserSummaryProvider(auctionUserSummaryAdapter{client: auctionClient})
 	liveStreamHandler.SetAuctionClient(auctionClient)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 	copywritingHandler := handler.NewCopywritingHandler(copyService)

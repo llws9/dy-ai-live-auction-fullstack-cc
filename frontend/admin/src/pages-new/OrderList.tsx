@@ -1,9 +1,7 @@
 import React from "react"
 import {
   Search,
-  Filter,
   Download,
-  MoreHorizontal,
   Truck,
   CreditCard,
   CheckCircle,
@@ -43,6 +41,7 @@ export default function OrderList() {
   const [loading, setLoading] = React.useState(true)
   const [statusFilter, setStatusFilter] = React.useState<number | undefined>(undefined)
   const [searchTerm, setSearchTerm] = React.useState("")
+  const [searchQuery, setSearchQuery] = React.useState("")
   const [page, setPage] = React.useState(1)
   const [total, setTotal] = React.useState(0)
   const [shippingOrderId, setShippingOrderId] = React.useState<number | null>(null)
@@ -62,28 +61,33 @@ export default function OrderList() {
     try {
       const response = await orderApi.list({
         status: statusFilter,
+        ...(searchQuery ? { search: searchQuery } : {}),
         page,
         page_size: pageSize,
       })
       setOrders(response.list || [])
       setTotal(response.total || 0)
+      setStats((prev) => ({
+        ...prev,
+        pendingPayment: response.summary?.pending_payment_count || 0,
+        pendingShipment: response.summary?.paid_count || 0,
+      }))
     } catch (e) {
       console.error('获取订单列表失败:', e)
     } finally {
       setLoading(false)
     }
-  }, [statusFilter, page])
+  }, [statusFilter, searchQuery, page])
 
   // 获取统计数据
   const fetchStats = React.useCallback(async () => {
     try {
       const overview = await statisticsApi.getOverview()
-      setStats({
+      setStats((prev) => ({
+        ...prev,
         todayRevenue: overview.today_revenue || 0,
-        pendingPayment: 0, // 需要额外计算
-        pendingShipment: 0,
         monthlyRevenue: overview.total_revenue || 0,
-      })
+      }))
     } catch (e) {
       console.error('获取统计数据失败:', e)
     }
@@ -110,6 +114,11 @@ export default function OrderList() {
     setPage(1)
   }
 
+  const handleSearch = () => {
+    setSearchQuery(searchTerm.trim())
+    setPage(1)
+  }
+
   // 标记发货
   const handleShip = async (orderId: number) => {
     if (!confirm('确认标记该订单为已发货？')) return
@@ -126,16 +135,6 @@ export default function OrderList() {
       setShippingOrderId(null)
     }
   }
-
-  // 本地搜索过滤
-  const filteredOrders = React.useMemo(() => {
-    if (!searchTerm) return orders
-    return orders.filter(o =>
-      String(o.id).includes(searchTerm) ||
-      (o.product_name || '').includes(searchTerm) ||
-      (o.user_name || '').includes(searchTerm)
-    )
-  }, [orders, searchTerm])
 
   return (
     <div className="space-y-6">
@@ -159,12 +158,12 @@ export default function OrderList() {
         />
         <OrderStatCard
           title="待支付订单"
-          value="查看列表"
+          value={`${stats.pendingPayment}`}
           color="blue"
         />
         <OrderStatCard
           title="待发货订单"
-          value="查看列表"
+          value={`${stats.pendingShipment}`}
           color="emerald"
         />
         <OrderStatCard
@@ -187,20 +186,26 @@ export default function OrderList() {
               </TabsList>
             </Tabs>
 
-            <div className="flex items-center gap-2">
+            <form
+              className="flex items-center gap-2"
+              onSubmit={(e) => {
+                e.preventDefault()
+                handleSearch()
+              }}
+            >
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input
-                  placeholder="搜索订单号/买家..."
+                  placeholder="搜索订单号/商品/买家ID"
                   className="pl-9 w-64 bg-slate-50 border-slate-200"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <Button variant="outline" size="icon" className="border-slate-200">
-                <Filter className="w-4 h-4" />
+              <Button type="submit" variant="outline" className="border-slate-200">
+                搜索
               </Button>
-            </div>
+            </form>
           </div>
 
           {loading ? (
@@ -222,14 +227,14 @@ export default function OrderList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredOrders.length === 0 ? (
+                {orders.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center text-slate-500 py-8">
                       暂无订单数据
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredOrders.map((order) => {
+                  orders.map((order) => {
                     const StatusIcon = statusMap[order.status]?.icon || Clock
                     return (
                       <TableRow
@@ -284,8 +289,13 @@ export default function OrderList() {
                                 催付
                               </Button>
                             )}
-                            <Button variant="ghost" size="icon" className="text-slate-400">
-                              <MoreHorizontal className="w-4 h-4" />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-slate-600 h-8"
+                              onClick={() => navigate(`/order/detail?id=${order.id}`)}
+                            >
+                              查看详情
                             </Button>
                           </div>
                         </TableCell>

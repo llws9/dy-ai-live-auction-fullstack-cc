@@ -102,6 +102,93 @@ func TestOrderHandler_AdminList_StatusFilter(t *testing.T) {
 	}
 }
 
+func TestOrderHandler_AdminList_SearchesOrderIDWinnerIDAndProductName(t *testing.T) {
+	h := newAdminOrderHandlerWithSeed(t, func(db *gorm.DB) {
+		require.NoError(t, db.Create(&model.Product{ID: 11, Name: "宋代玉镯"}).Error)
+		require.NoError(t, db.Create(&model.Product{ID: 12, Name: "紫砂茶壶"}).Error)
+		require.NoError(t, db.Create(&model.Order{ID: 101, AuctionID: 201, ProductID: 11, WinnerID: 901, FinalPrice: decimal.NewFromInt(100), Status: model.OrderStatusPending}).Error)
+		require.NoError(t, db.Create(&model.Order{ID: 202, AuctionID: 202, ProductID: 12, WinnerID: 902, FinalPrice: decimal.NewFromInt(200), Status: model.OrderStatusPaid}).Error)
+		require.NoError(t, db.Create(&model.Order{ID: 303, AuctionID: 203, ProductID: 12, WinnerID: 9901, FinalPrice: decimal.NewFromInt(300), Status: model.OrderStatusShipped}).Error)
+	})
+
+	tests := []struct {
+		name      string
+		search    string
+		wantIDs   []float64
+		wantTotal int64
+	}{
+		{name: "order id", search: "202", wantIDs: []float64{202}, wantTotal: 1},
+		{name: "winner id", search: "9901", wantIDs: []float64{303}, wantTotal: 1},
+		{name: "product name", search: "玉镯", wantIDs: []float64{101}, wantTotal: 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := app.NewContext(0)
+			c.Request.SetMethod("GET")
+			c.Request.SetRequestURI("/api/v1/admin/orders?search=" + tt.search)
+			c.Request.Header.Set("X-User-Role", "admin")
+
+			h.AdminList(context.Background(), c)
+
+			assert.Equal(t, 200, c.Response.StatusCode())
+			var body struct {
+				Data struct {
+					List  []map[string]interface{} `json:"list"`
+					Total int64                    `json:"total"`
+				} `json:"data"`
+			}
+			require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+			assert.Equal(t, tt.wantTotal, body.Data.Total)
+			require.Len(t, body.Data.List, len(tt.wantIDs))
+			for i, wantID := range tt.wantIDs {
+				assert.Equal(t, wantID, body.Data.List[i]["id"])
+			}
+		})
+	}
+}
+
+func TestOrderHandler_AdminList_ReturnsStatusSummaryScopedToActor(t *testing.T) {
+	sellerA := int64(1001)
+	sellerB := int64(1002)
+	h := newAdminOrderHandlerWithSeed(t, func(db *gorm.DB) {
+		require.NoError(t, db.Create(&model.Product{ID: 11, OwnerID: &sellerA, Name: "茶杯"}).Error)
+		require.NoError(t, db.Create(&model.Product{ID: 12, OwnerID: &sellerB, Name: "茶壶"}).Error)
+		require.NoError(t, db.Create(&model.Order{ID: 101, AuctionID: 201, ProductID: 11, SellerID: &sellerA, WinnerID: 901, FinalPrice: decimal.NewFromInt(100), Status: model.OrderStatusPending}).Error)
+		require.NoError(t, db.Create(&model.Order{ID: 102, AuctionID: 202, ProductID: 11, SellerID: &sellerA, WinnerID: 902, FinalPrice: decimal.NewFromInt(200), Status: model.OrderStatusPaid}).Error)
+		require.NoError(t, db.Create(&model.Order{ID: 103, AuctionID: 203, ProductID: 11, SellerID: &sellerA, WinnerID: 903, FinalPrice: decimal.NewFromInt(300), Status: model.OrderStatusShipped}).Error)
+		require.NoError(t, db.Create(&model.Order{ID: 104, AuctionID: 204, ProductID: 11, SellerID: &sellerA, WinnerID: 904, FinalPrice: decimal.NewFromInt(400), Status: model.OrderStatusCompleted}).Error)
+		require.NoError(t, db.Create(&model.Order{ID: 105, AuctionID: 205, ProductID: 12, SellerID: &sellerB, WinnerID: 905, FinalPrice: decimal.NewFromInt(500), Status: model.OrderStatusPaid}).Error)
+	})
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/admin/orders?page=1&page_size=2")
+	c.Request.Header.Set("X-User-Role", "merchant")
+	c.Request.Header.Set("X-User-ID", "1001")
+
+	h.AdminList(context.Background(), c)
+
+	assert.Equal(t, 200, c.Response.StatusCode())
+	var body struct {
+		Data struct {
+			Total   int64 `json:"total"`
+			Summary struct {
+				PendingPaymentCount int64 `json:"pending_payment_count"`
+				PaidCount           int64 `json:"paid_count"`
+				ShippedCount        int64 `json:"shipped_count"`
+				CompletedCount      int64 `json:"completed_count"`
+			} `json:"summary"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.EqualValues(t, 4, body.Data.Total)
+	assert.EqualValues(t, 1, body.Data.Summary.PendingPaymentCount)
+	assert.EqualValues(t, 1, body.Data.Summary.PaidCount)
+	assert.EqualValues(t, 1, body.Data.Summary.ShippedCount)
+	assert.EqualValues(t, 1, body.Data.Summary.CompletedCount)
+}
+
 // TestOrderHandler_AdminList_UserIDFilter admin 可按 user_id（=winner_id）筛某用户订单。
 func TestOrderHandler_AdminList_UserIDFilter(t *testing.T) {
 	h := newAdminOrderHandlerWithSeed(t, func(db *gorm.DB) {

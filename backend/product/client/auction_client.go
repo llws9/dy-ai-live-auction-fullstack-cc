@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -16,6 +17,12 @@ type FollowStatusResponse struct {
 
 type FollowersStatsResponse struct {
 	Count int64 `json:"count"`
+}
+
+type UserSummary struct {
+	ID       int64  `json:"id"`
+	Username string `json:"username"`
+	Avatar   string `json:"avatar"`
 }
 
 type auctionListData struct {
@@ -73,6 +80,7 @@ func (c *AuctionClient) CurrentByLiveStreamIDs(ctx context.Context, ids []int64)
 		return nil, fmt.Errorf("call auction-service: %w", err)
 	}
 	defer resp.Body.Close()
+	defer io.Copy(io.Discard, resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("auction-service returned status %d", resp.StatusCode)
 	}
@@ -88,6 +96,53 @@ func (c *AuctionClient) CurrentByLiveStreamIDs(ctx context.Context, ids []int64)
 	result := make(map[int64]CurrentAuctionItem, len(body.Data.Items))
 	for _, item := range body.Data.Items {
 		result[item.LiveStreamID] = item
+	}
+	return result, nil
+}
+
+func (c *AuctionClient) BatchGetUserSummaries(ctx context.Context, ids []int64) (map[int64]UserSummary, error) {
+	if len(ids) == 0 {
+		return map[int64]UserSummary{}, nil
+	}
+	reqURL := fmt.Sprintf("%s/internal/users/batch", c.baseURL)
+	payload, err := json.Marshal(map[string]interface{}{"ids": ids})
+	if err != nil {
+		return nil, fmt.Errorf("marshal request: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, bytes.NewReader(payload))
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.internalToken != "" {
+		req.Header.Set("X-Internal-Token", c.internalToken)
+	}
+
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("call auction-service: %w", err)
+	}
+	defer resp.Body.Close()
+	defer io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("auction-service returned status %d", resp.StatusCode)
+	}
+	var body struct {
+		Code int `json:"code"`
+		Data struct {
+			Items []UserSummary `json:"items"`
+		} `json:"data"`
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	if body.Code != 0 && body.Code != 200 {
+		return nil, fmt.Errorf("auction-service business code %d: %s", body.Code, body.Message)
+	}
+	result := make(map[int64]UserSummary, len(body.Data.Items))
+	for _, item := range body.Data.Items {
+		result[item.ID] = item
 	}
 	return result, nil
 }

@@ -30,6 +30,7 @@ type OrderService struct {
 	historyDAO           *dao.HistoryDAO
 	adminDAO             *dao.OrderAdminDAO
 	productDAO           *dao.ProductDAO
+	userSummaryProvider  UserSummaryProvider
 	notificationCallback NotificationCallback // 通知回调（Mock触发）
 	logger               *logger.Logger
 }
@@ -51,6 +52,10 @@ func (s *OrderService) SetAdminOrderDAO(adminDAO *dao.OrderAdminDAO) {
 // SetProductDAO 注入商品 DAO，用于在订单创建时固化 seller_id。
 func (s *OrderService) SetProductDAO(productDAO *dao.ProductDAO) {
 	s.productDAO = productDAO
+}
+
+func (s *OrderService) SetUserSummaryProvider(provider UserSummaryProvider) {
+	s.userSummaryProvider = provider
 }
 
 // SetNotificationCallback 设置通知回调

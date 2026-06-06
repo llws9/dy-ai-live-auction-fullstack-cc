@@ -83,6 +83,7 @@ export default function OrderDetail() {
 
   const statusInfo = statusMap[order.status] || statusMap[0]
   const canShip = order.status === 1
+  const buyerDisplayName = order.user_name || `用户 #${order.user_id}`
 
   return (
     <div className="space-y-6">
@@ -123,11 +124,15 @@ export default function OrderDetail() {
             <CardHeader><CardTitle className="text-lg">买家信息</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-start gap-4">
-                <div className="p-2 rounded-full bg-slate-100">
-                  <User className="w-5 h-5 text-slate-500" />
+	                <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center">
+	                  {order.user_avatar ? (
+	                    <img src={order.user_avatar} alt={buyerDisplayName} className="w-full h-full object-cover" />
+	                  ) : (
+	                    <User className="w-5 h-5 text-slate-500" />
+	                  )}
                 </div>
                 <div>
-                  <p className="font-bold">买家：{order.user_name || `用户 #${order.user_id}`}</p>
+	                  <p className="font-bold">买家：{buyerDisplayName}</p>
                   <p className="text-sm text-slate-500">用户ID: {order.user_id}</p>
                 </div>
               </div>

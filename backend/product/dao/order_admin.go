@@ -2,6 +2,8 @@ package dao
 
 import (
 	"context"
+	"strconv"
+	"strings"
 
 	"gorm.io/gorm"
 
@@ -14,6 +16,13 @@ type OrderAdminRow struct {
 	model.Order
 	ProductName       string `json:"product_name" gorm:"column:product_name"`
 	ProductImagesJSON string `json:"-" gorm:"column:product_images"`
+}
+
+type OrderAdminSummary struct {
+	PendingPaymentCount int64 `json:"pending_payment_count"`
+	PaidCount           int64 `json:"paid_count"`
+	ShippedCount        int64 `json:"shipped_count"`
+	CompletedCount      int64 `json:"completed_count"`
 }
 
 // OrderAdminDAO 提供 admin 端订单查询能力，与用户视角 OrderDAO 区分，避免误用。
@@ -35,33 +44,53 @@ func (d *OrderAdminDAO) adminBaseQuery(ctx context.Context) *gorm.DB {
 		Joins("LEFT JOIN products p ON p.id = orders.product_id")
 }
 
+func (d *OrderAdminDAO) adminCountQuery(ctx context.Context) *gorm.DB {
+	return d.db.WithContext(ctx).
+		Table("orders").
+		Joins("LEFT JOIN products p ON p.id = orders.product_id")
+}
+
+func applyAdminOrderFilters(query *gorm.DB, status *model.OrderStatus, userID *int64, sellerID *int64, search string, includeStatus bool) *gorm.DB {
+	if includeStatus && status != nil {
+		query = query.Where("orders.status = ?", *status)
+	}
+	if userID != nil {
+		query = query.Where("orders.winner_id = ?", *userID)
+	}
+	if sellerID != nil {
+		query = query.Where("orders.seller_id = ?", *sellerID)
+	}
+	search = strings.TrimSpace(search)
+	if search == "" {
+		return query
+	}
+	like := "%" + search + "%"
+	if id, err := strconv.ParseInt(search, 10, 64); err == nil && id > 0 {
+		return query.Where("(orders.id = ? OR orders.winner_id = ? OR p.name LIKE ?)", id, id, like)
+	}
+	return query.Where("p.name LIKE ?", like)
+}
+
 // ListAdminOrders 返回全量订单（不按 winner_id 过滤），可选按 status / user_id 筛选。
 // userID 在 admin 语义里等价于 winner_id 过滤——admin 想查某用户的订单。
 func (d *OrderAdminDAO) ListAdminOrders(ctx context.Context, status *model.OrderStatus, userID *int64, page, pageSize int) ([]OrderAdminRow, int64, error) {
-	return d.ListAdminOrdersScoped(ctx, status, userID, nil, page, pageSize)
+	rows, total, _, err := d.ListAdminOrdersScoped(ctx, status, userID, nil, "", page, pageSize)
+	return rows, total, err
 }
 
-func (d *OrderAdminDAO) ListAdminOrdersScoped(ctx context.Context, status *model.OrderStatus, userID *int64, sellerID *int64, page, pageSize int) ([]OrderAdminRow, int64, error) {
+func (d *OrderAdminDAO) ListAdminOrdersScoped(ctx context.Context, status *model.OrderStatus, userID *int64, sellerID *int64, search string, page, pageSize int) ([]OrderAdminRow, int64, OrderAdminSummary, error) {
 	var rows []OrderAdminRow
 	var total int64
+	var summary OrderAdminSummary
 
-	countQ := d.db.WithContext(ctx).Model(&model.Order{})
-	listQ := d.adminBaseQuery(ctx)
-	if status != nil {
-		countQ = countQ.Where("status = ?", *status)
-		listQ = listQ.Where("orders.status = ?", *status)
-	}
-	if userID != nil {
-		countQ = countQ.Where("winner_id = ?", *userID)
-		listQ = listQ.Where("orders.winner_id = ?", *userID)
-	}
-	if sellerID != nil {
-		countQ = countQ.Where("seller_id = ?", *sellerID)
-		listQ = listQ.Where("orders.seller_id = ?", *sellerID)
-	}
+	countQ := applyAdminOrderFilters(d.adminCountQuery(ctx), status, userID, sellerID, search, true)
+	listQ := applyAdminOrderFilters(d.adminBaseQuery(ctx), status, userID, sellerID, search, true)
 
 	if err := countQ.Count(&total).Error; err != nil {
-		return nil, 0, err
+		return nil, 0, summary, err
+	}
+	if err := d.countAdminOrderSummary(ctx, userID, sellerID, search, &summary); err != nil {
+		return nil, 0, summary, err
 	}
 
 	offset := (page - 1) * pageSize
@@ -70,9 +99,32 @@ func (d *OrderAdminDAO) ListAdminOrdersScoped(ctx context.Context, status *model
 		Offset(offset).
 		Limit(pageSize).
 		Scan(&rows).Error; err != nil {
-		return nil, 0, err
+		return nil, 0, summary, err
 	}
-	return rows, total, nil
+	return rows, total, summary, nil
+}
+
+func (d *OrderAdminDAO) countAdminOrderSummary(ctx context.Context, userID *int64, sellerID *int64, search string, summary *OrderAdminSummary) error {
+	countStatus := func(status model.OrderStatus) (int64, error) {
+		var count int64
+		err := applyAdminOrderFilters(d.adminCountQuery(ctx), &status, userID, sellerID, search, true).Count(&count).Error
+		return count, err
+	}
+
+	var err error
+	if summary.PendingPaymentCount, err = countStatus(model.OrderStatusPending); err != nil {
+		return err
+	}
+	if summary.PaidCount, err = countStatus(model.OrderStatusPaid); err != nil {
+		return err
+	}
+	if summary.ShippedCount, err = countStatus(model.OrderStatusShipped); err != nil {
+		return err
+	}
+	if summary.CompletedCount, err = countStatus(model.OrderStatusCompleted); err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetAdminOrder 根据 id 返回单条 admin 视图订单。未命中返回 gorm.ErrRecordNotFound。
