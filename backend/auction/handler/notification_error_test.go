@@ -181,7 +181,7 @@ func TestNotificationHandlerErrorResponsesDoNotLeakInternalDetails(t *testing.T)
 	}
 }
 
-func TestNotificationHandlerHotPullErrorResponseDoesNotLeakInternalDetails(t *testing.T) {
+func TestNotificationHandlerHotPullReturnsEmptyListWhenLiveReminderSourceUnavailable(t *testing.T) {
 	var logs bytes.Buffer
 	originalLogOutput := log.Writer()
 	log.SetOutput(&logs)
@@ -195,12 +195,20 @@ func TestNotificationHandlerHotPullErrorResponseDoesNotLeakInternalDetails(t *te
 
 	handler.HotPullNotifications(context.Background(), c)
 
-	assert.Equal(t, http.StatusInternalServerError, c.Response.StatusCode())
+	assert.Equal(t, http.StatusOK, c.Response.StatusCode())
 	var body map[string]interface{}
 	assert.NoError(t, json.Unmarshal(c.Response.Body(), &body))
-	assert.EqualValues(t, 500, body["code"])
-	assert.Equal(t, "热拉通知失败", body["message"])
+	assert.EqualValues(t, 0, body["code"])
+	assert.Equal(t, "success", body["message"])
 	assert.NotContains(t, body["message"], "redis client not initialized")
-	assert.Contains(t, logs.String(), "热拉通知失败 failed")
-	assert.Contains(t, logs.String(), "redis client not initialized")
+
+	data, ok := body["data"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.EqualValues(t, 0, data["count"])
+	notifications, ok := data["notifications"].([]interface{})
+	assert.True(t, ok)
+	assert.Empty(t, notifications)
+
+	assert.Contains(t, logs.String(), "HotPull: redis unavailable user=101 follow_dao_configured=false")
+	assert.Contains(t, logs.String(), "HotPull: completed without live reminder source user=101 total=0")
 }

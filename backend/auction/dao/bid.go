@@ -65,9 +65,9 @@ func (d *BidDAO) GetRanking(ctx context.Context, auctionID int64, limit int) ([]
 	// 使用子查询获取每个用户的最高出价
 	subQuery := d.db.WithContext(ctx).
 		Model(&model.Bid{}).
-		Select("user_id, MAX(amount) as amount, MAX(created_at) as created_at").
+		Select("MIN(id) as id, auction_id, user_id, MAX(amount) as amount").
 		Where("auction_id = ?", auctionID).
-		Group("user_id")
+		Group("auction_id, user_id")
 
 	err := d.db.WithContext(ctx).
 		Table("(?) as max_bids", subQuery).

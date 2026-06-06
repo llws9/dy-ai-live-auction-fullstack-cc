@@ -17,6 +17,7 @@ type AuctionService struct {
 	auctionDAO         *dao.AuctionDAO
 	bidDAO             *dao.BidDAO
 	notificationSender NotificationSender
+	orderCreator       AuctionOrderCreator
 }
 
 // NewAuctionService 创建竞拍服务
@@ -34,6 +35,14 @@ func (s *AuctionService) SetBidDAO(bidDAO *dao.BidDAO) {
 // SetNotificationSender 设置通知发送服务
 func (s *AuctionService) SetNotificationSender(sender NotificationSender) {
 	s.notificationSender = sender
+}
+
+type AuctionOrderCreator interface {
+	CreateOrderFromAuctionResult(ctx context.Context, req model.AuctionOrderRequest) error
+}
+
+func (s *AuctionService) SetOrderCreator(creator AuctionOrderCreator) {
+	s.orderCreator = creator
 }
 
 // SetSkyLampDAO 设置点天灯DAO（用于更新统计数据）
@@ -128,54 +137,88 @@ func (s *AuctionService) EndAuction(ctx context.Context, id int64) error {
 		return err
 	}
 
+	if err := s.createOrderForAuctionResult(ctx, auction); err != nil {
+		return err
+	}
+
 	if err := s.auctionDAO.Update(ctx, auction); err != nil {
 		return err
 	}
 
 	// 发送竞拍结果通知
-	s.sendAuctionResultNotifications(ctx, auction)
+	if err := s.sendAuctionResultNotifications(ctx, auction); err != nil {
+		return err
+	}
 
 	return nil
 }
 
-// sendAuctionResultNotifications 发送竞拍结果通知
-func (s *AuctionService) sendAuctionResultNotifications(ctx context.Context, auction *model.Auction) {
-	if s.notificationSender == nil || s.bidDAO == nil {
-		return
+func (s *AuctionService) auctionWinnerResult(ctx context.Context, auction *model.Auction) (winnerID int64, finalPrice decimal.Decimal, bids []model.Bid, ok bool, err error) {
+	if s.bidDAO == nil {
+		return 0, decimal.Zero, nil, false, nil
 	}
-
-	// 获取所有出价者
-	bids, err := s.bidDAO.GetRanking(ctx, auction.ID, 1000)
+	bids, err = s.bidDAO.GetRanking(ctx, auction.ID, 1000)
 	if err != nil {
-		return
+		return 0, decimal.Zero, nil, false, err
 	}
-
 	if len(bids) == 0 {
-		return // 无人出价，无需通知
+		return 0, decimal.Zero, nil, false, nil
 	}
-
-	// 中标者（第一个）
-	var winnerID int64
 	if auction.WinnerID != nil && *auction.WinnerID > 0 {
 		winnerID = *auction.WinnerID
 	} else if len(bids) > 0 {
 		winnerID = bids[0].UserID
 	}
-	finalPrice := auction.CurrentPrice
+	return winnerID, auction.CurrentPrice, bids, true, nil
+}
+
+func (s *AuctionService) createOrderForAuctionResult(ctx context.Context, auction *model.Auction) error {
+	winnerID, finalPrice, _, ok, err := s.auctionWinnerResult(ctx, auction)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return nil
+	}
+	if s.orderCreator == nil {
+		return errors.New("订单创建器未初始化")
+	}
+
+	if err := s.orderCreator.CreateOrderFromAuctionResult(ctx, model.AuctionOrderRequest{
+		AuctionID:  auction.ID,
+		ProductID:  auction.ProductID,
+		WinnerID:   winnerID,
+		FinalPrice: finalPrice,
+	}); err != nil {
+		return fmt.Errorf("创建中标订单失败: %w", err)
+	}
+	return nil
+}
+
+// sendAuctionResultNotifications 发送竞拍结果通知
+func (s *AuctionService) sendAuctionResultNotifications(ctx context.Context, auction *model.Auction) error {
+	if s.notificationSender == nil {
+		return nil
+	}
+	winnerID, finalPrice, bids, ok, err := s.auctionWinnerResult(ctx, auction)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return nil
+	}
 
 	// 发送中标通知
-	go func() {
-		_ = s.notificationSender.SendNotification(ctx, &model.NotificationRequest{
-			UserID:  winnerID,
-			Type:    model.NotificationTypeAuctionWon,
-			Title:   "竞拍中标",
-			Content: fmt.Sprintf("恭喜！您以 %s 元中标了竞拍", finalPrice.StringFixed(2)),
-			Data: map[string]interface{}{
-				"auction_id":  auction.ID,
-				"final_price": finalPrice.StringFixed(2),
-			},
-		})
-	}()
+	_ = s.notificationSender.SendNotification(ctx, &model.NotificationRequest{
+		UserID:  winnerID,
+		Type:    model.NotificationTypeAuctionWon,
+		Title:   "竞拍中标",
+		Content: fmt.Sprintf("恭喜！您以 %s 元中标了竞拍", finalPrice.StringFixed(2)),
+		Data: map[string]interface{}{
+			"auction_id":  auction.ID,
+			"final_price": finalPrice.StringFixed(2),
+		},
+	})
 
 	// 发送未中标通知给其他参与者
 	var loserRequests []*model.NotificationRequest
@@ -201,6 +244,8 @@ func (s *AuctionService) sendAuctionResultNotifications(ctx context.Context, auc
 			_ = s.notificationSender.SendBatchNotifications(ctx, loserRequests)
 		}()
 	}
+
+	return nil
 }
 
 // CheckAndStartAuctions 检查并开始应该开始的竞拍

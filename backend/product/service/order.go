@@ -93,6 +93,27 @@ func (s *OrderService) CreateOrder(ctx context.Context, auctionID, productID, wi
 	return order, nil
 }
 
+// CreateOrderFromAuctionResult creates the payment entry for a finalized auction.
+// Replays with the same auction result are idempotent; conflicting replays fail closed.
+func (s *OrderService) CreateOrderFromAuctionResult(ctx context.Context, auctionID, productID, winnerID int64, finalPrice decimal.Decimal) (*model.Order, error) {
+	if s.orderDAO == nil {
+		return nil, errors.New("订单服务未初始化")
+	}
+
+	existing, err := s.orderDAO.GetByAuctionID(ctx, auctionID)
+	if err == nil {
+		if existing.ProductID != productID || existing.WinnerID != winnerID || !existing.FinalPrice.Equal(finalPrice) {
+			return nil, errors.New("订单已存在且中标信息不一致")
+		}
+		return existing, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	return s.CreateOrder(ctx, auctionID, productID, winnerID, finalPrice)
+}
+
 // GetOrder 获取订单详情
 func (s *OrderService) GetOrder(ctx context.Context, id int64) (*model.Order, error) {
 	return s.orderDAO.GetByID(ctx, id)

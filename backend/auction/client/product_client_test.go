@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"auction-service/model"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -133,4 +135,63 @@ func TestBatchGetSummaries(t *testing.T) {
 		_, err := c.BatchGetSummaries(context.Background(), []int64{11})
 		require.Error(t, err)
 	})
+}
+
+func TestCreateOrderFromAuctionResult(t *testing.T) {
+	var capturedToken string
+	var capturedBody map[string]interface{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/internal/orders/from-auction-result", r.URL.Path)
+		capturedToken = r.Header.Get("X-Internal-Token")
+		_ = json.NewDecoder(r.Body).Decode(&capturedBody)
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"code":    0,
+			"message": "success",
+			"data": map[string]interface{}{
+				"id":          501,
+				"auction_id":  101,
+				"product_id":  11,
+				"winner_id":   2001,
+				"final_price": "110.00",
+				"status":      0,
+			},
+		})
+	}))
+	defer srv.Close()
+
+	c := NewHTTPProductClient(srv.URL, 2*time.Second)
+	c.SetInternalToken("internal-secret")
+	err := c.CreateOrderFromAuctionResult(context.Background(), model.AuctionOrderRequest{
+		AuctionID:  101,
+		ProductID:  11,
+		WinnerID:   2001,
+		FinalPrice: decimal.NewFromInt(110),
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, "internal-secret", capturedToken)
+	assert.Equal(t, float64(101), capturedBody["auction_id"])
+	assert.Equal(t, float64(11), capturedBody["product_id"])
+	assert.Equal(t, float64(2001), capturedBody["winner_id"])
+	assert.Equal(t, "110.00", capturedBody["final_price"])
+}
+
+func TestCreateOrderFromAuctionResultReturnsErrorOnUpstreamFailure(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+		_, _ = w.Write([]byte(`{"code":500,"message":"failed"}`))
+	}))
+	defer srv.Close()
+
+	c := NewHTTPProductClient(srv.URL, 2*time.Second)
+	err := c.CreateOrderFromAuctionResult(context.Background(), model.AuctionOrderRequest{
+		AuctionID:  101,
+		ProductID:  11,
+		WinnerID:   2001,
+		FinalPrice: decimal.NewFromInt(110),
+	})
+
+	require.Error(t, err)
 }

@@ -178,6 +178,7 @@ func main() {
 	}
 	productClient := client.NewHTTPProductClient(productSvcURL, 2*time.Second)
 	productClient.SetInternalToken(internalAPIToken)
+	auctionService.SetOrderCreator(productClient)
 	auctionHandler.SetProductClient(productClient)
 	// 直播间客户端（T3.3 / spec B §4.1：调 product /internal/live-streams/batch）。
 	liveStreamClient := client.NewHTTPLiveStreamClient(productSvcURL, 2*time.Second)

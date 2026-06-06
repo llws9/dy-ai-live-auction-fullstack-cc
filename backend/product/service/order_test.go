@@ -31,7 +31,7 @@ func (suite *OrderTestSuite) SetupSuite() {
 	assert.NoError(suite.T(), err)
 
 	// 自动迁移
-	err = db.AutoMigrate(&model.Order{}, &model.Product{})
+	err = db.AutoMigrate(&model.Order{}, &model.Product{}, &model.Category{})
 	assert.NoError(suite.T(), err)
 
 	suite.db = db
@@ -108,6 +108,36 @@ func (suite *OrderTestSuite) TestCreateOrderStoresSellerIDFromProductOwner() {
 	suite.NoError(err)
 	suite.NotNil(order.SellerID)
 	suite.Equal(ownerID, *order.SellerID)
+}
+
+func (suite *OrderTestSuite) TestCreateOrderFromAuctionResultIsIdempotent() {
+	ctx := context.Background()
+
+	first, err := suite.service.CreateOrderFromAuctionResult(ctx, 101, 1, 2001, decimal.NewFromInt(500))
+	suite.NoError(err)
+	suite.NotNil(first)
+
+	second, err := suite.service.CreateOrderFromAuctionResult(ctx, 101, 1, 2001, decimal.NewFromInt(500))
+	suite.NoError(err)
+	suite.NotNil(second)
+	suite.Equal(first.ID, second.ID)
+	suite.Equal(model.OrderStatusPending, second.Status)
+
+	var count int64
+	suite.NoError(suite.db.Model(&model.Order{}).Where("auction_id = ?", int64(101)).Count(&count).Error)
+	suite.Equal(int64(1), count)
+}
+
+func (suite *OrderTestSuite) TestCreateOrderFromAuctionResultRejectsConflictingReplay() {
+	ctx := context.Background()
+
+	_, err := suite.service.CreateOrderFromAuctionResult(ctx, 101, 1, 2001, decimal.NewFromInt(500))
+	suite.NoError(err)
+
+	order, err := suite.service.CreateOrderFromAuctionResult(ctx, 101, 1, 2002, decimal.NewFromInt(500))
+	suite.Require().Error(err)
+	suite.Nil(order)
+	suite.Contains(err.Error(), "订单已存在且中标信息不一致")
 }
 
 // TestGetOrder 测试获取订单

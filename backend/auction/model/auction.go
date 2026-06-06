@@ -33,6 +33,13 @@ type Auction struct {
 	CreatedAt    time.Time       `json:"created_at" gorm:"autoCreateTime"`
 }
 
+type AuctionOrderRequest struct {
+	AuctionID  int64           `json:"auction_id"`
+	ProductID  int64           `json:"product_id"`
+	WinnerID   int64           `json:"winner_id"`
+	FinalPrice decimal.Decimal `json:"final_price"`
+}
+
 // TableName 指定表名
 func (Auction) TableName() string {
 	return "auctions"

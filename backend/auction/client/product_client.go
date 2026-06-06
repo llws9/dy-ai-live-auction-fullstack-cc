@@ -12,10 +12,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
+
+	"auction-service/model"
 )
 
 // ProductSummary 是 product-service 内部接口返回的商品摘要。
@@ -79,6 +82,11 @@ type internalBatchResponse struct {
 	Data struct {
 		Items []ProductSummary `json:"items"`
 	} `json:"data"`
+	Message string `json:"message"`
+}
+
+type internalOrderResponse struct {
+	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
@@ -152,4 +160,43 @@ func (c *HTTPProductClient) BatchGetSummaries(ctx context.Context, ids []int64) 
 		out[it.ID] = it
 	}
 	return out, nil
+}
+
+func (c *HTTPProductClient) CreateOrderFromAuctionResult(ctx context.Context, req model.AuctionOrderRequest) error {
+	payload, err := json.Marshal(map[string]interface{}{
+		"auction_id":  req.AuctionID,
+		"product_id":  req.ProductID,
+		"winner_id":   req.WinnerID,
+		"final_price": req.FinalPrice.StringFixed(2),
+	})
+	if err != nil {
+		return fmt.Errorf("marshal request: %w", err)
+	}
+	endpoint := c.baseURL + "/internal/orders/from-auction-result"
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
+	if err != nil {
+		return fmt.Errorf("build request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	if c.internalToken != "" {
+		httpReq.Header.Set("X-Internal-Token", c.internalToken)
+	}
+
+	resp, err := c.hc.Do(httpReq)
+	if err != nil {
+		return fmt.Errorf("call product-service: %w", err)
+	}
+	defer resp.Body.Close()
+	defer io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("product-service returned status %d", resp.StatusCode)
+	}
+	var body internalOrderResponse
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return fmt.Errorf("decode response: %w", err)
+	}
+	if body.Code != 0 && body.Code != http.StatusOK {
+		return fmt.Errorf("product-service business code %d: %s", body.Code, body.Message)
+	}
+	return nil
 }

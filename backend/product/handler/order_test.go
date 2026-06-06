@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/sqlite"
@@ -18,6 +19,71 @@ import (
 	"product-service/model"
 	"product-service/service"
 )
+
+func newOrderHandlerWithDB(t *testing.T) (*OrderHandler, *gorm.DB) {
+	t.Helper()
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	assert.NoError(t, err)
+	assert.NoError(t, db.AutoMigrate(&model.Order{}, &model.Product{}, &model.Category{}))
+	productDAO := dao.NewProductDAO(db)
+	svc := service.NewOrderService(dao.NewOrderDAO(db), dao.NewHistoryDAO(db))
+	svc.SetProductDAO(productDAO)
+	return NewOrderHandler(svc), db
+}
+
+func TestOrderHandler_CreateFromAuctionResult(t *testing.T) {
+	h, db := newOrderHandlerWithDB(t)
+	ownerID := int64(3001)
+	assert.NoError(t, db.Create(&model.Product{
+		ID:      11,
+		OwnerID: &ownerID,
+		Name:    "auction product",
+		Status:  model.ProductStatusPublished,
+	}).Error)
+
+	c := app.NewContext(0)
+	c.Request.SetMethod(consts.MethodPost)
+	c.Request.SetRequestURI("/internal/orders/from-auction-result")
+	c.Request.Header.SetContentTypeBytes([]byte("application/json"))
+	c.Request.SetBodyString(`{"auction_id":101,"product_id":11,"winner_id":2001,"final_price":"110.00"}`)
+
+	h.CreateFromAuctionResult(context.Background(), c)
+
+	assert.Equal(t, 200, c.Response.StatusCode())
+	var body struct {
+		Code int `json:"code"`
+		Data struct {
+			ID         int64  `json:"id"`
+			AuctionID  int64  `json:"auction_id"`
+			ProductID  int64  `json:"product_id"`
+			WinnerID   int64  `json:"winner_id"`
+			FinalPrice string `json:"final_price"`
+			Status     int    `json:"status"`
+		} `json:"data"`
+	}
+	assert.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.Equal(t, 0, body.Code)
+	assert.NotZero(t, body.Data.ID)
+	assert.Equal(t, int64(101), body.Data.AuctionID)
+	assert.Equal(t, int64(11), body.Data.ProductID)
+	assert.Equal(t, int64(2001), body.Data.WinnerID)
+	assert.Equal(t, "110.00", body.Data.FinalPrice)
+	assert.Equal(t, int(model.OrderStatusPending), body.Data.Status)
+}
+
+func TestOrderHandler_CreateFromAuctionResultRejectsInvalidPrice(t *testing.T) {
+	h, _ := newOrderHandlerWithDB(t)
+
+	c := app.NewContext(0)
+	c.Request.SetMethod(consts.MethodPost)
+	c.Request.SetRequestURI("/internal/orders/from-auction-result")
+	c.Request.Header.SetContentTypeBytes([]byte("application/json"))
+	c.Request.SetBodyString(`{"auction_id":101,"product_id":11,"winner_id":2001,"final_price":"abc"}`)
+
+	h.CreateFromAuctionResult(context.Background(), c)
+
+	assert.Equal(t, 400, c.Response.StatusCode())
+}
 
 // TestOrderHandler_GetUserHistory_AuthContract 验证 spec C / F-C3 安全契约：
 //   - 未携带 X-User-ID（即 Gateway JWT 中间件未放行） → 401；

@@ -1,12 +1,19 @@
 package service
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
 
+	"auction-service/dao"
 	"auction-service/model"
 
+	"github.com/glebarez/sqlite"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 // TestStateMachine_CanBid 测试出价权限判断
@@ -157,9 +164,9 @@ func TestStateMachine_GetRemainingDelayTime(t *testing.T) {
 // TestAuction_IsInDelayWindow 测试延时窗口判断
 func TestAuction_IsInDelayWindow(t *testing.T) {
 	tests := []struct {
-		name            string
-		endTime         time.Time
-		triggerBefore   int
+		name             string
+		endTime          time.Time
+		triggerBefore    int
 		expectedInWindow bool
 	}{
 		{
@@ -216,6 +223,104 @@ func TestAuction_CanBid_Method(t *testing.T) {
 			assert.Equal(t, tt.expected, auction.CanBid())
 		})
 	}
+}
+
+type recordingOrderCreator struct {
+	err   error
+	calls []model.AuctionOrderRequest
+}
+
+func (r *recordingOrderCreator) CreateOrderFromAuctionResult(_ context.Context, req model.AuctionOrderRequest) error {
+	r.calls = append(r.calls, req)
+	return r.err
+}
+
+type recordingNotificationSender struct {
+	sent []model.NotificationRequest
+}
+
+func (r *recordingNotificationSender) SendNotification(_ context.Context, req *model.NotificationRequest) error {
+	r.sent = append(r.sent, *req)
+	return nil
+}
+
+func (r *recordingNotificationSender) SendBatchNotifications(_ context.Context, _ []*model.NotificationRequest) error {
+	return nil
+}
+
+func newAuctionServiceTestDB(t *testing.T) *gorm.DB {
+	t.Helper()
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Auction{}, &model.Bid{}))
+	return db
+}
+
+func TestEndAuctionCreatesPendingOrderBeforeWinnerNotification(t *testing.T) {
+	db := newAuctionServiceTestDB(t)
+	winnerID := int64(2001)
+	auction := &model.Auction{
+		ID:           101,
+		ProductID:    11,
+		Status:       model.AuctionStatusOngoing,
+		CurrentPrice: decimal.NewFromInt(110),
+		WinnerID:     &winnerID,
+		StartTime:    time.Now().Add(-time.Minute),
+		EndTime:      time.Now().Add(-time.Second),
+	}
+	require.NoError(t, db.Create(auction).Error)
+	require.NoError(t, db.Create(&model.Bid{AuctionID: auction.ID, UserID: winnerID, Amount: decimal.NewFromInt(110)}).Error)
+
+	orderCreator := &recordingOrderCreator{}
+	notifications := &recordingNotificationSender{}
+	svc := NewAuctionService(dao.NewAuctionDAO(db))
+	svc.SetBidDAO(dao.NewBidDAO(db))
+	svc.SetOrderCreator(orderCreator)
+	svc.SetNotificationSender(notifications)
+
+	err := svc.EndAuction(context.Background(), auction.ID)
+
+	require.NoError(t, err)
+	require.Len(t, orderCreator.calls, 1)
+	assert.Equal(t, int64(101), orderCreator.calls[0].AuctionID)
+	assert.Equal(t, int64(11), orderCreator.calls[0].ProductID)
+	assert.Equal(t, int64(2001), orderCreator.calls[0].WinnerID)
+	assert.True(t, orderCreator.calls[0].FinalPrice.Equal(decimal.NewFromInt(110)))
+	require.Len(t, notifications.sent, 1)
+	assert.Equal(t, model.NotificationTypeAuctionWon, notifications.sent[0].Type)
+}
+
+func TestEndAuctionDoesNotSendWinnerNotificationWhenOrderCreationFails(t *testing.T) {
+	db := newAuctionServiceTestDB(t)
+	winnerID := int64(2001)
+	auction := &model.Auction{
+		ID:           102,
+		ProductID:    11,
+		Status:       model.AuctionStatusOngoing,
+		CurrentPrice: decimal.NewFromInt(110),
+		WinnerID:     &winnerID,
+		StartTime:    time.Now().Add(-time.Minute),
+		EndTime:      time.Now().Add(-time.Second),
+	}
+	require.NoError(t, db.Create(auction).Error)
+	require.NoError(t, db.Create(&model.Bid{AuctionID: auction.ID, UserID: winnerID, Amount: decimal.NewFromInt(110)}).Error)
+
+	orderCreator := &recordingOrderCreator{err: errors.New("product-service unavailable")}
+	notifications := &recordingNotificationSender{}
+	svc := NewAuctionService(dao.NewAuctionDAO(db))
+	svc.SetBidDAO(dao.NewBidDAO(db))
+	svc.SetOrderCreator(orderCreator)
+	svc.SetNotificationSender(notifications)
+
+	err := svc.EndAuction(context.Background(), auction.ID)
+
+	require.Error(t, err)
+	require.Len(t, orderCreator.calls, 1)
+	assert.Empty(t, notifications.sent)
+
+	var saved model.Auction
+	require.NoError(t, db.First(&saved, auction.ID).Error)
+	assert.Equal(t, model.AuctionStatusOngoing, saved.Status)
 }
 
 // TestAuction_IsEnded 测试竞拍是否已结束

@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/shopspring/decimal"
 
 	"product-service/model"
 	"product-service/service"
@@ -119,6 +120,51 @@ func (h *OrderHandler) Summary(ctx context.Context, c *app.RequestContext) {
 	}
 
 	c.JSON(200, map[string]interface{}{"code": 0, "message": "success", "data": summary})
+}
+
+type createOrderFromAuctionResultRequest struct {
+	AuctionID  int64  `json:"auction_id"`
+	ProductID  int64  `json:"product_id"`
+	WinnerID   int64  `json:"winner_id"`
+	FinalPrice string `json:"final_price"`
+}
+
+// CreateFromAuctionResult creates the pending order for a finalized auction.
+// This handler is mounted behind /internal and protected by InternalAuthMiddleware.
+func (h *OrderHandler) CreateFromAuctionResult(ctx context.Context, c *app.RequestContext) {
+	var req createOrderFromAuctionResultRequest
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "请求参数错误"})
+		return
+	}
+	if req.AuctionID <= 0 || req.ProductID <= 0 || req.WinnerID <= 0 || req.FinalPrice == "" {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "请求参数错误"})
+		return
+	}
+	finalPrice, err := decimal.NewFromString(req.FinalPrice)
+	if err != nil || !finalPrice.GreaterThan(decimal.Zero) {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "无效的成交价"})
+		return
+	}
+
+	order, err := h.orderService.CreateOrderFromAuctionResult(ctx, req.AuctionID, req.ProductID, req.WinnerID, finalPrice)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "创建订单失败"})
+		return
+	}
+
+	c.JSON(200, map[string]interface{}{
+		"code":    0,
+		"message": "success",
+		"data": map[string]interface{}{
+			"id":          order.ID,
+			"auction_id":  order.AuctionID,
+			"product_id":  order.ProductID,
+			"winner_id":   order.WinnerID,
+			"final_price": order.FinalPrice.StringFixed(2),
+			"status":      order.Status,
+		},
+	})
 }
 
 // Pay 支付订单
