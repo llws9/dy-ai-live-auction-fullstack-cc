@@ -174,6 +174,52 @@ func TestHTTPProductClient_GetAuctionProductInfo(t *testing.T) {
 	assert.True(t, info.RuleBound)
 }
 
+func TestHTTPProductClient_GetAuctionProductInfoReturnsErrorOnHTTPStatus(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte(`{"code":503,"message":"database exploded"}`))
+	}))
+	defer srv.Close()
+
+	c := NewHTTPProductClient(srv.URL, time.Second)
+	_, err := c.GetAuctionProductInfo(context.Background(), 11)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "status 503")
+	assert.NotContains(t, err.Error(), "database exploded")
+}
+
+func TestHTTPProductClient_GetAuctionProductInfoReturnsErrorOnBusinessCode(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"code":    409,
+			"message": "product not auctionable",
+		})
+	}))
+	defer srv.Close()
+
+	c := NewHTTPProductClient(srv.URL, time.Second)
+	_, err := c.GetAuctionProductInfo(context.Background(), 11)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "business code 409")
+}
+
+func TestHTTPProductClient_GetAuctionProductInfoReturnsErrorOnDecodeFailure(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{not-json`))
+	}))
+	defer srv.Close()
+
+	c := NewHTTPProductClient(srv.URL, time.Second)
+	_, err := c.GetAuctionProductInfo(context.Background(), 11)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "decode response")
+}
+
 func TestHTTPProductClient_GetOrCreateActiveLiveStream(t *testing.T) {
 	var capturedBody map[string]interface{}
 	var capturedToken string
@@ -211,6 +257,21 @@ func TestHTTPProductClient_GetOrCreateActiveLiveStream(t *testing.T) {
 	assert.Equal(t, "merchant_1001的直播间", live.Name)
 }
 
+func TestHTTPProductClient_GetOrCreateActiveLiveStreamReturnsErrorOnHTTPStatus(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+		_, _ = w.Write([]byte(`{"code":502,"message":"upstream failed"}`))
+	}))
+	defer srv.Close()
+
+	c := NewHTTPProductClient(srv.URL, time.Second)
+	_, err := c.GetOrCreateActiveLiveStream(context.Background(), 1001, "merchant_1001")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "status 502")
+	assert.NotContains(t, err.Error(), "upstream failed")
+}
+
 func TestHTTPProductClient_GetOrCreateActiveLiveStreamReturnsErrorOnBusinessCode(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -225,6 +286,21 @@ func TestHTTPProductClient_GetOrCreateActiveLiveStreamReturnsErrorOnBusinessCode
 	_, err := c.GetOrCreateActiveLiveStream(context.Background(), 1001, "merchant_1001")
 
 	require.Error(t, err)
+	assert.Contains(t, err.Error(), "business code 409")
+}
+
+func TestHTTPProductClient_GetOrCreateActiveLiveStreamReturnsErrorOnDecodeFailure(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{not-json`))
+	}))
+	defer srv.Close()
+
+	c := NewHTTPProductClient(srv.URL, time.Second)
+	_, err := c.GetOrCreateActiveLiveStream(context.Background(), 1001, "merchant_1001")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "decode response")
 }
 
 func TestCreateOrderFromAuctionResult(t *testing.T) {

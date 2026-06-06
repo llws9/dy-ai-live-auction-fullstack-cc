@@ -38,7 +38,7 @@
 | In Progress | `0` |
 | Review | `1` |
 | Pending | `6` |
-| Last Updated | `2026-06-07 04:09` |
+| Last Updated | `2026-06-07 04:19` |
 
 ## Task Matrix
 
@@ -247,6 +247,11 @@
 | `cd backend/auction && go test ./handler -count=1` | Spec review fix: handler test fakes compile against expanded `ProductClient` | PASS: `ok auction-service/handler 1.159s` | `pass` |
 | `cd backend/auction && go test ./... -count=1` | Auction-service regression passes after fake sync | PASS: all auction-service packages passed | `pass` |
 | `git diff --check` | No whitespace errors after fake sync | PASS: exit 0 | `pass` |
+| `code quality review` | HTTP client error branches are covered with contextual error assertions | `CHANGES_REQUESTED: add GetAuctionProductInfo HTTP/business/decode error tests and GetOrCreateActiveLiveStream HTTP/decode error tests; assert status/business code/decode response context without depending on raw response body` | `changes_requested` |
+| `cd backend/auction && go test ./client -run 'TestHTTPProductClient_(GetAuctionProductInfo\|GetOrCreateActiveLiveStream)' -count=1` | Review fix targeted client tests pass | PASS: `ok auction-service/client 0.989s` | `pass` |
+| `cd backend/auction && go test ./client -count=1` | Client package regression passes after review fix | PASS: `ok auction-service/client 0.564s` | `pass` |
+| `cd backend/auction && go test ./... -count=1` | Auction-service full regression passes after review fix | PASS: all auction-service packages passed | `pass` |
+| `git diff --check` | No whitespace errors after review fix | PASS: exit 0 | `pass` |
 
 **Spec Review Fix**
 
@@ -254,11 +259,24 @@
 - Fix scope: synchronized only the handler test fake by adding no-op implementations returning `nil, nil`; these methods are not called by the existing list/result/fixed-price tests and do not change test semantics.
 - Status remains `review` after the blocker fix and verification.
 
+**Quality Review Fix**
+
+- Added `GetAuctionProductInfo` error branch coverage for HTTP status, product-service business code, and JSON decode failure.
+- Added `GetOrCreateActiveLiveStream` error branch coverage for HTTP status and JSON decode failure; strengthened the existing business-code test with `business code 409` context assertion.
+- HTTP status tests assert `status` context and explicitly avoid depending on or leaking raw response body text.
+- Existing implementation already returned `status`, `business code`, and `decode response` context, so no production code change was required.
+- Status remains `review` after the quality review test fix and verification.
+
 **Modified Files**
 
 - `backend/auction/client/product_client.go`
 - `backend/auction/client/product_client_test.go`
 - `backend/auction/handler/auction_list_test.go`
+- `docs/superpowers/sdd/runs/2026-06-07-auction-product-lifecycle-state.md`
+
+**Quality Review Fix Modified Files**
+
+- `backend/auction/client/product_client_test.go`
 - `docs/superpowers/sdd/runs/2026-06-07-auction-product-lifecycle-state.md`
 
 **Risks**
