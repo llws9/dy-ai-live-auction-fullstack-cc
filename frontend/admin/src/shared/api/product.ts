@@ -40,6 +40,18 @@ export interface CopywritingDraft {
   suggested_start_price: string;
 }
 
+function normalizeCategoryList(response: Category[] | { list?: Category[] }): Category[] {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  if (Array.isArray(response.list)) {
+    return response.list;
+  }
+
+  return [];
+}
+
 export const productApi = {
   // 获取商品列表
   list: (params?: ProductListParams) => {
@@ -52,7 +64,7 @@ export const productApi = {
   get: (id: number) => get<Product>(`/admin/products/${id}`).then(normalizeProductText),
 
   // 获取分类列表
-  listCategories: () => get<Category[]>('/categories'),
+  listCategories: () => get<Category[] | { list?: Category[] }>('/categories').then(normalizeCategoryList),
 
   // 创建商品
   create: (data: ProductCreateData) => post<Product>('/admin/products', data).then(normalizeProductText),

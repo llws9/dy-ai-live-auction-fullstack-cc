@@ -94,11 +94,11 @@ describe('productApi category contract', () => {
     expect(put).toHaveBeenCalledWith('/admin/products/101', updatePayload);
   });
 
-  it('module productApi adds listCategories and calls GET /categories', async () => {
+  it('module productApi unwraps category list responses from GET /categories', async () => {
     const categories: Category[] = [
       { id: 9, name: '艺术收藏', code: 'art-collection', status: 1 },
     ];
-    (get as jest.Mock).mockResolvedValue(categories);
+    (get as jest.Mock).mockResolvedValue({ list: categories, total: 1, page: 1, page_size: 20 });
 
     const result = await productApi.listCategories();
 
@@ -106,11 +106,11 @@ describe('productApi category contract', () => {
     expect(result).toEqual(categories);
   });
 
-  it('shared productApi adds listCategories and calls GET /categories', async () => {
+  it('shared productApi unwraps category list responses from GET /categories', async () => {
     const categories: Category[] = [
       { id: 11, name: '珠宝名表', code: 'jewelry-watch', status: 1 },
     ];
-    (get as jest.Mock).mockResolvedValue(categories);
+    (get as jest.Mock).mockResolvedValue({ list: categories, total: 1, page: 1, page_size: 20 });
 
     const result = await sharedProductApi.listCategories();
 

@@ -167,6 +167,30 @@ export const notificationApi = {
   markAllAsRead: () => put<void>('/notifications/read-all'),
 };
 
+function normalizeRevenueStatsResponse(response: any, groupBy?: string): any[] {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  if (groupBy === 'category' && Array.isArray(response?.category_distribution)) {
+    return response.category_distribution;
+  }
+
+  if (Array.isArray(response?.daily_revenue)) {
+    return response.daily_revenue;
+  }
+
+  if (Array.isArray(response?.monthly_revenue)) {
+    return response.monthly_revenue;
+  }
+
+  if (Array.isArray(response?.list)) {
+    return response.list;
+  }
+
+  return [];
+}
+
 // 统计API
 export const statisticsApi = {
   getOverview: () => get<any>('/statistics/overview'),
@@ -178,7 +202,9 @@ export const statisticsApi = {
 
   getRevenueStats: (params?: { start_date?: string; end_date?: string; category?: string; group_by?: string }) => {
     const query = buildQuery(params || {});
-    return get<any[]>(`/statistics/revenue?${query}`);
+    return get<any>(`/statistics/revenue?${query}`).then((response) =>
+      normalizeRevenueStatsResponse(response, params?.group_by)
+    );
   },
 
   getUserStats: (params?: { start_date?: string; end_date?: string }) => {
