@@ -56,6 +56,10 @@ function getDefaultMessage(status: number): string {
   return messages[status] || '请求失败，请稍后重试';
 }
 
+function isSuccessBusinessCode(code: number): boolean {
+  return code === 0 || (code >= 200 && code < 300);
+}
+
 // 处理错误响应
 async function handleErrorResponse(response: Response): Promise<never> {
   let errorData: any = {};
@@ -143,7 +147,7 @@ async function request<T>(
       const data: ApiResponse<T> = await response.json();
 
       // 检查业务错误码
-      if (data.code && data.code !== 0 && data.code !== 200) {
+      if (typeof data.code === 'number' && !isSuccessBusinessCode(data.code)) {
         const error = new ApiError(
           data.message || data.msg || '操作失败',
           response.status,
