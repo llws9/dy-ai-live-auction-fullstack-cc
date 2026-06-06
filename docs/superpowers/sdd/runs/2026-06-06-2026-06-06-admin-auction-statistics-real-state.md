@@ -15,7 +15,7 @@
 | Base Branch | `main` |
 | Started At | `2026-06-06 17:47` |
 | Owner | `main-agent` |
-| Status | `active` |
+| Status | `complete` |
 
 ## Input Documents
 
@@ -33,17 +33,17 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `1` |
-| Done | `0` |
+| Done | `1` |
 | Blocked | `0` |
-| In Progress | `1` |
+| In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-06 17:51` |
+| Last Updated | `2026-06-06 18:20` |
 
 ## Task Matrix
 
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Allowed Files |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `T001` | `Imported execution task` | `in_progress` | `main-agent` | `W1` | `-` | `all mode: inline` | `from tasks` |
+| `T001` | `Imported execution task` | `done` | `main-agent` | `W1` | `-` | `all mode: inline` | `from tasks` |
 
 ## Wave Plan
 
@@ -57,10 +57,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `in_progress` |
+| Status | `done` |
 | Owner | `main-agent` |
 | Started At | `2026-06-06 17:51` |
-| Completed At | `-` |
+| Completed At | `2026-06-06 18:20` |
 | Branch | `feat/admin-auction-statistics-real` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-auction-statistics-real` |
 | Depends On | `-` |
@@ -88,6 +88,11 @@
 | `cd backend/auction && go test . -run '^$'` | `main package compiles after route registration` | `ok auction-service 0.689s [no tests to run]` | `pass` |
 | `cd frontend/admin && npm test -- Stats.auctionStats.test.tsx --runInBand` | `FAIL before frontend fix: wrong success rate and static fallback remains` | `FAIL: expected 75.0%, got 62.5%; found \"count\":35 fallback` | `red_passed` |
 | `cd frontend/admin && npm test -- Stats.auctionStats.test.tsx --runInBand` | `PASS after frontend fix` | `PASS src/pages-new/__tests__/Stats.auctionStats.test.tsx, 2 tests` | `pass` |
+| `cd backend/gateway && go test ./router -run 'TestStatistics(AuctionRouteUsesAuctionService\|NonAuctionRoutesStillUseProductService)' -count=1` | `Final verification passes` | `ok gateway-service/router 0.952s` | `pass` |
+| `cd backend/auction && go test ./dao ./service ./handler -run 'TestStatistics\|TestAuctionStatistics\|TestDefaultAuctionStatisticsRange' -count=1` | `Final verification passes` | `ok auction-service/dao 0.759s; ok auction-service/service 1.948s; ok auction-service/handler 0.965s` | `pass` |
+| `cd frontend/admin && npm test -- Stats.auctionStats.test.tsx --runInBand` | `Final verification passes` | `PASS 1 suite, 2 tests` | `pass` |
+| `cd frontend/admin && npm run build` | `Admin build passes` | `tsc && vite build; built in 9.08s` | `pass` |
+| `git diff --check` | `No whitespace errors` | `exit 0` | `pass` |
 
 **Progress Log**
 
@@ -97,6 +102,7 @@
 - `2026-06-06 18:02` completed service slice: date range validation, missing-date zero fill, and one-decimal success rate calculation.
 - `2026-06-06 18:08` completed handler slice: `/api/v1/statistics/auctions` is exposed in auction-service behind internal auth, with role-scope and query validation in handler.
 - `2026-06-06 18:13` completed Admin frontend slice: auction stats request now sends recent 7-day day-group params, computes indicators from real array data, and removes static fallback data on API failure.
+- `2026-06-06 18:20` final verification completed; all planned focused checks and Admin build passed.
 
 **Modified Files**
 
@@ -118,20 +124,35 @@
 
 **Handoff**
 
-- First response line used: `pending`
+- Completion summary: Admin auction statistics now routes through Gateway to auction-service, aggregates real `auctions` + `bids` data, and the Admin UI consumes real array data without static fallback.
+- Remaining work: `none`
+- First response line used: `当前分支/worktree：feat/admin-auction-statistics-real @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-auction-statistics-real`
 
 
 ## Final Review Checklist
 
-- [ ] State file was created before subagent dispatch.
-- [ ] Every implementation task records TDD Red -> Green -> Verify evidence.
-- [ ] Every completed subagent response starts with `当前分支/worktree：`.
-- [ ] Verification commands and results are recorded.
+- [x] State file was created before implementation.
+- [x] Every implementation task records TDD Red -> Green -> Verify evidence.
+- [x] No subagents were dispatched; inline execution was used because the user did not explicitly request subagent delegation.
+- [x] Verification commands and results are recorded.
 
 ## Final Handoff
 
 当前分支/worktree：feat/admin-auction-statistics-real @ /Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-admin-auction-statistics-real
 
-**状态**
+**完成项**
 
-- `initialized`
+- Gateway `/api/v1/statistics/auctions` routes to auction-service.
+- auction-service exposes real daily auction statistics from `auctions` and `bids`.
+- Admin `数据统计 -> 竞拍统计` consumes real stats and removes static fallback data.
+
+**未完成项**
+
+- none
+
+**验证结果**
+
+- Gateway route focused tests passed.
+- Auction DAO/service/handler focused tests passed.
+- Admin auction stats Jest test passed.
+- Admin production build passed.
