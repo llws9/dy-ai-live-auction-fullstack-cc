@@ -24,10 +24,12 @@ func newAdminOrderHandlerWithSeed(t *testing.T, seed func(db *gorm.DB)) *OrderHa
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open("file::memory:?mode=memory&cache=shared"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&model.Order{}, &model.Product{}))
+	require.NoError(t, db.AutoMigrate(&model.Order{}, &model.Product{}, &model.LiveStream{}, &model.User{}))
 	// shared cache 在进程内复用，先清表再 seed。
 	db.Exec("DELETE FROM orders")
 	db.Exec("DELETE FROM products")
+	db.Exec("DELETE FROM live_streams")
+	db.Exec("DELETE FROM users")
 	if seed != nil {
 		seed(db)
 	}

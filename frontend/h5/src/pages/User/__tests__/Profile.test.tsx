@@ -98,6 +98,8 @@ describe('Profile migration', () => {
     expect(screen.getByText('¥12,288')).toBeInTheDocument();
     expect(screen.getByText('冻结 ¥600')).toBeInTheDocument();
     expect(screen.getByText('鎏金香炉')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '全部' })).toHaveAttribute('href', '/orders');
+    expect(screen.getByRole('link', { name: /鎏金香炉/ })).toHaveAttribute('href', '/order/56');
 
     expect(mockedUserApi.getProfile).toHaveBeenCalledTimes(1);
     expect(mockedUserApi.getBalance).toHaveBeenCalledTimes(1);

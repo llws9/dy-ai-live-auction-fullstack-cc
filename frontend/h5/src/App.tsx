@@ -24,6 +24,7 @@ const Follow = lazy(() => import('./pages/Follow'))
 const Profile = lazy(() => import('./pages/User/Index'))
 const Notifications = lazy(() => import('./pages/Notifications'))
 const Addresses = lazy(() => import('./pages/Addresses'))
+const OrderList = lazy(() => import('./pages/Order/List'))
 const OrderDetail = lazy(() => import('./pages/Order/Detail'))
 
 // 认证保护组件
@@ -108,6 +109,11 @@ function App() {
                       <Route path="/addresses" element={
                         <PrivateRoute>
                           <Addresses />
+                        </PrivateRoute>
+                      } />
+                      <Route path="/orders" element={
+                        <PrivateRoute>
+                          <OrderList />
                         </PrivateRoute>
                       } />
                       <Route path="/order/:id" element={

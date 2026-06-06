@@ -24,10 +24,11 @@ func newOrderHandlerWithDB(t *testing.T) (*OrderHandler, *gorm.DB) {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
 	assert.NoError(t, err)
-	assert.NoError(t, db.AutoMigrate(&model.Order{}, &model.Product{}, &model.Category{}))
+	assert.NoError(t, db.AutoMigrate(&model.Order{}, &model.Product{}, &model.Category{}, &model.LiveStream{}, &model.User{}))
 	productDAO := dao.NewProductDAO(db)
 	svc := service.NewOrderService(dao.NewOrderDAO(db), dao.NewHistoryDAO(db))
 	svc.SetProductDAO(productDAO)
+	svc.SetAdminOrderDAO(dao.NewOrderAdminDAO(db))
 	return NewOrderHandler(svc), db
 }
 
@@ -261,6 +262,50 @@ func TestOrderHandler_List_AuthContract(t *testing.T) {
 
 		assert.Equal(t, 200, c.Response.StatusCode())
 	})
+}
+
+func TestOrderHandler_List_ReturnsProductDisplayFields(t *testing.T) {
+	h, db := newOrderHandlerWithDB(t)
+	ownerID := int64(9001)
+	assert.NoError(t, db.Create(&model.User{
+		ID:     ownerID,
+		Name:   "山海商家",
+		Role:   int(model.RoleStreamer),
+		Status: 1,
+	}).Error)
+	assert.NoError(t, db.Create(&model.Product{
+		ID:      992204,
+		OwnerID: &ownerID,
+		Name:    "山海鎏金香炉",
+		Images:  model.JSONArray{"https://cdn.example.com/products/incense-burner.jpg"},
+		Status:  model.ProductStatusPublished,
+	}).Error)
+	assert.NoError(t, db.Create(&model.Order{
+		ID:         56,
+		AuctionID:  992304,
+		ProductID:  992204,
+		SellerID:   &ownerID,
+		WinnerID:   1001,
+		FinalPrice: decimal.NewFromInt(6800),
+		Status:     model.OrderStatusPending,
+	}).Error)
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/api/v1/orders?page=1&page_size=20")
+	c.Request.Header.Set("X-User-ID", "1001")
+
+	h.List(context.Background(), c)
+
+	assert.Equal(t, 200, c.Response.StatusCode())
+	var body struct {
+		List []map[string]interface{} `json:"list"`
+	}
+	assert.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.Len(t, body.List, 1)
+	assert.Equal(t, "山海鎏金香炉", body.List[0]["product_name"])
+	assert.Equal(t, "https://cdn.example.com/products/incense-burner.jpg", body.List[0]["product_image"])
+	assert.Equal(t, "山海商家", body.List[0]["seller_name"])
 }
 
 type stubSummaryGetter struct {

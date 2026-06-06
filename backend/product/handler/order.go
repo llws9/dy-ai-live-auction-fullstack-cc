@@ -50,7 +50,7 @@ func (h *OrderHandler) List(ctx context.Context, c *app.RequestContext) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 
-	orders, total, err := h.orderService.ListOrders(ctx, &userID, page, pageSize)
+	orders, total, err := h.orderService.ListOrderViews(ctx, &userID, page, pageSize)
 	if err != nil {
 		c.JSON(500, map[string]interface{}{
 			"code":    500,

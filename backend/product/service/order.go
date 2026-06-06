@@ -136,6 +136,51 @@ func (s *OrderService) ListOrders(ctx context.Context, userID *int64, page, page
 	return s.orderDAO.List(ctx, userID, page, pageSize)
 }
 
+func (s *OrderService) ListOrderViews(ctx context.Context, userID *int64, page, pageSize int) ([]OrderAdminVO, int64, error) {
+	if s.adminDAO != nil {
+		rows, total, _, err := s.adminDAO.ListAdminOrdersScoped(ctx, nil, userID, nil, "", page, pageSize)
+		if err != nil {
+			return nil, 0, err
+		}
+		vos := make([]OrderAdminVO, 0, len(rows))
+		for _, r := range rows {
+			vos = append(vos, toAdminVO(r))
+		}
+		return vos, total, nil
+	}
+
+	orders, total, err := s.ListOrders(ctx, userID, page, pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+	vos := make([]OrderAdminVO, 0, len(orders))
+	for _, order := range orders {
+		vos = append(vos, OrderAdminVO{
+			ID:          order.ID,
+			AuctionID:   order.AuctionID,
+			ProductID:   order.ProductID,
+			SellerID:    order.SellerID,
+			SellerName:  sellerNameFromID(order.SellerID),
+			WinnerID:    order.WinnerID,
+			UserID:      order.WinnerID,
+			FinalPrice:  order.FinalPrice,
+			Status:      order.Status,
+			PaidAt:      order.PaidAt,
+			ShippedAt:   order.ShippedAt,
+			CompletedAt: order.CompletedAt,
+			CreatedAt:   order.CreatedAt,
+		})
+	}
+	return vos, total, nil
+}
+
+func sellerNameFromID(sellerID *int64) string {
+	if sellerID == nil || *sellerID <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("商家 #%d", *sellerID)
+}
+
 // GetSummary 获取用户订单触点汇总
 func (s *OrderService) GetSummary(ctx context.Context, userID int64) (*model.OrderSummaryResponse, error) {
 	pending, err := s.orderDAO.CountByWinnerAndStatus(ctx, userID, model.OrderStatusPending)

@@ -37,9 +37,11 @@ func newAdminOrderServiceWithSeed(t *testing.T, seed func(db *gorm.DB)) *OrderSe
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open("file::memory:?mode=memory&cache=shared"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&model.Order{}, &model.Product{}))
+	require.NoError(t, db.AutoMigrate(&model.Order{}, &model.Product{}, &model.LiveStream{}, &model.User{}))
 	require.NoError(t, db.Exec("DELETE FROM orders").Error)
 	require.NoError(t, db.Exec("DELETE FROM products").Error)
+	require.NoError(t, db.Exec("DELETE FROM live_streams").Error)
+	require.NoError(t, db.Exec("DELETE FROM users").Error)
 	if seed != nil {
 		seed(db)
 	}

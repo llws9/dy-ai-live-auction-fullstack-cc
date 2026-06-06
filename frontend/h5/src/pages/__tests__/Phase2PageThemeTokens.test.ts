@@ -33,6 +33,7 @@ describe('phase 2 scoped page theme tokens', () => {
     ['Notifications/Notifications.module.css'],
     ['Follow/Following.module.css'],
     ['History/AuctionHistory.module.css'],
+    ['Order/List.module.css'],
   ])('keeps %s on semantic theme surfaces', (relativePath) => {
     const css = readPageCss(relativePath);
 

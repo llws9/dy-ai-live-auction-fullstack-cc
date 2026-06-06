@@ -263,13 +263,13 @@ const UserCenter: React.FC = () => {
             <p className={styles.cardLabel}>Orders</p>
             <h2>最近订单</h2>
           </div>
-          <Link to="/history">全部</Link>
+          <Link to="/orders">全部</Link>
         </div>
 
         {orders.length > 0 ? (
           <div className={styles.orderList}>
             {orders.map((order) => (
-              <Link key={order.id} to="/history" className={styles.orderItem}>
+              <Link key={order.id} to={`/order/${order.id}`} className={styles.orderItem}>
                 <div>
                   <strong>{order.product_name || order.product?.name || `订单 #${order.id}`}</strong>
                   <span>{order.created_at ? new Date(order.created_at).toLocaleDateString() : '待更新'}</span>

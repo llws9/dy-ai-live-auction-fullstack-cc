@@ -20,22 +20,24 @@ var ErrAdminDAOMissing = errors.New("admin order DAO is not configured")
 //   - product_image 取 products.images 数组首图（mysql 上是 JSON，sqlite 上是字符串，统一按字符串解析）；
 //   - user_name 留空，前端通过 fallback 渲染 `用户 #${user_id}`，不在此处跨库 JOIN auction 服务的 users 表。
 type OrderAdminVO struct {
-	ID           int64             `json:"id"`
-	AuctionID    int64             `json:"auction_id"`
-	ProductID    int64             `json:"product_id"`
-	ProductName  string            `json:"product_name"`
-	ProductImage string            `json:"product_image"`
-	SellerID     *int64            `json:"seller_id,omitempty"`
-	WinnerID     int64             `json:"winner_id"`
-	UserID       int64             `json:"user_id"`
-	UserName     string            `json:"user_name,omitempty"`
-	UserAvatar   string            `json:"user_avatar,omitempty"`
-	FinalPrice   decimal.Decimal   `json:"final_price"`
-	Status       model.OrderStatus `json:"status"`
-	PaidAt       *time.Time        `json:"paid_at,omitempty"`
-	ShippedAt    *time.Time        `json:"shipped_at,omitempty"`
-	CompletedAt  *time.Time        `json:"completed_at,omitempty"`
-	CreatedAt    time.Time         `json:"created_at"`
+	ID             int64             `json:"id"`
+	AuctionID      int64             `json:"auction_id"`
+	ProductID      int64             `json:"product_id"`
+	ProductName    string            `json:"product_name"`
+	ProductImage   string            `json:"product_image"`
+	LiveStreamName string            `json:"live_stream_name,omitempty"`
+	SellerID       *int64            `json:"seller_id,omitempty"`
+	SellerName     string            `json:"seller_name,omitempty"`
+	WinnerID       int64             `json:"winner_id"`
+	UserID         int64             `json:"user_id"`
+	UserName       string            `json:"user_name,omitempty"`
+	UserAvatar     string            `json:"user_avatar,omitempty"`
+	FinalPrice     decimal.Decimal   `json:"final_price"`
+	Status         model.OrderStatus `json:"status"`
+	PaidAt         *time.Time        `json:"paid_at,omitempty"`
+	ShippedAt      *time.Time        `json:"shipped_at,omitempty"`
+	CompletedAt    *time.Time        `json:"completed_at,omitempty"`
+	CreatedAt      time.Time         `json:"created_at"`
 }
 
 type OrderAdminSummary struct {
@@ -63,20 +65,22 @@ type UserSummaryProvider interface {
 
 func toAdminVO(row dao.OrderAdminRow) OrderAdminVO {
 	return OrderAdminVO{
-		ID:           row.ID,
-		AuctionID:    row.AuctionID,
-		ProductID:    row.ProductID,
-		ProductName:  row.ProductName,
-		ProductImage: firstProductImage(row.ProductImagesJSON),
-		SellerID:     row.SellerID,
-		WinnerID:     row.WinnerID,
-		UserID:       row.WinnerID,
-		FinalPrice:   row.FinalPrice,
-		Status:       row.Status,
-		PaidAt:       row.PaidAt,
-		ShippedAt:    row.ShippedAt,
-		CompletedAt:  row.CompletedAt,
-		CreatedAt:    row.CreatedAt,
+		ID:             row.ID,
+		AuctionID:      row.AuctionID,
+		ProductID:      row.ProductID,
+		ProductName:    row.ProductName,
+		ProductImage:   firstProductImage(row.ProductImagesJSON),
+		LiveStreamName: row.LiveStreamName,
+		SellerID:       row.SellerID,
+		SellerName:     row.SellerName,
+		WinnerID:       row.WinnerID,
+		UserID:         row.WinnerID,
+		FinalPrice:     row.FinalPrice,
+		Status:         row.Status,
+		PaidAt:         row.PaidAt,
+		ShippedAt:      row.ShippedAt,
+		CompletedAt:    row.CompletedAt,
+		CreatedAt:      row.CreatedAt,
 	}
 }
 

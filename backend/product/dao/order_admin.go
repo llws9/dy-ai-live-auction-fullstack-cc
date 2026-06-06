@@ -16,6 +16,8 @@ type OrderAdminRow struct {
 	model.Order
 	ProductName       string `json:"product_name" gorm:"column:product_name"`
 	ProductImagesJSON string `json:"-" gorm:"column:product_images"`
+	LiveStreamName    string `json:"live_stream_name" gorm:"column:live_stream_name"`
+	SellerName        string `json:"seller_name" gorm:"column:seller_name"`
 }
 
 type OrderAdminSummary struct {
@@ -40,8 +42,10 @@ func NewOrderAdminDAO(db *gorm.DB) *OrderAdminDAO {
 func (d *OrderAdminDAO) adminBaseQuery(ctx context.Context) *gorm.DB {
 	return d.db.WithContext(ctx).
 		Table("orders").
-		Select("orders.*, p.name AS product_name, p.images AS product_images").
-		Joins("LEFT JOIN products p ON p.id = orders.product_id")
+		Select("orders.*, p.name AS product_name, p.images AS product_images, ls.name AS live_stream_name, seller.name AS seller_name").
+		Joins("LEFT JOIN products p ON p.id = orders.product_id").
+		Joins("LEFT JOIN live_streams ls ON ls.creator_id = p.owner_id").
+		Joins("LEFT JOIN users seller ON seller.id = COALESCE(orders.seller_id, p.owner_id)")
 }
 
 func (d *OrderAdminDAO) adminCountQuery(ctx context.Context) *gorm.DB {
