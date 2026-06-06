@@ -124,7 +124,7 @@ describe('MobileShell', () => {
     expect(screen.getByRole('link', { name: /我的/ })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: /我的/ })).toHaveAttribute('data-state', 'active');
     expect(screen.getByRole('link', { name: /首页/ })).toHaveAttribute('data-state', 'inactive');
-    expect(await screen.findByLabelText('7 条待处理提醒')).toHaveTextContent('7');
+    expect(await screen.findByLabelText('8 条待处理提醒')).toHaveTextContent('8');
   });
 
   it('uses a live-safe content layout on live routes so the room stops above the bottom navigation', async () => {
@@ -143,13 +143,21 @@ describe('MobileShell', () => {
   });
 
   it('shows unread total badge on profile nav item from backend summary', async () => {
+    mockGetTouchpointSummary.mockResolvedValue({
+      unreadTotal: 83,
+      pendingPayment: 4,
+      wonNotPaid: 4,
+      outbid: 79,
+      endingSoon: 0,
+    });
+
     render(
       <MemoryRouter initialEntries={['/']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <BottomNav />
       </MemoryRouter>,
     );
 
-    expect(await screen.findByLabelText('7 条待处理提醒')).toHaveTextContent('7');
+    expect(await screen.findByLabelText('87 条待处理提醒')).toHaveTextContent('87');
     expect(mockGetTouchpointSummary).toHaveBeenCalledTimes(1);
     await waitFor(() =>
       expect(mockTrackEvent).toHaveBeenCalledWith('summary_exposed', {
@@ -157,7 +165,7 @@ describe('MobileShell', () => {
         entry: 'profile_tab',
         type: 'all',
         result: 'success',
-        countBucket: '6_10',
+        countBucket: '10_plus',
       })
     );
   });
@@ -273,7 +281,7 @@ describe('MobileShell', () => {
     );
 
     await waitFor(() => expect(mockGetTouchpointSummary).toHaveBeenCalledTimes(2));
-    expect(await screen.findByLabelText('4 条待处理提醒')).toHaveTextContent('4');
+    expect(await screen.findByLabelText('5 条待处理提醒')).toHaveTextContent('5');
 
     firstRequest.resolve({
       unreadTotal: 9,
@@ -283,8 +291,8 @@ describe('MobileShell', () => {
       endingSoon: 9,
     });
 
-    await waitFor(() => expect(screen.queryByLabelText('9 条待处理提醒')).not.toBeInTheDocument());
-    expect(screen.getByLabelText('4 条待处理提醒')).toHaveTextContent('4');
+    await waitFor(() => expect(screen.queryByLabelText('18 条待处理提醒')).not.toBeInTheDocument());
+    expect(screen.getByLabelText('5 条待处理提醒')).toHaveTextContent('5');
   });
 
   it.each(['/detail', '/result', '/notifications', '/following', '/history', '/login'])(

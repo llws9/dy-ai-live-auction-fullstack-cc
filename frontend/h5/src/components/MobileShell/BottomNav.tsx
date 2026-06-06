@@ -41,7 +41,8 @@ function trackNavClick(path: string) {
 
 function BottomNav() {
   const { pathname } = useLocation();
-  const { summaryLoaded, unreadTotal } = useTouchpointNotifications();
+  const { summaryLoaded, unreadTotal, wonNotPaid } = useTouchpointNotifications();
+  const profileUnreadTotal = unreadTotal + wonNotPaid;
   const hidden = isHiddenPath(pathname);
 
   useEffect(() => {
@@ -52,9 +53,9 @@ function BottomNav() {
       entry: 'profile_tab',
       type: 'all',
       result: 'success',
-      countBucket: getCountBucket(unreadTotal),
+      countBucket: getCountBucket(profileUnreadTotal),
     });
-  }, [hidden, summaryLoaded, unreadTotal]);
+  }, [hidden, summaryLoaded, profileUnreadTotal]);
 
   if (hidden) {
     return null;
@@ -78,7 +79,7 @@ function BottomNav() {
               <span className={styles.navIcon} aria-hidden="true">
                 {item.icon}
               </span>
-              {item.badge && <BadgeDot count={unreadTotal} />}
+              {item.badge && <BadgeDot count={profileUnreadTotal} />}
             </span>
             <span className={styles.navLabel}>{item.label}</span>
           </Link>

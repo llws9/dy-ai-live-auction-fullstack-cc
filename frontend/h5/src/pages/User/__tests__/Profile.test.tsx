@@ -136,7 +136,7 @@ describe('Profile migration', () => {
 
     expect(await screen.findByText('林见山')).toBeInTheDocument();
 
-    expect(await screen.findByLabelText('2 条待处理提醒')).toHaveTextContent('2');
+    expect(await screen.findByLabelText('1 条待处理提醒')).toHaveTextContent('1');
     expect(mockedNotificationApi.getTouchpointSummary).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('link', { name: /我的竞拍/ })).toHaveAttribute('href', '/history');
     expect(screen.getByRole('link', { name: /我的收藏/ })).toHaveAttribute('href', '/following');
@@ -154,7 +154,7 @@ describe('Profile migration', () => {
   it('shows unread notification badge on the notification center entry', async () => {
     mockedNotificationApi.getTouchpointSummary.mockResolvedValue({
       unreadTotal: 1,
-      pendingPayment: 0,
+      pendingPayment: 4,
       wonNotPaid: 0,
       outbid: 1,
       endingSoon: 0,
@@ -170,6 +170,6 @@ describe('Profile migration', () => {
     expect(screen.getByRole('link', { name: /消息通知/ })).toContainElement(
       screen.getByLabelText('1 条待处理提醒')
     );
-    expect(screen.queryByRole('link', { name: /我的竞拍.*1/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /我的竞拍.*4/ })).not.toBeInTheDocument();
   });
 });

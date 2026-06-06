@@ -5,6 +5,7 @@ import { TOUCHPOINT_SUMMARY_INVALIDATED_EVENT } from '../utils/touchpointSummary
 
 export interface TouchpointNotifications {
   pendingPayment: number;
+  wonNotPaid: number;
   unreadTotal: number;
   summaryLoaded: boolean;
 }
@@ -152,6 +153,7 @@ export function useTouchpointNotifications(): TouchpointNotifications {
 
   return {
     pendingPayment: summary.pendingPayment,
+    wonNotPaid: summary.wonNotPaid,
     unreadTotal: summary.unreadTotal,
     summaryLoaded,
   };

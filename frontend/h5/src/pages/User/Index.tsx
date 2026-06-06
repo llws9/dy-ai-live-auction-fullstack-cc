@@ -97,7 +97,7 @@ function orderStatusLabel(status?: number | string) {
 
 const UserCenter: React.FC = () => {
   const { user: authUser, logout } = useAuth();
-  const { pendingPayment, unreadTotal } = useTouchpointNotifications();
+  const { unreadTotal, wonNotPaid } = useTouchpointNotifications();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileUser | null>(authUser);
   const [balance, setBalance] = useState<BalanceData | null>(null);
@@ -291,7 +291,7 @@ const UserCenter: React.FC = () => {
           <span className={styles.menuIcon}>A</span>
           <span className={styles.menuLabel}>
             我的竞拍
-            <BadgeDot count={pendingPayment} className={styles.menuBadge} />
+            <BadgeDot count={wonNotPaid} className={styles.menuBadge} />
           </span>
           <b>›</b>
         </Link>
