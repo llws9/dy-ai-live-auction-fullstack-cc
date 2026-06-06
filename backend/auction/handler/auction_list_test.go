@@ -173,21 +173,18 @@ func TestBuildAuctionListResponse(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("auction whose product missing in batch result: product fields empty but item kept", func(t *testing.T) {
+	t.Run("auction whose product is not returned by batch is hidden from public list", func(t *testing.T) {
 		fl := &fakeLister{
 			out:      []model.Auction{{ID: 1, ProductID: 99}},
 			outTotal: 1,
 		}
-		// batch 返回空 map：表示 product-service 未找到该 id
+		// batch 返回空 map：表示 product-service 未找到该 id，或商品未发布。
 		fp := &fakeProductClient{batchOut: map[int64]client.ProductSummary{}}
 
 		items, total, err := BuildAuctionListResponse(ctx, fp, fl.List, ListParams{Page: 1, PageSize: 20})
 		require.NoError(t, err)
-		assert.Equal(t, int64(1), total)
-		require.Len(t, items, 1)
-		assert.Equal(t, int64(99), items[0].ProductID)
-		assert.Equal(t, int64(0), items[0].Product.ID)
-		assert.Equal(t, "", items[0].Product.Name)
+		assert.Equal(t, int64(0), total)
+		assert.Empty(t, items)
 	})
 
 	t.Run("upcoming flag is forwarded to auction filters", func(t *testing.T) {

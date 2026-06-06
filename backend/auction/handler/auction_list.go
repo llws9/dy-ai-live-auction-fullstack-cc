@@ -100,17 +100,26 @@ func BuildAuctionListResponse(
 
 	// Step 4: 回填
 	out := make([]AuctionListItem, 0, len(auctions))
+	hidden := int64(0)
 	for _, a := range auctions {
-		item := AuctionListItem{Auction: a}
 		if s, ok := summaries[a.ProductID]; ok {
+			item := AuctionListItem{Auction: a}
 			item.Product = AuctionProductSummary{
 				ID:         s.ID,
 				Name:       s.Name,
 				Image:      firstImage(s.Images),
 				CategoryID: s.CategoryID,
 			}
+			out = append(out, item)
+			continue
 		}
-		out = append(out, item)
+		hidden++
+	}
+	if hidden > 0 {
+		total -= hidden
+		if total < 0 {
+			total = 0
+		}
 	}
 	return out, total, nil
 }

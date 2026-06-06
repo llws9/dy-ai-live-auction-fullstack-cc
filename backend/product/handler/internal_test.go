@@ -42,9 +42,9 @@ func ptr64(v int64) *int64 { return &v }
 
 func TestInternalHandler_ListByCategory_OK(t *testing.T) {
 	h := newInternalHandlerWithSeed(t, func(db *gorm.DB) {
-		db.Create(&model.Product{Name: "A", CategoryID: ptr64(12)})
-		db.Create(&model.Product{Name: "B", CategoryID: ptr64(99)})
-		db.Create(&model.Product{Name: "C", CategoryID: ptr64(12)})
+		db.Create(&model.Product{Name: "A", CategoryID: ptr64(12), Status: model.ProductStatusPublished})
+		db.Create(&model.Product{Name: "B", CategoryID: ptr64(99), Status: model.ProductStatusPublished})
+		db.Create(&model.Product{Name: "C", CategoryID: ptr64(12), Status: model.ProductStatusPublished})
 	})
 
 	c := app.NewContext(0)
@@ -61,6 +61,29 @@ func TestInternalHandler_ListByCategory_OK(t *testing.T) {
 	assert.EqualValues(t, 2, data["total"])
 	items := data["items"].([]interface{})
 	assert.Len(t, items, 2)
+}
+
+func TestInternalHandler_ListByCategory_OnlyReturnsPublishedProducts(t *testing.T) {
+	h := newInternalHandlerWithSeed(t, func(db *gorm.DB) {
+		db.Create(&model.Product{Name: "draft", CategoryID: ptr64(12), Status: model.ProductStatusDraft})
+		db.Create(&model.Product{Name: "published", CategoryID: ptr64(12), Status: model.ProductStatusPublished})
+		db.Create(&model.Product{Name: "unpublished", CategoryID: ptr64(12), Status: model.ProductStatusUnpublished})
+	})
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/internal/products?category_id=12")
+
+	h.ListByCategory(context.Background(), c)
+
+	assert.Equal(t, 200, c.Response.StatusCode())
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	data := body["data"].(map[string]interface{})
+	assert.EqualValues(t, 1, data["total"])
+	items := data["items"].([]interface{})
+	require.Len(t, items, 1)
+	assert.Equal(t, "published", items[0].(map[string]interface{})["name"])
 }
 
 func TestInternalHandler_ListByCategory_MissingCategoryID(t *testing.T) {
@@ -92,8 +115,8 @@ func TestInternalHandler_ListByCategory_InvalidCategoryID(t *testing.T) {
 func TestInternalHandler_BatchByIDs_OK(t *testing.T) {
 	var p1, p2 int64
 	h := newInternalHandlerWithSeed(t, func(db *gorm.DB) {
-		a := &model.Product{Name: "A", CategoryID: ptr64(1), Images: model.JSONArray{"a.jpg"}}
-		b := &model.Product{Name: "B", CategoryID: ptr64(2)}
+		a := &model.Product{Name: "A", CategoryID: ptr64(1), Images: model.JSONArray{"a.jpg"}, Status: model.ProductStatusPublished}
+		b := &model.Product{Name: "B", CategoryID: ptr64(2), Status: model.ProductStatusPublished}
 		require.NoError(t, db.Create(a).Error)
 		require.NoError(t, db.Create(b).Error)
 		p1, p2 = a.ID, b.ID
@@ -116,6 +139,36 @@ func TestInternalHandler_BatchByIDs_OK(t *testing.T) {
 	data := resp["data"].(map[string]interface{})
 	items := data["items"].([]interface{})
 	assert.Len(t, items, 2, "missing id 99999 must not appear in items")
+}
+
+func TestInternalHandler_BatchByIDs_OnlyReturnsPublishedProducts(t *testing.T) {
+	var draftID, publishedID, unpublishedID int64
+	h := newInternalHandlerWithSeed(t, func(db *gorm.DB) {
+		draft := &model.Product{Name: "draft", Status: model.ProductStatusDraft}
+		published := &model.Product{Name: "published", Status: model.ProductStatusPublished}
+		unpublished := &model.Product{Name: "unpublished", Status: model.ProductStatusUnpublished}
+		require.NoError(t, db.Create(draft).Error)
+		require.NoError(t, db.Create(published).Error)
+		require.NoError(t, db.Create(unpublished).Error)
+		draftID, publishedID, unpublishedID = draft.ID, published.ID, unpublished.ID
+	})
+
+	raw, _ := json.Marshal(map[string]interface{}{"ids": []int64{draftID, publishedID, unpublishedID}})
+	c := app.NewContext(0)
+	c.Request.SetMethod("POST")
+	c.Request.SetRequestURI("/internal/products/batch")
+	c.Request.Header.SetContentTypeBytes([]byte("application/json"))
+	c.Request.SetBody(raw)
+
+	h.BatchByIDs(context.Background(), c)
+
+	assert.Equal(t, 200, c.Response.StatusCode())
+	var resp map[string]interface{}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &resp))
+	data := resp["data"].(map[string]interface{})
+	items := data["items"].([]interface{})
+	require.Len(t, items, 1)
+	assert.Equal(t, "published", items[0].(map[string]interface{})["name"])
 }
 
 func TestInternalHandler_BatchByIDs_EmptyIDsRejected(t *testing.T) {

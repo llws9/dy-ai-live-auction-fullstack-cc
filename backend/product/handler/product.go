@@ -88,7 +88,7 @@ func (h *ProductHandler) Get(ctx context.Context, c *app.RequestContext) {
 	}
 
 	product, err := h.productService.GetProduct(ctx, id)
-	if err != nil {
+	if err != nil || product.Status != model.ProductStatusPublished {
 		c.JSON(404, map[string]interface{}{
 			"code":    404,
 			"message": "商品不存在",
@@ -113,12 +113,24 @@ func (h *ProductHandler) Get(ctx context.Context, c *app.RequestContext) {
 func (h *ProductHandler) List(ctx context.Context, c *app.RequestContext) {
 	// 解析查询参数
 	statusStr := c.Query("status")
-	var status *model.ProductStatus
+	publishedStatus := model.ProductStatusPublished
+	status := &publishedStatus
 	if statusStr != "" {
 		s, err := strconv.Atoi(statusStr)
-		if err == nil {
-			st := model.ProductStatus(s)
-			status = &st
+		if err == nil && model.ProductStatus(s) != model.ProductStatusPublished {
+			page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+			pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+			c.JSON(200, map[string]interface{}{
+				"code":    200,
+				"message": "success",
+				"data": map[string]interface{}{
+					"list":      []model.Product{},
+					"total":     int64(0),
+					"page":      page,
+					"page_size": pageSize,
+				},
+			})
+			return
 		}
 	}
 

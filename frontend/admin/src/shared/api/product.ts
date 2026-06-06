@@ -44,28 +44,28 @@ export const productApi = {
   // 获取商品列表
   list: (params?: ProductListParams) => {
     const query = buildQuery(params || {});
-    return get<PaginatedResponse<Product>>(`/products?${query}`)
+    return get<PaginatedResponse<Product>>(`/admin/products?${query}`)
       .then(normalizeProductListResponse);
   },
 
   // 获取商品详情
-  get: (id: number) => get<Product>(`/products/${id}`).then(normalizeProductText),
+  get: (id: number) => get<Product>(`/admin/products/${id}`).then(normalizeProductText),
 
   // 获取分类列表
   listCategories: () => get<Category[]>('/categories'),
 
   // 创建商品
-  create: (data: ProductCreateData) => post<Product>('/products', data).then(normalizeProductText),
+  create: (data: ProductCreateData) => post<Product>('/admin/products', data).then(normalizeProductText),
 
   // AI 一键文案
   generateCopywriting: (data: CopywritingGenerateData) =>
     post<CopywritingDraft>('/products/ai/copywriting', data, { timeout: 70000 }),
 
   // 更新商品
-  update: (id: number, data: Partial<ProductCreateData>) => put<Product>(`/products/${id}`, data).then(normalizeProductText),
+  update: (id: number, data: Partial<ProductCreateData>) => put<Product>(`/admin/products/${id}`, data).then(normalizeProductText),
 
   // 删除商品
-  delete: (id: number) => del<void>(`/products/${id}`),
+  delete: (id: number) => del<void>(`/admin/products/${id}`),
 
   // 发布商品
   publish: (id: number) => post<Product>(`/products/${id}/publish`).then(normalizeProductText),

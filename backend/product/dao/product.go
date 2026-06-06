@@ -134,7 +134,8 @@ func (d *ProductDAO) ListByCategoryID(ctx context.Context, categoryID int64, pag
 	var products []model.Product
 	var total int64
 
-	query := d.db.WithContext(ctx).Model(&model.Product{}).Where("category_id = ?", categoryID)
+	query := d.db.WithContext(ctx).Model(&model.Product{}).
+		Where("category_id = ? AND status = ?", categoryID, model.ProductStatusPublished)
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
@@ -151,7 +152,9 @@ func (d *ProductDAO) GetByIDs(ctx context.Context, ids []int64) ([]model.Product
 		return []model.Product{}, nil
 	}
 	var products []model.Product
-	if err := d.db.WithContext(ctx).Where("id IN ?", ids).Find(&products).Error; err != nil {
+	if err := d.db.WithContext(ctx).
+		Where("id IN ? AND status = ?", ids, model.ProductStatusPublished).
+		Find(&products).Error; err != nil {
 		return nil, err
 	}
 	return products, nil

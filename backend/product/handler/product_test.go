@@ -317,6 +317,57 @@ func TestProductHandler_List_ReturnsWrappedData(t *testing.T) {
 	assert.EqualValues(t, 11, *stored.CategoryID)
 }
 
+func TestProductHandler_PublicListOnlyReturnsPublishedProducts(t *testing.T) {
+	h, _ := newProductHandlerWithSeed(t, func(db *gorm.DB) {
+		require.NoError(t, db.Create(&model.Product{
+			ID:     11,
+			Name:   "未发布商品",
+			Status: model.ProductStatusDraft,
+		}).Error)
+		require.NoError(t, db.Create(&model.Product{
+			ID:     12,
+			Name:   "已发布商品",
+			Status: model.ProductStatusPublished,
+		}).Error)
+		require.NoError(t, db.Create(&model.Product{
+			ID:     13,
+			Name:   "已下架商品",
+			Status: model.ProductStatusUnpublished,
+		}).Error)
+	})
+	c := newProductRequestContext("GET", "/api/v1/products?page=1&page_size=20", nil)
+
+	h.List(context.Background(), c)
+
+	assert.Equal(t, 200, c.Response.StatusCode())
+	var body struct {
+		Data struct {
+			List  []model.Product `json:"list"`
+			Total int64           `json:"total"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	require.Len(t, body.Data.List, 1)
+	assert.EqualValues(t, 12, body.Data.List[0].ID)
+	assert.EqualValues(t, 1, body.Data.Total)
+}
+
+func TestProductHandler_PublicGetRejectsUnpublishedProduct(t *testing.T) {
+	h, _ := newProductHandlerWithSeed(t, func(db *gorm.DB) {
+		require.NoError(t, db.Create(&model.Product{
+			ID:     21,
+			Name:   "未发布商品",
+			Status: model.ProductStatusDraft,
+		}).Error)
+	})
+	c := newProductRequestContext("GET", "/api/v1/products/21", nil)
+	c.Params = append(c.Params, param.Param{Key: "id", Value: "21"})
+
+	h.Get(context.Background(), c)
+
+	assert.Equal(t, 404, c.Response.StatusCode())
+}
+
 func TestProductHandler_Create_PersistsCategoryID(t *testing.T) {
 	h, db := newProductHandlerWithSeed(t, func(db *gorm.DB) {
 		require.NoError(t, db.Create(&model.Category{

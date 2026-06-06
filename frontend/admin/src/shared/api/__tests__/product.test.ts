@@ -70,8 +70,8 @@ describe('productApi category contract', () => {
     await productApi.create(createPayload);
     await productApi.update(101, updatePayload);
 
-    expect(post).toHaveBeenCalledWith('/products', createPayload);
-    expect(put).toHaveBeenCalledWith('/products/101', updatePayload);
+    expect(post).toHaveBeenCalledWith('/admin/products', createPayload);
+    expect(put).toHaveBeenCalledWith('/admin/products/101', updatePayload);
   });
 
   it('shared productApi creates and updates products with category_id payloads', async () => {
@@ -90,8 +90,8 @@ describe('productApi category contract', () => {
     await sharedProductApi.create(createPayload);
     await sharedProductApi.update(101, updatePayload);
 
-    expect(post).toHaveBeenCalledWith('/products', createPayload);
-    expect(put).toHaveBeenCalledWith('/products/101', updatePayload);
+    expect(post).toHaveBeenCalledWith('/admin/products', createPayload);
+    expect(put).toHaveBeenCalledWith('/admin/products/101', updatePayload);
   });
 
   it('module productApi adds listCategories and calls GET /categories', async () => {
@@ -150,5 +150,13 @@ describe('productApi.list', () => {
       description: '精选拍品',
       category_name: '翡翠',
     });
+  });
+
+  it('uses the admin product endpoint so merchants can manage all statuses without widening public APIs', async () => {
+    (get as jest.Mock).mockResolvedValue({ list: [], total: 0, page: 1, page_size: 10 });
+
+    await productApi.list({ page: 1, page_size: 10 });
+
+    expect(get).toHaveBeenCalledWith('/admin/products?page=1&page_size=10');
   });
 });
