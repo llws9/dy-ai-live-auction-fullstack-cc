@@ -84,6 +84,53 @@ func TestInternalHandler_GetAuctionProductInfo(t *testing.T) {
 	assert.True(t, body.Data.RuleBound)
 }
 
+func TestInternalHandler_GetAuctionProductInfoReturns500WhenRuleLookupFails(t *testing.T) {
+	var productID int64
+	const ownerID int64 = 1001
+	h := newInternalHandlerWithSeed(t, func(db *gorm.DB) {
+		product := &model.Product{OwnerID: ptr64(ownerID), Name: "rule lookup fails", Status: model.ProductStatusPublished}
+		require.NoError(t, db.Create(product).Error)
+		productID = product.ID
+		require.NoError(t, db.Migrator().DropTable(&model.AuctionRule{}))
+	})
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/internal/products/" + strconv.FormatInt(productID, 10) + "/auction-info")
+	c.Params = append(c.Params, param.Param{Key: "id", Value: strconv.FormatInt(productID, 10)})
+
+	h.GetAuctionProductInfo(context.Background(), c)
+
+	require.Equal(t, 500, c.Response.StatusCode())
+	var body struct {
+		Code int `json:"code"`
+		Data *struct {
+			RuleBound bool `json:"rule_bound"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.Equal(t, 500, body.Code)
+	assert.Nil(t, body.Data)
+}
+
+func TestInternalHandler_GetAuctionProductInfoReturns404WhenProductMissing(t *testing.T) {
+	h := newInternalHandlerWithSeed(t, nil)
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("GET")
+	c.Request.SetRequestURI("/internal/products/99999/auction-info")
+	c.Params = append(c.Params, param.Param{Key: "id", Value: "99999"})
+
+	h.GetAuctionProductInfo(context.Background(), c)
+
+	require.Equal(t, 404, c.Response.StatusCode())
+	var body struct {
+		Code int `json:"code"`
+	}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.Equal(t, 404, body.Code)
+}
+
 // --- POST /internal/live-streams/get-or-create -----------------------------
 
 func TestInternalHandler_GetOrCreateActiveLiveStream(t *testing.T) {

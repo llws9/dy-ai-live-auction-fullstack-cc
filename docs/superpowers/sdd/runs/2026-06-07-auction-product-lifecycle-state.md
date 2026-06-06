@@ -38,7 +38,7 @@
 | In Progress | `0` |
 | Review | `1` |
 | Pending | `7` |
-| Last Updated | `2026-06-07 03:45` |
+| Last Updated | `2026-06-07 03:54` |
 
 ## Task Matrix
 
@@ -172,19 +172,36 @@
 | `cd backend/product && go test ./handler -run 'TestInternalHandler_(GetAuctionProductInfo\|GetOrCreateActiveLiveStream)' -count=1` | `RED fail before implementation` | `FAIL: h.GetAuctionProductInfo and h.GetOrCreateActiveLiveStream undefined` | `red_confirmed` |
 | `cd backend/product && go test ./handler -run 'TestInternalHandler_(GetAuctionProductInfo\|GetOrCreateActiveLiveStream)' -count=1` | `PASS after minimal implementation` | `PASS: ok product-service/handler 0.736s` | `pass` |
 | `cd backend/product && go test ./service ./handler -count=1` | `PASS affected regression` | `PASS: ok product-service/service 1.209s; ok product-service/handler 0.926s` | `pass` |
+| `cd backend/product && go test ./handler -run 'TestInternalHandler_GetAuctionProductInfo' -count=1` | `RED fail before review fix` | `FAIL: TestInternalHandler_GetAuctionProductInfoReturns500WhenRuleLookupFails expected 500, actual 404 after auction_rules table drop` | `red_confirmed` |
+| `cd backend/product && go test ./handler -run 'TestInternalHandler_GetAuctionProductInfo' -count=1` | `PASS after review fix` | `PASS: ok product-service/handler 0.421s` | `pass` |
+| `cd backend/product && go test ./handler -run 'TestInternalHandler_(GetAuctionProductInfo\|GetOrCreateActiveLiveStream)' -count=1` | `PASS targeted regression after review fix` | `PASS: ok product-service/handler 0.448s` | `pass` |
+| `cd backend/product && go test ./service ./handler -count=1` | `PASS affected regression after review fix` | `PASS: ok product-service/service 0.772s; ok product-service/handler 0.634s` | `pass` |
+| `git diff --check` | `PASS whitespace check` | `PASS` | `pass` |
 
 **Implementation Notes**
 
 - Added `GET /internal/products/:id/auction-info` returning `id`, `owner_id`, `status`, `rule_bound`.
-- `ProductService.GetProductAuctionInfo` fails closed when `Product.OwnerID == nil`; handler maps lookup/owner failures to 404.
+- `ProductService.GetProductAuctionInfo` fails closed when `Product.OwnerID == nil`; handler maps only `gorm.ErrRecordNotFound` to 404 and maps other service/DAO failures to 500.
 - Added `POST /internal/live-streams/get-or-create`; `creator_id` is required, created/reused stream must satisfy `IsActive()`, otherwise returns 409.
 - Existing banned live stream is covered by `TestInternalHandler_GetOrCreateActiveLiveStreamRejectsBanned`.
+
+**Review Fix**
+
+- Added `TestInternalHandler_GetAuctionProductInfoReturns500WhenRuleLookupFails`: creates a valid product, drops `auction_rules`, and verifies the internal rule DAO error returns HTTP 500 with no `data.rule_bound=false` response.
+- Added `TestInternalHandler_GetAuctionProductInfoReturns404WhenProductMissing` to keep product not found mapped to HTTP 404.
+- `GetAuctionProductInfo` now distinguishes `errors.Is(err, gorm.ErrRecordNotFound)` from other errors; rule lookup failures and owner_id integrity failures are no longer hidden as 404.
 
 **Modified Files**
 
 - `backend/product/service/product.go`
 - `backend/product/handler/internal.go`
 - `backend/product/main.go`
+- `backend/product/handler/internal_test.go`
+- `docs/superpowers/sdd/runs/2026-06-07-auction-product-lifecycle-state.md`
+
+**Review Fix Modified Files**
+
+- `backend/product/handler/internal.go`
 - `backend/product/handler/internal_test.go`
 - `docs/superpowers/sdd/runs/2026-06-07-auction-product-lifecycle-state.md`
 

@@ -2,9 +2,11 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"gorm.io/gorm"
 
 	"product-service/model"
 	"product-service/service"
@@ -141,7 +143,11 @@ func (h *InternalHandler) GetAuctionProductInfo(ctx context.Context, c *app.Requ
 	}
 	info, err := h.productService.GetProductAuctionInfo(ctx, id)
 	if err != nil {
-		c.JSON(404, map[string]interface{}{"code": 404, "message": err.Error()})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(404, map[string]interface{}{"code": 404, "message": err.Error()})
+			return
+		}
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "查询失败: " + err.Error()})
 		return
 	}
 	c.JSON(200, map[string]interface{}{"code": 200, "message": "success", "data": info})
