@@ -561,5 +561,5 @@ func (s *BidService) broadcastDelayTriggered(auctionID int64, delayDuration int,
 		RemainingDelay: remainingDelay,
 		MaxDelay:       maxDelay,
 	})
-	s.hub.BroadcastToRoom(auctionID, msg)
+	_ = s.hub.TryBroadcastToRoom(auctionID, msg)
 }

@@ -15,6 +15,7 @@ func newDelayBroadcastTestClient(t *testing.T, auctionID int64) (*websocket.Hub,
 
 	hub := websocket.NewHub()
 	go hub.Run()
+	t.Cleanup(hub.Stop)
 
 	client := &websocket.Client{
 		ID:        "delay-broadcast-test-client",
@@ -23,7 +24,9 @@ func newDelayBroadcastTestClient(t *testing.T, auctionID int64) (*websocket.Hub,
 		Send:      make(chan *websocket.Message, 16),
 	}
 	hub.Register <- client
-	time.Sleep(20 * time.Millisecond)
+	require.Eventually(t, func() bool {
+		return hub.GetClientCount() == 1
+	}, 500*time.Millisecond, 10*time.Millisecond)
 
 	return hub, client
 }
@@ -74,6 +77,27 @@ func TestDelayBroadcast_NoHubDoesNotPanic(t *testing.T) {
 	require.NotPanics(t, func() {
 		svc.broadcastDelayTriggered(1001, 30, time.UnixMilli(1780761600000), 60, 90)
 	})
+}
+
+func TestDelayBroadcast_DoesNotBlockWhenHubBroadcastQueueIsFull(t *testing.T) {
+	hub := websocket.NewHub()
+	svc := &BidService{}
+	svc.SetHub(hub)
+
+	for hub.TryBroadcastToRoom(1001, websocket.NewDelayTriggeredMessage(&websocket.DelayTriggeredData{})) {
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		svc.broadcastDelayTriggered(1001, 30, time.UnixMilli(1780761600000), 60, 90)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("delay triggered broadcast blocked when hub broadcast queue was full")
+	}
 }
 
 func TestDelayBroadcast_DoesNotLeakAcrossAuctionRooms(t *testing.T) {
