@@ -44,7 +44,7 @@ const (
 
 **修改**:
 - Line 10: 注释更新为 `角色: 0=普通用户, 1=主播, 2=平台管理员`
-- Line 32: 创建管理员时使用 `role = 2`
+- 演示管理员不再由迁移脚本创建，统一由 `scripts/init-demo-users.sh` seed，避免出现第二账号来源。
 
 ### 3. 后端Model修复
 
@@ -72,7 +72,8 @@ const (
 ## 🎫 管理员账户
 
 **邮箱**: `admin@example.com`
-**密码**: `admin123`
+**手机号**: `13800138003`
+**密码**: `Demo@123456`
 **角色**: `2` (平台管理员)
 
 ---
@@ -81,8 +82,7 @@ const (
 
 ### 步骤1: 连接数据库
 ```bash
-mysql -h localhost -P 3307 -u root -p
-# 密码: rootpassword
+mysql -h 127.0.0.1 -P 3306 -u root -proot auction
 ```
 
 ### 步骤2: 执行修复脚本
@@ -92,9 +92,8 @@ source /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/scripts/mi
 
 或直接执行SQL:
 ```sql
-USE auction_db;
-UPDATE users SET role = 2 WHERE id = 999 AND email = 'admin@example.com';
-SELECT id, name, email, role FROM users WHERE id = 999;
+UPDATE users SET role = 2 WHERE id = 9104 AND email = 'admin@example.com';
+SELECT id, name, email, role FROM users WHERE id = 9104;
 ```
 
 ---
@@ -146,7 +145,7 @@ if userRole == 1 {
 
 ### 1. 验证数据库
 ```sql
-SELECT id, name, email, role FROM users WHERE id = 999;
+SELECT id, name, email, role FROM users WHERE id = 9104;
 -- 应该显示 role = 2
 ```
 
@@ -157,7 +156,8 @@ open http://localhost:5175
 
 # 使用管理员账户登录
 # 邮箱: admin@example.com
-# 密码: admin123
+# 手机号: 13800138003
+# 密码: Demo@123456
 
 # 应该能成功登录并看到管理界面
 ```
@@ -167,7 +167,7 @@ open http://localhost:5175
 # 获取JWT token
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@example.com","password":"admin123"}'
+  -d '{"phone":"13800138003","password":"Demo@123456"}'
 
 # 使用token访问管理API
 curl -X GET http://localhost:8080/api/v1/admin/users \
@@ -183,7 +183,7 @@ curl -X GET http://localhost:8080/api/v1/admin/users \
 如果修复出现问题，可以回滚：
 
 ```sql
-UPDATE users SET role = 1 WHERE id = 999 AND email = 'admin@example.com';
+UPDATE users SET role = 1 WHERE id = 9104 AND email = 'admin@example.com';
 ```
 
 然后恢复前端和后端代码的修改。

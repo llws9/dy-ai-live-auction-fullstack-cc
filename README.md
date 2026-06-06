@@ -13,9 +13,11 @@
 - 部署文件：允许修改仓库生成 demo 部署文件
 - 暂不部署：`test-service`、`grafana`、`prometheus`、`growthbook`
 
-## 线上账号信息
+## 演示账号信息
 
-- 普通用户：手机号 `13800138001`，密码 `Demo@123456`
+- 账号由 `scripts/init-demo-users.sh` 统一 seed，本地与 demo 服务器同源。
+- 买家A：手机号 `13800138001`，密码 `Demo@123456`
+- 买家B：手机号 `13800138004`，密码 `Demo@123456`
 - 商家账号：手机号 `13800138002`，密码 `Demo@123456`
 - 管理员账号：手机号 `13800138003`，密码 `Demo@123456`
 
@@ -148,19 +150,23 @@ INTERNAL_API_TOKEN=dev docker compose up -d mysql redis rabbitmq
 
 #### 4. 本地测试账号
 
+本地部署时，`scripts/init-demo-users.sh` 会自动初始化以下演示账号；手机号与密码和 demo 服务器保持一致。
+
 ```text
 H5 用户端：
-手机号：18600000001
-密码：123456
+买家A手机号：13800138001
+买家B手机号：13800138004
+密码：Demo@123456
 
 本地商家账号（role=1，可用于 H5/商家态联调，也可在 Admin 端用邮箱登录）：
-手机号：18600000002
+手机号：13800138002
 邮箱：merchant@example.com
-密码：123456
+密码：Demo@123456
 
 Admin 管理端：
+手机号：13800138003
 邮箱：admin@example.com
-密码：admin123
+密码：Demo@123456
 ```
 
 #### 5. 常见问题

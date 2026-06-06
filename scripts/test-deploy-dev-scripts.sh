@@ -141,54 +141,143 @@ assert_contains \
 
 assert_contains \
   "$ROOT/scripts/deploy-dev.sh" \
-  'init_local_auth_users' \
-  "deploy-dev.sh restart must initialize README local auth users after MySQL is ready"
+  'init_demo_users' \
+  "deploy-dev.sh restart must initialize unified demo users after MySQL is ready"
 
 assert_contains \
   "$ROOT/scripts/deploy-dev.sh" \
-  './scripts/init-local-auth-users.sh' \
-  "deploy-dev.sh must delegate local auth user seeding to scripts/init-local-auth-users.sh"
+  './scripts/init-demo-users.sh' \
+  "deploy-dev.sh must delegate demo user seeding to scripts/init-demo-users.sh"
 
-test -x "$ROOT/scripts/init-local-auth-users.sh" || fail "init-local-auth-users.sh must exist and be executable"
+test -x "$ROOT/scripts/init-demo-users.sh" || fail "init-demo-users.sh must exist and be executable"
+
+legacy_seed_script="$ROOT/scripts/init-local-auth"'-users.sh'
+if [[ -e "$legacy_seed_script" ]]; then
+  fail "legacy local auth seed script must be renamed to init-demo-users.sh"
+fi
 
 assert_contains \
-  "$ROOT/scripts/init-local-auth-users.sh" \
+  "$ROOT/scripts/init-demo-users.sh" \
   'ensure_column email' \
-  "init-local-auth-users.sh must repair old users tables that lack email"
+  "init-demo-users.sh must repair old users tables that lack email"
 
 assert_contains \
-  "$ROOT/scripts/init-local-auth-users.sh" \
+  "$ROOT/scripts/init-demo-users.sh" \
   'ensure_column phone' \
-  "init-local-auth-users.sh must repair old users tables that lack phone"
+  "init-demo-users.sh must repair old users tables that lack phone"
 
 assert_contains \
-  "$ROOT/scripts/init-local-auth-users.sh" \
-  'WHERE NOT EXISTS \(SELECT 1 FROM users WHERE phone = '\''18600000001'\''\)' \
-  "init-local-auth-users.sh must be idempotent for existing README H5 user phone"
+  "$ROOT/scripts/init-demo-users.sh" \
+  'ensure_column password' \
+  "init-demo-users.sh must repair old users tables that lack password"
 
 assert_contains \
-  "$ROOT/scripts/init-local-auth-users.sh" \
-  'WHERE email = '\''merchant@example.com'\''' \
-  "init-local-auth-users.sh must update existing README merchant account by email"
+  "$ROOT/scripts/init-demo-users.sh" \
+  'ON DUPLICATE KEY UPDATE' \
+  "init-demo-users.sh must seed demo users idempotently"
 
 assert_contains \
-  "$ROOT/scripts/init-local-auth-users.sh" \
+  "$ROOT/scripts/init-demo-users.sh" \
+  'validate_no_conflicts' \
+  "init-demo-users.sh must fail closed before seeding when target ids, phones, or emails conflict"
+
+assert_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
+  'SIGNAL SQLSTATE' \
+  "init-demo-users.sh must abort MySQL execution on demo user seed conflicts"
+
+assert_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
+  'assert_seeded_users' \
+  "init-demo-users.sh must verify final seeded user bindings after upsert"
+
+assert_not_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
+  'SET phone = NULL' \
+  "init-demo-users.sh must not silently clear phones from non-demo users"
+
+assert_not_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
+  'legacy\+' \
+  "init-demo-users.sh must not silently rewrite emails on non-demo users"
+
+assert_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
   'mysql -h127\.0\.0\.1 -P3306' \
-  "init-local-auth-users.sh must fall back to the host MySQL used by local backend processes"
+  "init-demo-users.sh must fall back to the host MySQL used by local backend processes"
 
 assert_contains \
-  "$ROOT/scripts/init-local-auth-users.sh" \
-  '18600000001' \
-  "init-local-auth-users.sh must seed README H5 user phone"
+  "$ROOT/scripts/init-demo-users.sh" \
+  '13800138001' \
+  "init-demo-users.sh must seed buyer A phone"
 
 assert_contains \
-  "$ROOT/scripts/init-local-auth-users.sh" \
-  'merchant@example.com' \
-  "init-local-auth-users.sh must seed README merchant email"
+  "$ROOT/scripts/init-demo-users.sh" \
+  '13800138004' \
+  "init-demo-users.sh must seed buyer B phone"
 
 assert_contains \
-  "$ROOT/scripts/init-local-auth-users.sh" \
-  'admin@example.com' \
-  "init-local-auth-users.sh must seed README admin email"
+  "$ROOT/scripts/init-demo-users.sh" \
+  '13800138002' \
+  "init-demo-users.sh must seed merchant phone"
+
+assert_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
+  '13800138003' \
+  "init-demo-users.sh must seed admin phone"
+
+assert_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
+  'Demo@123456' \
+  "init-demo-users.sh must document the unified demo password"
+
+assert_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
+  '9101' \
+  "init-demo-users.sh must seed buyer A with fixed id 9101"
+
+assert_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
+  '9102' \
+  "init-demo-users.sh must seed buyer B with fixed id 9102"
+
+assert_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
+  '9103' \
+  "init-demo-users.sh must seed merchant with fixed id 9103"
+
+assert_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
+  '9104' \
+  "init-demo-users.sh must seed admin with fixed id 9104"
+
+assert_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
+  '\$2a\$10\$qLMubs2jJ79\.H6tSKQRkruqVRbEH2Af91ljpMEAhSsLf642SC6wki' \
+  "init-demo-users.sh must use the fixed bcrypt hash for Demo@123456"
+
+assert_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
+  "\(9101, '演示买家A', '', NULL, '13800138001', '\\\$\{DEMO_PASSWORD_HASH\}', 0, 1, NOW\(\)\)" \
+  "init-demo-users.sh must keep buyer A full seed row binding"
+
+assert_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
+  "\(9102, '演示买家B', '', NULL, '13800138004', '\\\$\{DEMO_PASSWORD_HASH\}', 0, 1, NOW\(\)\)" \
+  "init-demo-users.sh must keep buyer B full seed row binding"
+
+assert_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
+  "\(9103, '演示商家', '', 'merchant@example.com', '13800138002', '\\\$\{DEMO_PASSWORD_HASH\}', 1, 1, NOW\(\)\)" \
+  "init-demo-users.sh must keep merchant full seed row binding"
+
+assert_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
+  "\(9104, '系统管理员', '', 'admin@example.com', '13800138003', '\\\$\{DEMO_PASSWORD_HASH\}', 2, 1, NOW\(\)\)" \
+  "init-demo-users.sh must keep admin full seed row binding"
+
+if grep -q '18600000001\|18600000002\|admin123\|本地测试用户' "$ROOT/scripts/init-demo-users.sh"; then
+  fail "init-demo-users.sh must not keep legacy local 186/admin123 account seeds"
+fi
 
 echo "deploy dev script checks passed"

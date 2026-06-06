@@ -77,7 +77,7 @@ Gateway (8080)
 # 通过Admin前端代理访问
 curl -X POST http://localhost:5175/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@example.com","password":"admin123"}'
+  -d '{"phone":"13800138003","password":"Demo@123456"}'
 ```
 
 **预期结果**: 返回JWT token和用户信息

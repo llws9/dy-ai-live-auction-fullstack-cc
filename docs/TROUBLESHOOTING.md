@@ -133,7 +133,7 @@ DB_NAME=auction go run main.go
 # 获取token后解码查看role
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@example.com","password":"admin123"}' | jq '.data.user.role'
+  -d '{"phone":"13800138003","password":"Demo@123456"}' | jq '.data.user.role'
 
 # 应该返回 2
 ```
@@ -197,9 +197,9 @@ go run main.go
 
 **解决方案**:
 ```bash
-# 更新用户名
+# 更新用户名（统一演示管理员 id=9104）
 docker exec -i mysql mysql -u root -proot auction <<EOF
-UPDATE users SET name = '系统管理员' WHERE id = 999;
+UPDATE users SET name = '系统管理员' WHERE id = 9104;
 EOF
 ```
 
@@ -211,11 +211,12 @@ EOF
 
 **解决方案**:
 ```bash
-# 重置密码为 admin123
+# 重置为统一演示密码 Demo@123456
 docker exec -i mysql mysql -u root -proot auction <<EOF
 UPDATE users
-SET password = '\$2a\$10\$P767XYZO9ntqyLwbxTfwnOM0HEvWp0b/RJdojahFCvGojW4joj3vS'
-WHERE id = 999;
+SET phone = '13800138003',
+    password = '\$2a\$10\$qLMubs2jJ79.H6tSKQRkruqVRbEH2Af91ljpMEAhSsLf642SC6wki'
+WHERE id = 9104;
 EOF
 ```
 
@@ -247,7 +248,7 @@ curl -s http://localhost:8080/health | jq '.'
 # 测试登录
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@example.com","password":"admin123"}' | jq '.code, .message'
+  -d '{"phone":"13800138003","password":"Demo@123456"}' | jq '.code, .message'
 ```
 
 ---

@@ -281,9 +281,9 @@ start_infra() {
   wait_for_infra_ready
 }
 
-init_local_auth_users() {
+init_demo_users() {
   cd "$PROJECT_ROOT"
-  ./scripts/init-local-auth-users.sh
+  ./scripts/init-demo-users.sh
 }
 
 start_backend() {
@@ -366,7 +366,7 @@ restart_all() {
   stop_backend
   stop_conflicting_containers
   start_infra
-  init_local_auth_users
+  init_demo_users
   start_backend
   start_frontend
   verify_local

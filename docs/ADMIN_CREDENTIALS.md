@@ -1,7 +1,7 @@
 # 🎫 管理员账户信息
 
 **创建日期**: 2026-05-23
-**最后更新**: 2026-05-23
+**最后更新**: 2026-06-07
 
 ---
 
@@ -13,8 +13,11 @@
 
 **账户信息**:
 - **邮箱**: `admin@example.com`
-- **密码**: `admin123`
+- **手机号**: `13800138003`
+- **密码**: `Demo@123456`
 - **角色**: 平台管理员 (role = 2)
+
+账号由 `scripts/init-demo-users.sh` 统一 seed，本地与 demo 服务器同源。
 
 ---
 
@@ -44,7 +47,7 @@
    -- 在MySQL中更新密码
    UPDATE users
    SET password = '$2a$10$YOUR_NEW_HASH'
-   WHERE id = 999;
+   WHERE id = 9104;
    ```
 
 2. **使用强密码**
@@ -72,7 +75,7 @@
 docker exec -i dy-ai-live-auction-mysql mysql -u root -proot live_auction <<EOF
 UPDATE users
 SET password = '$2a$10$YOUR_NEW_BCRYPT_HASH'
-WHERE id = 999;
+WHERE id = 9104;
 EOF
 ```
 
@@ -115,7 +118,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "admin@example.com",
-    "password": "admin123"
+    "password": "Demo@123456"
   }'
 
 # 应该返回JWT token和用户信息
