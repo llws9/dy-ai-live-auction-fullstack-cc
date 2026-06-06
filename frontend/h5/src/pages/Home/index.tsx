@@ -69,6 +69,8 @@ interface LiveStream {
 }
 
 const SPECIAL_TABS: SpecialTab[] = ['全部', '收藏'];
+const DEFAULT_PRODUCT_COVER_IMAGE =
+  'https://copilot-cn.bytedance.net/api/ide/v1/text_to_image?prompt=premium%20auction%20product%20display%20on%20warm%20neutral%20background%2C%20realistic%20product%20photography%2C%20jade%20jewelry%20and%20luxury%20watch%2C%20soft%20studio%20lighting%2C%20mobile%20ecommerce%20card%20cover&image_size=landscape_4_3';
 
 const SearchIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -546,7 +548,7 @@ const HomePage: React.FC = () => {
           <div className={styles.grid}>
             {auctions.map((auction) => {
               const statusInfo = getStatusInfo(auction.status, auction.endTime);
-              const productImage = getFirstImage(auction.product);
+              const productImage = getFirstImage(auction.product) || DEFAULT_PRODUCT_COVER_IMAGE;
               const productName = repairUtf8Mojibake(auction.product?.name) || `竞拍场次 #${auction.id}`;
               const livePath = `/live?id=${auction.liveStreamId ?? ''}&auction_id=${auction.id}`;
               const upcoming = auction.status === 0;
@@ -557,16 +559,17 @@ const HomePage: React.FC = () => {
               return (
                 <article key={auction.id} className={styles.card}>
                   <div className={styles.imageWrapper}>
-                    {productImage ? (
-                      <img
-                        alt={productName}
-                        className={`${styles.image} ${!statusInfo.live ? styles.imageMuted : ''}`}
-                        src={productImage}
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className={styles.imageFallback}>暂无图片</div>
-                    )}
+                    <img
+                      alt={productName}
+                      className={`${styles.image} ${!statusInfo.live ? styles.imageMuted : ''}`}
+                      src={productImage}
+                      loading="lazy"
+                      onError={(event) => {
+                        if (event.currentTarget.src !== DEFAULT_PRODUCT_COVER_IMAGE) {
+                          event.currentTarget.src = DEFAULT_PRODUCT_COVER_IMAGE;
+                        }
+                      }}
+                    />
                     <div className={`${styles.statusBadge} ${statusInfo.live ? styles.statusLive : ''}`}>
                       {statusInfo.live && <span className={styles.liveDot} />}
                       {statusInfo.label}

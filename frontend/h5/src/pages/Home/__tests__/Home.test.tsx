@@ -211,6 +211,32 @@ describe('HomePage 分类联动 (T2.10)', () => {
     expect(screen.queryByText('暂无图片')).not.toBeInTheDocument();
   });
 
+  it('首页竞拍卡片在商品无图时使用兜底图片', async () => {
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [
+        {
+          id: 11,
+          product_id: 101,
+          live_stream_id: 5,
+          status: 3,
+          current_price: 32112,
+          product: {
+            id: 101,
+            name: '压测拍品 1780733852',
+            images: [],
+          },
+        },
+      ],
+      total: 1,
+    });
+
+    renderHome();
+
+    const image = await screen.findByRole('img', { name: '压测拍品 1780733852' });
+    expect(image).toHaveAttribute('src', expect.stringContaining('/api/ide/v1/text_to_image'));
+    expect(screen.queryByText('暂无图片')).not.toBeInTheDocument();
+  });
+
   it('首页将已过 end_time 的 active 竞拍展示为已结束并隐藏进入直播', async () => {
     mockedAuctionApi.list.mockResolvedValue({
       list: [
