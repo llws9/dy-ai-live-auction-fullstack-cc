@@ -40,8 +40,8 @@ func (s *TimeSyncService) GetRemainingTime(endTime time.Time) int64 {
 }
 
 // CreateTimeSyncMessage 创建时间同步消息
-func (s *TimeSyncService) CreateTimeSyncMessage(endTime int64) *Message {
-	return NewTimeSyncMessage(s.GetServerTime(), endTime)
+func (s *TimeSyncService) CreateTimeSyncMessage(auctionID int64, endTime int64) *Message {
+	return NewTimeSyncMessage(auctionID, s.GetServerTime(), endTime)
 }
 
 // BroadcastTimeSync 向指定竞拍房间广播时间同步消息
@@ -50,6 +50,6 @@ func (s *TimeSyncService) BroadcastTimeSync(auctionID int64, endTime int64) {
 		return
 	}
 
-	msg := s.CreateTimeSyncMessage(endTime)
+	msg := s.CreateTimeSyncMessage(auctionID, endTime)
 	s.hub.BroadcastToRoom(auctionID, msg)
 }

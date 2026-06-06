@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"auction-service/model"
 	"auction-service/websocket"
 )
 
@@ -88,7 +89,7 @@ func (s *Scheduler) checkAuctions() {
 	}
 }
 
-// broadcastTimeSync 广播时间同步消息
+// broadcastTimeSync 广播时间同步消息（覆盖进行中 + 延时中的竞拍）
 func (s *Scheduler) broadcastTimeSync() {
 	if s.hub == nil {
 		return
@@ -96,15 +97,18 @@ func (s *Scheduler) broadcastTimeSync() {
 
 	ctx := context.Background()
 
-	// 获取进行中的竞拍
-	auctions, err := s.auctionService.GetAuctionsByStatus(ctx, 1) // status=1 进行中
-	if err != nil {
-		log.Printf("Error getting ongoing auctions for time sync: %v", err)
-		return
+	statuses := []model.AuctionStatus{
+		model.AuctionStatusOngoing,
+		model.AuctionStatusDelayed,
 	}
-
-	// 向每个竞拍房间广播时间同步
-	for _, auction := range auctions {
-		s.timeSyncService.BroadcastTimeSync(auction.ID, auction.EndTime.UnixMilli())
+	for _, status := range statuses {
+		auctions, err := s.auctionService.GetAuctionsByStatus(ctx, int(status))
+		if err != nil {
+			log.Printf("Error getting auctions(status=%d) for time sync: %v", status, err)
+			continue
+		}
+		for _, auction := range auctions {
+			s.timeSyncService.BroadcastTimeSync(auction.ID, auction.EndTime.UnixMilli())
+		}
 	}
 }
