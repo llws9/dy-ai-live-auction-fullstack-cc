@@ -70,7 +70,7 @@ func (s *ProductService) PublishProduct(ctx context.Context, productID, creatorI
 	if product.Status != model.ProductStatusDraft {
 		return nil, nil, errors.New("商品状态不正确，只有草稿状态的商品可以发布")
 	}
-	if product.OwnerID != nil && *product.OwnerID != creatorID {
+	if product.OwnerID == nil || *product.OwnerID != creatorID {
 		return nil, nil, errors.New("商品不存在或不属于当前商家")
 	}
 

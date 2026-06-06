@@ -307,7 +307,7 @@ func (suite *ProductTestSuite) TestPublishProduct() {
 	ctx := context.Background()
 
 	// 创建测试商品
-	created, err := suite.service.CreateProduct(ctx, &CreateProductRequest{
+	created, err := suite.service.CreateProductForOwner(ctx, 1, &CreateProductRequest{
 		Name: "Test Product",
 	})
 	suite.NoError(err)
@@ -344,6 +344,25 @@ func TestProductService_PublishProductOnlyMarksProductPublished(t *testing.T) {
 	var count int64
 	require.NoError(t, db.Model(&model.LiveStream{}).Count(&count).Error)
 	assert.Equal(t, int64(0), count)
+}
+
+func TestProductService_PublishProductRejectsOwnerlessProduct(t *testing.T) {
+	ctx := context.Background()
+	db := newProductServiceTestDB(t)
+	svc := NewProductService(dao.NewProductDAO(db), dao.NewAuctionRuleDAO(db), dao.NewLiveStreamDAO(db))
+
+	product := &model.Product{
+		Name:   "ownerless draft product",
+		Status: model.ProductStatusDraft,
+	}
+	require.NoError(t, db.Create(product).Error)
+
+	got, liveStream, err := svc.PublishProduct(ctx, int64(product.ID), 1001, nil)
+
+	require.Error(t, err)
+	assert.Nil(t, got)
+	assert.Nil(t, liveStream)
+	assert.Contains(t, err.Error(), "商品不存在或不属于当前商家")
 }
 
 func TestProductService_PublishProductRejectsNonDraft(t *testing.T) {
