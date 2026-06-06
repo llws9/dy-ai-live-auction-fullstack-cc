@@ -126,6 +126,10 @@ const renderSlide = (props: Partial<React.ComponentProps<typeof LiveRoomSlide>> 
     </MemoryRouter>
   );
 
+const getWebSocketHandler = (type: string) => mockWebSocketInstance.on.mock.calls.find((call) => call[0] === type)?.[1] as
+  | ((data: any) => void)
+  | undefined;
+
 describe('LiveRoomSlide', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -417,9 +421,7 @@ describe('LiveRoomSlide', () => {
 
     expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
 
-    const bidHandler = mockWebSocketInstance.on.mock.calls.find((c) => c[0] === 'bid_placed')?.[1] as
-      | ((data: any) => void)
-      | undefined;
+    const bidHandler = getWebSocketHandler('bid_placed');
     expect(bidHandler).toBeDefined();
 
     // 不匹配的消息（auction_id=999）应被丢弃，价格不更新
@@ -434,6 +436,123 @@ describe('LiveRoomSlide', () => {
       bidHandler!({ auction_id: 5, current_price: 1500 });
     });
     expect(await screen.findByText('¥1,500')).toBeInTheDocument();
+  });
+
+  it('updates end_time and shows toast when delay_triggered belongs to this room', async () => {
+    const baseNow = new Date('2026-06-06T00:00:00.000Z').getTime();
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(baseNow);
+    mockedAuctionApi.get.mockResolvedValue({
+      id: 5,
+      product_id: 7,
+      live_stream_id: 3,
+      status: 1,
+      current_price: 1200,
+      end_time: new Date(baseNow + 30_000).toISOString(),
+    });
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
+    expect(await screen.findByText('00:30')).toBeInTheDocument();
+
+    const delayHandler = getWebSocketHandler('delay_triggered');
+    expect(delayHandler).toBeDefined();
+
+    act(() => {
+      delayHandler!({
+        auction_id: 5,
+        delay_duration: 30,
+        new_end_time: baseNow + 180_000,
+        remaining_delay: 60,
+        max_delay: 90,
+      });
+    });
+
+    expect(await screen.findByText('03:00')).toBeInTheDocument();
+    expect(mockShowGlobalToast).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'info',
+      title: '触发防狙击',
+      message: '已有新出价，竞拍时间自动延长',
+    }));
+
+    dateNowSpy.mockRestore();
+  });
+
+  it('ignores delay_triggered messages from other auction rooms', async () => {
+    const baseNow = new Date('2026-06-06T00:00:00.000Z').getTime();
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(baseNow);
+    mockedAuctionApi.get.mockResolvedValue({
+      id: 5,
+      product_id: 7,
+      live_stream_id: 3,
+      status: 1,
+      current_price: 1200,
+      end_time: new Date(baseNow + 30_000).toISOString(),
+    });
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
+    expect(await screen.findByText('00:30')).toBeInTheDocument();
+
+    const delayHandler = getWebSocketHandler('delay_triggered');
+    expect(delayHandler).toBeDefined();
+
+    act(() => {
+      delayHandler!({
+        auction_id: 999,
+        delay_duration: 30,
+        new_end_time: baseNow + 180_000,
+        remaining_delay: 60,
+        max_delay: 90,
+      });
+    });
+
+    expect(screen.getByText('00:30')).toBeInTheDocument();
+    expect(screen.queryByText('03:00')).not.toBeInTheDocument();
+    expect(mockShowGlobalToast).not.toHaveBeenCalledWith(expect.objectContaining({
+      title: '触发防狙击',
+    }));
+
+    dateNowSpy.mockRestore();
+  });
+
+  it('updates end_time from time_sync without showing antisnipe toast', async () => {
+    const baseNow = new Date('2026-06-06T00:00:00.000Z').getTime();
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(baseNow);
+    mockedAuctionApi.get.mockResolvedValue({
+      id: 5,
+      product_id: 7,
+      live_stream_id: 3,
+      status: 2,
+      current_price: 1200,
+      end_time: new Date(baseNow + 30_000).toISOString(),
+    });
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
+    expect(await screen.findByText('00:30')).toBeInTheDocument();
+
+    const timeSyncHandler = getWebSocketHandler('time_sync');
+    expect(timeSyncHandler).toBeDefined();
+
+    act(() => {
+      timeSyncHandler!({
+        server_time: baseNow,
+        end_time: baseNow + 120_000,
+      });
+    });
+
+    expect(await screen.findByText('02:00')).toBeInTheDocument();
+    expect(mockShowGlobalToast).not.toHaveBeenCalledWith(expect.objectContaining({
+      title: '触发防狙击',
+    }));
+
+    dateNowSpy.mockRestore();
   });
 
   it('opens sheet via URL push and clears it on bid success', async () => {

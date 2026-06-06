@@ -113,6 +113,20 @@ const toAmount = (value: unknown, fallback = 0) => {
   return Number.isFinite(amount) ? amount : fallback;
 };
 
+const toEndTimeIso = (value: unknown): string | undefined => {
+  if (value == null) return undefined;
+
+  const text = String(value).trim();
+  const parsed = typeof value === 'number'
+    ? value
+    : /^\d+$/.test(text)
+      ? Number(text)
+      : new Date(text).getTime();
+
+  if (!Number.isFinite(parsed)) return undefined;
+  return new Date(parsed).toISOString();
+};
+
 const formatTimeLeft = (seconds: number) => {
   const safeSeconds = Math.max(0, seconds);
   const minutes = Math.floor(safeSeconds / 60);
@@ -491,7 +505,30 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       return true;
     };
 
+    const onDelayTriggered = (data: any) => {
+      if (!belongsToThisRoom(data)) return;
+      const nextEndTime = toEndTimeIso(data?.new_end_time);
+      if (!nextEndTime) return;
+
+      setAuction((previous) => previous ? { ...previous, end_time: nextEndTime, status: 2 } : previous);
+      showGlobalToast({
+        type: 'info',
+        title: '触发防狙击',
+        message: '已有新出价，竞拍时间自动延长',
+      });
+    };
+
+    const onTimeSync = (data: any) => {
+      if (!belongsToThisRoom(data)) return;
+      const nextEndTime = toEndTimeIso(data?.end_time);
+      if (!nextEndTime) return;
+
+      setAuction((previous) => previous ? { ...previous, end_time: nextEndTime } : previous);
+    };
+
     ws.on('chat_message', onChatMessage);
+    ws.on('delay_triggered', onDelayTriggered);
+    ws.on('time_sync', onTimeSync);
     ws.on('rank_update', (data) => {
       if (!belongsToThisRoom(data)) return;
       setRanking(normalizeRanking(extractList(data)));
@@ -508,12 +545,13 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     });
     ws.on('sync_response', (data) => {
       if (!belongsToThisRoom(data)) return;
-      if (data?.current_price || data?.status || data?.end_time) {
+      if (data?.current_price !== undefined || data?.status !== undefined || data?.end_time !== undefined) {
+        const nextEndTime = toEndTimeIso(data?.end_time);
         setAuction((previous) => previous ? {
           ...previous,
           current_price: data.current_price !== undefined ? toAmount(data.current_price, toAmount(previous.current_price)) : previous.current_price,
           status: data.status ?? previous.status,
-          end_time: data.end_time ?? previous.end_time,
+          end_time: nextEndTime ?? previous.end_time,
         } : previous);
       }
       if (data?.ranking) {
@@ -559,6 +597,8 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     return () => {
       unsubscribeNotification();
       ws.off('chat_message', onChatMessage);
+      ws.off('delay_triggered', onDelayTriggered);
+      ws.off('time_sync', onTimeSync);
       ws.disconnect();
       wsRef.current = null;
       useLiveChatStore.getState().reset();
