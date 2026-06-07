@@ -477,3 +477,31 @@ func (d *AuctionDAO) GetCurrentByLiveStreamIDs(ctx context.Context, liveStreamID
 	}
 	return result, nil
 }
+
+// GetNextByLiveStreamIDs 为每个 live_stream 取"即将开始"的下一场竞拍。
+// 规则：status=Pending，按 start_time ASC, id ASC 每组取第一条。
+func (d *AuctionDAO) GetNextByLiveStreamIDs(ctx context.Context, liveStreamIDs []int64) (map[int64]*model.Auction, error) {
+	result := make(map[int64]*model.Auction)
+	if len(liveStreamIDs) == 0 {
+		return result, nil
+	}
+	var rows []model.Auction
+	err := d.db.WithContext(ctx).
+		Where("live_stream_id IN ?", liveStreamIDs).
+		Where("status = ?", model.AuctionStatusPending).
+		Order("live_stream_id ASC, start_time ASC, id ASC").
+		Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	for i := range rows {
+		ls := rows[i].LiveStreamID
+		if ls == nil {
+			continue
+		}
+		if _, ok := result[*ls]; !ok {
+			result[*ls] = &rows[i]
+		}
+	}
+	return result, nil
+}
