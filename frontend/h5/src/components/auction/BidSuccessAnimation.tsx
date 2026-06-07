@@ -24,29 +24,31 @@ export const BidSuccessAnimation: React.FC<BidSuccessAnimationProps> = ({
   useEffect(() => {
     const timer = window.setTimeout(() => {
       onAnimationEndRef.current?.();
-    }, 3000);
+    }, 4100);
     return () => window.clearTimeout(timer);
   }, []);
 
   return (
-    <div className="shake-trigger" data-testid="bid-success-animation">
-      <IntroAnimation />
+    <div className="bid-success-overlay">
+      <div className="shake-trigger" data-testid="bid-success-animation">
+        <IntroAnimation />
 
-      <div className="card-container">
-        <div className="auction-card v1-anim">
-          <div className="v1-stamp">成交</div>
+        <div className="card-container">
+          <div className="auction-card v1-anim">
+            <div className="v1-stamp">成交</div>
 
-          <div className="auction-card-image">
-            {imageUrl ? (
-              <img src={imageUrl} alt={productName} />
-            ) : (
-              <span>[ 拍品图 ]</span>
-            )}
+            <div className="auction-card-image">
+              {imageUrl ? (
+                <img src={imageUrl} alt={productName} />
+              ) : (
+                <span>[ 拍品图 ]</span>
+              )}
+            </div>
+
+            <div className="auction-card-title">{productName}</div>
+            <div className="auction-card-subtitle">最终成交价</div>
+            <div className="auction-card-price">¥{price.toLocaleString('zh-CN')}</div>
           </div>
-
-          <div className="auction-card-title">{productName}</div>
-          <div className="auction-card-subtitle">最终成交价</div>
-          <div className="auction-card-price">¥{price.toLocaleString('zh-CN')}</div>
         </div>
       </div>
     </div>
