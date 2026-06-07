@@ -169,6 +169,11 @@ func (s *LiveStreamService) ListAdmin(ctx context.Context, page, pageSize int, s
 	return s.liveStreamDAO.ListAdmin(ctx, offset, pageSize, statusFilter)
 }
 
+func (s *LiveStreamService) ListPublicCandidates(ctx context.Context, page, pageSize int) ([]model.LiveStream, int64, error) {
+	offset := (page - 1) * pageSize
+	return s.liveStreamDAO.ListPublicCandidates(ctx, offset, pageSize)
+}
+
 func (s *LiveStreamService) ListAdminScoped(ctx context.Context, page, pageSize int, statusFilter *int, creatorID *int64) ([]model.LiveStream, int64, error) {
 	offset := (page - 1) * pageSize
 	return s.liveStreamDAO.ListAdminScoped(ctx, offset, pageSize, statusFilter, creatorID)
