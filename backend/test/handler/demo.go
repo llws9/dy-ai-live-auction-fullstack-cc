@@ -22,6 +22,9 @@ const (
 	buyerBUserID   int64 = 9102
 	merchantUserID int64 = 9103
 	adminUserID    int64 = 9104
+
+	demoCategoryJewelryID int64 = 8
+	demoCategoryArtID     int64 = 12
 )
 
 type demoAuctionClient interface {
@@ -267,6 +270,10 @@ func nextDemoProductName(kind string) string {
 	return fmt.Sprintf("DEMO_商家动作_%s_%d_%d", kind, time.Now().UnixNano(), seq)
 }
 
+func demoCategoryID(id int64) *int64 {
+	return &id
+}
+
 func writeDemoStepError(c *app.RequestContext, step auctioncli.StepResult) {
 	status := step.StatusCode
 	if status < 400 {
@@ -482,6 +489,7 @@ func (h *DemoHandler) PostMerchantAuction(ctx context.Context, c *app.RequestCon
 	product := h.bizCli.CreateProductAs(ctx, actor, auctioncli.CreateProductReq{
 		Name:        nextDemoProductName(req.Mode),
 		Description: "Demo Console merchant auction fixture",
+		CategoryID:  demoCategoryID(demoCategoryArtID),
 		Status:      0,
 	})
 	if !product.OK || product.RefID <= 0 {
@@ -611,6 +619,7 @@ func (h *DemoHandler) PostMerchantFixedPriceItem(ctx context.Context, c *app.Req
 	product := h.bizCli.CreateProductAs(ctx, actor, auctioncli.CreateProductReq{
 		Name:        nextDemoProductName("fixed_price"),
 		Description: "Demo Console fixed-price fixture",
+		CategoryID:  demoCategoryID(demoCategoryJewelryID),
 		Status:      0,
 	})
 	if !product.OK || product.RefID <= 0 {

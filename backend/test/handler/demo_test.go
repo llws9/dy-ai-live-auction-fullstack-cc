@@ -147,6 +147,9 @@ func TestMerchantDemoAuctionReusesMerchantLiveStreamForRepeatedOngoingClicks(t *
 		if req.Status != 0 {
 			t.Fatalf("merchant auction demo must create draft products before explicit publish, status=%d", req.Status)
 		}
+		if req.CategoryID == nil || *req.CategoryID != demoCategoryArtID {
+			t.Fatalf("merchant auction demo category_id: want %d, got %v", demoCategoryArtID, req.CategoryID)
+		}
 	}
 	if fake.auctionReqs[0].ProductID == fake.auctionReqs[1].ProductID {
 		t.Fatalf("repeated clicks must create different demo products, got product_id=%d", fake.auctionReqs[0].ProductID)
@@ -268,6 +271,9 @@ func TestMerchantDemoFixedPriceUsesRequestedLiveStream(t *testing.T) {
 	}
 	if len(fake.productReqs) != 1 || fake.productReqs[0].Status != 0 {
 		t.Fatalf("fixed price demo must create a draft product before explicit publish, productReqs=%+v", fake.productReqs)
+	}
+	if fake.productReqs[0].CategoryID == nil || *fake.productReqs[0].CategoryID != demoCategoryJewelryID {
+		t.Fatalf("fixed price demo category_id: want %d, got %v", demoCategoryJewelryID, fake.productReqs[0].CategoryID)
 	}
 }
 

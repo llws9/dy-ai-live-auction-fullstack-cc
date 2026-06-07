@@ -85,7 +85,14 @@ type CreateProductReq struct {
 	Name        string   `json:"name"`
 	Description string   `json:"description,omitempty"`
 	Images      []string `json:"images,omitempty"`
+	CategoryID  *int64   `json:"category_id,omitempty"`
 	Status      int      `json:"status,omitempty"`
+}
+
+const DefaultFixtureProductCategoryID int64 = 12 // ART
+
+func fixtureCategoryID(id int64) *int64 {
+	return &id
 }
 
 // CreateAuctionReq 创建拍卖
@@ -276,6 +283,9 @@ func (c *Client) CreateProductAs(ctx context.Context, actor Actor, req CreatePro
 	}
 	if len(req.Images) == 0 {
 		req.Images = []string{defaultFixtureProductImage}
+	}
+	if req.CategoryID == nil {
+		req.CategoryID = fixtureCategoryID(DefaultFixtureProductCategoryID)
 	}
 	step := c.doAs(ctx, "create_product", http.MethodPost, path, actor, req, nil, &resp)
 	step.RefID = firstNonZero(resp.ID, resp.Data.ID)

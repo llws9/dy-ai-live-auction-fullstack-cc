@@ -562,11 +562,14 @@ func TestProductHandlerPublishUsesForwardedUserHeaders(t *testing.T) {
 func TestProductHandler_AdminListMerchantOnlyOwnProducts(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("file::memory:?mode=memory&cache=shared"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&model.Product{}))
+	require.NoError(t, db.AutoMigrate(&model.Category{}, &model.Product{}))
 	require.NoError(t, db.Exec("DELETE FROM products").Error)
+	require.NoError(t, db.Exec("DELETE FROM categories").Error)
 	ownerA := int64(1001)
 	ownerB := int64(1002)
-	require.NoError(t, db.Create(&model.Product{Name: "A", OwnerID: &ownerA, Status: model.ProductStatusDraft}).Error)
+	categoryID := int64(12)
+	require.NoError(t, db.Create(&model.Category{ID: categoryID, Name: "艺术品", Code: "ART", Status: model.CategoryStatusActive}).Error)
+	require.NoError(t, db.Create(&model.Product{Name: "A", OwnerID: &ownerA, CategoryID: &categoryID, Status: model.ProductStatusDraft}).Error)
 	require.NoError(t, db.Create(&model.Product{Name: "B", OwnerID: &ownerB, Status: model.ProductStatusDraft}).Error)
 	productSvc := service.NewProductService(dao.NewProductDAO(db), nil, dao.NewLiveStreamDAO(db))
 	h := NewProductHandler(productSvc)
@@ -589,6 +592,7 @@ func TestProductHandler_AdminListMerchantOnlyOwnProducts(t *testing.T) {
 	assert.Equal(t, int64(1), body.Data.Total)
 	require.Len(t, body.Data.List, 1)
 	assert.Equal(t, "A", body.Data.List[0].Name)
+	assert.Equal(t, "艺术品", body.Data.List[0].CategoryName)
 }
 
 func TestProductHandler_AdminListDerivedStatus(t *testing.T) {

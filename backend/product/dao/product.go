@@ -89,7 +89,17 @@ func (d *ProductDAO) ListAdminScoped(ctx context.Context, ownerID *int64, status
 	}
 
 	offset := (page - 1) * pageSize
-	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&products).Error; err != nil {
+	readQuery := d.db.WithContext(ctx).
+		Model(&model.Product{}).
+		Select("products.*, categories.name AS category_name").
+		Joins("LEFT JOIN categories ON categories.id = products.category_id")
+	if ownerID != nil {
+		readQuery = readQuery.Where("products.owner_id = ?", *ownerID)
+	}
+	if status != nil {
+		readQuery = readQuery.Where("products.status = ?", *status)
+	}
+	if err := readQuery.Offset(offset).Limit(pageSize).Order("products.created_at DESC").Find(&products).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -99,11 +109,14 @@ func (d *ProductDAO) ListAdminScoped(ctx context.Context, ownerID *int64, status
 // ListAdminScopedAll returns all admin-visible products before application-level derived status filtering.
 func (d *ProductDAO) ListAdminScopedAll(ctx context.Context, ownerID *int64) ([]model.Product, error) {
 	var products []model.Product
-	query := d.db.WithContext(ctx).Model(&model.Product{})
+	query := d.db.WithContext(ctx).
+		Model(&model.Product{}).
+		Select("products.*, categories.name AS category_name").
+		Joins("LEFT JOIN categories ON categories.id = products.category_id")
 	if ownerID != nil {
-		query = query.Where("owner_id = ?", *ownerID)
+		query = query.Where("products.owner_id = ?", *ownerID)
 	}
-	if err := query.Order("created_at DESC").Find(&products).Error; err != nil {
+	if err := query.Order("products.created_at DESC").Find(&products).Error; err != nil {
 		return nil, err
 	}
 	return products, nil

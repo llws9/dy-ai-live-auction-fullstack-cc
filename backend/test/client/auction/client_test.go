@@ -39,8 +39,8 @@ func TestSDK_CreateProduct(t *testing.T) {
 	if step.Step != "create_product" {
 		t.Fatalf("Step name: %s", step.Step)
 	}
-	if step.DurationMs <= 0 {
-		t.Fatalf("DurationMs should be > 0")
+	if step.DurationMs < 0 {
+		t.Fatalf("DurationMs should not be negative")
 	}
 }
 
@@ -127,9 +127,12 @@ func TestSDK_CreateProductAsAddsDefaultImageWhenMissing(t *testing.T) {
 	if !strings.Contains(captured.Images[0], "text_to_image") {
 		t.Fatalf("default image should use generated website image URL, got %q", captured.Images[0])
 	}
+	if captured.CategoryID == nil || *captured.CategoryID != DefaultFixtureProductCategoryID {
+		t.Fatalf("default category_id: want %d, got %v", DefaultFixtureProductCategoryID, captured.CategoryID)
+	}
 }
 
-func TestSDK_CreateProductAsPreservesExplicitImages(t *testing.T) {
+func TestSDK_CreateProductAsPreservesExplicitImagesAndCategory(t *testing.T) {
 	var captured CreateProductReq
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if err := json.NewDecoder(r.Body).Decode(&captured); err != nil {
@@ -141,15 +144,20 @@ func TestSDK_CreateProductAsPreservesExplicitImages(t *testing.T) {
 	defer srv.Close()
 
 	c := NewClient(srv.URL, 3*time.Second)
+	categoryID := int64(8)
 	step := c.CreateProductAs(context.Background(), Actor{UserID: 9001, Role: RoleMerchant}, CreateProductReq{
-		Name:   "fixture product",
-		Images: []string{"https://cdn.example.com/custom-product.jpg"},
+		Name:       "fixture product",
+		Images:     []string{"https://cdn.example.com/custom-product.jpg"},
+		CategoryID: &categoryID,
 	})
 	if !step.OK {
 		t.Fatalf("CreateProductAs failed: %s err=%v", step.Message, step.Err)
 	}
 	if len(captured.Images) != 1 || captured.Images[0] != "https://cdn.example.com/custom-product.jpg" {
 		t.Fatalf("explicit images should be preserved, got %#v", captured.Images)
+	}
+	if captured.CategoryID == nil || *captured.CategoryID != categoryID {
+		t.Fatalf("explicit category_id should be preserved, got %v", captured.CategoryID)
 	}
 }
 

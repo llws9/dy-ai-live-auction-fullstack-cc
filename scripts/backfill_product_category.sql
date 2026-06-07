@@ -1,8 +1,8 @@
--- T006 一次性历史数据修复脚本
+-- 一次性/可重复执行的商品分类历史数据修复脚本
 -- 目标：
 -- 1. 补齐缺失的 categories 主数据
--- 2. 仅回填可稳定判定的历史空分类商品
--- 3. 输出仍需人工处理的商品清单
+-- 2. 修正早期错误编码导致的分类名称不可读问题
+-- 3. 回填历史空分类商品，确保管理端与 H5 分类筛选可用
 
 START TRANSACTION;
 
@@ -27,25 +27,51 @@ ON DUPLICATE KEY UPDATE
   status = VALUES(status),
   updated_at = VALUES(updated_at);
 
--- 可稳定判定的历史商品：
--- 1) ID=1 名称/描述均指向“珠宝”
--- 2) ID=880201 Fixed Price Demo Jade Bracelet 明确是手镯类珠宝
+-- 可稳定判定为珠宝的历史商品。
 UPDATE products
 SET category_id = (SELECT id FROM categories WHERE code = 'JEWELRY')
-WHERE id IN (1, 880201) AND category_id IS NULL;
+WHERE category_id IS NULL
+  AND (
+    id IN (1, 880201)
+    OR name LIKE '%Jade%'
+    OR name LIKE '%Bracelet%'
+    OR name LIKE '%fixed_price%'
+    OR description LIKE '%fixed-price%'
+  );
+
+-- H5 Demo Console、独立测试平台、压测平台生成的拍卖商品默认按“艺术品”入类。
+-- 这些商品本身是 auction fixture/collectible fixture，用 ART 比继续“未分类”更符合筛选语义。
+UPDATE products
+SET category_id = (SELECT id FROM categories WHERE code = 'ART')
+WHERE category_id IS NULL
+  AND (
+    name LIKE 'DEMO\\_%'
+    OR name LIKE 'E2E 测试拍品%'
+    OR name LIKE 'AntiSnipe %'
+    OR name LIKE 'TEST_USER_JOURNEY\\_%'
+    OR name LIKE '压测拍品 %'
+    OR description LIKE '%auto-generated%'
+    OR description LIKE '%auto fixture%'
+    OR description LIKE '%pressure auto fixture%'
+  );
+
+-- 兜底：历史库中其余无法从名称判断的空分类商品也归入“艺术品”，避免继续破坏分类筛选。
+UPDATE products
+SET category_id = (SELECT id FROM categories WHERE code = 'ART')
+WHERE category_id IS NULL;
 
 COMMIT;
 
--- 验证输出：当前分类主数据与剩余待人工处理商品
+-- 验证输出：当前分类主数据与商品分布
 SELECT id, name, code, status, sort_order
 FROM categories
 ORDER BY sort_order, id;
 
-SELECT p.id, p.name, p.category_id, c.name AS category_name
+SELECT p.category_id, c.name AS category_name, c.code, COUNT(*) AS product_count
 FROM products p
 LEFT JOIN categories c ON c.id = p.category_id
-WHERE p.id IN (1, 880201)
-ORDER BY p.id;
+GROUP BY p.category_id, c.name, c.code
+ORDER BY product_count DESC, p.category_id;
 
 SELECT id, name, LEFT(description, 120) AS description_preview, created_at
 FROM products
