@@ -1,0 +1,708 @@
+backend/auction/handler/auction_result_test.go
+  s_152cc48d1c7fe4::t_ab962c88441162 28-49,77-90,92,104-110,129,148,152,167,178,181 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25323a00057ea64ca2c107","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[28,49]},{"Range":[77,90]},{"Single":92},{"Range":[104,110]},{"Single":129},{"Single":148},{"Single":152},{"Single":167},{"Single":178},{"Single":181}]}]}
+backend/product/service/copywriting.go
+  s_152cc48d1c7fe4::t_ab962c88441162 21,86-88 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25323a00057ea64ca2c107","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Single":21},{"Range":[86,88]}]}]}
+frontend/admin/src/pages-new/goodsEditAi.ts
+  s_152cc48d1c7fe4::t_ab962c88441162 61-62 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25323a00057ea64ca2c107","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[61,62]}]}]}
+backend/product/handler/copywriting.go
+  s_152cc48d1c7fe4::t_ab962c88441162 70-71 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25323a00057ea64ca2c107","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[70,71]}]}]}
+backend/auction/main.go
+  s_152cc48d1c7fe4::t_ab962c88441162 175 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25323a00057ea64ca2c107","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Single":175}]}]}
+backend/product/service/copywriting_test.go
+  s_152cc48d1c7fe4::t_ab962c88441162 132-140 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25323a00057ea64ca2c107","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[132,140]}]}]}
+backend/shared/llm/doubao_test.go
+  s_152cc48d1c7fe4::t_ab962c88441162 67-91 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25323a00057ea64ca2c107","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[67,91]}]}]}
+backend/auction/handler/auction_result.go
+  s_152cc48d1c7fe4::t_ab962c88441162 5,11-12,19-22,31-38,50,64-65,84,108-142 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25323a00057ea64ca2c107","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Single":5},{"Range":[11,12]},{"Range":[19,22]},{"Range":[31,38]},{"Single":50},{"Range":[64,65]},{"Single":84},{"Range":[108,142]}]}]}
+backend/auction/service/auction.go
+  s_152cc48d1c7fe4::t_ab962c88441162 147-149,162-178 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25323a00057ea64ca2c107","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[147,149]},{"Range":[162,178]}]}]}
+backend/auction/dao/bid.go
+  s_152cc48d1c7fe4::t_ab962c88441162 81-94 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25323a00057ea64ca2c107","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[81,94]}]}]}
+backend/product/handler/copywriting_test.go
+  s_152cc48d1c7fe4::t_ab962c88441162 126-140 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25323a00057ea64ca2c107","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[126,140]}]}]}
+docs/superpowers/plans/2026-06-07-bid-success-animation.md
+  s_152cc48d1c7fe4::t_ab962c88441162 1-312 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25323a00057ea64ca2c107","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,312]}]}]}
+ranking-demo.html
+  s_152cc48d1c7fe4::t_ab962c88441162 1-243 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25323a00057ea64ca2c107","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,243]}]}]}
+docs/superpowers/plans/2026-06-07-unified-demo-seed.md
+  s_152cc48d1c7fe4::t_ab962c88441162 1-670 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25323a00057ea64ca2c107","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,670]}]}]}
+frontend/admin/src/pages-new/__tests__/goodsEditAi.test.ts
+  s_152cc48d1c7fe4::t_ab962c88441162 58 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25323a00057ea64ca2c107","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Single":58}]}]}
+backend/shared/llm/doubao.go
+  s_152cc48d1c7fe4::t_ab962c88441162 66-69 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25323a00057ea64ca2c107","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[66,69]}]}]}
+backend/shared/llm/provider.go
+  s_152cc48d1c7fe4::t_ab962c88441162 10-14 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25323a00057ea64ca2c107","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[10,14]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "76042cd4c2e4258d4c7041229329129fa79dfdc0",
+  "prompts": {},
+  "sessions": {
+    "s_152cc48d1c7fe4": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a242c4900057ea64ca26316",
+        "model": "gpt-5.5__dev",
+        "display_model_name": "GPT-5.5"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {
+    "backend/auction/dao/bid.go": [
+      {
+        "hash": "s_152cc48d1c7fe4::t_ab962c88441162",
+        "line_ranges": [
+          {
+            "Range": [
+              81,
+              94
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25323a00057ea64ca2c107",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  81,
+                  94
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/handler/auction_result.go": [
+      {
+        "hash": "s_152cc48d1c7fe4::t_ab962c88441162",
+        "line_ranges": [
+          {
+            "Single": 5
+          },
+          {
+            "Range": [
+              11,
+              12
+            ]
+          },
+          {
+            "Range": [
+              19,
+              22
+            ]
+          },
+          {
+            "Range": [
+              31,
+              38
+            ]
+          },
+          {
+            "Single": 50
+          },
+          {
+            "Range": [
+              64,
+              65
+            ]
+          },
+          {
+            "Single": 84
+          },
+          {
+            "Range": [
+              108,
+              142
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25323a00057ea64ca2c107",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Single": 5
+              },
+              {
+                "Range": [
+                  11,
+                  12
+                ]
+              },
+              {
+                "Range": [
+                  19,
+                  22
+                ]
+              },
+              {
+                "Range": [
+                  31,
+                  38
+                ]
+              },
+              {
+                "Single": 50
+              },
+              {
+                "Range": [
+                  64,
+                  65
+                ]
+              },
+              {
+                "Single": 84
+              },
+              {
+                "Range": [
+                  108,
+                  142
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/handler/auction_result_test.go": [
+      {
+        "hash": "s_152cc48d1c7fe4::t_ab962c88441162",
+        "line_ranges": [
+          {
+            "Range": [
+              28,
+              49
+            ]
+          },
+          {
+            "Range": [
+              77,
+              90
+            ]
+          },
+          {
+            "Single": 92
+          },
+          {
+            "Range": [
+              104,
+              110
+            ]
+          },
+          {
+            "Single": 129
+          },
+          {
+            "Single": 148
+          },
+          {
+            "Single": 152
+          },
+          {
+            "Single": 167
+          },
+          {
+            "Single": 178
+          },
+          {
+            "Single": 181
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25323a00057ea64ca2c107",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  28,
+                  49
+                ]
+              },
+              {
+                "Range": [
+                  77,
+                  90
+                ]
+              },
+              {
+                "Single": 92
+              },
+              {
+                "Range": [
+                  104,
+                  110
+                ]
+              },
+              {
+                "Single": 129
+              },
+              {
+                "Single": 148
+              },
+              {
+                "Single": 152
+              },
+              {
+                "Single": 167
+              },
+              {
+                "Single": 178
+              },
+              {
+                "Single": 181
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/main.go": [
+      {
+        "hash": "s_152cc48d1c7fe4::t_ab962c88441162",
+        "line_ranges": [
+          {
+            "Single": 175
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25323a00057ea64ca2c107",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Single": 175
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/service/auction.go": [
+      {
+        "hash": "s_152cc48d1c7fe4::t_ab962c88441162",
+        "line_ranges": [
+          {
+            "Range": [
+              147,
+              149
+            ]
+          },
+          {
+            "Range": [
+              162,
+              178
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25323a00057ea64ca2c107",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  147,
+                  149
+                ]
+              },
+              {
+                "Range": [
+                  162,
+                  178
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/product/handler/copywriting.go": [
+      {
+        "hash": "s_152cc48d1c7fe4::t_ab962c88441162",
+        "line_ranges": [
+          {
+            "Range": [
+              70,
+              71
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25323a00057ea64ca2c107",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  70,
+                  71
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/product/handler/copywriting_test.go": [
+      {
+        "hash": "s_152cc48d1c7fe4::t_ab962c88441162",
+        "line_ranges": [
+          {
+            "Range": [
+              126,
+              140
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25323a00057ea64ca2c107",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  126,
+                  140
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/product/service/copywriting.go": [
+      {
+        "hash": "s_152cc48d1c7fe4::t_ab962c88441162",
+        "line_ranges": [
+          {
+            "Single": 21
+          },
+          {
+            "Range": [
+              86,
+              88
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25323a00057ea64ca2c107",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Single": 21
+              },
+              {
+                "Range": [
+                  86,
+                  88
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/product/service/copywriting_test.go": [
+      {
+        "hash": "s_152cc48d1c7fe4::t_ab962c88441162",
+        "line_ranges": [
+          {
+            "Range": [
+              132,
+              140
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25323a00057ea64ca2c107",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  132,
+                  140
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/shared/llm/doubao.go": [
+      {
+        "hash": "s_152cc48d1c7fe4::t_ab962c88441162",
+        "line_ranges": [
+          {
+            "Range": [
+              66,
+              69
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25323a00057ea64ca2c107",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  66,
+                  69
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/shared/llm/doubao_test.go": [
+      {
+        "hash": "s_152cc48d1c7fe4::t_ab962c88441162",
+        "line_ranges": [
+          {
+            "Range": [
+              67,
+              91
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25323a00057ea64ca2c107",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  67,
+                  91
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/shared/llm/provider.go": [
+      {
+        "hash": "s_152cc48d1c7fe4::t_ab962c88441162",
+        "line_ranges": [
+          {
+            "Range": [
+              10,
+              14
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25323a00057ea64ca2c107",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  10,
+                  14
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "docs/superpowers/plans/2026-06-07-bid-success-animation.md": [
+      {
+        "hash": "s_152cc48d1c7fe4::t_ab962c88441162",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              312
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25323a00057ea64ca2c107",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  312
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "docs/superpowers/plans/2026-06-07-unified-demo-seed.md": [
+      {
+        "hash": "s_152cc48d1c7fe4::t_ab962c88441162",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              670
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25323a00057ea64ca2c107",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  670
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frontend/admin/src/pages-new/__tests__/goodsEditAi.test.ts": [
+      {
+        "hash": "s_152cc48d1c7fe4::t_ab962c88441162",
+        "line_ranges": [
+          {
+            "Single": 58
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25323a00057ea64ca2c107",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Single": 58
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frontend/admin/src/pages-new/goodsEditAi.ts": [
+      {
+        "hash": "s_152cc48d1c7fe4::t_ab962c88441162",
+        "line_ranges": [
+          {
+            "Range": [
+              61,
+              62
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25323a00057ea64ca2c107",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  61,
+                  62
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "ranking-demo.html": [
+      {
+        "hash": "s_152cc48d1c7fe4::t_ab962c88441162",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              243
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25323a00057ea64ca2c107",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  243
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "s_152cc48d1c7fe4": {
+      "tool": "trae",
+      "conversation_id": "6a242c4900057ea64ca26316",
+      "session_id": "6a242c4900057ea64ca26316",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_152cc48d1c7fe4::t_a11dc5119c6520": {
+      "tool": "trae",
+      "conversation_id": "6a242c4900057ea64ca26316",
+      "session_id": "6a242c4900057ea64ca26316",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_152cc48d1c7fe4::t_ab962c88441162": {
+      "tool": "trae",
+      "conversation_id": "6a242c4900057ea64ca26316",
+      "session_id": "6a242c4900057ea64ca26316",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
