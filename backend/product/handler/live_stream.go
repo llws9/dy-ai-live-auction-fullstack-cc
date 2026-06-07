@@ -464,6 +464,7 @@ func (h *LiveStreamHandler) ListPublic(ctx context.Context, c *app.RequestContex
 		if hasNext {
 			nextAuction = map[string]interface{}{
 				"auction_id":   nx.AuctionID,
+				"product_id":   nx.ProductID,
 				"product_name": nameByID[nx.ProductID],
 				"start_price":  nx.StartPrice,
 				"start_time":   nx.StartTime,

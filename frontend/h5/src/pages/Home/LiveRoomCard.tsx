@@ -4,6 +4,7 @@ import styles from './LiveRoomCard.module.css';
 
 export interface NextAuction {
   auction_id: number;
+  product_id: number;
   product_name: string;
   start_price: string;
   start_time: string;
@@ -94,7 +95,7 @@ const LiveRoomCard: React.FC<Props> = ({ room, onSubscribe, onEnter }) => {
             <button
               type="button"
               className={styles.secondaryButton}
-              onClick={() => onSubscribe?.(undefined, next?.auction_id)}
+              onClick={() => onSubscribe?.(next?.product_id, next?.auction_id)}
             >
               预约开拍提醒
             </button>

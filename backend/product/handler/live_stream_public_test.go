@@ -163,6 +163,7 @@ func TestListPublic_BackfillsNextAndRecentDeals(t *testing.T) {
 
 	next := byID[602]["next_auction"].(map[string]interface{})
 	assert.EqualValues(t, 21, next["auction_id"])
+	assert.EqualValues(t, 9, next["product_id"])
 	assert.Equal(t, "翡翠手镯", next["product_name"])
 	assert.Equal(t, "300.00", next["start_price"])
 

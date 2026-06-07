@@ -20,11 +20,13 @@ test('有 current_auction 时显示直播中并以进入直播为主操作', () 
 test('无 current 有 next 时显示即将开始并以预约为主操作', () => {
   const onSubscribe = jest.fn();
   renderCard(
-    { id: 2, name: '云裳阁', status: 0, current_auction_id: null, next_auction: { auction_id: 21, product_name: '翡翠手镯', start_price: '300.00', start_time: '2026-06-08T10:00:00Z' }, recent_deals: [] },
+    { id: 2, name: '云裳阁', status: 0, current_auction_id: null, next_auction: { auction_id: 21, product_id: 8, product_name: '翡翠手镯', start_price: '300.00', start_time: '2026-06-08T10:00:00Z' }, recent_deals: [] },
     onSubscribe,
   );
   expect(screen.getByText('即将开始')).toBeInTheDocument();
   expect(screen.getByText('翡翠手镯')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '预约开拍提醒' }));
+  expect(onSubscribe).toHaveBeenCalledWith(8, 21);
 });
 
 test('渲染最近成交氛围信息', () => {
