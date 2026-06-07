@@ -796,10 +796,16 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
 
+:global(:root[data-theme='dark']) .rankingBlock,
+:global(:root:not([data-theme])) .rankingBlock,
 :global(.dark) .rankingBlock {
-  background: rgba(28, 28, 30, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  background:
+    radial-gradient(circle at 88% 0%, rgba(245, 158, 11, 0.24), transparent 40%),
+    linear-gradient(145deg, rgba(25, 18, 10, 0.98) 0%, rgba(8, 12, 20, 0.96) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.38);
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.46),
+    inset 0 1px 0 rgba(255, 237, 213, 0.16);
 }
 
 .rankingGlow {
@@ -814,6 +820,13 @@
   z-index: 0;
 }
 
+:global(:root[data-theme='dark']) .rankingGlow,
+:global(:root:not([data-theme])) .rankingGlow,
+:global(.dark) .rankingGlow {
+  background: rgba(245, 158, 11, 0.32);
+  filter: blur(44px);
+}
+
 .rankingBlockTitle {
   position: relative;
   z-index: 1;
@@ -824,6 +837,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+:global(:root[data-theme='dark']) .rankingBlockTitle,
+:global(:root:not([data-theme])) .rankingBlockTitle,
+:global(.dark) .rankingBlockTitle {
+  color: #fff7ed;
+  text-shadow: 0 1px 12px rgba(245, 158, 11, 0.28);
 }
 
 .rankingTrophy {
@@ -851,8 +871,11 @@
   background: linear-gradient(to right, rgba(254, 240, 138, 0.3), transparent);
 }
 
+:global(:root[data-theme='dark']) .rankingItemFirst,
+:global(:root:not([data-theme])) .rankingItemFirst,
 :global(.dark) .rankingItemFirst {
-  background: linear-gradient(to right, rgba(113, 63, 18, 0.3), transparent);
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.26), rgba(245, 158, 11, 0.08) 70%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.28);
 }
 
 .rankingItemLeft {
@@ -865,9 +888,22 @@
   opacity: 0.6;
 }
 
+:global(:root[data-theme='dark']) .rankingItemEmpty,
+:global(:root:not([data-theme])) .rankingItemEmpty,
+:global(.dark) .rankingItemEmpty {
+  opacity: 0.74;
+}
+
 .rankingItemMe {
   box-shadow: inset 0 0 0 1px rgba(255, 59, 48, 0.3);
   background-color: rgba(255, 59, 48, 0.05);
+}
+
+:global(:root[data-theme='dark']) .rankingItemMe,
+:global(:root:not([data-theme])) .rankingItemMe,
+:global(.dark) .rankingItemMe {
+  background: rgba(245, 158, 11, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.42);
 }
 
 /* 呼吸闪烁动画 */
@@ -914,9 +950,11 @@
   color: rgba(156, 163, 175, 0.8);
 }
 
+:global(:root[data-theme='dark']) .rankEmpty,
+:global(:root:not([data-theme])) .rankEmpty,
 :global(.dark) .rankEmpty {
-  background-color: rgba(156, 163, 175, 0.1);
-  color: rgba(156, 163, 175, 0.5);
+  background-color: rgba(245, 158, 11, 0.16);
+  color: rgba(253, 230, 138, 0.7);
 }
 
 .rankingName {
@@ -928,6 +966,18 @@
 .rankingNameEmpty {
   color: var(--color-text-secondary);
   font-style: italic;
+}
+
+:global(:root[data-theme='dark']) .rankingName,
+:global(:root:not([data-theme])) .rankingName,
+:global(.dark) .rankingName {
+  color: rgba(255, 247, 237, 0.92);
+}
+
+:global(:root[data-theme='dark']) .rankingNameEmpty,
+:global(:root:not([data-theme])) .rankingNameEmpty,
+:global(.dark) .rankingNameEmpty {
+  color: rgba(253, 230, 138, 0.66);
 }
 
 .rankingNameMe {
@@ -944,6 +994,18 @@
   color: var(--color-text-secondary);
 }
 
+:global(:root[data-theme='dark']) .rankingAmount,
+:global(:root:not([data-theme])) .rankingAmount,
+:global(.dark) .rankingAmount {
+  color: #fbbf24;
+}
+
+:global(:root[data-theme='dark']) .rankingAmountEmpty,
+:global(:root:not([data-theme])) .rankingAmountEmpty,
+:global(.dark) .rankingAmountEmpty {
+  color: rgba(253, 230, 138, 0.62);
+}
+
 .rankingAmountMe {
   color: var(--color-primary);
 }
@@ -955,6 +1017,8 @@
   -webkit-text-fill-color: transparent;
 }
 
+:global(:root[data-theme='dark']) .rankingAmountFirst,
+:global(:root:not([data-theme])) .rankingAmountFirst,
 :global(.dark) .rankingAmountFirst {
   background: linear-gradient(135deg, #FFE000 0%, #799F0C 100%);
   -webkit-background-clip: text;
@@ -970,8 +1034,10 @@
   border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
+:global(:root[data-theme='dark']) .myBidSection,
+:global(:root:not([data-theme])) .myBidSection,
 :global(.dark) .myBidSection {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(245, 158, 11, 0.24);
 }
 
 .myBidCard {
@@ -987,9 +1053,15 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
+:global(:root[data-theme='dark']) .myBidCard,
+:global(:root:not([data-theme])) .myBidCard,
 :global(.dark) .myBidCard {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(15, 23, 42, 0.82));
+  border: 1px solid rgba(245, 158, 11, 0.34);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 237, 213, 0.12);
 }
 
 .myBidLeft {
@@ -1008,16 +1080,38 @@
   justify-content: center;
 }
 
+:global(:root[data-theme='dark']) .myBidRankCircle,
+:global(:root:not([data-theme])) .myBidRankCircle,
+:global(.dark) .myBidRankCircle {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.34) 0%, rgba(245, 158, 11, 0.12) 100%);
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.28);
+}
+
 .myBidRank {
   font-size: 14px;
   font-weight: 700;
   color: var(--color-primary);
 }
 
+:global(:root[data-theme='dark']) .myBidRank,
+:global(:root[data-theme='dark']) .myBidAmount,
+:global(:root:not([data-theme])) .myBidRank,
+:global(:root:not([data-theme])) .myBidAmount,
+:global(.dark) .myBidRank,
+:global(.dark) .myBidAmount {
+  color: #fbbf24;
+}
+
 .myBidLabel {
   font-size: 14px;
   font-weight: 500;
   color: var(--color-text-primary);
+}
+
+:global(:root[data-theme='dark']) .myBidLabel,
+:global(:root:not([data-theme])) .myBidLabel,
+:global(.dark) .myBidLabel {
+  color: rgba(255, 247, 237, 0.86);
 }
 
 .myBidAmount {

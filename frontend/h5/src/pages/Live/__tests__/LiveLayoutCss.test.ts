@@ -36,6 +36,19 @@ describe('Live layout css', () => {
     expect(sheetCss).toContain('box-sizing: border-box;');
   });
 
+  it('uses warm glass styling for the ranking block in dark mode', () => {
+    const css = readLiveCss();
+    const darkRankingBlockCss = css.match(/:global\(:root\[data-theme='dark'\]\) \.rankingBlock,[\s\S]*?\n\}/)?.[0] ?? '';
+    const darkRankingGlowCss = css.match(/:global\(:root\[data-theme='dark'\]\) \.rankingGlow,[\s\S]*?\n\}/)?.[0] ?? '';
+    const darkMyBidCardCss = css.match(/:global\(:root\[data-theme='dark'\]\) \.myBidCard,[\s\S]*?\n\}/)?.[0] ?? '';
+
+    expect(darkRankingBlockCss).toContain(":global(:root:not([data-theme])) .rankingBlock");
+    expect(darkRankingBlockCss).toContain('linear-gradient(145deg, rgba(25, 18, 10, 0.98) 0%, rgba(8, 12, 20, 0.96) 100%)');
+    expect(darkRankingBlockCss).toContain('rgba(245, 158, 11, 0.38)');
+    expect(darkRankingGlowCss).toContain('rgba(245, 158, 11, 0.32)');
+    expect(darkMyBidCardCss).toContain('rgba(245, 158, 11, 0.22)');
+  });
+
   it('keeps live empty upcoming state colors bound to theme tokens', () => {
     const css = readLiveCss();
     const liveEmptyPageCss = getClassBlock(css, 'liveEmptyPage');
