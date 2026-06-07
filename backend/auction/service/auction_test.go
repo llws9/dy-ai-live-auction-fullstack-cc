@@ -294,6 +294,7 @@ func TestEndAuctionCreatesPendingOrderBeforeWinnerNotification(t *testing.T) {
 	assert.True(t, orderCreator.calls[0].FinalPrice.Equal(decimal.NewFromInt(110)))
 	require.Len(t, notifications.sent, 1)
 	assert.Equal(t, model.NotificationTypeAuctionWon, notifications.sent[0].Type)
+	assert.True(t, notifications.sent[0].Immediately, "auction_won notification must be pushed in realtime for H5 success animation")
 
 	var task model.AuctionSettlementTask
 	require.NoError(t, db.First(&task, "auction_id = ?", auction.ID).Error)

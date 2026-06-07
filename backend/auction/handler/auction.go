@@ -427,7 +427,7 @@ func (h *AuctionHandler) List(ctx context.Context, c *app.RequestContext) {
 
 	// 走带 product 摘要回填的编排路径（spec C §5.2）。
 	if h.productClient != nil {
-		items, total, err := BuildAuctionListResponse(ctx, h.productClient, h.auctionService.ListAuctionsWithFilters, params)
+		items, total, err := BuildAuctionListResponse(ctx, h.productClient, h.auctionService.ListAuctionsWithFilters, h.ruleFetcher, params)
 		if err != nil {
 			c.JSON(500, map[string]interface{}{
 				"code":    500,

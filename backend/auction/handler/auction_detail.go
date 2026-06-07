@@ -8,6 +8,7 @@ import (
 
 type auctionRuleFetcher interface {
 	GetByProductID(ctx context.Context, productID int64) (*model.AuctionRule, error)
+	GetByProductIDs(ctx context.Context, productIDs []int64) (map[int64]*model.AuctionRule, error)
 }
 
 type AuctionDetailResponse struct {

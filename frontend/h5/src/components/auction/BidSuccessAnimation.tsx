@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { IntroAnimation } from './IntroAnimation';
 import './bid-success-animation.css';
 
@@ -15,12 +15,18 @@ export const BidSuccessAnimation: React.FC<BidSuccessAnimationProps> = ({
   imageUrl,
   onAnimationEnd,
 }) => {
+  const onAnimationEndRef = useRef(onAnimationEnd);
+
+  useEffect(() => {
+    onAnimationEndRef.current = onAnimationEnd;
+  }, [onAnimationEnd]);
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      onAnimationEnd?.();
+      onAnimationEndRef.current?.();
     }, 3000);
     return () => window.clearTimeout(timer);
-  }, [onAnimationEnd]);
+  }, []);
 
   return (
     <div className="shake-trigger" data-testid="bid-success-animation">

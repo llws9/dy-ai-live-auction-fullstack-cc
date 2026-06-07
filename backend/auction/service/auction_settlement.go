@@ -169,10 +169,11 @@ func (s *AuctionSettlementService) SendAuctionResultNotifications(ctx context.Co
 	}
 
 	if err := s.notificationSender.SendNotification(ctx, &model.NotificationRequest{
-		UserID:  winnerID,
-		Type:    model.NotificationTypeAuctionWon,
-		Title:   "竞拍中标",
-		Content: fmt.Sprintf("恭喜！您以 %s 元中标了竞拍", finalPrice.StringFixed(2)),
+		UserID:      winnerID,
+		Type:        model.NotificationTypeAuctionWon,
+		Title:       "竞拍中标",
+		Content:     fmt.Sprintf("恭喜！您以 %s 元中标了竞拍", finalPrice.StringFixed(2)),
+		Immediately: true,
 		Data: map[string]interface{}{
 			"auction_id":  auction.ID,
 			"final_price": finalPrice.StringFixed(2),
@@ -192,10 +193,11 @@ func (s *AuctionSettlementService) SendAuctionResultNotifications(ctx context.Co
 		}
 		seenLosers[bid.UserID] = struct{}{}
 		loserRequests = append(loserRequests, &model.NotificationRequest{
-			UserID:  bid.UserID,
-			Type:    model.NotificationTypeAuctionLost,
-			Title:   "竞拍未中标",
-			Content: fmt.Sprintf("很遗憾，您未能中标。最终成交价为 %s 元", finalPrice.StringFixed(2)),
+			UserID:      bid.UserID,
+			Type:        model.NotificationTypeAuctionLost,
+			Title:       "竞拍未中标",
+			Content:     fmt.Sprintf("很遗憾，您未能中标。最终成交价为 %s 元", finalPrice.StringFixed(2)),
+			Immediately: true,
 			Data: map[string]interface{}{
 				"auction_id":   auction.ID,
 				"winner_price": finalPrice.StringFixed(2),

@@ -7,11 +7,17 @@ import (
 	"auction-service/client"
 	"auction-service/dao"
 	"auction-service/model"
+
+	"github.com/shopspring/decimal"
 )
 
 // auctionLister 是 BuildAuctionListResponse 依赖的最小接口，
 // 在生产环境由 service.AuctionService.ListAuctionsWithFilters 提供。
 type auctionLister func(ctx context.Context, filters *dao.AuctionFilters, page, pageSize int) ([]model.Auction, int64, error)
+
+type auctionRuleBatchFetcher interface {
+	GetByProductIDs(ctx context.Context, productIDs []int64) (map[int64]*model.AuctionRule, error)
+}
 
 // ListParams 是 GET /auctions 的归一化查询参数。
 type ListParams struct {
@@ -37,7 +43,8 @@ type AuctionProductSummary struct {
 // AuctionListItem 是 list 响应中的单条记录：原 auction 字段 + 内嵌 product 摘要。
 type AuctionListItem struct {
 	model.Auction
-	Product AuctionProductSummary `json:"product"`
+	StartPrice *decimal.Decimal      `json:"start_price,omitempty"`
+	Product    AuctionProductSummary `json:"product"`
 }
 
 // BuildAuctionListResponse 编排 GET /auctions 的核心逻辑：
@@ -51,6 +58,7 @@ func BuildAuctionListResponse(
 	ctx context.Context,
 	pc client.ProductClient,
 	lister auctionLister,
+	ruleFetcher auctionRuleBatchFetcher,
 	p ListParams,
 ) ([]AuctionListItem, int64, error) {
 	filters := &dao.AuctionFilters{
@@ -97,6 +105,13 @@ func BuildAuctionListResponse(
 	if err != nil {
 		return nil, 0, fmt.Errorf("batch get product summaries: %w", err)
 	}
+	rules := map[int64]*model.AuctionRule{}
+	if ruleFetcher != nil {
+		rules, err = ruleFetcher.GetByProductIDs(ctx, productIDs)
+		if err != nil {
+			return nil, 0, fmt.Errorf("batch get auction rules: %w", err)
+		}
+	}
 
 	// Step 4: 回填
 	out := make([]AuctionListItem, 0, len(auctions))
@@ -109,6 +124,9 @@ func BuildAuctionListResponse(
 				Name:       s.Name,
 				Image:      firstImage(s.Images),
 				CategoryID: s.CategoryID,
+			}
+			if rule, ok := rules[a.ProductID]; ok && rule != nil {
+				item.StartPrice = &rule.StartPrice
 			}
 			out = append(out, item)
 			continue

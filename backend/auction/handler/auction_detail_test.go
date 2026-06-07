@@ -20,6 +20,16 @@ func (f *fakeAuctionRuleFetcher) GetByProductID(_ context.Context, _ int64) (*mo
 	return f.out, f.err
 }
 
+func (f *fakeAuctionRuleFetcher) GetByProductIDs(_ context.Context, _ []int64) (map[int64]*model.AuctionRule, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	if f.out == nil {
+		return map[int64]*model.AuctionRule{}, nil
+	}
+	return map[int64]*model.AuctionRule{f.out.ProductID: f.out}, nil
+}
+
 func TestBuildAuctionDetailResponseIncludesAuctionRule(t *testing.T) {
 	ctx := context.Background()
 	auction := &model.Auction{

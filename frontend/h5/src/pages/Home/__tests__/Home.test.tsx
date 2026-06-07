@@ -223,6 +223,35 @@ describe('HomePage 分类联动 (T2.10)', () => {
     expect(screen.queryByText('暂无图片')).not.toBeInTheDocument();
   });
 
+  it('首页无出价竞拍使用起拍价展示价格，不显示 0', async () => {
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [
+        {
+          id: 12,
+          product_id: 100,
+          live_stream_id: 5,
+          status: 1,
+          current_price: 0,
+          start_price: 100,
+          bid_count: 0,
+          product: {
+            id: 100,
+            name: '起拍价拍品',
+            images: ['/auction.jpg'],
+          },
+        },
+      ],
+      total: 1,
+    });
+
+    renderHome();
+
+    await screen.findByRole('heading', { name: '起拍价拍品' });
+    expect(screen.getByText('暂无出价')).toBeInTheDocument();
+    expect(screen.getByText('¥100')).toBeInTheDocument();
+    expect(screen.queryByText('¥0')).not.toBeInTheDocument();
+  });
+
   it('首页竞拍卡片在商品无图时使用兜底图片', async () => {
     mockedAuctionApi.list.mockResolvedValue({
       list: [

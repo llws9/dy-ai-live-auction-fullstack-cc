@@ -153,6 +153,7 @@ type Auction struct {
 }
 
 type AuctionRules struct {
+	StartPrice decimal.Decimal `json:"start_price"`
 	Increment decimal.Decimal `json:"increment"`
 }
 

@@ -130,6 +130,7 @@ func main() {
 	bidService.SetSkyLampTrigger(skyLampService)
 	bidService.SetMetrics(metrics.GetMetrics())
 	bidService.SetHub(hub)
+	skyLampService.SetHub(hub)
 	auctionService.SetBidDAO(bidDAO)
 	auctionService.SetNotificationSender(notificationService)
 	auctionService.SetSkyLampDAO(skyLampDAO)

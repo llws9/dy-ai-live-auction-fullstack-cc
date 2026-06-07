@@ -109,14 +109,18 @@ func parseOptionalFollowBidAmount(raw json.RawMessage) (*decimal.Decimal, error)
 	return &amount, nil
 }
 
-func computeFollowBidAmount(current, increment decimal.Decimal, override *decimal.Decimal) decimal.Decimal {
+func computeFollowBidAmount(current, start, increment decimal.Decimal, override *decimal.Decimal) decimal.Decimal {
 	if override != nil {
 		return *override
 	}
 	if increment.IsZero() {
 		increment = decimal.NewFromInt(1)
 	}
-	return current.Add(increment)
+	baseline := current
+	if start.GreaterThan(baseline) {
+		baseline = start
+	}
+	return baseline.Add(increment)
 }
 
 func demoUserIDFromAuthorization(authHeader, jwtSecret string) (int64, error) {
@@ -290,6 +294,7 @@ func (h *DemoHandler) PostFollowBid(ctx context.Context, c *app.RequestContext) 
 	}
 
 	current := zeroFollowBidAmount()
+	start := zeroFollowBidAmount()
 	if override == nil {
 		auction, step := h.bizCli.GetAuction(ctx, req.AuctionID)
 		if !step.OK {
@@ -297,12 +302,15 @@ func (h *DemoHandler) PostFollowBid(ctx context.Context, c *app.RequestContext) 
 			return
 		}
 		current = decimal.NewFromFloat(auction.CurrentPrice)
-		if increment.IsZero() && auction.Rules != nil && auction.Rules.Increment.IsPositive() {
-			increment = auction.Rules.Increment
+		if auction.Rules != nil {
+			start = auction.Rules.StartPrice
+			if increment.IsZero() && auction.Rules.Increment.IsPositive() {
+				increment = auction.Rules.Increment
+			}
 		}
 	}
 
-	amount := computeFollowBidAmount(current, increment, override)
+	amount := computeFollowBidAmount(current, start, increment, override)
 	if !amount.IsPositive() {
 		c.JSON(400, map[string]any{"error": "amount must be positive"})
 		return
@@ -433,7 +441,7 @@ func (h *DemoHandler) PostMerchantAuction(ctx context.Context, c *app.RequestCon
 		Duration:           durationSec,
 		DelayDuration:      5,
 		MaxDelayTime:       30,
-		TriggerDelayBefore: 5,
+		TriggerDelayBefore: 10,
 	})
 	if !rule.OK {
 		writeDemoStepError(c, rule)

@@ -16,18 +16,21 @@ func TestComputeFollowBidAmount(t *testing.T) {
 	cases := []struct {
 		name     string
 		current  string
+		start    string
 		incr     string
 		override string
 		want     string
 	}{
-		{"override wins", "100", "10", "500", "500"},
-		{"current plus increment", "100", "10", "", "110"},
-		{"zero current uses increment", "0", "5", "", "5"},
-		{"empty increment defaults to 1", "100", "", "", "101"},
+		{"override wins", "100", "80", "10", "500", "500"},
+		{"current plus increment", "100", "80", "10", "", "110"},
+		{"zero current uses start plus increment", "0", "100", "10", "", "110"},
+		{"current above start wins", "120", "100", "10", "", "130"},
+		{"empty increment defaults to 1", "100", "80", "", "", "101"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			cur := mustFollowBidAmount(t, c.current)
+			start := mustFollowBidAmount(t, c.start)
 			incr := zeroFollowBidAmount()
 			if c.incr != "" {
 				incr = mustFollowBidAmount(t, c.incr)
@@ -37,10 +40,10 @@ func TestComputeFollowBidAmount(t *testing.T) {
 				v := mustFollowBidAmount(t, c.override)
 				override = &v
 			}
-			got := computeFollowBidAmount(cur, incr, override)
+			got := computeFollowBidAmount(cur, start, incr, override)
 			want := mustFollowBidAmount(t, c.want)
 			if !got.Equal(want) {
-				t.Fatalf("computeFollowBidAmount(%s,%s,%v)=%s want %s", c.current, c.incr, override, got, want)
+				t.Fatalf("computeFollowBidAmount(%s,%s,%s,%v)=%s want %s", c.current, c.start, c.incr, override, got, want)
 			}
 		})
 	}
@@ -147,6 +150,14 @@ func TestMerchantDemoAuctionCreatesFreshProductsForRepeatedOngoingClicks(t *test
 	}
 	if fake.waitStartedCalls != 2 {
 		t.Fatalf("ongoing mode should wait for auction started twice, got %d", fake.waitStartedCalls)
+	}
+	if len(fake.ruleReqs) != 2 {
+		t.Fatalf("expected two auction rule requests, got %d", len(fake.ruleReqs))
+	}
+	for _, req := range fake.ruleReqs {
+		if req.TriggerDelayBefore != 10 {
+			t.Fatalf("demo anti-snipe window=%d want 10", req.TriggerDelayBefore)
+		}
 	}
 }
 
@@ -267,6 +278,7 @@ type fakeDemoAuctionClient struct {
 	waitStartedCalls    int
 	productReqs         []auctioncli.CreateProductReq
 	publishedProductIDs []int64
+	ruleReqs            []auctioncli.CreateAuctionRuleReq
 	auctionReqs         []auctioncli.CreateAuctionReq
 	fixedReqs           []auctioncli.CreateFixedPriceItemReq
 }
@@ -302,7 +314,8 @@ func (f *fakeDemoAuctionClient) PublishProductAs(_ context.Context, _ auctioncli
 	return f.ok("publish_product", productID)
 }
 
-func (f *fakeDemoAuctionClient) CreateAuctionRule(_ context.Context, _ auctioncli.Actor, productID int64, _ auctioncli.CreateAuctionRuleReq) auctioncli.StepResult {
+func (f *fakeDemoAuctionClient) CreateAuctionRule(_ context.Context, _ auctioncli.Actor, productID int64, req auctioncli.CreateAuctionRuleReq) auctioncli.StepResult {
+	f.ruleReqs = append(f.ruleReqs, req)
 	return f.ok("create_auction_rule", productID)
 }
 

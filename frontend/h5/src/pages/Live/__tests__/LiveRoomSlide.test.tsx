@@ -412,6 +412,81 @@ describe('LiveRoomSlide', () => {
     expect(screen.getByTestId('dock-sky-lamp-icon')).toBeInTheDocument();
   });
 
+  it('shows the sky lamp notice again when auto-bid websocket message arrives', async () => {
+    mockedAuctionApi.get.mockResolvedValue({
+      id: 5,
+      product_id: 7,
+      live_stream_id: 3,
+      status: 1,
+      current_price: 130,
+      end_time: new Date(Date.now() + 60_000).toISOString(),
+    });
+    mockedProductApi.get.mockResolvedValue({
+      id: 7,
+      name: '明代紫砂壶',
+      images: ['/product.jpg'],
+      rules: { start_price: 100, increment: 10 },
+    });
+    mockedBidApi.getRanking.mockResolvedValue([
+      { rank: 1, user_id: 9102, user_name: '演示买家B', amount: 140 },
+      { rank: 2, user_id: 9, user_name: '测试用户', amount: 130 },
+    ]);
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: '出价' }));
+    expect(screen.getByText('当前最高价 ¥130')).toBeInTheDocument();
+    expect(screen.getByText('演示买家B')).toBeInTheDocument();
+    const autoBidHandler = getWebSocketHandler('sky_lamp_auto_bid');
+    expect(autoBidHandler).toBeDefined();
+
+    act(() => {
+      autoBidHandler!({
+        auction_id: 5,
+        user_id: 9,
+        amount: '150',
+        remaining_budget: '9850',
+        auto_bid_count: 1,
+      });
+    });
+
+    expect(screen.getByText('测试用户 点天灯自动跟价 ¥150，继续守住领先')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByText('¥150').length).toBeGreaterThan(0));
+    expect(screen.getByText('我自己 (当前领先)')).toBeInTheDocument();
+    expect(screen.getByText('演示买家B')).toBeInTheDocument();
+
+    act(() => {
+      autoBidHandler!({
+        auction_id: 5,
+        user_id: 9102,
+        amount: '160',
+        remaining_budget: '9840',
+        auto_bid_count: 2,
+      });
+    });
+
+    expect(screen.getByText('用户9102 点天灯自动跟价 ¥160，继续守住领先')).toBeInTheDocument();
+  });
+
+  it('ignores sky lamp auto-bid websocket messages from other auction rooms', async () => {
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    const autoBidHandler = getWebSocketHandler('sky_lamp_auto_bid');
+    expect(autoBidHandler).toBeDefined();
+
+    act(() => {
+      autoBidHandler!({
+        auction_id: 999,
+        user_id: 9,
+        amount: '150',
+      });
+    });
+
+    expect(screen.queryByText(/点天灯自动跟价/)).not.toBeInTheDocument();
+  });
+
   it('uses total_count from followers stats when count aliases are absent', async () => {
     mockedFollowApi.getFollowersStats.mockResolvedValue({ total_count: 1 });
     mockedLiveStreamApi.get.mockResolvedValue({

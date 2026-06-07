@@ -97,6 +97,14 @@ type PlaceBidResult struct {
 	WinnerID     int64           `json:"winner_id"`
 }
 
+func minimumBidAmount(currentPrice, startPrice, increment decimal.Decimal) decimal.Decimal {
+	baseline := currentPrice
+	if startPrice.GreaterThan(baseline) {
+		baseline = startPrice
+	}
+	return baseline.Add(increment)
+}
+
 // PlaceBid 出价
 func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*PlaceBidResult, error) {
 	start := time.Now()
@@ -146,7 +154,7 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 	}
 
 	// 5. 校验出价金额
-	minBidAmount := auction.CurrentPrice.Add(rule.Increment)
+	minBidAmount := minimumBidAmount(auction.CurrentPrice, rule.StartPrice, rule.Increment)
 	if req.Amount.LessThan(minBidAmount) {
 		return &PlaceBidResult{
 			Success: false,
@@ -210,7 +218,7 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 	}
 
 	// 9. 再次校验（双重检查）
-	minBidAmount = auction.CurrentPrice.Add(rule.Increment)
+	minBidAmount = minimumBidAmount(auction.CurrentPrice, rule.StartPrice, rule.Increment)
 	if req.Amount.LessThan(minBidAmount) {
 		return &PlaceBidResult{
 			Success: false,
@@ -235,7 +243,7 @@ func (s *BidService) PlaceBid(ctx context.Context, req *PlaceBidRequest) (*Place
 				continue
 			}
 			// 重试时再次校验最低出价
-			minBidAmount = auction.CurrentPrice.Add(rule.Increment)
+			minBidAmount = minimumBidAmount(auction.CurrentPrice, rule.StartPrice, rule.Increment)
 			if req.Amount.LessThan(minBidAmount) {
 				return &PlaceBidResult{
 					Success: false,
