@@ -9,7 +9,6 @@ import {
   createDemoMerchantAuction,
   rechargeDemoUser,
   shortenDemoAuction,
-  triggerOtherSkyLamp,
   triggerFollowBid,
 } from '../../../services/demoApi';
 
@@ -29,7 +28,6 @@ jest.mock('../../../services/demoApi', () => ({
   createDemoFixedPriceItem: jest.fn(),
   createDemoMerchantAuction: jest.fn(),
   shortenDemoAuction: jest.fn(),
-  triggerOtherSkyLamp: jest.fn(),
   triggerFollowBid: jest.fn(),
   rechargeDemoUser: jest.fn(),
 }));
@@ -46,7 +44,6 @@ const mockedUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockedUseDemo = useDemo as jest.MockedFunction<typeof useDemo>;
 const mockedUseToast = useToast as jest.MockedFunction<typeof useToast>;
 const mockedTriggerFollowBid = triggerFollowBid as jest.MockedFunction<typeof triggerFollowBid>;
-const mockedTriggerOtherSkyLamp = triggerOtherSkyLamp as jest.MockedFunction<typeof triggerOtherSkyLamp>;
 const mockedRechargeDemoUser = rechargeDemoUser as jest.MockedFunction<typeof rechargeDemoUser>;
 const mockedCreateDemoMerchantAuction = createDemoMerchantAuction as jest.MockedFunction<typeof createDemoMerchantAuction>;
 const mockedCreateDemoFixedPriceItem = createDemoFixedPriceItem as jest.MockedFunction<typeof createDemoFixedPriceItem>;
@@ -86,7 +83,6 @@ describe('DemoConsole', () => {
     mockPathname = '/';
     mockLogin.mockResolvedValue(undefined);
     mockedTriggerFollowBid.mockResolvedValue({ ok: true });
-    mockedTriggerOtherSkyLamp.mockResolvedValue({ ok: true });
     mockedRechargeDemoUser.mockResolvedValue({ ok: true });
     mockedCreateDemoMerchantAuction.mockResolvedValue({ ok: true });
     mockedCreateDemoFixedPriceItem.mockResolvedValue({ ok: true });
@@ -117,7 +113,6 @@ describe('DemoConsole', () => {
     await user.click(screen.getByRole('button', { name: '演示' }));
 
     expect(screen.getByRole('button', { name: '他人跟价' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '他人天灯' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '并发压测' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '倒计时' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '返回' })).toBeInTheDocument();
@@ -236,42 +231,6 @@ describe('DemoConsole', () => {
     await user.click(screen.getByRole('button', { name: '他人跟价' }));
 
     expect(mockShowToast).toHaveBeenCalledWith('跟价失败：跟价冲突，请重试', 'error', 2500);
-  });
-
-  it('triggers buyer B sky lamp for the current auction and reports success', async () => {
-    const user = userEvent.setup();
-    renderConsole(777);
-
-    await user.click(screen.getByTestId('demo-console-fab'));
-    await user.click(screen.getByRole('button', { name: '演示' }));
-    await user.click(screen.getByRole('button', { name: '他人天灯' }));
-
-    expect(mockedTriggerOtherSkyLamp).toHaveBeenCalledWith({ auctionId: 777 });
-    expect(mockShowToast).toHaveBeenCalledWith('已触发他人天灯', 'success', 2500);
-  });
-
-  it('warns and skips other sky lamp when there is no current auction', async () => {
-    const user = userEvent.setup();
-    renderConsole(null);
-
-    await user.click(screen.getByTestId('demo-console-fab'));
-    await user.click(screen.getByRole('button', { name: '演示' }));
-    await user.click(screen.getByRole('button', { name: '他人天灯' }));
-
-    expect(mockShowToast).toHaveBeenCalledWith('请先进入直播间', 'warning', 2500);
-    expect(mockedTriggerOtherSkyLamp).not.toHaveBeenCalled();
-  });
-
-  it('shows a short error toast when other sky lamp fails', async () => {
-    const user = userEvent.setup();
-    mockedTriggerOtherSkyLamp.mockRejectedValueOnce(new Error('已有活跃的点天灯订阅'));
-    renderConsole(777);
-
-    await user.click(screen.getByTestId('demo-console-fab'));
-    await user.click(screen.getByRole('button', { name: '演示' }));
-    await user.click(screen.getByRole('button', { name: '他人天灯' }));
-
-    expect(mockShowToast).toHaveBeenCalledWith('天灯失败：已有活跃的点天灯订阅', 'error', 2500);
   });
 
   it('recharges demo buyer A and B with a fixed amount from the second-level menu', async () => {
@@ -398,7 +357,6 @@ describe('DemoConsole', () => {
 
     expect(mockShowToast).toHaveBeenCalledWith('并发压测暂未接入后端链路', 'info', 2500);
     expect(mockedTriggerFollowBid).not.toHaveBeenCalled();
-    expect(mockedTriggerOtherSkyLamp).not.toHaveBeenCalled();
     expect(mockedShortenDemoAuction).not.toHaveBeenCalled();
     expect(mockedRechargeDemoUser).not.toHaveBeenCalled();
   });
