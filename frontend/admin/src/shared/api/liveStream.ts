@@ -49,8 +49,11 @@ export const liveStreamApi = {
   // 开启直播：复用已有 gateway admin start route
   start: (id: number) => post<void>(`/live-streams/${id}/start`),
 
-  // 强制结束直播
-  end: (id: number) => put<void>(`/admin/live-streams/${id}/end`),
+  // 商家结束自己的直播间
+  end: (id: number) => put<void>(`/live-streams/${id}/end`),
+
+  // 平台管理员强制结束直播间
+  adminEnd: (id: number) => put<void>(`/admin/live-streams/${id}/end`),
 
   // 封禁直播间
   ban: (id: number, reason: string) => put<void>(`/admin/live-streams/${id}/ban`, { reason }),

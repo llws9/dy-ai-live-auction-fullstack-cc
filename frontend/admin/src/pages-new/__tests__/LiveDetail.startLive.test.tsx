@@ -13,6 +13,7 @@ jest.mock('@/shared/api', () => ({
     adminGet: jest.fn(),
     start: jest.fn(),
     end: jest.fn(),
+    adminEnd: jest.fn(),
     ban: jest.fn(),
   },
 }));
@@ -73,7 +74,31 @@ describe('LiveDetail start live', () => {
 
     expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('确认开始直播'));
     await waitFor(() => expect(liveStreamApi.start).toHaveBeenCalledWith(501));
-    expect(screen.getByRole('button', { name: /直播中/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /结束直播/ })).toBeInTheDocument();
+  });
+
+  it('lets merchants end a live stream from detail page', async () => {
+    jest.spyOn(window, 'confirm').mockReturnValue(true);
+    (liveStreamApi.end as jest.Mock).mockResolvedValue({ status: 2 });
+
+    renderLiveDetailAs(1, {
+      id: 501,
+      name: '商家直播间',
+      streamer_id: 1002,
+      streamer_name: '商家用户',
+      status: 1,
+      viewer_count: 10,
+      auction_count: 2,
+      created_at: '2026-06-05T00:00:00Z',
+    });
+
+    expect(await screen.findByRole('heading', { name: '直播间控制台' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /结束直播/ }));
+
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('确认结束当前直播'));
+    await waitFor(() => expect(liveStreamApi.end).toHaveBeenCalledWith(501));
+    expect(screen.getByRole('button', { name: /已结束/ })).toBeDisabled();
   });
 
   it('does not show merchant start action for admins', async () => {

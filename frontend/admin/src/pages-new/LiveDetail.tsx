@@ -21,7 +21,7 @@ export default function LiveDetail() {
   const liveStreamId = searchParams.get('id')
 
   const [loading, setLoading] = React.useState(true)
-  const [starting, setStarting] = React.useState(false)
+  const [submitting, setSubmitting] = React.useState(false)
   const [liveStream, setLiveStream] = React.useState<any>(null)
 
   // 获取直播间详情
@@ -48,13 +48,13 @@ export default function LiveDetail() {
   }, [liveStreamId, navigate])
 
   const handleStart = async () => {
-    if (!liveStreamId || starting || liveStream?.status !== 0) return
+    if (!liveStreamId || submitting || liveStream?.status !== 0) return
     const confirmed = window.confirm(
       "确认开始直播？\n当前版本将由 PC 管理端发起直播状态，用于演示观看、竞拍和一口价交易链路；真实移动端推流将在后续版本接入。"
     )
     if (!confirmed) return
 
-    setStarting(true)
+    setSubmitting(true)
     try {
       await liveStreamApi.start(Number(liveStreamId))
       setLiveStream((prev: any) => ({ ...prev, status: 1 }))
@@ -63,19 +63,26 @@ export default function LiveDetail() {
       console.error("开始直播失败:", e)
       alert("开始直播失败")
     } finally {
-      setStarting(false)
+      setSubmitting(false)
     }
   }
 
   const handleEnd = async () => {
-    if (!liveStreamId || !window.confirm("确认强制结束该直播间？")) return
+    if (!liveStreamId || submitting || liveStream?.status !== 1) return
+    const message = isPlatformAdmin ? "确认强制结束该直播间？" : "确认结束当前直播？"
+    if (!window.confirm(message)) return
+    setSubmitting(true)
     try {
-      const data = await liveStreamApi.end(Number(liveStreamId))
+      const data = isPlatformAdmin
+        ? await liveStreamApi.adminEnd(Number(liveStreamId))
+        : await liveStreamApi.end(Number(liveStreamId))
       setLiveStream((prev: any) => ({ ...prev, status: data?.status ?? 2 }))
       alert("直播间已结束")
     } catch (e) {
       console.error("结束直播失败:", e)
       alert("结束直播失败")
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -178,14 +185,25 @@ export default function LiveDetail() {
                   <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">
                     当前版本支持通过 PC 管理端发起直播状态，用于商品讲解、竞拍和一口价交易链路演示；移动端主播推流能力将在后续版本接入。
                   </div>
-                  <Button
-                    className="w-full bg-amber-500 text-[#0f172a] hover:bg-amber-600"
-                    onClick={handleStart}
-                    disabled={starting || !canStartLive}
-                  >
-                    <Video className="mr-2 w-4 h-4" />
-                    {canStartLive ? (starting ? "开始中..." : "开始直播") : statusLabel}
-                  </Button>
+                  {isLive ? (
+                    <Button
+                      variant="destructive"
+                      className="w-full"
+                      onClick={handleEnd}
+                      disabled={submitting}
+                    >
+                      {submitting ? "结束中..." : "结束直播"}
+                    </Button>
+                  ) : (
+                    <Button
+                      className="w-full bg-amber-500 text-[#0f172a] hover:bg-amber-600"
+                      onClick={handleStart}
+                      disabled={submitting || !canStartLive}
+                    >
+                      <Video className="mr-2 w-4 h-4" />
+                      {canStartLive ? (submitting ? "开始中..." : "开始直播") : statusLabel}
+                    </Button>
+                  )}
                 </>
               )}
               {isPlatformAdmin && (
@@ -193,8 +211,8 @@ export default function LiveDetail() {
                   <Button variant="outline" className="w-full" onClick={handleBan}>
                     封禁直播间
                   </Button>
-                  <Button variant="destructive" className="w-full" onClick={handleEnd} disabled={liveStream.status === 2 || liveStream.status === 3}>
-                    关闭直播
+                  <Button variant="destructive" className="w-full" onClick={handleEnd} disabled={submitting || liveStream.status !== 1}>
+                    {submitting ? "关闭中..." : "关闭直播"}
                   </Button>
                 </>
               )}

@@ -24,7 +24,7 @@ type LiveStream struct {
 	Description    string           `json:"description" gorm:"type:text"`                  // 直播间描述
 	CoverImage     string           `json:"cover_image" gorm:"type:varchar(256)"`          // 封面图URL
 	VideoURL       string           `json:"video_url" gorm:"type:varchar(512)"`            // 直播流URL（HLS/FLV，本期由后台手动配置）
-	Status         LiveStreamStatus `json:"status" gorm:"type:tinyint;default:1"`          // 状态：0=禁用，1=正常
+	Status         LiveStreamStatus `json:"status" gorm:"type:tinyint;default:0"`          // 状态：0=未开播，1=直播中，2=已结束，3=已封禁
 	StreamerName   string           `json:"streamer_name" gorm:"type:varchar(128)"`        // 主播展示名
 	StreamerAvatar string           `json:"streamer_avatar" gorm:"type:varchar(255)"`      // 主播头像
 	ViewerCount    int              `json:"viewer_count" gorm:"default:0"`                 // 兜底在线人数，实时值优先取 Redis

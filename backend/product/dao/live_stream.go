@@ -152,7 +152,7 @@ func (d *LiveStreamDAO) GetOrCreateByCreatorID(ctx context.Context, creatorID in
 			CreatorID:   creatorID,
 			Name:        creatorName + "的直播间",
 			Description: creatorName + "的个人直播间",
-			Status:      model.LiveStreamStatusActive,
+			Status:      model.LiveStreamStatusNotStarted,
 		}
 		if err := d.Create(ctx, liveStream); err != nil {
 			return nil, err

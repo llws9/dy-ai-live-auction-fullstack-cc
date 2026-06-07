@@ -15,6 +15,7 @@ type LiveStreamStatsHandler struct {
 
 type LiveStarter interface {
 	StartLive(ctx context.Context, liveStreamID int64) error
+	EndLive(ctx context.Context, liveStreamID int64) error
 }
 
 type LiveStreamOwnerChecker interface {
@@ -72,6 +73,24 @@ func (h *LiveStreamStatsHandler) StartLive(ctx context.Context, c *app.RequestCo
 		return
 	}
 
+	c.JSON(200, map[string]interface{}{
+		"code":    0,
+		"message": "success",
+		"data":    map[string]interface{}{"success": true},
+	})
+}
+
+func (h *LiveStreamStatsHandler) EndLive(ctx context.Context, c *app.RequestContext) {
+	liveStreamID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || liveStreamID <= 0 {
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "无效的直播间ID"})
+		return
+	}
+	if err := h.service.EndLive(ctx, liveStreamID); err != nil {
+		log.Printf("EndLive failed: liveStreamID=%d err=%v", liveStreamID, err)
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "结束直播失败"})
+		return
+	}
 	c.JSON(200, map[string]interface{}{
 		"code":    0,
 		"message": "success",

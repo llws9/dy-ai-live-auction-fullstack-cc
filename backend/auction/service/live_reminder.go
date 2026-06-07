@@ -57,8 +57,13 @@ func (r *LiveStatsSessionResolver) GetActiveSession(ctx context.Context, liveStr
 			return nil, err
 		}
 		if item, ok := items[liveStreamID]; ok {
+			if item.Status != 1 {
+				return nil, nil
+			}
 			name = item.Name
 			avatarURL = item.CoverImage
+		} else {
+			return nil, nil
 		}
 	}
 	return &model.StreamInfo{

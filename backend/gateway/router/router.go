@@ -28,7 +28,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	adminAuctionProxy := handler.NewProxyHandlerWithInternalToken(cfg.Services.AuctionURL, cfg.Services.InternalToken)
 	testProxy := handler.NewProxyHandler(cfg.Services.TestURL)
 	touchpointHandler := handler.NewTouchpointHandler(cfg.Services.AuctionURL, cfg.Services.ProductURL)
-	liveStartHandler := handler.NewLiveStartHandler(cfg.Services.AuctionURL, cfg.Services.InternalToken)
+	liveStartHandler := handler.NewLiveStartHandler(cfg.Services.ProductURL, cfg.Services.AuctionURL, cfg.Services.InternalToken)
 
 	// 创建实验处理器
 	experimentHandler := handler.NewExperimentHandler(gbClient)
@@ -118,6 +118,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.GET("/user/followed-live-streams", auctionProxy.Forward)
 	authGroup.PUT("/live-streams/:id/notification", auctionProxy.Forward)
 	authGroup.POST("/live-streams/:id/start", middleware.RequireMerchantOnly(), liveStartHandler.StartLive)
+	authGroup.PUT("/live-streams/:id/end", middleware.RequireMerchantOnly(), liveStartHandler.EndLive)
 	v1.GET("/live-streams/:id/followers/stats", auctionProxy.Forward)
 	v1.GET("/live-streams/:id/followers/count", auctionProxy.Forward)
 
@@ -166,7 +167,7 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	authGroup.GET("/admin/live-streams/:id", middleware.RequireMerchantOrAdmin(), adminProductProxy.Forward)
 	authGroup.POST("/admin/live-streams", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
 	authGroup.PUT("/admin/live-streams/:id", middleware.RequireMerchantOnly(), adminProductProxy.Forward)
-	authGroup.PUT("/admin/live-streams/:id/end", middleware.RequireAdmin(), adminProductProxy.Forward)
+	authGroup.PUT("/admin/live-streams/:id/end", middleware.RequireAdmin(), liveStartHandler.EndLive)
 	authGroup.PUT("/admin/live-streams/:id/ban", middleware.RequireAdmin(), adminProductProxy.Forward)
 	authGroup.GET("/admin/auctions", middleware.RequireMerchantOrAdmin(), adminAuctionProxy.Forward)
 	authGroup.GET("/admin/auctions/:id", middleware.RequireMerchantOrAdmin(), adminAuctionProxy.Forward)

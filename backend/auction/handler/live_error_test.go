@@ -27,6 +27,10 @@ func (s *failingLiveStarter) StartLive(ctx context.Context, liveStreamID int64) 
 	return errors.New("redis password leaked in driver error")
 }
 
+func (s *failingLiveStarter) EndLive(ctx context.Context, liveStreamID int64) error {
+	return errors.New("redis password leaked in driver error")
+}
+
 func TestLiveReminderHandlerHidesInternalErrorDetails(t *testing.T) {
 	var logs bytes.Buffer
 	originalLogOutput := log.Writer()

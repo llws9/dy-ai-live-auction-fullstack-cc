@@ -289,6 +289,78 @@ func TestAdminCreateLiveStreamMerchantSetsCreatorID(t *testing.T) {
 	data := body["data"].(map[string]interface{})
 	assert.EqualValues(t, 1001, data["creator_id"])
 	assert.Equal(t, "商家直播间", data["name"])
+	assert.EqualValues(t, model.LiveStreamStatusNotStarted, data["status"])
+}
+
+func TestMerchantStartAndEndOwnLiveStream(t *testing.T) {
+	h := newLiveStreamHandlerWithSeed(t, func(db *gorm.DB) {
+		db.Create(&model.LiveStream{ID: 601, CreatorID: 1001, Name: "待开播", Status: model.LiveStreamStatusNotStarted})
+	})
+
+	startCtx := app.NewContext(0)
+	startCtx.Params = append(startCtx.Params, param.Param{Key: "id", Value: "601"})
+	startCtx.Request.Header.Set("X-User-Role", "merchant")
+	startCtx.Request.Header.Set("X-User-ID", "1001")
+	h.StartMerchant(context.Background(), startCtx)
+
+	require.Equal(t, 200, startCtx.Response.StatusCode())
+	var startBody map[string]interface{}
+	require.NoError(t, json.Unmarshal(startCtx.Response.Body(), &startBody))
+	startData := startBody["data"].(map[string]interface{})
+	assert.EqualValues(t, model.LiveStreamStatusLive, startData["status"])
+	assert.Equal(t, "live_stream_started", startData["event"])
+
+	endCtx := app.NewContext(0)
+	endCtx.Params = append(endCtx.Params, param.Param{Key: "id", Value: "601"})
+	endCtx.Request.Header.Set("X-User-Role", "merchant")
+	endCtx.Request.Header.Set("X-User-ID", "1001")
+	h.EndMerchant(context.Background(), endCtx)
+
+	require.Equal(t, 200, endCtx.Response.StatusCode())
+	var endBody map[string]interface{}
+	require.NoError(t, json.Unmarshal(endCtx.Response.Body(), &endBody))
+	endData := endBody["data"].(map[string]interface{})
+	assert.EqualValues(t, model.LiveStreamStatusEnded, endData["status"])
+	assert.Equal(t, "live_stream_ended", endData["event"])
+}
+
+func TestMerchantCannotStartOtherLiveStream(t *testing.T) {
+	h := newLiveStreamHandlerWithSeed(t, func(db *gorm.DB) {
+		db.Create(&model.LiveStream{ID: 602, CreatorID: 1002, Name: "其他商家", Status: model.LiveStreamStatusNotStarted})
+	})
+
+	c := app.NewContext(0)
+	c.Params = append(c.Params, param.Param{Key: "id", Value: "602"})
+	c.Request.Header.Set("X-User-Role", "merchant")
+	c.Request.Header.Set("X-User-ID", "1001")
+	h.StartMerchant(context.Background(), c)
+
+	assert.Equal(t, 404, c.Response.StatusCode())
+}
+
+func TestMerchantCannotEndBannedLiveStream(t *testing.T) {
+	h := newLiveStreamHandlerWithSeed(t, func(db *gorm.DB) {
+		db.Create(&model.LiveStream{ID: 603, CreatorID: 1001, Name: "已封禁", Status: model.LiveStreamStatusBanned})
+	})
+
+	c := app.NewContext(0)
+	c.Params = append(c.Params, param.Param{Key: "id", Value: "603"})
+	c.Request.Header.Set("X-User-Role", "merchant")
+	c.Request.Header.Set("X-User-ID", "1001")
+	h.EndMerchant(context.Background(), c)
+
+	assert.Equal(t, 409, c.Response.StatusCode())
+
+	check := app.NewContext(0)
+	check.Params = append(check.Params, param.Param{Key: "id", Value: "603"})
+	check.Request.Header.Set("X-User-Role", "merchant")
+	check.Request.Header.Set("X-User-ID", "1001")
+	h.AdminGet(context.Background(), check)
+	require.Equal(t, 200, check.Response.StatusCode())
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(check.Response.Body(), &body))
+	data := body["data"].(map[string]interface{})
+	assert.EqualValues(t, model.LiveStreamStatusBanned, data["status"])
 }
 
 func TestAdminCreateLiveStreamReturnsOKForExistingStream(t *testing.T) {
@@ -376,6 +448,31 @@ func TestEndAndBanAdminLiveStream(t *testing.T) {
 	banData := banBody["data"].(map[string]interface{})
 	assert.EqualValues(t, model.LiveStreamStatusBanned, banData["status"])
 	assert.Equal(t, "违规内容", banData["ban_reason"])
+}
+
+func TestAdminEndDoesNotOverwriteBannedLiveStream(t *testing.T) {
+	h := newLiveStreamHandlerWithSeed(t, func(db *gorm.DB) {
+		db.Create(&model.LiveStream{ID: 701, CreatorID: 9001, Name: "已封禁", Status: model.LiveStreamStatusBanned})
+	})
+
+	endCtx := app.NewContext(0)
+	endCtx.Params = append(endCtx.Params, param.Param{Key: "id", Value: "701"})
+	endCtx.Request.Header.Set("X-User-Role", "admin")
+	endCtx.Request.Header.Set("X-User-ID", "2001")
+	h.EndAdmin(context.Background(), endCtx)
+
+	assert.Equal(t, 409, endCtx.Response.StatusCode())
+
+	getCtx := app.NewContext(0)
+	getCtx.Params = append(getCtx.Params, param.Param{Key: "id", Value: "701"})
+	getCtx.Request.Header.Set("X-User-Role", "admin")
+	getCtx.Request.Header.Set("X-User-ID", "2001")
+	h.AdminGet(context.Background(), getCtx)
+	require.Equal(t, 200, getCtx.Response.StatusCode())
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(getCtx.Response.Body(), &body))
+	data := body["data"].(map[string]interface{})
+	assert.EqualValues(t, model.LiveStreamStatusBanned, data["status"])
 }
 
 func TestBanAdminLiveStreamRejectsBlankReason(t *testing.T) {

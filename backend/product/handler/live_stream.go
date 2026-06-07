@@ -157,6 +157,64 @@ func (h *LiveStreamHandler) AdminUpdate(ctx context.Context, c *app.RequestConte
 	c.JSON(200, map[string]interface{}{"code": 200, "message": "success", "data": liveStream})
 }
 
+func (h *LiveStreamHandler) StartMerchant(ctx context.Context, c *app.RequestContext) {
+	actor, ok := requireMerchantActor(c)
+	if !ok {
+		return
+	}
+	id, ok := parseLiveStreamIDParam(c)
+	if !ok {
+		return
+	}
+	liveStream, err := h.liveStreamService.StartForCreator(ctx, actor.UserID, id)
+	if err != nil {
+		if errors.Is(err, service.ErrLiveStreamBanned) {
+			c.JSON(409, map[string]interface{}{"code": 409, "message": "直播间已封禁，不能开播"})
+			return
+		}
+		writeLiveStreamError(c, err, "开始直播间失败")
+		return
+	}
+	c.JSON(200, map[string]interface{}{
+		"code":    200,
+		"message": "success",
+		"data": map[string]interface{}{
+			"id":     liveStream.ID,
+			"status": liveStream.Status,
+			"event":  "live_stream_started",
+		},
+	})
+}
+
+func (h *LiveStreamHandler) EndMerchant(ctx context.Context, c *app.RequestContext) {
+	actor, ok := requireMerchantActor(c)
+	if !ok {
+		return
+	}
+	id, ok := parseLiveStreamIDParam(c)
+	if !ok {
+		return
+	}
+	liveStream, err := h.liveStreamService.EndForCreator(ctx, actor.UserID, id)
+	if err != nil {
+		if errors.Is(err, service.ErrLiveStreamBanned) {
+			c.JSON(409, map[string]interface{}{"code": 409, "message": "直播间已封禁，不能结束"})
+			return
+		}
+		writeLiveStreamError(c, err, "结束直播间失败")
+		return
+	}
+	c.JSON(200, map[string]interface{}{
+		"code":    200,
+		"message": "success",
+		"data": map[string]interface{}{
+			"id":     liveStream.ID,
+			"status": liveStream.Status,
+			"event":  "live_stream_ended",
+		},
+	})
+}
+
 func (h *LiveStreamHandler) buildAdminList(ctx context.Context, liveStreams []model.LiveStream) []map[string]interface{} {
 	items := make([]map[string]interface{}, 0, len(liveStreams))
 	auctionCounts := h.countAuctionsByLiveStreams(ctx, liveStreams)
@@ -209,8 +267,21 @@ func (h *LiveStreamHandler) buildAdminItem(ctx context.Context, liveStream model
 }
 
 func (h *LiveStreamHandler) EndAdmin(ctx context.Context, c *app.RequestContext) {
-	if !requireAdminRole(c) {
+	role := string(c.GetHeader("X-User-Role"))
+	if role != roleAdmin && role != roleMerchant {
+		c.JSON(403, map[string]interface{}{"code": 403, "message": "权限不足：需要管理员权限"})
 		return
+	}
+	var actor AdminActor
+	if role == roleAdmin {
+		actor = AdminActor{Role: roleAdmin}
+	} else {
+		userID, err := strconv.ParseInt(string(c.GetHeader("X-User-ID")), 10, 64)
+		if err != nil || userID <= 0 {
+			c.JSON(401, map[string]interface{}{"code": 401, "message": "未认证，请先登录"})
+			return
+		}
+		actor = AdminActor{UserID: userID, Role: roleMerchant}
 	}
 
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
@@ -218,8 +289,17 @@ func (h *LiveStreamHandler) EndAdmin(ctx context.Context, c *app.RequestContext)
 		c.JSON(400, map[string]interface{}{"code": 400, "message": "无效的直播间ID"})
 		return
 	}
-	liveStream, err := h.liveStreamService.End(ctx, id)
+	var liveStream *model.LiveStream
+	if actor.IsAdmin() {
+		liveStream, err = h.liveStreamService.End(ctx, id)
+	} else {
+		liveStream, err = h.liveStreamService.EndForCreator(ctx, actor.UserID, id)
+	}
 	if err != nil {
+		if errors.Is(err, service.ErrLiveStreamBanned) {
+			c.JSON(409, map[string]interface{}{"code": 409, "message": "直播间已封禁，不能结束"})
+			return
+		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(404, map[string]interface{}{"code": 404, "message": "直播间不存在"})
 			return

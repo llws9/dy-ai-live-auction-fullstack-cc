@@ -133,7 +133,7 @@ func TestInternalHandler_GetAuctionProductInfoReturns404WhenProductMissing(t *te
 
 // --- POST /internal/live-streams/get-or-create -----------------------------
 
-func TestInternalHandler_GetOrCreateActiveLiveStream(t *testing.T) {
+func TestInternalHandler_GetOrCreateActiveLiveStreamCreatesNotStartedStream(t *testing.T) {
 	h := newInternalHandlerWithSeed(t, nil)
 
 	c := app.NewContext(0)
@@ -157,7 +157,34 @@ func TestInternalHandler_GetOrCreateActiveLiveStream(t *testing.T) {
 	assert.Equal(t, 200, body.Code)
 	assert.NotZero(t, body.Data.ID)
 	assert.Equal(t, int64(1001), body.Data.CreatorID)
-	assert.Equal(t, int(model.LiveStreamStatusActive), body.Data.Status)
+	assert.Equal(t, int(model.LiveStreamStatusNotStarted), body.Data.Status)
+}
+
+func TestInternalHandler_GetOrCreateActiveLiveStreamAllowsExistingNotStartedStream(t *testing.T) {
+	h := newInternalHandlerWithSeed(t, func(db *gorm.DB) {
+		require.NoError(t, db.Create(&model.LiveStream{
+			CreatorID: 1001,
+			Name:      "not-started",
+			Status:    model.LiveStreamStatusNotStarted,
+		}).Error)
+	})
+
+	c := app.NewContext(0)
+	c.Request.SetMethod("POST")
+	c.Request.SetRequestURI("/internal/live-streams/get-or-create")
+	c.Request.Header.SetContentTypeBytes([]byte("application/json"))
+	c.Request.SetBodyString(`{"creator_id":1001,"creator_name":"merchant_1001"}`)
+
+	h.GetOrCreateActiveLiveStream(context.Background(), c)
+
+	require.Equal(t, 200, c.Response.StatusCode())
+	var body struct {
+		Data struct {
+			Status int `json:"status"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.Equal(t, int(model.LiveStreamStatusNotStarted), body.Data.Status)
 }
 
 func TestInternalHandler_GetOrCreateActiveLiveStreamRejectsBanned(t *testing.T) {

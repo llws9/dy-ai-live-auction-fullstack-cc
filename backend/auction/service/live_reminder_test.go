@@ -198,7 +198,7 @@ func TestLiveStatsSessionResolverUsesLiveStreamMetadata(t *testing.T) {
 			liveStreamID: {LiveStreamID: liveStreamID, Status: "live", StartedAt: &startedAt},
 		}},
 		&fakeLiveStreamMetadataProvider{items: map[int64]client.LiveStreamSummary{
-			liveStreamID: {ID: liveStreamID, Name: "真实直播间", CoverImage: "cover.png"},
+			liveStreamID: {ID: liveStreamID, Name: "真实直播间", CoverImage: "cover.png", Status: 1},
 		}},
 	)
 
@@ -208,4 +208,24 @@ func TestLiveStatsSessionResolverUsesLiveStreamMetadata(t *testing.T) {
 	require.NotNil(t, session)
 	assert.Equal(t, "真实直播间", session.Name)
 	assert.Equal(t, "cover.png", session.AvatarURL)
+}
+
+func TestLiveStatsSessionResolverRequiresProductLiveStatus(t *testing.T) {
+	ctx := context.Background()
+	liveStreamID := int64(7302)
+	startedAt := time.Now()
+
+	resolver := NewLiveStatsSessionResolverWithMetadata(
+		&fakeLiveStreamStatsProvider{stats: map[int64]*LiveStreamStats{
+			liveStreamID: {LiveStreamID: liveStreamID, Status: "live", StartedAt: &startedAt},
+		}},
+		&fakeLiveStreamMetadataProvider{items: map[int64]client.LiveStreamSummary{
+			liveStreamID: {ID: liveStreamID, Name: "已结束直播间", Status: 2},
+		}},
+	)
+
+	session, err := resolver.GetActiveSession(ctx, liveStreamID)
+
+	require.NoError(t, err)
+	assert.Nil(t, session)
 }

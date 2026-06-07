@@ -245,6 +245,7 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	v1.GET("/admin/live-streams/:id", internalAuth, liveStreamHandler.AdminGet)
 	v1.POST("/admin/live-streams", internalAuth, liveStreamHandler.AdminCreate)
 	v1.PUT("/admin/live-streams/:id", internalAuth, liveStreamHandler.AdminUpdate)
+	v1.PUT("/admin/live-streams/:id/start", internalAuth, liveStreamHandler.StartMerchant)
 	v1.PUT("/admin/live-streams/:id/end", internalAuth, liveStreamHandler.EndAdmin)
 	v1.PUT("/admin/live-streams/:id/ban", internalAuth, liveStreamHandler.BanAdmin)
 	v1.GET("/live-streams", liveStreamHandler.ListPublic)

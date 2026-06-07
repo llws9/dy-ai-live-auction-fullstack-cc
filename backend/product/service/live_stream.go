@@ -2,11 +2,14 @@ package service
 
 import (
 	"context"
+	"errors"
 	"product-service/dao"
 	"product-service/model"
 
 	"gorm.io/gorm"
 )
+
+var ErrLiveStreamBanned = errors.New("live stream is banned")
 
 // LiveStreamService 直播间服务
 type LiveStreamService struct {
@@ -78,8 +81,49 @@ func (s *LiveStreamService) UpdateStatus(ctx context.Context, id int64, status m
 }
 
 func (s *LiveStreamService) End(ctx context.Context, id int64) (*model.LiveStream, error) {
-	if err := s.liveStreamDAO.UpdateStatus(ctx, id, model.LiveStreamStatusEnded); err != nil {
+	liveStream, err := s.liveStreamDAO.GetByID(ctx, id)
+	if err != nil {
 		return nil, err
+	}
+	if liveStream.Status == model.LiveStreamStatusBanned {
+		return nil, ErrLiveStreamBanned
+	}
+	if liveStream.Status != model.LiveStreamStatusEnded {
+		if err := s.liveStreamDAO.UpdateStatus(ctx, id, model.LiveStreamStatusEnded); err != nil {
+			return nil, err
+		}
+	}
+	return s.liveStreamDAO.GetByID(ctx, id)
+}
+
+func (s *LiveStreamService) StartForCreator(ctx context.Context, creatorID, id int64) (*model.LiveStream, error) {
+	liveStream, err := s.liveStreamDAO.GetByIDAndCreatorID(ctx, id, creatorID)
+	if err != nil {
+		return nil, err
+	}
+	if liveStream.Status == model.LiveStreamStatusBanned {
+		return nil, ErrLiveStreamBanned
+	}
+	if liveStream.Status != model.LiveStreamStatusLive {
+		if err := s.liveStreamDAO.UpdateStatus(ctx, id, model.LiveStreamStatusLive); err != nil {
+			return nil, err
+		}
+	}
+	return s.liveStreamDAO.GetByID(ctx, id)
+}
+
+func (s *LiveStreamService) EndForCreator(ctx context.Context, creatorID, id int64) (*model.LiveStream, error) {
+	liveStream, err := s.liveStreamDAO.GetByIDAndCreatorID(ctx, id, creatorID)
+	if err != nil {
+		return nil, err
+	}
+	if liveStream.Status == model.LiveStreamStatusBanned {
+		return nil, ErrLiveStreamBanned
+	}
+	if liveStream.Status != model.LiveStreamStatusEnded {
+		if err := s.liveStreamDAO.UpdateStatus(ctx, id, model.LiveStreamStatusEnded); err != nil {
+			return nil, err
+		}
 	}
 	return s.liveStreamDAO.GetByID(ctx, id)
 }
@@ -152,7 +196,7 @@ func (s *LiveStreamService) CreateForCreator(ctx context.Context, creatorID int6
 		Description:    req.Description,
 		CoverImage:     req.CoverImage,
 		VideoURL:       req.VideoURL,
-		Status:         model.LiveStreamStatusLive,
+		Status:         model.LiveStreamStatusNotStarted,
 		StreamerName:   req.StreamerName,
 		StreamerAvatar: req.StreamerAvatar,
 	}

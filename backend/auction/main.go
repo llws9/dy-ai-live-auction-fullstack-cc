@@ -504,6 +504,7 @@ func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, inter
 	}
 	internal.GET("/live/pending-reminder", liveReminderHandler.GetPendingReminder)
 	internal.POST("/live-streams/:id/start", liveStreamStatsHandler.StartLive)
+	internal.POST("/live-streams/:id/end", liveStreamStatsHandler.EndLive)
 	if currentAuctionHandler != nil {
 		internal.POST("/auctions/current-by-live-streams", currentAuctionHandler.Handle)
 	}

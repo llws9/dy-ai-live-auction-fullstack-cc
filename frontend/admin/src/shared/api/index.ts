@@ -116,7 +116,8 @@ export const liveStreamApi = {
 
   start: (id: number) => post<any>(`/live-streams/${id}/start`),
 
-  end: (id: number) => put<any>(`/admin/live-streams/${id}/end`),
+  end: (id: number) => put<any>(`/live-streams/${id}/end`),
+  adminEnd: (id: number) => put<any>(`/admin/live-streams/${id}/end`),
 
   ban: (id: number, reason: string) => put<any>(`/admin/live-streams/${id}/ban`, { reason }),
 };

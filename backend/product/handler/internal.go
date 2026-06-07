@@ -232,7 +232,7 @@ func (h *InternalHandler) GetOrCreateActiveLiveStream(ctx context.Context, c *ap
 		c.JSON(500, map[string]interface{}{"code": 500, "message": "获取直播间失败: " + err.Error()})
 		return
 	}
-	if !liveStream.IsActive() {
+	if liveStream.Status == model.LiveStreamStatusBanned {
 		c.JSON(409, map[string]interface{}{"code": 409, "message": "直播间已被禁用，无法创建竞拍"})
 		return
 	}
