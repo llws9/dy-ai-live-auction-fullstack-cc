@@ -18,6 +18,7 @@ import (
 var (
 	ErrInvalidRequest  = errors.New("copywriting: invalid request")
 	ErrRateLimited     = errors.New("copywriting: rate limited")
+	ErrNotConfigured   = errors.New("copywriting: not configured")
 	ErrUpstreamFailed  = errors.New("copywriting: upstream failed")
 	ErrUpstreamTimeout = errors.New("copywriting: upstream timeout")
 	ErrInvalidOutput   = errors.New("copywriting: invalid llm output")
@@ -82,6 +83,9 @@ func (s *CopywritingService) Generate(ctx context.Context, userID int64, req *Co
 
 	resp, err := s.provider.Chat(ctx, s.buildChatRequest(req, categoryName))
 	if err != nil {
+		if errors.Is(err, sharedllm.ErrMissingCredentials) {
+			return nil, fmt.Errorf("%w: %v", ErrNotConfigured, err)
+		}
 		if errors.Is(err, sharedllm.ErrUpstreamTimeout) {
 			return nil, fmt.Errorf("%w: %v", ErrUpstreamTimeout, err)
 		}

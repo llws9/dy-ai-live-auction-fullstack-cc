@@ -63,6 +63,10 @@ type doubaoResp struct {
 
 // Chat calls /chat/completions using the OpenAI-compatible request shape.
 func (p *DoubaoProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
+	if strings.TrimSpace(p.apiKey) == "" {
+		log.Printf("provider=doubao event=request_blocked reason=missing_api_key")
+		return nil, ErrMissingCredentials
+	}
 	if req.Model == "" {
 		req.Model = p.model
 	}

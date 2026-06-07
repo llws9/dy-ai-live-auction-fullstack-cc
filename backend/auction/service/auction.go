@@ -144,6 +144,9 @@ func (s *AuctionService) EndAuction(ctx context.Context, id int64) error {
 		if err := sm.Transition(model.AuctionStatusEnded); err != nil {
 			return err
 		}
+		if err := s.persistWinnerFromHighestBid(ctx, tx, auction); err != nil {
+			return err
+		}
 
 		if err := txAuctionDAO.Update(ctx, auction); err != nil {
 			return err
@@ -154,6 +157,25 @@ func (s *AuctionService) EndAuction(ctx context.Context, id int64) error {
 	}
 
 	return s.settlementService.FinalizeEndedAuction(ctx, id)
+}
+
+func (s *AuctionService) persistWinnerFromHighestBid(ctx context.Context, tx *gorm.DB, auction *model.Auction) error {
+	if auction.WinnerID != nil && *auction.WinnerID > 0 {
+		return nil
+	}
+	if s.bidDAO == nil {
+		return nil
+	}
+	bids, err := s.bidDAO.WithTx(tx).GetRanking(ctx, auction.ID, 1)
+	if err != nil {
+		return err
+	}
+	if len(bids) == 0 {
+		return nil
+	}
+	winnerID := bids[0].UserID
+	auction.WinnerID = &winnerID
+	return nil
 }
 
 // CheckAndStartAuctions 检查并开始应该开始的竞拍

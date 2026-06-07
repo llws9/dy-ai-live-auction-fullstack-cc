@@ -172,6 +172,7 @@ func main() {
 	// 初始化 Handler 层
 	auctionHandler := handler.NewAuctionHandler(auctionService)
 	auctionHandler.SetRuleFetcher(ruleDAO)
+	auctionHandler.SetResultFetchers(bidDAO.GetWinnerBid, userDAO.GetByIDs)
 	// 注入 product-service 内部接口客户端，启用 list 接口的 category 过滤与商品摘要回填（spec C §5.2）。
 	productSvcURL := os.Getenv("PRODUCT_SERVICE_URL")
 	if productSvcURL == "" {

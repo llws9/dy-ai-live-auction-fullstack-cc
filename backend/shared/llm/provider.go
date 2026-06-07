@@ -7,10 +7,11 @@ import (
 
 // Error categories used by business services to map upstream failures.
 var (
-	ErrUpstreamTimeout = errors.New("llm upstream timeout")
-	ErrUpstreamClient  = errors.New("llm upstream client error")
-	ErrUpstreamServer  = errors.New("llm upstream server error")
-	ErrInvalidResponse = errors.New("llm invalid response")
+	ErrUpstreamTimeout    = errors.New("llm upstream timeout")
+	ErrUpstreamClient     = errors.New("llm upstream client error")
+	ErrUpstreamServer     = errors.New("llm upstream server error")
+	ErrInvalidResponse    = errors.New("llm invalid response")
+	ErrMissingCredentials = errors.New("llm missing credentials")
 )
 
 // ChatMessage is an OpenAI-compatible multimodal chat message.

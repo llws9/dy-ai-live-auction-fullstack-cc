@@ -64,6 +64,31 @@ func TestDoubao_Chat_Success(t *testing.T) {
 	}
 }
 
+func TestDoubao_Chat_MissingAPIKeyDoesNotCallUpstream(t *testing.T) {
+	called := false
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+	p := NewDoubaoProvider(DoubaoOptions{
+		BaseURL: srv.URL,
+		APIKey:  "   ",
+		Model:   "doubao-1.5-vision-pro",
+		Timeout: 2 * time.Second,
+	})
+
+	_, err := p.Chat(context.Background(), &ChatRequest{
+		Messages: []ChatMessage{{Role: "user", Content: []ContentPart{{Type: "text", Text: "hi"}}}},
+	})
+	if err == nil || !errors.Is(err, ErrMissingCredentials) {
+		t.Fatalf("want ErrMissingCredentials, got %v", err)
+	}
+	if called {
+		t.Fatalf("missing API key must not call upstream")
+	}
+}
+
 func captureLogs(t *testing.T) *bytes.Buffer {
 	t.Helper()
 	var buf bytes.Buffer

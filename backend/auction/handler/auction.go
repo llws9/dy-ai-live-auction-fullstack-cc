@@ -20,6 +20,8 @@ type AuctionHandler struct {
 	productClient    client.ProductClient
 	liveStreamClient client.LiveStreamClient
 	ruleFetcher      auctionRuleFetcher
+	winnerBid        winnerBidFetcher
+	users            resultUserFetcher
 }
 
 // NewAuctionHandler 创建竞拍 Handler
@@ -37,6 +39,11 @@ func (h *AuctionHandler) SetProductClient(pc client.ProductClient) {
 // SetLiveStreamClient 注入 product-service 直播间内部接口客户端，用于校验竞拍归属。
 func (h *AuctionHandler) SetLiveStreamClient(lc client.LiveStreamClient) {
 	h.liveStreamClient = lc
+}
+
+func (h *AuctionHandler) SetResultFetchers(winnerBid winnerBidFetcher, users resultUserFetcher) {
+	h.winnerBid = winnerBid
+	h.users = users
 }
 
 // SetRuleFetcher 注入竞拍规则读取器，用于详情接口返回前端出价所需的权威规则。
@@ -305,7 +312,7 @@ func (h *AuctionHandler) GetResult(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
-	resp, err := BuildAuctionResultResponse(ctx, h.productClient, h.auctionService.GetAuction, id)
+	resp, err := BuildAuctionResultResponse(ctx, h.productClient, h.auctionService.GetAuction, h.winnerBid, h.users, id)
 	if err != nil {
 		c.JSON(404, map[string]interface{}{
 			"code":    404,

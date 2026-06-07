@@ -129,6 +129,15 @@ func TestCopywriting_Generate_UpstreamFail_502(t *testing.T) {
 	}
 }
 
+func TestCopywriting_Generate_MissingCredentials_503(t *testing.T) {
+	fp := &fakeProvider{err: sharedllm.ErrMissingCredentials}
+	svc := NewCopywritingService(fp, &fakeCategoryResolver{}, newRedis(t), "m")
+	_, err := svc.Generate(context.Background(), 1, &CopywritingRequest{Images: []string{"https://cdn.example.com/a.jpg"}})
+	if !errors.Is(err, ErrNotConfigured) {
+		t.Fatalf("want ErrNotConfigured, got %v", err)
+	}
+}
+
 func TestCopywriting_Generate_UpstreamTimeout(t *testing.T) {
 	fp := &fakeProvider{err: sharedllm.ErrUpstreamTimeout}
 	svc := NewCopywritingService(fp, &fakeCategoryResolver{}, newRedis(t), "m")
