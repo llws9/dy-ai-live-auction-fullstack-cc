@@ -48,6 +48,14 @@ func (d *flowFollowDAO) GetFollowStats(ctx context.Context, liveStreamID int64) 
 	return nil, nil
 }
 
+func (d *flowFollowDAO) CountFollowersByLiveStreamIDs(ctx context.Context, liveStreamIDs []int64) (map[int64]int64, error) {
+	counts := make(map[int64]int64, len(liveStreamIDs))
+	for _, follow := range d.follows {
+		counts[follow.LiveStreamID]++
+	}
+	return counts, nil
+}
+
 type memoryReminderClaimer struct {
 	seen map[string]bool
 }

@@ -13,12 +13,15 @@ import (
 // ---- fakes ----
 
 type fakeFollowProvider struct {
-	follows []model.UserLiveStreamFollow
-	total   int64
-	err     error
-	gotUID  int64
-	gotPage int
-	gotSize int
+	follows          []model.UserLiveStreamFollow
+	total            int64
+	err              error
+	followerCounts   map[int64]int64
+	followerCountErr error
+	gotUID           int64
+	gotPage          int
+	gotSize          int
+	gotCountIDs      []int64
 }
 
 func (f *fakeFollowProvider) GetUserFollows(ctx context.Context, userID int64, page, pageSize int) ([]model.UserLiveStreamFollow, int64, error) {
@@ -26,6 +29,11 @@ func (f *fakeFollowProvider) GetUserFollows(ctx context.Context, userID int64, p
 	f.gotPage = page
 	f.gotSize = pageSize
 	return f.follows, f.total, f.err
+}
+
+func (f *fakeFollowProvider) CountFollowersByLiveStreamIDs(ctx context.Context, liveStreamIDs []int64) (map[int64]int64, error) {
+	f.gotCountIDs = liveStreamIDs
+	return f.followerCounts, f.followerCountErr
 }
 
 type fakeLSFetcher struct {
@@ -132,7 +140,8 @@ func TestBuildFollowedLiveStreams_FullAggregation(t *testing.T) {
 			{ID: 100, UserID: 1, LiveStreamID: 11, NotificationEnabled: true, CreatedAt: now},
 			{ID: 101, UserID: 1, LiveStreamID: 12, NotificationEnabled: false, CreatedAt: now.Add(time.Minute)},
 		},
-		total: 2,
+		total:          2,
+		followerCounts: map[int64]int64{11: 7, 12: 2},
 	}
 	ls := &fakeLSFetcher{streams: map[int64]client.LiveStreamSummary{
 		11: {ID: 11, Name: "room-11", CoverImage: "c11.png", Status: 1, CreatorID: 9001},
@@ -154,14 +163,14 @@ func TestBuildFollowedLiveStreams_FullAggregation(t *testing.T) {
 	first := resp.Items[0]
 	if first.LiveStreamID != 11 || first.LiveStreamName != "room-11" || first.CoverImage != "c11.png" ||
 		first.Status != 1 || first.HostAvatar != "a9001.png" || !first.NotificationEnabled ||
-		first.AuctionCount != 3 || first.ViewerCount != 0 {
+		first.AuctionCount != 3 || first.ViewerCount != 0 || first.FollowersCount != 7 {
 		t.Fatalf("first item mismatch: %+v", first)
 	}
 	if first.FollowedAt != "2026-05-31T08:00:00Z" {
 		t.Fatalf("first followed_at = %q", first.FollowedAt)
 	}
 	second := resp.Items[1]
-	if second.LiveStreamID != 12 || second.HostAvatar != "a9002.png" || second.AuctionCount != 0 {
+	if second.LiveStreamID != 12 || second.HostAvatar != "a9002.png" || second.AuctionCount != 0 || second.FollowersCount != 2 {
 		t.Fatalf("second item mismatch: %+v", second)
 	}
 }

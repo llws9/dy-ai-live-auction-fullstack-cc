@@ -18,6 +18,7 @@ type FollowDAO interface {
 	CountUserFollows(ctx context.Context, userID int64) (int64, error)
 	UpdateNotificationEnabled(ctx context.Context, userID, liveStreamID int64, enabled bool) error
 	GetFollowStats(ctx context.Context, liveStreamID int64) (map[string]int64, error)
+	CountFollowersByLiveStreamIDs(ctx context.Context, liveStreamIDs []int64) (map[int64]int64, error)
 }
 
 // FollowService 关注服务
@@ -122,6 +123,11 @@ func (s *FollowService) GetUserFollows(ctx context.Context, userID int64, page, 
 // GetFollowStats 获取直播间关注统计
 func (s *FollowService) GetFollowStats(ctx context.Context, liveStreamID int64) (map[string]int64, error) {
 	return s.followDAO.GetFollowStats(ctx, liveStreamID)
+}
+
+// CountFollowersByLiveStreamIDs 批量统计直播间关注人数。
+func (s *FollowService) CountFollowersByLiveStreamIDs(ctx context.Context, liveStreamIDs []int64) (map[int64]int64, error) {
+	return s.followDAO.CountFollowersByLiveStreamIDs(ctx, liveStreamIDs)
 }
 
 // IsFollowing 检查用户是否关注了直播间

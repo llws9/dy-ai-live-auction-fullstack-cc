@@ -19,6 +19,7 @@ type FollowedLiveStreamItem struct {
 	NotificationEnabled bool   `json:"notification_enabled"`
 	FollowedAt          string `json:"followed_at"`
 	ViewerCount         int64  `json:"viewer_count"`
+	FollowersCount      int64  `json:"followers_count"`
 	AuctionCount        int64  `json:"auction_count"`
 }
 
@@ -33,6 +34,7 @@ type FollowedLiveStreamsResponse struct {
 // FollowListProvider 抽象 followService.GetUserFollows，便于编排单测。
 type FollowListProvider interface {
 	GetUserFollows(ctx context.Context, userID int64, page, pageSize int) ([]model.UserLiveStreamFollow, int64, error)
+	CountFollowersByLiveStreamIDs(ctx context.Context, liveStreamIDs []int64) (map[int64]int64, error)
 }
 
 // LiveStreamBatchFetcher 抽象 LiveStreamClient，便于注入 fake。
@@ -58,8 +60,9 @@ type AuctionCountFetcher interface {
 //     2) LiveStreamBatchFetcher 一次取齐 live_stream 摘要（name / cover_image / status / creator_id）
 //     3) UserAvatarFetcher 一次取齐 host_avatar（按 creator_id 批量）
 //     4) AuctionCountFetcher 一次取齐 auction_count（按 live_stream_id 批量）
-//   - 缺失字段全部走默认值（host_avatar=""、auction_count=0、viewer_count=0）。
-//   - 编排不缓存、不并发：N≤pageSize≤100，三次 batch 调用即可。
+//     5) FollowListProvider 批量读取 followers_count，保持列表页与详情页关注人数一致
+//   - 缺失字段全部走默认值（host_avatar=""、followers_count=0、auction_count=0、viewer_count=0）。
+//   - 编排不缓存、不并发：N≤pageSize≤100，四次 batch 调用即可。
 func BuildFollowedLiveStreams(
 	ctx context.Context,
 	provider FollowListProvider,
@@ -130,6 +133,11 @@ func BuildFollowedLiveStreams(
 		return nil, err
 	}
 
+	followerCounts, err := provider.CountFollowersByLiveStreamIDs(ctx, liveStreamIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	items := make([]FollowedLiveStreamItem, 0, len(follows))
 	for _, f := range follows {
 		item := FollowedLiveStreamItem{
@@ -137,6 +145,7 @@ func BuildFollowedLiveStreams(
 			NotificationEnabled: f.NotificationEnabled,
 			FollowedAt:          f.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 			ViewerCount:         0, // spec B §2.3：本期固定 0
+			FollowersCount:      followerCounts[f.LiveStreamID],
 			AuctionCount:        counts[f.LiveStreamID],
 		}
 		if s, ok := streams[f.LiveStreamID]; ok {

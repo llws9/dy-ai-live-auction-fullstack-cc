@@ -122,6 +122,31 @@ func (d *UserLiveStreamFollowDAO) GetFollowStats(ctx context.Context, liveStream
 	return stats, nil
 }
 
+// CountFollowersByLiveStreamIDs 批量统计每个直播间的关注人数。
+func (d *UserLiveStreamFollowDAO) CountFollowersByLiveStreamIDs(ctx context.Context, liveStreamIDs []int64) (map[int64]int64, error) {
+	counts := make(map[int64]int64, len(liveStreamIDs))
+	if len(liveStreamIDs) == 0 {
+		return counts, nil
+	}
+
+	var rows []struct {
+		LiveStreamID int64
+		Count        int64
+	}
+	if err := d.db.WithContext(ctx).
+		Model(&model.UserLiveStreamFollow{}).
+		Select("live_stream_id, COUNT(*) AS count").
+		Where("live_stream_id IN ?", liveStreamIDs).
+		Group("live_stream_id").
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		counts[row.LiveStreamID] = row.Count
+	}
+	return counts, nil
+}
+
 // GetUserFollowedLiveStreamIDs 获取用户关注的所有直播间ID列表（用于Redis失败时的数据库兜底）
 func (d *UserLiveStreamFollowDAO) GetUserFollowedLiveStreamIDs(ctx context.Context, userID int64) ([]int64, error) {
 	var liveStreamIDs []int64

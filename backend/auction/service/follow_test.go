@@ -54,6 +54,11 @@ func (m *MockUserLiveStreamFollowDAO) GetFollowStats(ctx context.Context, liveSt
 	return args.Get(0).(map[string]int64), args.Error(1)
 }
 
+func (m *MockUserLiveStreamFollowDAO) CountFollowersByLiveStreamIDs(ctx context.Context, liveStreamIDs []int64) (map[int64]int64, error) {
+	args := m.Called(ctx, liveStreamIDs)
+	return args.Get(0).(map[int64]int64), args.Error(1)
+}
+
 // TestFollowService_Follow 测试关注功能
 func TestFollowService_Follow(t *testing.T) {
 	mockDAO := new(MockUserLiveStreamFollowDAO)
