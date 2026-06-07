@@ -34,6 +34,7 @@ type demoAuctionClient interface {
 	CreateAuctionAs(ctx context.Context, actor auctioncli.Actor, req auctioncli.CreateAuctionReq) auctioncli.StepResult
 	WaitAuctionStarted(ctx context.Context, auctionID int64, interval, timeout time.Duration) auctioncli.StepResult
 	CreateFixedPriceItem(ctx context.Context, actor auctioncli.Actor, req auctioncli.CreateFixedPriceItemReq) auctioncli.StepResult
+	SubscribeSkyLamp(ctx context.Context, userID, auctionID int64) auctioncli.StepResult
 }
 
 type demoInternalAuctionClient interface {
@@ -56,6 +57,10 @@ type followBidRequest struct {
 	AuctionID int64           `json:"auction_id"`
 	Amount    json.RawMessage `json:"amount,omitempty"`
 	Increment json.RawMessage `json:"increment,omitempty"`
+}
+
+type skyLampRequest struct {
+	AuctionID int64 `json:"auction_id"`
 }
 
 type rechargeRequest struct {
@@ -328,6 +333,31 @@ func (h *DemoHandler) PostFollowBid(ctx context.Context, c *app.RequestContext) 
 		return
 	}
 	c.JSON(200, map[string]any{"ok": true, "auction_id": req.AuctionID, "buyer_user_id": buyerBUserID, "amount": amount.String()})
+}
+
+// PostSkyLamp 以统一 seed 的买家B身份对指定拍卖开启点天灯。
+func (h *DemoHandler) PostSkyLamp(ctx context.Context, c *app.RequestContext) {
+	if !h.authorizeDemoRequest(c) {
+		return
+	}
+	if h.bizCli == nil {
+		c.JSON(500, map[string]any{"error": "demo auction client is not configured"})
+		return
+	}
+
+	var req skyLampRequest
+	if err := json.Unmarshal(c.Request.Body(), &req); err != nil || req.AuctionID <= 0 {
+		c.JSON(400, map[string]any{"error": "invalid auction_id"})
+		return
+	}
+
+	hlog.CtxInfof(ctx, "[demo] sky-lamp auction=%d as buyerB=%d", req.AuctionID, buyerBUserID)
+	step := h.bizCli.SubscribeSkyLamp(ctx, buyerBUserID, req.AuctionID)
+	if !step.OK {
+		writeDemoStepError(c, step)
+		return
+	}
+	c.JSON(200, map[string]any{"ok": true, "auction_id": req.AuctionID, "buyer_user_id": buyerBUserID, "subscription_id": step.RefID})
 }
 
 // PostRecharge 给指定用户充值演示余额，金额保持 decimal string 语义传递到 auction internal API。

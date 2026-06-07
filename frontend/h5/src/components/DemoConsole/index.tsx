@@ -5,6 +5,7 @@ import {
   createDemoMerchantAuction,
   rechargeDemoUser,
   shortenDemoAuction,
+  triggerOtherSkyLamp,
   triggerFollowBid,
 } from '../../services/demoApi';
 import type { DemoMerchantAuctionMode } from '../../services/demoApi';
@@ -83,6 +84,24 @@ export default function DemoConsole() {
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';
       showToast(`跟价失败：${message}`, 'error', TOAST_DURATION_MS);
+    } finally {
+      setRunningAction(null);
+    }
+  };
+
+  const handleOtherSkyLamp = async () => {
+    if (!currentAuctionId) {
+      showToast('请先进入直播间', 'warning', TOAST_DURATION_MS);
+      return;
+    }
+
+    setRunningAction('other-sky-lamp');
+    try {
+      await triggerOtherSkyLamp({ auctionId: currentAuctionId });
+      showToast('已触发他人天灯', 'success', TOAST_DURATION_MS);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '请稍后重试';
+      showToast(`天灯失败：${message}`, 'error', TOAST_DURATION_MS);
     } finally {
       setRunningAction(null);
     }
@@ -215,6 +234,14 @@ export default function DemoConsole() {
                 disabled={runningAction === 'follow-bid'}
               >
                 他人跟价
+              </button>
+              <button
+                type="button"
+                className="demo-console__item"
+                onClick={handleOtherSkyLamp}
+                disabled={runningAction === 'other-sky-lamp'}
+              >
+                他人天灯
               </button>
               <button
                 type="button"

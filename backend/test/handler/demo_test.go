@@ -236,6 +236,44 @@ func TestDemoShortenAuctionRejectsNonDemoUser(t *testing.T) {
 	}
 }
 
+func TestDemoSkyLampSubscribesBuyerB(t *testing.T) {
+	const secret = "demo-secret"
+	fake := &fakeDemoAuctionClient{}
+	h := NewDemoHandler(fake, nil, secret)
+	c := newDemoRequestContext(t, secret, `{"auction_id":3001}`)
+
+	h.PostSkyLamp(context.Background(), c)
+
+	if c.Response.StatusCode() != 200 {
+		t.Fatalf("response status=%d body=%s", c.Response.StatusCode(), c.Response.Body())
+	}
+	if fake.skyLampUserID != buyerBUserID {
+		t.Fatalf("sky lamp user_id=%d want %d", fake.skyLampUserID, buyerBUserID)
+	}
+	if fake.skyLampAuctionID != 3001 {
+		t.Fatalf("sky lamp auction_id=%d want 3001", fake.skyLampAuctionID)
+	}
+}
+
+func TestDemoSkyLampRejectsNonDemoUser(t *testing.T) {
+	const secret = "demo-secret"
+	fake := &fakeDemoAuctionClient{}
+	h := NewDemoHandler(fake, nil, secret)
+	c := app.NewContext(0)
+	c.Request.Header.Set("Authorization", "Bearer "+signDemoToken(t, secret, 42))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request.SetBodyString(`{"auction_id":3001}`)
+
+	h.PostSkyLamp(context.Background(), c)
+
+	if c.Response.StatusCode() != 401 {
+		t.Fatalf("status=%d want 401", c.Response.StatusCode())
+	}
+	if fake.skyLampAuctionID != 0 {
+		t.Fatalf("sky lamp should not be called for non-demo user")
+	}
+}
+
 func mustFollowBidAmount(t *testing.T, raw string) decimal.Decimal {
 	t.Helper()
 	amount, err := parseFollowBidAmount(raw)
@@ -281,6 +319,8 @@ type fakeDemoAuctionClient struct {
 	ruleReqs            []auctioncli.CreateAuctionRuleReq
 	auctionReqs         []auctioncli.CreateAuctionReq
 	fixedReqs           []auctioncli.CreateFixedPriceItemReq
+	skyLampUserID       int64
+	skyLampAuctionID    int64
 }
 
 func (f *fakeDemoAuctionClient) nextID(counter *int64, base int64) int64 {
@@ -336,6 +376,12 @@ func (f *fakeDemoAuctionClient) WaitAuctionStarted(_ context.Context, auctionID 
 func (f *fakeDemoAuctionClient) CreateFixedPriceItem(_ context.Context, _ auctioncli.Actor, req auctioncli.CreateFixedPriceItemReq) auctioncli.StepResult {
 	f.fixedReqs = append(f.fixedReqs, req)
 	return f.ok("create_fixed_price_item", f.nextID(&f.nextFixedID, 4001))
+}
+
+func (f *fakeDemoAuctionClient) SubscribeSkyLamp(_ context.Context, userID, auctionID int64) auctioncli.StepResult {
+	f.skyLampUserID = userID
+	f.skyLampAuctionID = auctionID
+	return f.ok("skylamp_subscribe", 5001)
 }
 
 type fakeDemoInternalAuctionClient struct {
