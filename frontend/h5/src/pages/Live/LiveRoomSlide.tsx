@@ -233,6 +233,8 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const enteredRoomsRef = useRef<Set<string>>(new Set());
   const bidFlairDelayTimerRef = useRef<number | null>(null);
   const bidFlairHideTimerRef = useRef<number | null>(null);
+  const currentPriceRef = useRef(0);
+  const lastBidFlairKeyRef = useRef('');
   const wonAnimationDataRef = useRef<WonAnimationState>({
     productName: '竞拍商品',
     price: 0,
@@ -269,6 +271,10 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       message,
     }));
   }, []);
+
+  useEffect(() => {
+    currentPriceRef.current = currentPrice;
+  }, [currentPrice]);
 
   useEffect(() => {
     wonAnimationDataRef.current = {
@@ -356,7 +362,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     window.setTimeout(() => setToast(''), 2200);
   }, []);
 
-  const showBidSuccessFlair = useCallback((amount: number) => {
+  const showBidSuccessFlair = useCallback((amount: number, userName: string) => {
     if (bidFlairDelayTimerRef.current !== null) {
       window.clearTimeout(bidFlairDelayTimerRef.current);
     }
@@ -368,7 +374,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       setBidSuccessFlair({
         id: Date.now(),
         amount,
-        userName: currentUserDisplayName,
+        userName,
       });
       bidFlairHideTimerRef.current = window.setTimeout(() => {
         setBidSuccessFlair(null);
@@ -376,7 +382,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       }, BID_SUCCESS_FLAIR_VISIBLE_MS);
       bidFlairDelayTimerRef.current = null;
     }, BID_SUCCESS_FLAIR_DELAY_MS);
-  }, [currentUserDisplayName]);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -453,6 +459,34 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       },
     ].sort((left, right) => right.amount - left.amount)));
   }, [normalizeRanking]);
+
+  const showRemoteBidFlair = useCallback((userID: number, userName: string, amount: number) => {
+    if (!userID || userID === user?.id || amount <= 0) return;
+
+    const displayName = repairUtf8Mojibake(userName) || `用户${userID}`;
+    const flairKey = `${userID}:${amount}`;
+    if (lastBidFlairKeyRef.current === flairKey) return;
+
+    lastBidFlairKeyRef.current = flairKey;
+    showBidSuccessFlair(amount, displayName);
+  }, [showBidSuccessFlair, user?.id]);
+
+  const applyRealtimeRanking = useCallback((data: any) => {
+    const nextRanking = normalizeRanking(extractList(data));
+    setRanking(nextRanking);
+
+    const leadingBid = nextRanking[0];
+    if (!leadingBid || leadingBid.amount <= 0) return;
+
+    setAuction((previous) => previous ? {
+      ...previous,
+      current_price: Math.max(toAmount(previous.current_price), leadingBid.amount),
+    } : previous);
+
+    if (leadingBid.amount > currentPriceRef.current) {
+      showRemoteBidFlair(leadingBid.user_id ?? 0, leadingBid.user_name || '', leadingBid.amount);
+    }
+  }, [normalizeRanking, showRemoteBidFlair]);
 
   const loadRanking = useCallback(async (targetAuctionId: number) => {
     if (!targetAuctionId) return;
@@ -611,7 +645,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     ws.on('time_sync', onTimeSync);
     ws.on('rank_update', (data) => {
       if (!belongsToThisRoom(data)) return;
-      setRanking(normalizeRanking(extractList(data)));
+      applyRealtimeRanking(data);
     });
     ws.on('bid_placed', (data) => {
       if (!belongsToThisRoom(data)) return;
@@ -620,7 +654,12 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         setAuction((previous) => previous ? { ...previous, current_price: nextPrice } : previous);
       }
       if (data?.ranking) {
-        setRanking(normalizeRanking(extractList(data)));
+        applyRealtimeRanking(data);
+      } else {
+        const userID = Number(data?.user_id || 0);
+        const displayName = repairUtf8Mojibake(data?.user_name) || `用户${userID || '未知'}`;
+        applyRealtimeBid(userID, displayName, nextPrice);
+        showRemoteBidFlair(userID, displayName, nextPrice);
       }
     });
     const onSkyLampAutoBid = (data: any) => {
@@ -712,7 +751,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       useLiveChatStore.getState().reset();
       setConnected(false);
     };
-  }, [auctionId, active, liveStreamId, normalizeRanking, token, showGlobalToast, navigate, user?.id, currentUserDisplayName, showSkyLampNotice, applyRealtimeBid]);
+  }, [auctionId, active, liveStreamId, normalizeRanking, token, showGlobalToast, navigate, user?.id, currentUserDisplayName, showSkyLampNotice, applyRealtimeBid, applyRealtimeRanking, showRemoteBidFlair]);
 
   const handleBid = async () => {
     if (!isAuthenticated) {
@@ -744,7 +783,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       setBidAmount(String(nextPrice + increment));
       showToast('出价成功');
       closeSheet();
-      showBidSuccessFlair(nextPrice);
+      showBidSuccessFlair(nextPrice, currentUserDisplayName);
     } catch (error: any) {
       showToast(error?.message || '出价失败，请稍后重试');
     } finally {

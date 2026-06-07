@@ -553,6 +553,39 @@ describe('LiveRoomSlide', () => {
     expect(await screen.findByText('¥1,500')).toBeInTheDocument();
   });
 
+  it('shows bid flair and updates current price when another user bid arrives through rank_update', async () => {
+    jest.useFakeTimers();
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    expect(screen.getByText('当前最高价 ¥1,200')).toBeInTheDocument();
+
+    const rankUpdateHandler = getWebSocketHandler('rank_update');
+    expect(rankUpdateHandler).toBeDefined();
+
+    act(() => {
+      rankUpdateHandler!({
+        auction_id: 5,
+        ranking: [
+          { rank: 1, user_id: 9102, user_name: '演示买家B', amount: 1300 },
+          { rank: 2, user_id: 9, user_name: '测试用户', amount: 1200 },
+        ],
+      });
+    });
+
+    expect(screen.getByText('当前最高价 ¥1,300')).toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(240);
+    });
+
+    expect(screen.getByTestId('bid-success-flair')).toHaveTextContent('演示买家B 刚刚出价');
+    expect(screen.getByTestId('bid-success-flair')).toHaveTextContent('¥1,300');
+
+    jest.useRealTimers();
+  });
+
   it('updates end_time and shows toast when delay_triggered belongs to this room', async () => {
     const baseNow = new Date('2026-06-06T00:00:00.000Z').getTime();
     const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(baseNow);
