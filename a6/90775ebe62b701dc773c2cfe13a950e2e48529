@@ -1,0 +1,1643 @@
+backend/product/client/auction_client.go
+  s_1cea49a54889ce::t_cf964262b11535 62-70,112-154 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[62,70]},{"Range":[112,154]}]}]}
+backend/product/main.go
+  s_1cea49a54889ce::t_cf964262b11535 157,271,273 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Single":157},{"Single":271},{"Single":273}]}]}
+backend/product/service/product.go
+  s_1cea49a54889ce::t_cf964262b11535 45-51,71,80-81,88,288-310 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[45,51]},{"Single":71},{"Range":[80,81]},{"Single":88},{"Range":[288,310]}]}]}
+backend/auction/service/auction_admin_scope_test.go
+  s_1cea49a54889ce::t_cf964262b11535 28-34,69-77,79-87,104-110 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[28,34]},{"Range":[69,77]},{"Range":[79,87]},{"Range":[104,110]}]}]}
+  s_1cea49a54889ce::t_5a0b3a95830de1 42,44,48-54,60 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2547a500057ea64ca2cd7b","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":42},{"Single":44},{"Range":[48,54]},{"Single":60}]}]}
+frontend/admin/src/pages-new/AuctionList.tsx
+  s_1cea49a54889ce::t_cf964262b11535 20-27,35-36,65,69-78,109,113,128,160-163,194-200,233-237,280,301-304,328,331,343-344 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[20,27]},{"Range":[35,36]},{"Single":65},{"Range":[69,78]},{"Single":109},{"Single":113},{"Single":128},{"Range":[160,163]},{"Range":[194,200]},{"Range":[233,237]},{"Single":280},{"Range":[301,304]},{"Single":328},{"Single":331},{"Range":[343,344]}]}]}
+frontend/admin/src/shared/api/types.ts
+  s_1cea49a54889ce::t_cf964262b11535 31-35 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[31,35]}]}]}
+frontend/admin/src/pages-new/GoodsList.tsx
+  s_1cea49a54889ce::t_cf964262b11535 30-31,84,208,230 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[30,31]},{"Single":84},{"Single":208},{"Single":230}]}]}
+backend/product/handler/product_test.go
+  s_1cea49a54889ce::t_cf964262b11535 12,27-40,594-672 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Single":12},{"Range":[27,40]},{"Range":[594,672]}]}]}
+backend/auction/client/product_client_test.go
+  s_1cea49a54889ce::t_cf964262b11535 140-305 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[140,305]}]}]}
+backend/auction/handler/auction_create_test.go
+  s_1cea49a54889ce::t_cf964262b11535 1-101 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,101]}]}]}
+backend/auction/service/auction_create_test.go
+  s_1cea49a54889ce::t_cf964262b11535 1-206 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,206]}]}]}
+backend/auction/handler/auction_admin_scope_test.go
+  s_1cea49a54889ce::t_cf964262b11535 34-48,54-55,78,95,115 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[34,48]},{"Range":[54,55]},{"Single":78},{"Single":95},{"Single":115}]}]}
+frontend/admin/src/pages-new/__tests__/GoodsList.test.tsx
+  s_1cea49a54889ce::t_cf964262b11535 83-110 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[83,110]}]}]}
+backend/auction/service/auction_test.go
+  s_1cea49a54889ce::t_cf964262b11535 366,368-374,378-383 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Single":366},{"Range":[368,374]},{"Range":[378,383]}]}]}
+backend/test/scenario/antisnipe/factory.go
+  s_1cea49a54889ce::t_cf964262b11535 31 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Single":31}]}]}
+scripts/check-auction-product-consistency.sql
+  s_1cea49a54889ce::t_cf964262b11535 1-20 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,20]}]}]}
+backend/auction/dao/auction_test.go
+  s_1cea49a54889ce::t_cf964262b11535 1-49 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,49]}]}]}
+frontend/admin/src/pages-new/__tests__/AuctionList.createAuction.test.tsx
+  s_1cea49a54889ce::t_cf964262b11535 54-55,133-274 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[54,55]},{"Range":[133,274]}]}]}
+backend/product/service/product_test.go
+  s_1cea49a54889ce::t_cf964262b11535 11,310,325-401 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Single":11},{"Single":310},{"Range":[325,401]}]}]}
+backend/auction/admin_route_test.go
+  s_1cea49a54889ce::t_cf964262b11535 26-32 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[26,32]}]}]}
+backend/auction/handler/internal_product_auctions_test.go
+  s_1cea49a54889ce::t_cf964262b11535 1-70 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,70]}]}]}
+backend/auction/handler/auction_list_test.go
+  s_1cea49a54889ce::t_cf964262b11535 47-54 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[47,54]}]}]}
+backend/auction/dao/auction.go
+  s_1cea49a54889ce::t_cf964262b11535 87-125 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[87,125]}]}]}
+backend/test/client/auction/client.go
+  s_1cea49a54889ce::t_cf964262b11535 270-273,279-289 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[270,273]},{"Range":[279,289]}]}]}
+  s_1cea49a54889ce::t_62fb8c10673df6 157 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25473600057ea64ca2cd36","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Single":157}]}]}
+backend/auction/client/product_client.go
+  s_1cea49a54889ce::t_cf964262b11535 33-48,59-64,110-121,199-264 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[33,48]},{"Range":[59,64]},{"Range":[110,121]},{"Range":[199,264]}]}]}
+backend/product/client/auction_client_test.go
+  s_1cea49a54889ce::t_cf964262b11535 56-85 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[56,85]}]}]}
+backend/product/handler/internal_test.go
+  s_1cea49a54889ce::t_cf964262b11535 7-8,12,28-29,34-35,45-181 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[7,8]},{"Single":12},{"Range":[28,29]},{"Range":[34,35]},{"Range":[45,181]}]}]}
+docs/superpowers/sdd/runs/2026-06-07-auction-product-lifecycle-state.md
+  s_1cea49a54889ce::t_cf964262b11535 1-733 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,733]}]}]}
+backend/product/handler/internal.go
+  s_1cea49a54889ce::t_cf964262b11535 5,9,100-104,138-155,218-246 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Single":5},{"Single":9},{"Range":[100,104]},{"Range":[138,155]},{"Range":[218,246]}]}]}
+backend/test/scenario/antisnipe/factory_test.go
+  s_1cea49a54889ce::t_cf964262b11535 25-27,56 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[25,27]},{"Single":56}]}]}
+backend/auction/dao/auction_schema_test.go
+  s_1cea49a54889ce::t_cf964262b11535 1-18 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,18]}]}]}
+backend/auction/handler/internal_product_auctions.go
+  s_1cea49a54889ce::t_cf964262b11535 1-102 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,102]}]}]}
+backend/auction/route_internal_test.go
+  s_1cea49a54889ce::t_38e200d1db3f01 68 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25478b00057ea64ca2cd66","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":68}]}]}
+backend/auction/dao/auction_schema.go
+  s_1cea49a54889ce::t_cf964262b11535 1-67 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2546cf00057ea64ca2cce8","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,67]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "a690775ebe62b701dc773c2cfe13a950e2e48529",
+  "prompts": {},
+  "sessions": {
+    "s_1cea49a54889ce": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a24571300057ea64ca27a83",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {
+    "backend/auction/admin_route_test.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              26,
+              32
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  26,
+                  32
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/client/product_client.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              33,
+              48
+            ]
+          },
+          {
+            "Range": [
+              59,
+              64
+            ]
+          },
+          {
+            "Range": [
+              110,
+              121
+            ]
+          },
+          {
+            "Range": [
+              199,
+              264
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  33,
+                  48
+                ]
+              },
+              {
+                "Range": [
+                  59,
+                  64
+                ]
+              },
+              {
+                "Range": [
+                  110,
+                  121
+                ]
+              },
+              {
+                "Range": [
+                  199,
+                  264
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/client/product_client_test.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              140,
+              305
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  140,
+                  305
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/dao/auction.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              87,
+              125
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  87,
+                  125
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/dao/auction_schema.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              67
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  67
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/dao/auction_schema_test.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              18
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  18
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/dao/auction_test.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              49
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  49
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/handler/auction_admin_scope_test.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              34,
+              48
+            ]
+          },
+          {
+            "Range": [
+              54,
+              55
+            ]
+          },
+          {
+            "Single": 78
+          },
+          {
+            "Single": 95
+          },
+          {
+            "Single": 115
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  34,
+                  48
+                ]
+              },
+              {
+                "Range": [
+                  54,
+                  55
+                ]
+              },
+              {
+                "Single": 78
+              },
+              {
+                "Single": 95
+              },
+              {
+                "Single": 115
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/handler/auction_create_test.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              101
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  101
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/handler/auction_list_test.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              47,
+              54
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  47,
+                  54
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/handler/internal_product_auctions.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              102
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  102
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/handler/internal_product_auctions_test.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              70
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  70
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/route_internal_test.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_38e200d1db3f01",
+        "line_ranges": [
+          {
+            "Single": 68
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25478b00057ea64ca2cd66",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 68
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/service/auction_admin_scope_test.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              28,
+              34
+            ]
+          },
+          {
+            "Range": [
+              69,
+              77
+            ]
+          },
+          {
+            "Range": [
+              79,
+              87
+            ]
+          },
+          {
+            "Range": [
+              104,
+              110
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  28,
+                  34
+                ]
+              },
+              {
+                "Range": [
+                  69,
+                  77
+                ]
+              },
+              {
+                "Range": [
+                  79,
+                  87
+                ]
+              },
+              {
+                "Range": [
+                  104,
+                  110
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_1cea49a54889ce::t_5a0b3a95830de1",
+        "line_ranges": [
+          {
+            "Single": 42
+          },
+          {
+            "Single": 44
+          },
+          {
+            "Range": [
+              48,
+              54
+            ]
+          },
+          {
+            "Single": 60
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2547a500057ea64ca2cd7b",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 42
+              },
+              {
+                "Single": 44
+              },
+              {
+                "Range": [
+                  48,
+                  54
+                ]
+              },
+              {
+                "Single": 60
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/service/auction_create_test.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              206
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  206
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/auction/service/auction_test.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Single": 366
+          },
+          {
+            "Range": [
+              368,
+              374
+            ]
+          },
+          {
+            "Range": [
+              378,
+              383
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Single": 366
+              },
+              {
+                "Range": [
+                  368,
+                  374
+                ]
+              },
+              {
+                "Range": [
+                  378,
+                  383
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/product/client/auction_client.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              62,
+              70
+            ]
+          },
+          {
+            "Range": [
+              112,
+              154
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  62,
+                  70
+                ]
+              },
+              {
+                "Range": [
+                  112,
+                  154
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/product/client/auction_client_test.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              56,
+              85
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  56,
+                  85
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/product/handler/internal.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Single": 5
+          },
+          {
+            "Single": 9
+          },
+          {
+            "Range": [
+              100,
+              104
+            ]
+          },
+          {
+            "Range": [
+              138,
+              155
+            ]
+          },
+          {
+            "Range": [
+              218,
+              246
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Single": 5
+              },
+              {
+                "Single": 9
+              },
+              {
+                "Range": [
+                  100,
+                  104
+                ]
+              },
+              {
+                "Range": [
+                  138,
+                  155
+                ]
+              },
+              {
+                "Range": [
+                  218,
+                  246
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/product/handler/internal_test.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              7,
+              8
+            ]
+          },
+          {
+            "Single": 12
+          },
+          {
+            "Range": [
+              28,
+              29
+            ]
+          },
+          {
+            "Range": [
+              34,
+              35
+            ]
+          },
+          {
+            "Range": [
+              45,
+              181
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  7,
+                  8
+                ]
+              },
+              {
+                "Single": 12
+              },
+              {
+                "Range": [
+                  28,
+                  29
+                ]
+              },
+              {
+                "Range": [
+                  34,
+                  35
+                ]
+              },
+              {
+                "Range": [
+                  45,
+                  181
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/product/handler/product_test.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Single": 12
+          },
+          {
+            "Range": [
+              27,
+              40
+            ]
+          },
+          {
+            "Range": [
+              594,
+              672
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Single": 12
+              },
+              {
+                "Range": [
+                  27,
+                  40
+                ]
+              },
+              {
+                "Range": [
+                  594,
+                  672
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/product/main.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Single": 157
+          },
+          {
+            "Single": 271
+          },
+          {
+            "Single": 273
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Single": 157
+              },
+              {
+                "Single": 271
+              },
+              {
+                "Single": 273
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/product/service/product.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              45,
+              51
+            ]
+          },
+          {
+            "Single": 71
+          },
+          {
+            "Range": [
+              80,
+              81
+            ]
+          },
+          {
+            "Single": 88
+          },
+          {
+            "Range": [
+              288,
+              310
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  45,
+                  51
+                ]
+              },
+              {
+                "Single": 71
+              },
+              {
+                "Range": [
+                  80,
+                  81
+                ]
+              },
+              {
+                "Single": 88
+              },
+              {
+                "Range": [
+                  288,
+                  310
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/product/service/product_test.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Single": 11
+          },
+          {
+            "Single": 310
+          },
+          {
+            "Range": [
+              325,
+              401
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Single": 11
+              },
+              {
+                "Single": 310
+              },
+              {
+                "Range": [
+                  325,
+                  401
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/test/client/auction/client.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              270,
+              273
+            ]
+          },
+          {
+            "Range": [
+              279,
+              289
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  270,
+                  273
+                ]
+              },
+              {
+                "Range": [
+                  279,
+                  289
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_1cea49a54889ce::t_62fb8c10673df6",
+        "line_ranges": [
+          {
+            "Single": 157
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25473600057ea64ca2cd36",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Single": 157
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/test/scenario/antisnipe/factory.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Single": 31
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Single": 31
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/test/scenario/antisnipe/factory_test.go": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              25,
+              27
+            ]
+          },
+          {
+            "Single": 56
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  25,
+                  27
+                ]
+              },
+              {
+                "Single": 56
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "docs/superpowers/sdd/runs/2026-06-07-auction-product-lifecycle-state.md": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              733
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  733
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frontend/admin/src/pages-new/AuctionList.tsx": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              20,
+              27
+            ]
+          },
+          {
+            "Range": [
+              35,
+              36
+            ]
+          },
+          {
+            "Single": 65
+          },
+          {
+            "Range": [
+              69,
+              78
+            ]
+          },
+          {
+            "Single": 109
+          },
+          {
+            "Single": 113
+          },
+          {
+            "Single": 128
+          },
+          {
+            "Range": [
+              160,
+              163
+            ]
+          },
+          {
+            "Range": [
+              194,
+              200
+            ]
+          },
+          {
+            "Range": [
+              233,
+              237
+            ]
+          },
+          {
+            "Single": 280
+          },
+          {
+            "Range": [
+              301,
+              304
+            ]
+          },
+          {
+            "Single": 328
+          },
+          {
+            "Single": 331
+          },
+          {
+            "Range": [
+              343,
+              344
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  20,
+                  27
+                ]
+              },
+              {
+                "Range": [
+                  35,
+                  36
+                ]
+              },
+              {
+                "Single": 65
+              },
+              {
+                "Range": [
+                  69,
+                  78
+                ]
+              },
+              {
+                "Single": 109
+              },
+              {
+                "Single": 113
+              },
+              {
+                "Single": 128
+              },
+              {
+                "Range": [
+                  160,
+                  163
+                ]
+              },
+              {
+                "Range": [
+                  194,
+                  200
+                ]
+              },
+              {
+                "Range": [
+                  233,
+                  237
+                ]
+              },
+              {
+                "Single": 280
+              },
+              {
+                "Range": [
+                  301,
+                  304
+                ]
+              },
+              {
+                "Single": 328
+              },
+              {
+                "Single": 331
+              },
+              {
+                "Range": [
+                  343,
+                  344
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frontend/admin/src/pages-new/GoodsList.tsx": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              30,
+              31
+            ]
+          },
+          {
+            "Single": 84
+          },
+          {
+            "Single": 208
+          },
+          {
+            "Single": 230
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  30,
+                  31
+                ]
+              },
+              {
+                "Single": 84
+              },
+              {
+                "Single": 208
+              },
+              {
+                "Single": 230
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frontend/admin/src/pages-new/__tests__/AuctionList.createAuction.test.tsx": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              54,
+              55
+            ]
+          },
+          {
+            "Range": [
+              133,
+              274
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  54,
+                  55
+                ]
+              },
+              {
+                "Range": [
+                  133,
+                  274
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frontend/admin/src/pages-new/__tests__/GoodsList.test.tsx": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              83,
+              110
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  83,
+                  110
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frontend/admin/src/shared/api/types.ts": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              31,
+              35
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  31,
+                  35
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "scripts/check-auction-product-consistency.sql": [
+      {
+        "hash": "s_1cea49a54889ce::t_cf964262b11535",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              20
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2546cf00057ea64ca2cce8",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  20
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "s_1cea49a54889ce": {
+      "tool": "trae",
+      "conversation_id": "6a24571300057ea64ca27a83",
+      "session_id": "6a24571300057ea64ca27a83",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_1cea49a54889ce::t_119f4814a6a3e9": {
+      "tool": "trae",
+      "conversation_id": "6a24571300057ea64ca27a83",
+      "session_id": "6a24571300057ea64ca27a83",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_1cea49a54889ce::t_38e200d1db3f01": {
+      "tool": "trae",
+      "conversation_id": "6a24571300057ea64ca27a83",
+      "session_id": "6a24571300057ea64ca27a83",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_1cea49a54889ce::t_5a0b3a95830de1": {
+      "tool": "trae",
+      "conversation_id": "6a24571300057ea64ca27a83",
+      "session_id": "6a24571300057ea64ca27a83",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_1cea49a54889ce::t_62fb8c10673df6": {
+      "tool": "trae",
+      "conversation_id": "6a24571300057ea64ca27a83",
+      "session_id": "6a24571300057ea64ca27a83",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_1cea49a54889ce::t_6de41a8c813471": {
+      "tool": "trae",
+      "conversation_id": "6a24571300057ea64ca27a83",
+      "session_id": "6a24571300057ea64ca27a83",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_1cea49a54889ce::t_8f1171b8fe3937": {
+      "tool": "trae",
+      "conversation_id": "6a24571300057ea64ca27a83",
+      "session_id": "6a24571300057ea64ca27a83",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_1cea49a54889ce::t_cf964262b11535": {
+      "tool": "trae",
+      "conversation_id": "6a24571300057ea64ca27a83",
+      "session_id": "6a24571300057ea64ca27a83",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
