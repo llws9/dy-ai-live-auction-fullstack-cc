@@ -105,7 +105,7 @@ export default function LiveStreamFixedPrice({ liveStreamId: propLiveStreamId }:
       const [response, auctionResponse, productResponse] = await Promise.all([
         fixedPriceAdminApi.list(liveStreamId, { page: 1, page_size: pageSize }),
         auctionApi.list({ live_stream_id: liveStreamId, page: 1, page_size: 100 }),
-        productApi.list({ display_status: 'schedulable', page: 1, page_size: 100 }),
+        productApi.list({ display_status: "schedulable", page: 1, page_size: 100 }),
       ])
       const nextItems = (response.items || []).map(normalizeItem)
       const nextAuctions = (auctionResponse.list || []).filter((auction: any) => [0, 1, 2].includes(Number(auction.status)))
@@ -160,7 +160,6 @@ export default function LiveStreamFixedPrice({ liveStreamId: propLiveStreamId }:
       }
       setItems((prev) => [normalizeItem(completedItem), ...prev])
       setTotal((prev) => prev + 1)
-      setProductId("")
       setPrice("")
       setStock("")
     } catch (error) {
