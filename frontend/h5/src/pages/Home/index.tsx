@@ -26,6 +26,10 @@ interface ProductSummary {
   images?: string[] | string;
   category?: string;
   category_name?: string;
+  start_price?: number | string;
+  rules?: {
+    start_price?: number | string;
+  };
 }
 
 interface RawAuction {
@@ -34,7 +38,17 @@ interface RawAuction {
   product?: ProductSummary;
   live_stream_id?: number | null;
   status?: number;
-  current_price?: number;
+  current_price?: number | string;
+  start_price?: number | string;
+  rules?: {
+    start_price?: number | string;
+  };
+  rule?: {
+    start_price?: number | string;
+  };
+  auction_rule?: {
+    start_price?: number | string;
+  };
   bid_count?: number;
   bidder_count?: number;
   start_time?: string;
@@ -199,17 +213,39 @@ const getAuctionMetaText = (auction: HomeAuction, statusInfo: ReturnType<typeof 
   return '暂无出价';
 };
 
-const normalizeAuction = (auction: RawAuction, product?: ProductSummary): HomeAuction => ({
-  id: auction.id,
-  productId: auction.product_id ?? auction.product?.id,
-  liveStreamId: auction.live_stream_id ?? undefined,
-  status: auction.status ?? 0,
-  currentPrice: auction.current_price ?? 0,
-  bidCount: auction.bid_count ?? auction.bidder_count ?? 0,
-  startTime: auction.start_time,
-  endTime: auction.end_time,
-  product: auction.product ?? product,
-});
+const toNumber = (value: number | string | undefined, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const getAuctionStartPrice = (auction: RawAuction, product?: ProductSummary) =>
+  toNumber(
+    auction.start_price ??
+      auction.rules?.start_price ??
+      auction.rule?.start_price ??
+      auction.auction_rule?.start_price ??
+      auction.product?.start_price ??
+      auction.product?.rules?.start_price ??
+      product?.start_price ??
+      product?.rules?.start_price
+  );
+
+const normalizeAuction = (auction: RawAuction, product?: ProductSummary): HomeAuction => {
+  const currentPrice = toNumber(auction.current_price);
+  const startPrice = getAuctionStartPrice(auction, product);
+
+  return {
+    id: auction.id,
+    productId: auction.product_id ?? auction.product?.id,
+    liveStreamId: auction.live_stream_id ?? undefined,
+    status: auction.status ?? 0,
+    currentPrice: currentPrice > 0 ? currentPrice : startPrice,
+    bidCount: auction.bid_count ?? auction.bidder_count ?? 0,
+    startTime: auction.start_time,
+    endTime: auction.end_time,
+    product: auction.product ?? product,
+  };
+};
 
 const getAuctionSortPriority = (auction: HomeAuction) => {
   if ((auction.status === 1 || auction.status === 2) && !isPastEndTime(auction.endTime)) {
@@ -245,11 +281,6 @@ const getStreamCoverImage = (stream: LiveStream) => stream.cover_image || stream
 const isLiveStreamActive = (status: LiveStream['status']) => {
   const normalized = String(status ?? '').toLowerCase();
   return status === 1 || ['active', 'live', 'living', 'streaming'].includes(normalized);
-};
-
-const toNumber = (value: number | string | undefined, fallback = 0) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
 };
 
 const hasActiveAuction = (stream: LiveStream) => {

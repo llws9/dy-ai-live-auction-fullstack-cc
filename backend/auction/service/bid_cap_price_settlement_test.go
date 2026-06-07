@@ -110,6 +110,55 @@ func TestPlaceBidAtCapPriceFinalizesAuctionResult(t *testing.T) {
 	assert.Equal(t, model.AuctionSettlementTaskStatusDone, task.Status)
 }
 
+func TestPlaceBidRejectsAmountBelowStartPrice(t *testing.T) {
+	db := newBidSettlementTestDB(t)
+	require.NoError(t, db.Create(&model.User{
+		ID:       2001,
+		Name:     "buyer",
+		Password: "password",
+		Status:   1,
+	}).Error)
+	require.NoError(t, db.Create(&model.Auction{
+		ID:           304,
+		ProductID:    404,
+		Status:       model.AuctionStatusOngoing,
+		CurrentPrice: decimal.Zero,
+		StartTime:    time.Now().Add(-time.Minute),
+		EndTime:      time.Now().Add(time.Hour),
+	}).Error)
+	require.NoError(t, db.Create(&model.AuctionRule{
+		ProductID:          404,
+		StartPrice:         decimal.NewFromInt(100),
+		Increment:          decimal.NewFromInt(10),
+		Duration:           60,
+		DelayDuration:      30,
+		MaxDelayTime:       180,
+		TriggerDelayBefore: 30,
+	}).Error)
+
+	bidSvc := NewBidService(
+		dao.NewAuctionDAO(db),
+		dao.NewBidDAO(db),
+		dao.NewAuctionRuleDAO(db),
+		dao.NewUserDAO(db),
+	)
+
+	result, err := bidSvc.PlaceBid(context.Background(), &PlaceBidRequest{
+		AuctionID: 304,
+		UserID:    2001,
+		Amount:    decimal.NewFromInt(10),
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.False(t, result.Success)
+	assert.Contains(t, result.Message, "110.00")
+
+	var count int64
+	require.NoError(t, db.Model(&model.Bid{}).Where("auction_id = ?", int64(304)).Count(&count).Error)
+	assert.Equal(t, int64(0), count)
+}
+
 func TestCapPriceSettlementRetryCompletesPendingTask(t *testing.T) {
 	db := newBidSettlementTestDB(t)
 	rdb := setupTestRedis(t)

@@ -3,6 +3,7 @@ import {
   createDemoMerchantAuction,
   rechargeDemoUser,
   shortenDemoAuction,
+  triggerOtherSkyLamp,
   triggerFollowBid,
 } from '../demoApi';
 
@@ -63,6 +64,23 @@ describe('demoApi', () => {
     expect(JSON.parse(init.body as string)).toEqual({
       user_id: 9101,
       amount: '100.00',
+    });
+  });
+
+  it('posts other sky lamp request for the current auction', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    } as Response);
+    global.fetch = fetchMock;
+
+    await triggerOtherSkyLamp({ auctionId: 42 });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/test/demo/sky-lamp');
+    expect(JSON.parse(init.body as string)).toEqual({
+      auction_id: 42,
     });
   });
 

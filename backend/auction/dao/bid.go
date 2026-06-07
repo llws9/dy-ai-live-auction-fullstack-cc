@@ -78,6 +78,20 @@ func (d *BidDAO) GetRanking(ctx context.Context, auctionID int64, limit int) ([]
 	return bids, err
 }
 
+// GetWinnerBid returns the authoritative winning bid for an auction.
+// It preserves the original bid row so result pages can show bid time.
+func (d *BidDAO) GetWinnerBid(ctx context.Context, auctionID int64) (*model.Bid, error) {
+	var bid model.Bid
+	err := d.db.WithContext(ctx).
+		Where("auction_id = ?", auctionID).
+		Order("amount DESC, created_at ASC, id ASC").
+		First(&bid).Error
+	if err != nil {
+		return nil, err
+	}
+	return &bid, nil
+}
+
 // GetUserHighestBid 获取用户在某个竞拍中的最高出价
 func (d *BidDAO) GetUserHighestBid(ctx context.Context, auctionID, userID int64) (*model.Bid, error) {
 	var bid model.Bid

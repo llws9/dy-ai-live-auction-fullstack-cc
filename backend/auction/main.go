@@ -85,6 +85,9 @@ func main() {
 	); err != nil {
 		log.Printf("Warning: AutoMigrate failed (tables may already exist): %v", err)
 	}
+	if err := dao.EnsureAuctionActiveProductUniqueIndex(db); err != nil {
+		log.Printf("Warning: ensure active product unique index failed: %v", err)
+	}
 
 	// 初始化 DAO 层
 	auctionDAO := dao.NewAuctionDAO(db)
@@ -130,6 +133,7 @@ func main() {
 	bidService.SetSkyLampTrigger(skyLampService)
 	bidService.SetMetrics(metrics.GetMetrics())
 	bidService.SetHub(hub)
+	skyLampService.SetHub(hub)
 	auctionService.SetBidDAO(bidDAO)
 	auctionService.SetNotificationSender(notificationService)
 	auctionService.SetSkyLampDAO(skyLampDAO)
@@ -172,6 +176,7 @@ func main() {
 	// 初始化 Handler 层
 	auctionHandler := handler.NewAuctionHandler(auctionService)
 	auctionHandler.SetRuleFetcher(ruleDAO)
+	auctionHandler.SetResultFetchers(bidDAO.GetWinnerBid, userDAO.GetByIDs)
 	// 注入 product-service 内部接口客户端，启用 list 接口的 category 过滤与商品摘要回填（spec C §5.2）。
 	productSvcURL := os.Getenv("PRODUCT_SERVICE_URL")
 	if productSvcURL == "" {
@@ -202,6 +207,7 @@ func main() {
 	internalUserHandler := handler.NewInternalUserHandler(userDAO)
 	currentAuctionHandler := handler.NewInternalCurrentAuctionHandler(handler.NewCurrentAuctionDAOFetcher(auctionDAO))
 	internalDemoAuctionHandler := handler.NewInternalDemoAuctionHandler(auctionDAO, hub)
+	productAuctionsHandler := handler.NewInternalProductAuctionsHandler(auctionDAO)
 	statisticsHandler := handler.NewStatisticsHandler(service.NewStatisticsService(statisticsDAO))
 
 	// 一口价秒杀（A5 M1）：dao + Redis 库存/幂等 + service + handler。
@@ -314,6 +320,7 @@ func main() {
 		liveStreamStatsHandler,
 		currentAuctionHandler,
 		internalDemoAuctionHandler,
+		productAuctionsHandler,
 	)
 
 	// 注册 Prometheus metrics 端点
@@ -475,7 +482,7 @@ func registerRoutes(h *server.Hertz, internalAPIToken string, auctionHandler *ha
 	v1.POST("/users/me/addresses/:id/default", userAddressHandler.SetDefault)
 }
 
-func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, internalUserHandler *handler.InternalUserHandler, userBalanceHandler *handler.UserBalanceHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler, currentAuctionHandler *handler.InternalCurrentAuctionHandler, internalDemoAuctionHandler *handler.InternalDemoAuctionHandler) {
+func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, internalUserHandler *handler.InternalUserHandler, userBalanceHandler *handler.UserBalanceHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler, currentAuctionHandler *handler.InternalCurrentAuctionHandler, internalDemoAuctionHandler *handler.InternalDemoAuctionHandler, productAuctionsHandler *handler.InternalProductAuctionsHandler) {
 	internal := h.Group("/internal", internalAuth)
 	if internalUserHandler != nil {
 		internal.POST("/users/batch", internalUserHandler.BatchByIDs)
@@ -490,6 +497,9 @@ func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, inter
 	}
 	if internalDemoAuctionHandler != nil {
 		internal.POST("/test/auctions/shorten", internalDemoAuctionHandler.Shorten)
+	}
+	if productAuctionsHandler != nil {
+		internal.POST("/auctions/by-products", productAuctionsHandler.Handle)
 	}
 }
 

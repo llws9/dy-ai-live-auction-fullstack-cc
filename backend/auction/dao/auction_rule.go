@@ -31,3 +31,21 @@ func (d *AuctionRuleDAO) GetByProductID(ctx context.Context, productID int64) (*
 	}
 	return &rule, nil
 }
+
+func (d *AuctionRuleDAO) GetByProductIDs(ctx context.Context, productIDs []int64) (map[int64]*model.AuctionRule, error) {
+	if len(productIDs) == 0 {
+		return map[int64]*model.AuctionRule{}, nil
+	}
+
+	var rules []model.AuctionRule
+	if err := d.db.WithContext(ctx).Where("product_id IN ?", productIDs).Find(&rules).Error; err != nil {
+		return nil, err
+	}
+
+	out := make(map[int64]*model.AuctionRule, len(rules))
+	for i := range rules {
+		rule := rules[i]
+		out[rule.ProductID] = &rule
+	}
+	return out, nil
+}

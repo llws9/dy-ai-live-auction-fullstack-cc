@@ -25,6 +25,28 @@ func (f *fakeAuctionFetcher) Get(_ context.Context, _ int64) (*model.Auction, er
 	return f.out, f.err
 }
 
+type fakeWinnerBidFetcher struct {
+	out       *model.Bid
+	err       error
+	calledIDs []int64
+}
+
+func (f *fakeWinnerBidFetcher) GetWinnerBid(_ context.Context, auctionID int64) (*model.Bid, error) {
+	f.calledIDs = append(f.calledIDs, auctionID)
+	return f.out, f.err
+}
+
+type fakeResultUserFetcher struct {
+	out       map[int64]*model.User
+	err       error
+	calledIDs []int64
+}
+
+func (f *fakeResultUserFetcher) GetByIDs(_ context.Context, ids []int64) (map[int64]*model.User, error) {
+	f.calledIDs = append(f.calledIDs, ids...)
+	return f.out, f.err
+}
+
 func TestBuildAuctionResultResponse(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now().UTC().Truncate(time.Second)
@@ -52,8 +74,22 @@ func TestBuildAuctionResultResponse(t *testing.T) {
 				},
 			},
 		}
+		wb := &fakeWinnerBidFetcher{
+			out: &model.Bid{
+				ID:        7001,
+				AuctionID: 1001,
+				UserID:    winnerID,
+				Amount:    decimal.NewFromInt(9200),
+				CreatedAt: now.Add(29 * time.Minute),
+			},
+		}
+		uf := &fakeResultUserFetcher{
+			out: map[int64]*model.User{
+				winnerID: {ID: winnerID, Name: "买家A"},
+			},
+		}
 
-		got, err := BuildAuctionResultResponse(ctx, fp, af.Get, 1001)
+		got, err := BuildAuctionResultResponse(ctx, fp, af.Get, wb.GetWinnerBid, uf.GetByIDs, 1001)
 		require.NoError(t, err)
 
 		// 已有字段保留
@@ -65,9 +101,13 @@ func TestBuildAuctionResultResponse(t *testing.T) {
 		assert.Equal(t, int64(88), *got.WinnerID)
 		assert.Equal(t, 30, got.DelayUsed)
 
-		// 新增字段：won_bid 严格等于 final_price
-		assert.Equal(t, got.FinalPrice, got.WonBid)
-		assert.Equal(t, float64(9200), got.WonBid)
+		// 新增字段：won_bid 返回中标出价详情，供 H5 结果页展示中标人和出价时间。
+		require.NotNil(t, got.WonBid)
+		assert.Equal(t, int64(7001), got.WonBid.ID)
+		assert.Equal(t, int64(88), got.WonBid.UserID)
+		assert.Equal(t, "买家A", got.WonBid.UserName)
+		assert.Equal(t, float64(9200), got.WonBid.Amount)
+		assert.Equal(t, now.Add(29*time.Minute), got.WonBid.CreatedAt)
 
 		// 新增字段：product 含完整 images 数组（与 list 仅 image 不同）
 		require.NotNil(t, got.Product)
@@ -86,7 +126,7 @@ func TestBuildAuctionResultResponse(t *testing.T) {
 		af := &fakeAuctionFetcher{err: errors.New("not found")}
 		fp := &fakeProductClient{}
 
-		_, err := BuildAuctionResultResponse(ctx, fp, af.Get, 9999)
+		_, err := BuildAuctionResultResponse(ctx, fp, af.Get, nil, nil, 9999)
 		require.Error(t, err)
 		// product client 不应被调用
 		assert.Empty(t, fp.batchCalledIDs)
@@ -105,11 +145,11 @@ func TestBuildAuctionResultResponse(t *testing.T) {
 		}
 		fp := &fakeProductClient{batchErr: errors.New("product-service down")}
 
-		got, err := BuildAuctionResultResponse(ctx, fp, af.Get, 1001)
+		got, err := BuildAuctionResultResponse(ctx, fp, af.Get, nil, nil, 1001)
 		require.NoError(t, err)
 		assert.Nil(t, got.Product)
 		// 核心字段仍正确
-		assert.Equal(t, float64(9200), got.WonBid)
+		assert.Nil(t, got.WonBid)
 		assert.Equal(t, float64(9200), got.FinalPrice)
 	})
 
@@ -124,7 +164,7 @@ func TestBuildAuctionResultResponse(t *testing.T) {
 		}
 		fp := &fakeProductClient{batchOut: map[int64]client.ProductSummary{}}
 
-		got, err := BuildAuctionResultResponse(ctx, fp, af.Get, 1001)
+		got, err := BuildAuctionResultResponse(ctx, fp, af.Get, nil, nil, 1001)
 		require.NoError(t, err)
 		assert.Nil(t, got.Product)
 	})
@@ -135,9 +175,9 @@ func TestBuildAuctionResultResponse(t *testing.T) {
 			out: &model.Auction{ID: 1, ProductID: 2, CurrentPrice: decimal.NewFromInt(100)},
 		}
 
-		got, err := BuildAuctionResultResponse(ctx, nil, af.Get, 1)
+		got, err := BuildAuctionResultResponse(ctx, nil, af.Get, nil, nil, 1)
 		require.NoError(t, err)
 		assert.Nil(t, got.Product)
-		assert.Equal(t, float64(100), got.WonBid)
+		assert.Nil(t, got.WonBid)
 	})
 }

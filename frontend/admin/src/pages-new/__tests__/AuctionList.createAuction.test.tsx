@@ -51,6 +51,8 @@ describe('AuctionList create auction with rule template', () => {
           category_id: null,
           category_name: '',
           status: 1,
+          display_status: 'schedulable',
+          display_status_label: '可排期',
           created_at: '2026-06-06T00:00:00Z',
           updated_at: '2026-06-06T00:00:00Z',
         },
@@ -127,5 +129,148 @@ describe('AuctionList create auction with rule template', () => {
     expect(mockedProductApi.applyRuleTemplate.mock.invocationCallOrder[0]).toBeLessThan(
       mockedAuctionApi.create.mock.invocationCallOrder[0]
     )
+  })
+
+  it('shows empty schedulable products state', async () => {
+    const user = userEvent.setup()
+    mockedProductApi.list.mockResolvedValueOnce({ list: [], total: 0, page: 1, page_size: 100 })
+
+    render(
+      <MemoryRouter>
+        <AuctionList />
+      </MemoryRouter>
+    )
+
+    await user.click(await screen.findByRole('button', { name: '创建竞拍场次' }))
+
+    expect(await screen.findByText('暂无可排期商品')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '确认创建竞拍' })).toBeDisabled()
+  })
+
+  it('only lists schedulable products in create auction selector', async () => {
+    const user = userEvent.setup()
+    mockedProductApi.list.mockResolvedValueOnce({
+      list: [
+        {
+          id: 501,
+          name: '可排期商品',
+          description: '',
+          images: [],
+          category_id: null,
+          category_name: '',
+          status: 1,
+          display_status: 'schedulable',
+          display_status_label: '可排期',
+          created_at: '2026-06-06T00:00:00Z',
+          updated_at: '2026-06-06T00:00:00Z',
+        },
+        {
+          id: 502,
+          name: '已成交商品',
+          description: '',
+          images: [],
+          category_id: null,
+          category_name: '',
+          status: 1,
+          display_status: 'sold',
+          display_status_label: '已拍卖',
+          created_at: '2026-06-06T00:00:00Z',
+          updated_at: '2026-06-06T00:00:00Z',
+        },
+        {
+          id: 503,
+          name: '竞拍中商品',
+          description: '',
+          images: [],
+          category_id: null,
+          category_name: '',
+          status: 1,
+          display_status: 'auctioning',
+          display_status_label: '竞拍中',
+          created_at: '2026-06-06T00:00:00Z',
+          updated_at: '2026-06-06T00:00:00Z',
+        },
+      ],
+      total: 3,
+      page: 1,
+      page_size: 100,
+    })
+
+    render(
+      <MemoryRouter>
+        <AuctionList />
+      </MemoryRouter>
+    )
+
+    await user.click(await screen.findByRole('button', { name: '创建竞拍场次' }))
+
+    expect(await screen.findByRole('option', { name: '可排期商品' })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: '已成交商品' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: '竞拍中商品' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('竞拍商品')).toHaveValue('501')
+  })
+
+  it('shows sold and unsold lifecycle tabs', async () => {
+    render(
+      <MemoryRouter>
+        <AuctionList />
+      </MemoryRouter>
+    )
+
+    expect(await screen.findByRole('tab', { name: '全部场次' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '竞拍中' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '已拍卖' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '流拍' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '已取消' })).toBeInTheDocument()
+  })
+
+  it('loads both ongoing and delayed auctions for active tab', async () => {
+    const user = userEvent.setup()
+    mockedAuctionApi.list.mockImplementation(async (params?: any) => {
+      if (params?.status === 1) {
+        return {
+          list: [{
+            id: 7001,
+            product: { name: '正在竞拍商品' },
+            status: 1,
+            current_price: 100,
+            start_time: '2026-06-06T00:00:00Z',
+            bid_count: 1,
+            live_stream_id: 8001,
+          }],
+          total: 1,
+        }
+      }
+      if (params?.status === 2) {
+        return {
+          list: [{
+            id: 7002,
+            product: { name: '延时竞拍商品' },
+            status: 2,
+            current_price: 120,
+            start_time: '2026-06-06T00:00:00Z',
+            bid_count: 2,
+            live_stream_id: 8002,
+          }],
+          total: 1,
+        }
+      }
+      return { list: [], total: 0 }
+    })
+
+    render(
+      <MemoryRouter>
+        <AuctionList />
+      </MemoryRouter>
+    )
+
+    await user.click(await screen.findByRole('tab', { name: '竞拍中' }))
+
+    await waitFor(() => {
+      expect(mockedAuctionApi.list).toHaveBeenCalledWith(expect.objectContaining({ status: 1 }))
+      expect(mockedAuctionApi.list).toHaveBeenCalledWith(expect.objectContaining({ status: 2 }))
+    })
+    expect(await screen.findByText('正在竞拍商品')).toBeInTheDocument()
+    expect(screen.getByText('延时竞拍商品')).toBeInTheDocument()
   })
 })

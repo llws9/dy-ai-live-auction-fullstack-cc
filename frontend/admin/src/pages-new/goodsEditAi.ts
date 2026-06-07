@@ -58,6 +58,8 @@ export function getCopywritingErrorMessage(error: CopywritingErrorLike): string 
       return '当前账号没有使用 AI 文案的权限'
     case 429:
       return 'AI 使用过于频繁，请稍后再试'
+    case 503:
+      return 'AI 服务未配置，请联系管理员注入 ARK_API_KEY 后重启服务'
     case 502:
       return 'AI 服务暂时不可用，请稍后重试或手动填写'
     case 504:

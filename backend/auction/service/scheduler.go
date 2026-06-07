@@ -11,20 +11,29 @@ import (
 
 // Scheduler 状态转换定时任务
 type Scheduler struct {
-	auctionService  *AuctionService
-	timeSyncService *websocket.TimeSyncService
-	hub             *websocket.Hub
-	ticker          *time.Ticker
-	timeSyncTicker  *time.Ticker
-	stopChan        chan struct{}
+	auctionService   *AuctionService
+	timeSyncService  *websocket.TimeSyncService
+	hub              *websocket.Hub
+	checkInterval    time.Duration
+	timeSyncInterval time.Duration
+	ticker           *time.Ticker
+	timeSyncTicker   *time.Ticker
+	stopChan         chan struct{}
 }
+
+const (
+	defaultAuctionCheckInterval = 200 * time.Millisecond
+	defaultTimeSyncInterval     = 5 * time.Second
+)
 
 // NewScheduler 创建定时任务调度器
 func NewScheduler(auctionService *AuctionService) *Scheduler {
 	return &Scheduler{
-		auctionService:  auctionService,
-		timeSyncService: websocket.NewTimeSyncService(),
-		stopChan:        make(chan struct{}),
+		auctionService:   auctionService,
+		timeSyncService:  websocket.NewTimeSyncService(),
+		checkInterval:    defaultAuctionCheckInterval,
+		timeSyncInterval: defaultTimeSyncInterval,
+		stopChan:         make(chan struct{}),
 	}
 }
 
@@ -36,11 +45,11 @@ func (s *Scheduler) SetHub(hub *websocket.Hub) {
 
 // Start 启动定时任务
 func (s *Scheduler) Start() {
-	// 每 1 秒检查一次竞拍状态
-	s.ticker = time.NewTicker(1 * time.Second)
+	// 高频检查竞拍状态，降低 end_time 到结算通知之间的体感延迟。
+	s.ticker = time.NewTicker(s.checkInterval)
 
 	// 每 5 秒推送时间同步
-	s.timeSyncTicker = time.NewTicker(5 * time.Second)
+	s.timeSyncTicker = time.NewTicker(s.timeSyncInterval)
 
 	go func() {
 		for {

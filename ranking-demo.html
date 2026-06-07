@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>出价排行 - 设计优化演示</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#ff3b30',
+            darkSurface: '#1c1c1e',
+            darkBg: '#000000',
+            gold: '#ffd700',
+            silver: '#c0c0c0',
+            bronze: '#cd7f32',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    
+    /* 基础琉璃微光 (Glassmorphism) */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    .dark .glass-card {
+      background: rgba(28, 28, 30, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .text-gradient-gold {
+      background: linear-gradient(135deg, #F9D423 0%, #FF4E50 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .dark .text-gradient-gold {
+      background: linear-gradient(135deg, #FFE000 0%, #799F0C 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    @keyframes breathe {
+      0%, 100% { transform: scale(1); box-shadow: 0 4px 14px -3px rgba(250, 204, 21, 0.4); }
+      50% { transform: scale(1.15); box-shadow: 0 10px 25px -3px rgba(250, 204, 21, 0.8); }
+    }
+    .animate-breathe {
+      animation: breathe 2.5s ease-in-out infinite;
+    }
+
+    /* 滚动条隐藏 */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+    }
+  </style>
+</head>
+<body class="bg-gray-100 dark:bg-darkBg text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-300">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const mockRanking = [
+      { id: 1, rank: 1, user_name: '榜一大哥', amount: 8888 },
+      { id: 2, rank: 2, user_name: '用户1001', amount: 8500 },
+      { id: 3, rank: 3, user_name: '张三', amount: 8200 },
+      { id: 4, rank: 4, user_name: '李四', amount: 8000 },
+      { id: 5, rank: 5, user_name: '王五', amount: 7500 },
+    ];
+
+    const myBid = { rank: 12, user_name: '我', amount: 5000 };
+
+    const formatMoney = (amount) => amount.toLocaleString('zh-CN', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
+
+    // 方案一：琉璃微光 (Glassmorphism)
+    const App = () => {
+      const [isDark, setIsDark] = useState(false);
+
+      useEffect(() => {
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }, [isDark]);
+
+      // 方案A：悬浮吸底（类似之前的卡片，但更轻量）
+      const MyBidVariantA = () => (
+        <div className="mt-2 pt-3 border-t border-gray-200 dark:border-gray-700/50 relative z-10">
+          <div className="flex items-center justify-between p-3 rounded-xl backdrop-blur-md bg-white/40 dark:bg-black/40 border border-white/50 dark:border-white/10 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                <span className="text-sm font-bold text-primary">{myBid.rank}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-500 dark:text-gray-400">当前我的排位</span>
+                <span className="text-sm font-medium text-primary">等待超越...</span>
+              </div>
+            </div>
+            <strong className="text-primary text-lg">¥{formatMoney(myBid.amount)}</strong>
+          </div>
+        </div>
+      );
+
+      // 方案B：极简文字链（不带边框和背景，完全融入布局）
+      const MyBidVariantB = () => (
+        <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700/50 relative z-10 flex items-center justify-between px-2">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+            <span>我的出价处于第</span>
+            <span className="font-bold text-primary">{myBid.rank}</span>
+            <span>位</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">当前金额</span>
+            <strong className="text-primary text-base">¥{formatMoney(myBid.amount)}</strong>
+          </div>
+        </div>
+      );
+
+      // 方案C：霓虹强调（带渐变边框和发光效果，适合强调个人出价）
+      const MyBidVariantC = () => (
+        <div className="mt-3 relative z-10">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/50 to-orange-500/50 rounded-xl blur-sm opacity-50"></div>
+          <div className="relative flex items-center justify-between p-3 rounded-xl bg-white dark:bg-darkSurface border border-primary/30">
+            <div className="flex items-center gap-3">
+              <span className="w-6 h-6 flex items-center justify-center rounded-full bg-primary text-white text-xs font-bold shadow-md shadow-primary/30">
+                {myBid.rank}
+              </span>
+              <span className="text-sm font-bold bg-gradient-to-r from-primary to-orange-500 -webkit-background-clip-text text-transparent bg-clip-text">
+                我的最新出价
+              </span>
+            </div>
+            <strong className="text-primary text-lg font-black tracking-tight">¥{formatMoney(myBid.amount)}</strong>
+          </div>
+        </div>
+      );
+
+      // 通用排行渲染逻辑
+      const renderRankingList = () => (
+        <div className="flex flex-col gap-2 relative z-10">
+          {mockRanking.slice(0, 3).map((item, idx) => {
+            const isMe = item.user_name === '我'; // 模拟当前用户上榜
+            const displayName = isMe ? '我自己 (当前领先)' : item.user_name;
+            
+            return (
+              <div key={item.id} className={`flex items-center justify-between p-2 rounded-xl transition-all ${idx === 0 ? 'bg-gradient-to-r from-yellow-50 to-transparent dark:from-yellow-900/20' : ''} ${isMe ? 'ring-1 ring-primary/30 bg-primary/5' : ''}`}>
+                <div className="flex items-center gap-3">
+                  <span className={`w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold ${
+                    idx === 0 ? 'bg-yellow-400 text-white shadow-lg shadow-yellow-400/40 animate-breathe' : 
+                    idx === 1 ? 'bg-gray-300 text-white' : 
+                    'bg-orange-300 text-white'
+                  }`}>
+                    {item.rank}
+                  </span>
+                  <span className={`font-medium text-sm ${isMe ? 'text-primary' : ''}`}>{displayName}</span>
+                </div>
+                <strong className={`text-base ${idx === 0 ? 'text-gradient-gold text-lg' : isMe ? 'text-primary' : ''}`}>
+                  ¥{formatMoney(item.amount)}
+                </strong>
+              </div>
+            );
+          })}
+        </div>
+      );
+
+      return (
+        <div className="min-h-screen p-8 flex flex-col items-center">
+          <div className="w-full max-w-5xl mb-8 flex justify-between items-center bg-white dark:bg-darkSurface p-4 rounded-xl shadow-sm">
+            <div>
+              <h1 className="text-2xl font-bold">"我的出价" UI 优化方案</h1>
+              <p className="text-gray-500 text-sm mt-1">展示了如果自己上榜，用户名会显示为“我自己 (当前领先)”</p>
+            </div>
+            <button 
+              onClick={() => setIsDark(!isDark)}
+              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg font-medium transition-colors"
+            >
+              {isDark ? '☀️ 切换至日间模式' : '🌙 切换至夜间模式'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl">
+            {/* 方案A */}
+            <div className="flex flex-col items-center gap-4">
+              <h3 className="font-semibold text-lg">方案A：悬浮轻量卡片</h3>
+              <p className="text-sm text-gray-500 text-center">使用半透明背景和精细边框，比原本的 div 更轻盈，不喧宾夺主。</p>
+              <div className="glass-card rounded-2xl p-4 w-full max-w-sm flex flex-col gap-3 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                <h2 className="text-lg font-bold flex items-center gap-2 relative z-10"><span className="text-xl">🏆</span> 出价排行</h2>
+                {renderRankingList()}
+                <MyBidVariantA />
+              </div>
+            </div>
+
+            {/* 方案B */}
+            <div className="flex flex-col items-center gap-4">
+              <h3 className="font-semibold text-lg">方案B：极简文字流</h3>
+              <p className="text-sm text-gray-500 text-center">完全去除包裹卡片，化作底部的一行文字，极度克制，适合内容密集的页面。</p>
+              <div className="glass-card rounded-2xl p-4 w-full max-w-sm flex flex-col gap-3 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                <h2 className="text-lg font-bold flex items-center gap-2 relative z-10"><span className="text-xl">🏆</span> 出价排行</h2>
+                {renderRankingList()}
+                <MyBidVariantB />
+              </div>
+            </div>
+
+            {/* 方案C */}
+            <div className="flex flex-col items-center gap-4">
+              <h3 className="font-semibold text-lg">方案C：霓虹强调</h3>
+              <p className="text-sm text-gray-500 text-center">使用渐变光晕和高亮文字，如果你们希望用户非常关注自己的出价状态，选这个。</p>
+              <div className="glass-card rounded-2xl p-4 w-full max-w-sm flex flex-col gap-3 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                <h2 className="text-lg font-bold flex items-center gap-2 relative z-10"><span className="text-xl">🏆</span> 出价排行</h2>
+                {renderRankingList()}
+                <MyBidVariantC />
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

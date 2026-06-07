@@ -44,6 +44,14 @@ func (f *fakeProductClient) BatchGetSummaries(_ context.Context, ids []int64) (m
 	return f.batchOut, nil
 }
 
+func (f *fakeProductClient) GetAuctionProductInfo(_ context.Context, _ int64) (*client.AuctionProductInfo, error) {
+	return nil, nil
+}
+
+func (f *fakeProductClient) GetOrCreateActiveLiveStream(_ context.Context, _ int64, _ string) (*client.LiveStreamInfo, error) {
+	return nil, nil
+}
+
 // fakeLister 模拟 service.ListAuctionsWithFilters，断言收到的 filters。
 type fakeLister struct {
 	called      bool
@@ -54,6 +62,20 @@ type fakeLister struct {
 	out      []model.Auction
 	outTotal int64
 	outErr   error
+}
+
+type fakeRuleBatchFetcher struct {
+	out            map[int64]*model.AuctionRule
+	err            error
+	batchCalledIDs []int64
+}
+
+func (f *fakeRuleBatchFetcher) GetByProductIDs(_ context.Context, ids []int64) (map[int64]*model.AuctionRule, error) {
+	f.batchCalledIDs = append([]int64(nil), ids...)
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.out, nil
 }
 
 func (l *fakeLister) List(_ context.Context, f *dao.AuctionFilters, page, pageSize int) ([]model.Auction, int64, error) {
@@ -86,7 +108,14 @@ func TestBuildAuctionListResponse(t *testing.T) {
 		}
 
 		params := ListParams{Page: 1, PageSize: 20}
-		items, total, err := BuildAuctionListResponse(ctx, fp, fl.List, params)
+		rf := &fakeRuleBatchFetcher{
+			out: map[int64]*model.AuctionRule{
+				11: {ProductID: 11, StartPrice: decimal.NewFromInt(100)},
+				22: {ProductID: 22, StartPrice: decimal.NewFromInt(200)},
+			},
+		}
+
+		items, total, err := BuildAuctionListResponse(ctx, fp, fl.List, rf, params)
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), total)
 		require.Len(t, items, 2)
@@ -98,11 +127,14 @@ func TestBuildAuctionListResponse(t *testing.T) {
 		assert.Empty(t, fl.gotFilters.ProductIDs)
 		// batch 被以 [11,22] 调用（顺序不强约束，长度即可）
 		assert.ElementsMatch(t, []int64{11, 22}, fp.batchCalledIDs)
+		assert.ElementsMatch(t, []int64{11, 22}, rf.batchCalledIDs)
 
 		// 摘要内嵌：spec C §4.1 list 返回 image (=images[0])
 		assert.Equal(t, int64(11), items[0].Product.ID)
 		assert.Equal(t, "p1", items[0].Product.Name)
 		assert.Equal(t, "u1", items[0].Product.Image)
+		require.NotNil(t, items[0].StartPrice)
+		assert.True(t, items[0].StartPrice.Equal(decimal.NewFromInt(100)))
 		require.NotNil(t, items[0].Product.CategoryID)
 		assert.Equal(t, int64(7), *items[0].Product.CategoryID)
 		assert.Equal(t, "", items[1].Product.Image) // 空 images → ""
@@ -122,7 +154,7 @@ func TestBuildAuctionListResponse(t *testing.T) {
 		cid := int64(7)
 		params := ListParams{CategoryID: &cid, Page: 1, PageSize: 20}
 
-		items, total, err := BuildAuctionListResponse(ctx, fp, fl.List, params)
+		items, total, err := BuildAuctionListResponse(ctx, fp, fl.List, nil, params)
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), total)
 		require.Len(t, items, 1)
@@ -141,7 +173,7 @@ func TestBuildAuctionListResponse(t *testing.T) {
 		cid := int64(7)
 		params := ListParams{CategoryID: &cid, Page: 1, PageSize: 20}
 
-		items, total, err := BuildAuctionListResponse(ctx, fp, fl.List, params)
+		items, total, err := BuildAuctionListResponse(ctx, fp, fl.List, nil, params)
 		require.NoError(t, err)
 		assert.Equal(t, int64(0), total)
 		assert.Empty(t, items)
@@ -156,7 +188,7 @@ func TestBuildAuctionListResponse(t *testing.T) {
 		cid := int64(7)
 		params := ListParams{CategoryID: &cid, Page: 1, PageSize: 20}
 
-		_, _, err := BuildAuctionListResponse(ctx, fp, fl.List, params)
+		_, _, err := BuildAuctionListResponse(ctx, fp, fl.List, nil, params)
 		require.Error(t, err)
 		assert.False(t, fl.called)
 	})
@@ -169,7 +201,7 @@ func TestBuildAuctionListResponse(t *testing.T) {
 		fp := &fakeProductClient{batchErr: errors.New("batch down")}
 		params := ListParams{Page: 1, PageSize: 20}
 
-		_, _, err := BuildAuctionListResponse(ctx, fp, fl.List, params)
+		_, _, err := BuildAuctionListResponse(ctx, fp, fl.List, nil, params)
 		require.Error(t, err)
 	})
 
@@ -181,7 +213,7 @@ func TestBuildAuctionListResponse(t *testing.T) {
 		// batch 返回空 map：表示 product-service 未找到该 id，或商品未发布。
 		fp := &fakeProductClient{batchOut: map[int64]client.ProductSummary{}}
 
-		items, total, err := BuildAuctionListResponse(ctx, fp, fl.List, ListParams{Page: 1, PageSize: 20})
+		items, total, err := BuildAuctionListResponse(ctx, fp, fl.List, nil, ListParams{Page: 1, PageSize: 20})
 		require.NoError(t, err)
 		assert.Equal(t, int64(0), total)
 		assert.Empty(t, items)
@@ -201,7 +233,7 @@ func TestBuildAuctionListResponse(t *testing.T) {
 			},
 		}
 
-		items, total, err := BuildAuctionListResponse(ctx, fp, fl.List, ListParams{Upcoming: true, Page: 1, PageSize: 2})
+		items, total, err := BuildAuctionListResponse(ctx, fp, fl.List, nil, ListParams{Upcoming: true, Page: 1, PageSize: 2})
 		require.NoError(t, err)
 		require.Equal(t, int64(1), total)
 		require.Len(t, items, 1)

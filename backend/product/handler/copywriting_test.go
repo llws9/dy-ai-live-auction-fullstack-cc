@@ -123,6 +123,21 @@ func TestCopyHandler_Upstream_502(t *testing.T) {
 	}
 }
 
+func TestCopyHandler_NotConfigured_503(t *testing.T) {
+	svc := &stubCopySvc{err: service.ErrNotConfigured}
+	h := setupCopyRouter(t, svc)
+	body := mustBody(t, service.CopywritingRequest{Images: []string{"https://cdn.example.com/a.jpg"}})
+	w := ut.PerformRequest(h.Engine, http.MethodPost, "/api/v1/products/ai/copywriting",
+		&ut.Body{Body: bytes.NewReader(body), Len: len(body)},
+		ut.Header{Key: "Content-Type", Value: "application/json"},
+		ut.Header{Key: "X-User-ID", Value: "100"},
+		ut.Header{Key: "X-User-Role", Value: "merchant"},
+	)
+	if w.Result().StatusCode() != http.StatusServiceUnavailable {
+		t.Fatalf("status want=503 got=%d body=%s", w.Result().StatusCode(), w.Result().Body())
+	}
+}
+
 func TestCopyHandler_Timeout_504(t *testing.T) {
 	svc := &stubCopySvc{err: service.ErrUpstreamTimeout}
 	h := setupCopyRouter(t, svc)

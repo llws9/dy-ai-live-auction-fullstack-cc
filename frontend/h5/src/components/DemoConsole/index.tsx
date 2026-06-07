@@ -5,6 +5,7 @@ import {
   createDemoMerchantAuction,
   rechargeDemoUser,
   shortenDemoAuction,
+  triggerOtherSkyLamp,
   triggerFollowBid,
 } from '../../services/demoApi';
 import type { DemoMerchantAuctionMode } from '../../services/demoApi';
@@ -83,6 +84,24 @@ export default function DemoConsole() {
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';
       showToast(`跟价失败：${message}`, 'error', TOAST_DURATION_MS);
+    } finally {
+      setRunningAction(null);
+    }
+  };
+
+  const handleOtherSkyLamp = async () => {
+    if (!currentAuctionId) {
+      showToast('请先进入直播间', 'warning', TOAST_DURATION_MS);
+      return;
+    }
+
+    setRunningAction('other-sky-lamp');
+    try {
+      await triggerOtherSkyLamp({ auctionId: currentAuctionId });
+      showToast('已触发他人天灯', 'success', TOAST_DURATION_MS);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '请稍后重试';
+      showToast(`天灯失败：${message}`, 'error', TOAST_DURATION_MS);
     } finally {
       setRunningAction(null);
     }
@@ -218,6 +237,14 @@ export default function DemoConsole() {
               </button>
               <button
                 type="button"
+                className="demo-console__item"
+                onClick={handleOtherSkyLamp}
+                disabled={runningAction === 'other-sky-lamp'}
+              >
+                他人天灯
+              </button>
+              <button
+                type="button"
                 className="demo-console__item demo-console__item--placeholder"
                 onClick={() => showPromptOnlyAction('并发压测暂未接入后端链路')}
               >
@@ -229,7 +256,7 @@ export default function DemoConsole() {
                 onClick={handleShortenAuction}
                 disabled={runningAction === 'shorten-auction'}
               >
-                竞拍延时
+                倒计时
               </button>
               <button type="button" className="demo-console__item demo-console__item--secondary" onClick={() => setView('root')}>
                 返回

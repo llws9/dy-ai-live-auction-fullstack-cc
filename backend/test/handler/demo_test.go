@@ -16,18 +16,21 @@ func TestComputeFollowBidAmount(t *testing.T) {
 	cases := []struct {
 		name     string
 		current  string
+		start    string
 		incr     string
 		override string
 		want     string
 	}{
-		{"override wins", "100", "10", "500", "500"},
-		{"current plus increment", "100", "10", "", "110"},
-		{"zero current uses increment", "0", "5", "", "5"},
-		{"empty increment defaults to 1", "100", "", "", "101"},
+		{"override wins", "100", "80", "10", "500", "500"},
+		{"current plus increment", "100", "80", "10", "", "110"},
+		{"zero current uses start plus increment", "0", "100", "10", "", "110"},
+		{"current above start wins", "120", "100", "10", "", "130"},
+		{"empty increment defaults to 1", "100", "80", "", "", "101"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			cur := mustFollowBidAmount(t, c.current)
+			start := mustFollowBidAmount(t, c.start)
 			incr := zeroFollowBidAmount()
 			if c.incr != "" {
 				incr = mustFollowBidAmount(t, c.incr)
@@ -37,10 +40,10 @@ func TestComputeFollowBidAmount(t *testing.T) {
 				v := mustFollowBidAmount(t, c.override)
 				override = &v
 			}
-			got := computeFollowBidAmount(cur, incr, override)
+			got := computeFollowBidAmount(cur, start, incr, override)
 			want := mustFollowBidAmount(t, c.want)
 			if !got.Equal(want) {
-				t.Fatalf("computeFollowBidAmount(%s,%s,%v)=%s want %s", c.current, c.incr, override, got, want)
+				t.Fatalf("computeFollowBidAmount(%s,%s,%s,%v)=%s want %s", c.current, c.start, c.incr, override, got, want)
 			}
 		})
 	}
@@ -148,6 +151,14 @@ func TestMerchantDemoAuctionCreatesFreshProductsForRepeatedOngoingClicks(t *test
 	if fake.waitStartedCalls != 2 {
 		t.Fatalf("ongoing mode should wait for auction started twice, got %d", fake.waitStartedCalls)
 	}
+	if len(fake.ruleReqs) != 2 {
+		t.Fatalf("expected two auction rule requests, got %d", len(fake.ruleReqs))
+	}
+	for _, req := range fake.ruleReqs {
+		if req.TriggerDelayBefore != 10 {
+			t.Fatalf("demo anti-snipe window=%d want 10", req.TriggerDelayBefore)
+		}
+	}
 }
 
 func TestMerchantDemoAuctionRejectsUnsupportedMode(t *testing.T) {
@@ -225,6 +236,44 @@ func TestDemoShortenAuctionRejectsNonDemoUser(t *testing.T) {
 	}
 }
 
+func TestDemoSkyLampSubscribesBuyerB(t *testing.T) {
+	const secret = "demo-secret"
+	fake := &fakeDemoAuctionClient{}
+	h := NewDemoHandler(fake, nil, secret)
+	c := newDemoRequestContext(t, secret, `{"auction_id":3001}`)
+
+	h.PostSkyLamp(context.Background(), c)
+
+	if c.Response.StatusCode() != 200 {
+		t.Fatalf("response status=%d body=%s", c.Response.StatusCode(), c.Response.Body())
+	}
+	if fake.skyLampUserID != buyerBUserID {
+		t.Fatalf("sky lamp user_id=%d want %d", fake.skyLampUserID, buyerBUserID)
+	}
+	if fake.skyLampAuctionID != 3001 {
+		t.Fatalf("sky lamp auction_id=%d want 3001", fake.skyLampAuctionID)
+	}
+}
+
+func TestDemoSkyLampRejectsNonDemoUser(t *testing.T) {
+	const secret = "demo-secret"
+	fake := &fakeDemoAuctionClient{}
+	h := NewDemoHandler(fake, nil, secret)
+	c := app.NewContext(0)
+	c.Request.Header.Set("Authorization", "Bearer "+signDemoToken(t, secret, 42))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request.SetBodyString(`{"auction_id":3001}`)
+
+	h.PostSkyLamp(context.Background(), c)
+
+	if c.Response.StatusCode() != 401 {
+		t.Fatalf("status=%d want 401", c.Response.StatusCode())
+	}
+	if fake.skyLampAuctionID != 0 {
+		t.Fatalf("sky lamp should not be called for non-demo user")
+	}
+}
+
 func mustFollowBidAmount(t *testing.T, raw string) decimal.Decimal {
 	t.Helper()
 	amount, err := parseFollowBidAmount(raw)
@@ -267,8 +316,11 @@ type fakeDemoAuctionClient struct {
 	waitStartedCalls    int
 	productReqs         []auctioncli.CreateProductReq
 	publishedProductIDs []int64
+	ruleReqs            []auctioncli.CreateAuctionRuleReq
 	auctionReqs         []auctioncli.CreateAuctionReq
 	fixedReqs           []auctioncli.CreateFixedPriceItemReq
+	skyLampUserID       int64
+	skyLampAuctionID    int64
 }
 
 func (f *fakeDemoAuctionClient) nextID(counter *int64, base int64) int64 {
@@ -302,7 +354,8 @@ func (f *fakeDemoAuctionClient) PublishProductAs(_ context.Context, _ auctioncli
 	return f.ok("publish_product", productID)
 }
 
-func (f *fakeDemoAuctionClient) CreateAuctionRule(_ context.Context, _ auctioncli.Actor, productID int64, _ auctioncli.CreateAuctionRuleReq) auctioncli.StepResult {
+func (f *fakeDemoAuctionClient) CreateAuctionRule(_ context.Context, _ auctioncli.Actor, productID int64, req auctioncli.CreateAuctionRuleReq) auctioncli.StepResult {
+	f.ruleReqs = append(f.ruleReqs, req)
 	return f.ok("create_auction_rule", productID)
 }
 
@@ -323,6 +376,12 @@ func (f *fakeDemoAuctionClient) WaitAuctionStarted(_ context.Context, auctionID 
 func (f *fakeDemoAuctionClient) CreateFixedPriceItem(_ context.Context, _ auctioncli.Actor, req auctioncli.CreateFixedPriceItemReq) auctioncli.StepResult {
 	f.fixedReqs = append(f.fixedReqs, req)
 	return f.ok("create_fixed_price_item", f.nextID(&f.nextFixedID, 4001))
+}
+
+func (f *fakeDemoAuctionClient) SubscribeSkyLamp(_ context.Context, userID, auctionID int64) auctioncli.StepResult {
+	f.skyLampUserID = userID
+	f.skyLampAuctionID = auctionID
+	return f.ok("skylamp_subscribe", 5001)
 }
 
 type fakeDemoInternalAuctionClient struct {

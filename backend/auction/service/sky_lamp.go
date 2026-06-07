@@ -12,6 +12,7 @@ import (
 	"auction-service/dao"
 	"auction-service/model"
 	"auction-service/pkg/metrics"
+	"auction-service/websocket"
 
 	"github.com/shopspring/decimal"
 )
@@ -23,6 +24,7 @@ type SkyLampService struct {
 	metrics    *metrics.SkyLampMetrics
 	cfg        config.SkyLampConfig
 	lockSvc    *DistributedLockService
+	hub        *websocket.Hub
 }
 
 // NewSkyLampService 创建点天灯服务
@@ -41,6 +43,10 @@ func (s *SkyLampService) SetMetrics(m *metrics.SkyLampMetrics) {
 		log.Println("WARNING: SkyLampService metrics not initialized")
 	}
 	s.metrics = m
+}
+
+func (s *SkyLampService) SetHub(hub *websocket.Hub) {
+	s.hub = hub
 }
 
 // StartSubscription 开启点天灯订阅
@@ -90,7 +96,7 @@ func (s *SkyLampService) StartSubscription(ctx context.Context, userID, auctionI
 	}
 
 	initialPrice := auction.CurrentPrice
-	initialBidAmount := initialPrice.Add(rule.Increment)
+	initialBidAmount := minimumBidAmount(auction.CurrentPrice, rule.StartPrice, rule.Increment)
 	if rule.CapPrice != nil && rule.CapPrice.GreaterThan(decimal.Zero) && initialBidAmount.GreaterThan(*rule.CapPrice) {
 		return nil, errors.New("当前竞拍已达到封顶价，无法开启点天灯")
 	}
@@ -352,8 +358,24 @@ func (s *SkyLampService) processOneSubscription(ctx context.Context, auctionID i
 	if s.metrics != nil {
 		s.metrics.RecordAutoBidSuccess(auctionID, latestSub.UserID, latestSub.ID, nextBid, time.Since(autoBidStartTime))
 	}
+	s.broadcastAutoBid(auctionID, latestSub.UserID, nextBid, latestSub.MaxPriceLimit, latestSub.CurrentAutoBidCount)
 
 	log.Printf("SkyLamp自动出价成功: sub=%d, user=%d, amount=%f, count=%d", latestSub.ID, latestSub.UserID, nextBid, latestSub.CurrentAutoBidCount)
+}
+
+func (s *SkyLampService) broadcastAutoBid(auctionID, userID int64, amount, maxPriceLimit float64, autoBidCount int) {
+	if s.hub == nil {
+		return
+	}
+
+	amountDecimal := decimal.NewFromFloat(amount)
+	remainingBudget := decimal.NewFromFloat(maxPriceLimit).Sub(amountDecimal)
+	if remainingBudget.IsNegative() {
+		remainingBudget = decimal.Zero
+	}
+
+	msg := websocket.NewSkyLampAutoBidMessage(auctionID, userID, amountDecimal, remainingBudget, autoBidCount)
+	_ = s.hub.TryBroadcastToRoom(auctionID, msg)
 }
 
 // GetUserSubscriptions 获取用户的点天灯订阅列表

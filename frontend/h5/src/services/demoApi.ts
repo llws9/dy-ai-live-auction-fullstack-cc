@@ -18,6 +18,10 @@ export type ShortenDemoAuctionInput = {
   remainingSeconds: number;
 };
 
+export type TriggerOtherSkyLampInput = {
+  auctionId: number;
+};
+
 export type DemoMerchantAuctionMode = 'upcoming' | 'ongoing';
 
 export type CreateDemoFixedPriceItemInput = {
@@ -98,6 +102,12 @@ export function shortenDemoAuction(input: ShortenDemoAuctionInput) {
   return postDemo('/auctions/shorten', {
     auction_id: input.auctionId,
     remaining_seconds: input.remainingSeconds,
+  });
+}
+
+export function triggerOtherSkyLamp(input: TriggerOtherSkyLampInput) {
+  return postDemo('/sky-lamp', {
+    auction_id: input.auctionId,
   });
 }
 

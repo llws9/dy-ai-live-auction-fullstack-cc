@@ -153,7 +153,8 @@ type Auction struct {
 }
 
 type AuctionRules struct {
-	Increment decimal.Decimal `json:"increment"`
+	StartPrice decimal.Decimal `json:"start_price"`
+	Increment  decimal.Decimal `json:"increment"`
 }
 
 type AuctionResult struct {
@@ -266,11 +267,26 @@ func (c *Client) CreateProductAs(ctx context.Context, actor Actor, req CreatePro
 	if actor.role() == RoleMerchant {
 		path = "/api/v1/admin/products"
 	}
+	shouldPublish := req.Status == 1 && actor.role() == RoleMerchant
+	if shouldPublish {
+		req.Status = 0
+	}
 	if len(req.Images) == 0 {
 		req.Images = []string{defaultFixtureProductImage}
 	}
 	step := c.doAs(ctx, "create_product", http.MethodPost, path, actor, req, nil, &resp)
 	step.RefID = firstNonZero(resp.ID, resp.Data.ID)
+	if !step.OK || !shouldPublish || step.RefID == 0 {
+		return step
+	}
+
+	publishPath := "/api/v1/products/" + strconv.FormatInt(step.RefID, 10) + "/publish"
+	publishStep := c.doAs(ctx, "publish_product", http.MethodPost, publishPath, actor, nil, nil, nil)
+	publishStep.RefID = step.RefID
+	if !publishStep.OK {
+		return publishStep
+	}
+	step.DurationMs += publishStep.DurationMs
 	return step
 }
 

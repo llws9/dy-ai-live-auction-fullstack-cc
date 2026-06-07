@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/require"
@@ -26,10 +25,13 @@ func TestAuctionServiceCreateAuctionStoresCreatorID(t *testing.T) {
 	creatorID := int64(1001)
 
 	auction, err := svc.CreateAuction(context.Background(), &CreateAuctionRequest{
-		ProductID: 1,
-		CreatorID: &creatorID,
-		StartTime: time.Now(),
-		EndTime:   time.Now().Add(time.Hour),
+		ProductID:      1,
+		CreatorID:      &creatorID,
+		Duration:       3600,
+		ProductOwnerID: creatorID,
+		ProductStatus:  1,
+		RuleBound:      true,
+		LiveStreamID:   1,
 	})
 
 	require.NoError(t, err)
@@ -37,22 +39,25 @@ func TestAuctionServiceCreateAuctionStoresCreatorID(t *testing.T) {
 	require.Equal(t, creatorID, *auction.CreatorID)
 }
 
-func TestAuctionServiceCreateAuctionStoresLiveStreamIDAndStartTime(t *testing.T) {
+func TestAuctionServiceCreateAuctionStoresLiveStreamIDAndDuration(t *testing.T) {
 	svc := setupAuctionAdminScopeService(t)
+	creatorID := int64(1001)
 	liveStreamID := int64(880301)
-	startTime := time.Now().Add(time.Minute).Truncate(time.Second)
 
 	auction, err := svc.CreateAuction(context.Background(), &CreateAuctionRequest{
-		ProductID:    1,
-		LiveStreamID: &liveStreamID,
-		StartTime:    startTime,
-		EndTime:      startTime.Add(3 * time.Minute),
+		ProductID:      1,
+		CreatorID:      &creatorID,
+		Duration:       180,
+		ProductOwnerID: creatorID,
+		ProductStatus:  1,
+		RuleBound:      true,
+		LiveStreamID:   liveStreamID,
 	})
 
 	require.NoError(t, err)
 	require.NotNil(t, auction.LiveStreamID)
 	require.Equal(t, liveStreamID, *auction.LiveStreamID)
-	require.WithinDuration(t, startTime, auction.StartTime, time.Second)
+	require.Equal(t, int64(180), int64(auction.EndTime.Sub(auction.StartTime).Seconds()))
 	require.Equal(t, model.AuctionStatusPending, auction.Status)
 }
 
@@ -61,9 +66,25 @@ func TestAuctionServiceListAdminScopedMerchantOnlyOwnAuctions(t *testing.T) {
 	ctx := context.Background()
 	ownerA := int64(1001)
 	ownerB := int64(1002)
-	_, err := svc.CreateAuction(ctx, &CreateAuctionRequest{ProductID: 1, CreatorID: &ownerA, StartTime: time.Now(), EndTime: time.Now().Add(time.Hour)})
+	_, err := svc.CreateAuction(ctx, &CreateAuctionRequest{
+		ProductID:      1,
+		CreatorID:      &ownerA,
+		Duration:       3600,
+		ProductOwnerID: ownerA,
+		ProductStatus:  1,
+		RuleBound:      true,
+		LiveStreamID:   1,
+	})
 	require.NoError(t, err)
-	_, err = svc.CreateAuction(ctx, &CreateAuctionRequest{ProductID: 2, CreatorID: &ownerB, StartTime: time.Now(), EndTime: time.Now().Add(time.Hour)})
+	_, err = svc.CreateAuction(ctx, &CreateAuctionRequest{
+		ProductID:      2,
+		CreatorID:      &ownerB,
+		Duration:       3600,
+		ProductOwnerID: ownerB,
+		ProductStatus:  1,
+		RuleBound:      true,
+		LiveStreamID:   2,
+	})
 	require.NoError(t, err)
 
 	items, total, err := svc.ListAdminAuctions(ctx, nil, 1, 20, &ownerA)
@@ -80,10 +101,13 @@ func TestAuctionServiceCancelAuctionByCreatorRejectsOtherOwner(t *testing.T) {
 	ownerA := int64(1001)
 	ownerB := int64(1002)
 	auction, err := svc.CreateAuction(ctx, &CreateAuctionRequest{
-		ProductID: 1,
-		CreatorID: &ownerA,
-		StartTime: time.Now(),
-		EndTime:   time.Now().Add(time.Hour),
+		ProductID:      1,
+		CreatorID:      &ownerA,
+		Duration:       3600,
+		ProductOwnerID: ownerA,
+		ProductStatus:  1,
+		RuleBound:      true,
+		LiveStreamID:   1,
 	})
 	require.NoError(t, err)
 

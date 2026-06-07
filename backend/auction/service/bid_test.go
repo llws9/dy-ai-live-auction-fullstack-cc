@@ -58,6 +58,18 @@ func TestBidService_PlaceBidRequest_Validation(t *testing.T) {
 	}
 }
 
+func TestMinimumBidAmountUsesStartPriceBeforeAnyBid(t *testing.T) {
+	got := minimumBidAmount(decimal.Zero, decimal.NewFromInt(100), decimal.NewFromInt(10))
+
+	assert.True(t, got.Equal(decimal.NewFromInt(110)), "first bid must be based on start price plus increment")
+}
+
+func TestMinimumBidAmountUsesCurrentPriceAfterBiddingStarts(t *testing.T) {
+	got := minimumBidAmount(decimal.NewFromInt(120), decimal.NewFromInt(100), decimal.NewFromInt(10))
+
+	assert.True(t, got.Equal(decimal.NewFromInt(130)), "subsequent bid must be based on current price plus increment")
+}
+
 // TestPlaceBidResult_Structure 测试出价结果结构
 func TestPlaceBidResult_Structure(t *testing.T) {
 	result := &PlaceBidResult{

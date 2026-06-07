@@ -28,6 +28,7 @@ func NewSDKAuctionFactory(cli *auction.Client, seller int64, dur int) *SDKAuctio
 }
 
 // Prepare 创建一个商品、竞拍规则和拍卖。
+// 每次调用必须创建独立商品：auction-service 对同一 product_id 只允许一条 Pending/Ongoing/Delayed 活跃竞拍。
 func (f *SDKAuctionFactory) Prepare(ctx context.Context, name string) (int64, error) {
 	seller := auction.Actor{
 		UserID:   f.sellerID,

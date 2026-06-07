@@ -59,6 +59,15 @@ type CurrentAuctionItem struct {
 	Status       int    `json:"status"`
 }
 
+type ProductAuctionState struct {
+	ProductID           int64  `json:"product_id"`
+	ActiveAuctionID     *int64 `json:"active_auction_id"`
+	ActiveStatus        *int   `json:"active_status"`
+	LatestAuctionID     *int64 `json:"latest_auction_id"`
+	LatestAuctionStatus *int   `json:"latest_auction_status"`
+	LatestAuctionResult string `json:"latest_auction_result"`
+}
+
 // CurrentByLiveStreamIDs 批量查询多个直播间的当前竞拍，返回 live_stream_id -> 当前竞拍 的映射。
 func (c *AuctionClient) CurrentByLiveStreamIDs(ctx context.Context, ids []int64) (map[int64]CurrentAuctionItem, error) {
 	reqURL := fmt.Sprintf("%s/internal/auctions/current-by-live-streams", c.baseURL)
@@ -96,6 +105,53 @@ func (c *AuctionClient) CurrentByLiveStreamIDs(ctx context.Context, ids []int64)
 	result := make(map[int64]CurrentAuctionItem, len(body.Data.Items))
 	for _, item := range body.Data.Items {
 		result[item.LiveStreamID] = item
+	}
+	return result, nil
+}
+
+func (c *AuctionClient) BatchProductAuctionStates(ctx context.Context, productIDs []int64) (map[int64]ProductAuctionState, error) {
+	if len(productIDs) == 0 {
+		return map[int64]ProductAuctionState{}, nil
+	}
+	reqURL := fmt.Sprintf("%s/internal/auctions/by-products", c.baseURL)
+	payload, err := json.Marshal(map[string]interface{}{"product_ids": productIDs})
+	if err != nil {
+		return nil, fmt.Errorf("marshal request: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, bytes.NewReader(payload))
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.internalToken != "" {
+		req.Header.Set("X-Internal-Token", c.internalToken)
+	}
+
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("call auction-service: %w", err)
+	}
+	defer resp.Body.Close()
+	defer io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("auction-service returned status %d", resp.StatusCode)
+	}
+	var body struct {
+		Code int `json:"code"`
+		Data struct {
+			Items []ProductAuctionState `json:"items"`
+		} `json:"data"`
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	if body.Code != 0 && body.Code != 200 {
+		return nil, fmt.Errorf("auction-service business code %d: %s", body.Code, body.Message)
+	}
+	result := make(map[int64]ProductAuctionState, len(body.Data.Items))
+	for _, item := range body.Data.Items {
+		result[item.ProductID] = item
 	}
 	return result, nil
 }

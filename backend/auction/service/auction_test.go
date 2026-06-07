@@ -294,6 +294,7 @@ func TestEndAuctionCreatesPendingOrderBeforeWinnerNotification(t *testing.T) {
 	assert.True(t, orderCreator.calls[0].FinalPrice.Equal(decimal.NewFromInt(110)))
 	require.Len(t, notifications.sent, 1)
 	assert.Equal(t, model.NotificationTypeAuctionWon, notifications.sent[0].Type)
+	assert.True(t, notifications.sent[0].Immediately, "auction_won notification must be pushed in realtime for H5 success animation")
 
 	var task model.AuctionSettlementTask
 	require.NoError(t, db.First(&task, "auction_id = ?", auction.ID).Error)
@@ -362,14 +363,24 @@ func TestAuction_IsEnded(t *testing.T) {
 // TestAuctionService_Creation 测试竞拍服务创建
 func TestAuctionService_Creation(t *testing.T) {
 	// 测试竞拍创建请求验证
+	creatorID := int64(1)
 	req := &CreateAuctionRequest{
-		ProductID: 1,
-		StartTime: time.Now(),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		ProductID:      1,
+		CreatorID:      &creatorID,
+		Duration:       3600,
+		ProductOwnerID: creatorID,
+		ProductStatus:  1,
+		RuleBound:      true,
+		LiveStreamID:   1,
 	}
 
 	assert.Equal(t, int64(1), req.ProductID)
-	assert.True(t, req.EndTime.After(req.StartTime))
+	assert.Equal(t, &creatorID, req.CreatorID)
+	assert.Equal(t, 3600, req.Duration)
+	assert.Equal(t, creatorID, req.ProductOwnerID)
+	assert.Equal(t, 1, req.ProductStatus)
+	assert.True(t, req.RuleBound)
+	assert.Equal(t, int64(1), req.LiveStreamID)
 }
 
 // TestNotificationType_Constants 测试通知类型常量

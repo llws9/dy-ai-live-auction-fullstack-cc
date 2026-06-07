@@ -2,16 +2,23 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"auction-service/client"
 	"auction-service/model"
+
+	"gorm.io/gorm"
 )
 
 // auctionFetcher 是 BuildAuctionResultResponse 依赖的最小接口，
 // 由 service.AuctionService.GetAuction 提供。
 type auctionFetcher func(ctx context.Context, id int64) (*model.Auction, error)
+
+type winnerBidFetcher func(ctx context.Context, auctionID int64) (*model.Bid, error)
+
+type resultUserFetcher func(ctx context.Context, userIDs []int64) (map[int64]*model.User, error)
 
 // AuctionResultProduct 是 result 接口内嵌的 product 摘要（spec C §4.2）。
 // 与 list 接口不同：result 给完整 images 数组，便于详情页画廊展示。
@@ -19,6 +26,14 @@ type AuctionResultProduct struct {
 	ID     int64    `json:"id"`
 	Name   string   `json:"name"`
 	Images []string `json:"images"`
+}
+
+type AuctionResultWonBid struct {
+	ID        int64     `json:"id"`
+	UserID    int64     `json:"user_id"`
+	UserName  string    `json:"user_name,omitempty"`
+	Amount    float64   `json:"amount"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // AuctionResultResponse 是 GET /auctions/:id/result 的响应 data 部分。
@@ -32,7 +47,7 @@ type AuctionResultResponse struct {
 	StartedAt  time.Time             `json:"started_at"`
 	EndedAt    time.Time             `json:"ended_at"`
 	DelayUsed  int                   `json:"delay_used"`
-	WonBid     float64               `json:"won_bid"`           // 中标价别名，本期等同 final_price
+	WonBid     *AuctionResultWonBid  `json:"won_bid,omitempty"` // 中标出价详情
 	Product    *AuctionResultProduct `json:"product,omitempty"` // null 表示降级或未找到
 }
 
@@ -46,6 +61,8 @@ func BuildAuctionResultResponse(
 	ctx context.Context,
 	pc client.ProductClient,
 	fetch auctionFetcher,
+	fetchWinnerBid winnerBidFetcher,
+	fetchUsers resultUserFetcher,
 	id int64,
 ) (*AuctionResultResponse, error) {
 	auction, err := fetch(ctx, id)
@@ -63,8 +80,8 @@ func BuildAuctionResultResponse(
 		StartedAt:  auction.StartTime,
 		EndedAt:    auction.EndTime,
 		DelayUsed:  auction.DelayUsed,
-		WonBid:     currentPrice, // 别名，恒等于 FinalPrice
 	}
+	resp.WonBid = buildWonBid(ctx, fetchWinnerBid, fetchUsers, auction.ID)
 
 	if pc == nil {
 		return resp, nil
@@ -87,4 +104,40 @@ func BuildAuctionResultResponse(
 		}
 	}
 	return resp, nil
+}
+
+func buildWonBid(
+	ctx context.Context,
+	fetchWinnerBid winnerBidFetcher,
+	fetchUsers resultUserFetcher,
+	auctionID int64,
+) *AuctionResultWonBid {
+	if fetchWinnerBid == nil {
+		return nil
+	}
+	bid, err := fetchWinnerBid(ctx, auctionID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
+		return nil
+	}
+	amount, _ := bid.Amount.Float64()
+	wonBid := &AuctionResultWonBid{
+		ID:        bid.ID,
+		UserID:    bid.UserID,
+		Amount:    amount,
+		CreatedAt: bid.CreatedAt,
+	}
+	if fetchUsers == nil {
+		return wonBid
+	}
+	users, err := fetchUsers(ctx, []int64{bid.UserID})
+	if err != nil {
+		return wonBid
+	}
+	if user := users[bid.UserID]; user != nil {
+		wonBid.UserName = user.Name
+	}
+	return wonBid
 }

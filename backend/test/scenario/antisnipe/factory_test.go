@@ -22,6 +22,9 @@ func TestSDKAuctionFactory_PrepareUsesMerchantRuleThenAuction(t *testing.T) {
 		case "POST /api/v1/admin/products":
 			w.WriteHeader(http.StatusCreated)
 			_, _ = w.Write([]byte(`{"code":201,"data":{"id":42}}`))
+		case "POST /api/v1/products/42/publish":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"code":200,"data":{"id":42,"status":1}}`))
 		case "POST /api/v1/products/42/rules":
 			w.WriteHeader(http.StatusCreated)
 			_, _ = w.Write([]byte(`{"code":201}`))
@@ -50,6 +53,7 @@ func TestSDKAuctionFactory_PrepareUsesMerchantRuleThenAuction(t *testing.T) {
 
 	want := []string{
 		"POST /api/v1/admin/products",
+		"POST /api/v1/products/42/publish",
 		"POST /api/v1/products/42/rules",
 		"POST /api/v1/auctions",
 		"GET /api/v1/auctions/77",
