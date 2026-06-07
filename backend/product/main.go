@@ -157,6 +157,7 @@ func main() {
 	productHandler.SetAuctionStateProvider(auctionClient)
 	orderService.SetUserSummaryProvider(auctionUserSummaryAdapter{client: auctionClient})
 	liveStreamHandler.SetAuctionClient(auctionClient)
+	liveStreamHandler.SetProductNameResolver(productDAO)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 	copywritingHandler := handler.NewCopywritingHandler(copyService)
 	internalHandler := handler.NewInternalHandler(productService, liveStreamDAO)
