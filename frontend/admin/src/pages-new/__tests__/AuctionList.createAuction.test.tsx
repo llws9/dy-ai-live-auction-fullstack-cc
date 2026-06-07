@@ -160,6 +160,31 @@ describe('AuctionList create auction with rule template', () => {
     })
   })
 
+  it('binds auction creation to live stream context from the live-room console', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/auction/list?live_stream_id=501&create=1']}>
+        <AuctionList />
+      </MemoryRouter>
+    )
+
+    expect(await screen.findByText('当前直播间：#501')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(mockedAuctionApi.list).toHaveBeenCalledWith(expect.objectContaining({ live_stream_id: 501 }))
+    })
+
+    await user.click(screen.getByRole('button', { name: '确认创建竞拍' }))
+
+    await waitFor(() => {
+      expect(mockedAuctionApi.create).toHaveBeenCalledWith(expect.objectContaining({
+        product_id: 501,
+        duration: 3600,
+        live_stream_id: 501,
+      }))
+    })
+  })
+
   it('shows empty schedulable products state', async () => {
     const user = userEvent.setup()
     mockedProductApi.list.mockResolvedValueOnce({ list: [], total: 0, page: 1, page_size: 100 })

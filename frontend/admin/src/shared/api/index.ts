@@ -126,6 +126,7 @@ export type FixedPriceAdminStatus = 'on_sale' | 'sold_out' | 'offline'
 
 export interface FixedPriceAdminItem {
   id: number
+  auction_id?: number
   live_stream_id: number
   product_id: number
   product_title?: string
@@ -155,8 +156,9 @@ export const fixedPriceAdminApi = {
     return get<FixedPriceAdminListResponse>(`/admin/live-streams/${liveStreamId}/fixed-price/items${suffix}`)
   },
 
-  listItem: (liveStreamId: number, data: { product_id: number; price: string; stock: number }) =>
+  listItem: (liveStreamId: number, data: { auction_id: number; product_id: number; price: string; stock: number }) =>
     post<FixedPriceAdminItem>('/fixed-price/items', {
+      auction_id: data.auction_id,
       live_stream_id: liveStreamId,
       product_id: data.product_id,
       price: data.price,

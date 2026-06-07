@@ -1,9 +1,15 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import LiveStreamFixedPrice from '../index'
-import { fixedPriceAdminApi } from '@/shared/api'
+import { auctionApi, fixedPriceAdminApi, liveStreamApi } from '@/shared/api'
 
 jest.mock('@/shared/api', () => ({
+  auctionApi: {
+    list: jest.fn(),
+  },
+  liveStreamApi: {
+    adminList: jest.fn(),
+  },
   fixedPriceAdminApi: {
     list: jest.fn(),
     listItem: jest.fn(),
@@ -14,6 +20,8 @@ jest.mock('@/shared/api', () => ({
 const listMock = fixedPriceAdminApi.list as jest.Mock
 const listItemMock = fixedPriceAdminApi.listItem as jest.Mock
 const offlineMock = fixedPriceAdminApi.offline as jest.Mock
+const adminListMock = liveStreamApi.adminList as jest.Mock
+const auctionListMock = auctionApi.list as jest.Mock
 
 const baseItems = [
   {
@@ -40,6 +48,11 @@ describe('LiveStreamFixedPrice', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     jest.spyOn(window, 'confirm').mockReturnValue(true)
+    adminListMock.mockResolvedValue({ list: [], total: 0, page: 1, page_size: 1 })
+    auctionListMock.mockResolvedValue({
+      list: [{ id: 8001, live_stream_id: 1001, status: 1, product: { name: '当前竞拍商品' } }],
+      total: 1,
+    })
     listMock.mockResolvedValue({ items: baseItems, total: 1, page: 1, page_size: 20 })
   })
 
@@ -51,20 +64,43 @@ describe('LiveStreamFixedPrice', () => {
     renderPage()
 
     await waitFor(() => expect(listMock).toHaveBeenCalledWith(1001, { page: 1, page_size: 20 }))
+    expect(auctionListMock).toHaveBeenCalledWith({ live_stream_id: 1001, page: 1, page_size: 100 })
+    expect(await screen.findByLabelText('竞拍场次')).toHaveValue('8001')
     expect(await screen.findByText('福利翡翠手镯')).toBeInTheDocument()
     expect(screen.getByText('¥99.00')).toBeInTheDocument()
     expect(screen.getByText('12 / 20')).toBeInTheDocument()
   })
 
+  it('auto-resolves the merchant live stream when route id is missing', async () => {
+    adminListMock.mockResolvedValueOnce({
+      list: [{ id: 1001, name: '商家直播间', status: 1 }],
+      total: 1,
+      page: 1,
+      page_size: 1,
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/live/fixed-price']}>
+        <LiveStreamFixedPrice />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => expect(adminListMock).toHaveBeenCalledWith({ page: 1, page_size: 1 }))
+    await waitFor(() => expect(listMock).toHaveBeenCalledWith(1001, { page: 1, page_size: 20 }))
+    expect(await screen.findByText('福利翡翠手镯')).toBeInTheDocument()
+  })
+
   it('adds a listed row after listing succeeds', async () => {
     listItemMock.mockResolvedValue({
       id: 7002,
+      auction_id: 8001,
       remaining_stock: 5,
       status: 'on_sale',
     })
 
     renderPage()
 
+    await waitFor(() => expect(screen.getByLabelText('竞拍场次')).toHaveValue('8001'))
     fireEvent.change(screen.getByLabelText('商品 ID'), { target: { value: '5002' } })
     fireEvent.change(screen.getByLabelText('一口价'), { target: { value: '199.00' } })
     fireEvent.change(screen.getByLabelText('库存'), { target: { value: '5' } })
@@ -72,6 +108,7 @@ describe('LiveStreamFixedPrice', () => {
 
     await waitFor(() => {
       expect(listItemMock).toHaveBeenCalledWith(1001, {
+        auction_id: 8001,
         product_id: 5002,
         price: '199.00',
         stock: 5,

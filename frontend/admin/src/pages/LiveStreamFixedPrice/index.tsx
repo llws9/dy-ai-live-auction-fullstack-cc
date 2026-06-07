@@ -14,7 +14,9 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
+  auctionApi,
   fixedPriceAdminApi,
+  liveStreamApi,
   type FixedPriceAdminItem,
   type FixedPriceAdminStatus,
 } from "@/shared/api"
@@ -46,28 +48,67 @@ export default function LiveStreamFixedPrice({ liveStreamId: propLiveStreamId }:
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const routeLiveStreamId = Number(searchParams.get("id") || 0)
-  const liveStreamId = propLiveStreamId || routeLiveStreamId
+  const [resolvedLiveStreamId, setResolvedLiveStreamId] = React.useState(0)
+  const liveStreamId = propLiveStreamId || routeLiveStreamId || resolvedLiveStreamId
 
   const [items, setItems] = React.useState<FixedPriceAdminItem[]>([])
   const [total, setTotal] = React.useState(0)
   const [loading, setLoading] = React.useState(true)
   const [submitting, setSubmitting] = React.useState(false)
+  const [auctionOptions, setAuctionOptions] = React.useState<any[]>([])
+  const [auctionId, setAuctionId] = React.useState("")
   const [productId, setProductId] = React.useState("")
   const [price, setPrice] = React.useState("")
   const [stock, setStock] = React.useState("")
 
+  React.useEffect(() => {
+    if (propLiveStreamId || routeLiveStreamId) {
+      setResolvedLiveStreamId(0)
+      return
+    }
+
+    let cancelled = false
+    setLoading(true)
+    liveStreamApi.adminList({ page: 1, page_size: 1 })
+      .then((response) => {
+        if (cancelled) return
+        const firstLiveStreamId = Number(response.list?.[0]?.id || 0)
+        if (firstLiveStreamId > 0) {
+          setResolvedLiveStreamId(firstLiveStreamId)
+          navigate(`/live/fixed-price?id=${firstLiveStreamId}`, { replace: true })
+          return
+        }
+        setLoading(false)
+      })
+      .catch((error) => {
+        if (cancelled) return
+        console.error("获取商家直播间失败:", error)
+        alert("请先创建直播间")
+        setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [navigate, propLiveStreamId, routeLiveStreamId])
+
   const fetchItems = React.useCallback(async () => {
     if (!liveStreamId) {
-      setLoading(false)
       return
     }
 
     setLoading(true)
     try {
-      const response = await fixedPriceAdminApi.list(liveStreamId, { page: 1, page_size: pageSize })
+      const [response, auctionResponse] = await Promise.all([
+        fixedPriceAdminApi.list(liveStreamId, { page: 1, page_size: pageSize }),
+        auctionApi.list({ live_stream_id: liveStreamId, page: 1, page_size: 100 }),
+      ])
       const nextItems = (response.items || []).map(normalizeItem)
+      const nextAuctions = (auctionResponse.list || []).filter((auction: any) => [0, 1, 2].includes(Number(auction.status)))
       setItems(nextItems)
       setTotal(response.total ?? nextItems.length)
+      setAuctionOptions(nextAuctions)
+      setAuctionId((current) => current || (nextAuctions[0]?.id ? String(nextAuctions[0].id) : ""))
     } catch (error) {
       console.error("获取一口价列表失败:", error)
       alert("获取一口价列表失败")
@@ -83,16 +124,22 @@ export default function LiveStreamFixedPrice({ liveStreamId: propLiveStreamId }:
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!liveStreamId || submitting) return
+    if (!auctionId) {
+      alert("请先创建竞拍场次")
+      return
+    }
 
     setSubmitting(true)
     try {
       const created = await fixedPriceAdminApi.listItem(liveStreamId, {
+        auction_id: Number(auctionId),
         product_id: Number(productId),
         price,
         stock: Number(stock),
       })
       const completedItem: FixedPriceAdminItem = {
         ...created,
+        auction_id: created.auction_id ?? Number(auctionId),
         live_stream_id: created.live_stream_id ?? liveStreamId,
         product_id: created.product_id ?? Number(productId),
         price: created.price ?? price,
@@ -129,8 +176,11 @@ export default function LiveStreamFixedPrice({ liveStreamId: propLiveStreamId }:
 
   if (!liveStreamId) {
     return (
-      <div className="flex items-center justify-center min-h-[400px] text-slate-500">
-        缺少直播间 ID
+      <div className="flex flex-col items-center justify-center gap-4 min-h-[400px] text-slate-500">
+        <p>请先创建直播间，再管理一口价商品</p>
+        <Button className="bg-amber-500 text-[#0f172a] hover:bg-amber-600" onClick={() => navigate("/live/my")}>
+          前往我的直播间
+        </Button>
       </div>
     )
   }
@@ -158,7 +208,27 @@ export default function LiveStreamFixedPrice({ liveStreamId: propLiveStreamId }:
           <CardTitle className="text-lg">新增上架</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_1fr_1fr_auto]" onSubmit={handleSubmit}>
+          <form className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_1fr_1fr_1fr_auto]" onSubmit={handleSubmit}>
+            <label className="space-y-2 text-sm font-medium text-slate-700">
+              竞拍场次
+              <select
+                aria-label="竞拍场次"
+                className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
+                value={auctionId}
+                onChange={(event) => setAuctionId(event.target.value)}
+                required
+              >
+                {auctionOptions.length === 0 ? (
+                  <option value="">请先创建竞拍场次</option>
+                ) : (
+                  auctionOptions.map((auction) => (
+                    <option key={auction.id} value={auction.id}>
+                      {auction.product?.name || auction.title || `竞拍 #${auction.id}`}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
             <label className="space-y-2 text-sm font-medium text-slate-700">
               商品 ID
               <Input
@@ -190,7 +260,7 @@ export default function LiveStreamFixedPrice({ liveStreamId: propLiveStreamId }:
                 placeholder="20"
               />
             </label>
-            <Button type="submit" disabled={submitting} className="self-end bg-amber-500 text-[#0f172a] hover:bg-amber-600">
+            <Button type="submit" disabled={submitting || !auctionId} className="self-end bg-amber-500 text-[#0f172a] hover:bg-amber-600">
               <Plus className="mr-2 w-4 h-4" />
               新增上架
             </Button>

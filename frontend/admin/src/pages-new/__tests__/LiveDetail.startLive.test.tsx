@@ -77,6 +77,26 @@ describe('LiveDetail start live', () => {
     expect(screen.getByRole('button', { name: /结束直播/ })).toBeInTheDocument();
   });
 
+  it('shows merchant demo loop actions from the live-room console', async () => {
+    renderLiveDetailAs(1, {
+      id: 501,
+      name: '商家直播间',
+      streamer_id: 1002,
+      streamer_name: '商家用户',
+      status: 0,
+      viewer_count: 0,
+      auction_count: 2,
+      created_at: '2026-06-05T00:00:00Z',
+    });
+
+    expect(await screen.findByRole('heading', { name: '演示链路' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '创建商品' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '创建规则模板' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '创建竞拍场次' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '一口价上下架' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'H5 预览直播间' })).toBeInTheDocument();
+  });
+
   it('lets merchants end a live stream from detail page', async () => {
     jest.spyOn(window, 'confirm').mockReturnValue(true);
     (liveStreamApi.end as jest.Mock).mockResolvedValue({ status: 2 });

@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge, type BadgeProps } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { auctionApi, auctionRuleTemplateApi, productApi, statisticsApi, type AuctionRuleTemplate } from "@/shared/api"
 import { useAuth } from "@/shared/auth"
 import { MERCHANT_ROLE } from "@/shared/auth/roles"
@@ -40,7 +40,11 @@ function parseDateTimeLocalToISO(value: string) {
 
 export default function AuctionList() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user } = useAuth()
+  const liveStreamContextID = Number(searchParams.get("live_stream_id") || 0)
+  const shouldAutoOpenCreate = searchParams.get("create") === "1"
+  const autoOpenedCreateRef = React.useRef(false)
   const [auctions, setAuctions] = React.useState<any[]>([])
   const [loading, setLoading] = React.useState(true)
   const [statusFilter, setStatusFilter] = React.useState<number | number[] | undefined>(undefined)
@@ -78,6 +82,7 @@ export default function AuctionList() {
         search: searchTerm || undefined,
         page,
         page_size: pageSize,
+        live_stream_id: liveStreamContextID > 0 ? liveStreamContextID : undefined,
       }
       const response = Array.isArray(statusFilter)
         ? await Promise.all(statusFilter.map((status) => auctionApi.list({ ...baseParams, status }))).then((items) => ({
@@ -95,7 +100,7 @@ export default function AuctionList() {
     } finally {
       setLoading(false)
     }
-  }, [statusFilter, searchTerm, page])
+  }, [statusFilter, searchTerm, page, liveStreamContextID])
 
   // 获取统计数据
   const fetchStats = React.useCallback(async () => {
@@ -128,7 +133,7 @@ export default function AuctionList() {
     setPage(1)
   }
 
-  const openCreateAuction = async () => {
+  const openCreateAuction = React.useCallback(async () => {
     setCreateOpen(true)
     setCreateLoading(true)
     setCreateError("")
@@ -154,7 +159,13 @@ export default function AuctionList() {
     } finally {
       setCreateLoading(false)
     }
-  }
+  }, [])
+
+  React.useEffect(() => {
+    if (!isMerchant || !shouldAutoOpenCreate || autoOpenedCreateRef.current) return
+    autoOpenedCreateRef.current = true
+    openCreateAuction()
+  }, [isMerchant, shouldAutoOpenCreate, openCreateAuction])
 
   const handleTemplateChange = (templateID: string) => {
     const selected = templates.find((template) => String(template.id) === templateID)
@@ -188,7 +199,15 @@ export default function AuctionList() {
     setCreateError("")
     try {
       await productApi.applyRuleTemplate(productID, templateID)
-      await auctionApi.create({ product_id: productID, duration, start_time: startTime })
+      const payload: { product_id: number; duration: number; start_time: string; live_stream_id?: number } = {
+        product_id: productID,
+        duration,
+        start_time: startTime,
+      }
+      if (liveStreamContextID > 0) {
+        payload.live_stream_id = liveStreamContextID
+      }
+      await auctionApi.create(payload)
       setCreateOpen(false)
       await fetchAuctions()
       await fetchStats()
@@ -241,7 +260,10 @@ export default function AuctionList() {
             <form className="space-y-4" onSubmit={submitCreateAuction}>
               <div>
                 <h2 className="text-lg font-bold text-slate-900">创建竞拍场次</h2>
-                <p className="text-sm text-slate-500">先将规则模板应用到商品，再创建真实竞拍场次</p>
+                <p className="text-sm text-slate-500">
+                  先将规则模板应用到商品，再创建真实竞拍场次
+                  {liveStreamContextID > 0 ? <span className="ml-2 font-medium text-amber-700">当前直播间：#{liveStreamContextID}</span> : null}
+                </p>
               </div>
               {createError && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{createError}</div>}
               {createLoading ? (

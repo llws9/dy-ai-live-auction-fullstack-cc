@@ -121,6 +121,12 @@ export default function LiveDetail() {
   const statusLabel = liveStatusLabels[liveStream.status] || "未知状态"
   const isMerchant = user?.role === MERCHANT_ROLE
   const isPlatformAdmin = user?.role === ADMIN_ROLE
+  const currentLiveStreamId = Number(liveStreamId)
+
+  const openH5Preview = () => {
+    if (!currentLiveStreamId) return
+    window.open(`/live?id=${currentLiveStreamId}`, "_blank", "noopener,noreferrer")
+  }
 
   return (
     <div className="space-y-6">
@@ -218,6 +224,42 @@ export default function LiveDetail() {
               )}
             </CardContent>
           </Card>
+
+          {isMerchant && (
+            <Card className="border-slate-200">
+              <CardHeader><CardTitle className="text-lg">演示链路</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-sm leading-6 text-slate-500">
+                  围绕直播间 #{currentLiveStreamId} 完成商品、规则、竞拍、一口价和 H5 观看链路。
+                </p>
+                <div className="grid grid-cols-1 gap-2">
+                  <Button variant="outline" className="justify-start border-slate-200" onClick={() => navigate("/goods/create")}>
+                    创建商品
+                  </Button>
+                  <Button variant="outline" className="justify-start border-slate-200" onClick={() => navigate("/auction/rules")}>
+                    创建规则模板
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="justify-start border-slate-200"
+                    onClick={() => navigate(`/auction/list?live_stream_id=${currentLiveStreamId}&create=1`)}
+                  >
+                    创建竞拍场次
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="justify-start border-slate-200"
+                    onClick={() => navigate(`/live/fixed-price?id=${currentLiveStreamId}`)}
+                  >
+                    一口价上下架
+                  </Button>
+                  <Button className="justify-start bg-amber-500 text-[#0f172a] hover:bg-amber-600" onClick={openH5Preview}>
+                    H5 预览直播间
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
