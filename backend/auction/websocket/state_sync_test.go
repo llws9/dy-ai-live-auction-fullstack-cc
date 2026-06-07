@@ -1,11 +1,15 @@
 package websocket
 
 import (
+	"context"
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
+	"github.com/redis/go-redis/v9"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStateManager_SaveSyncState(t *testing.T) {
@@ -60,6 +64,43 @@ func TestStateManager_ConnectionState(t *testing.T) {
 
 		assert.Equal(t, 3, state.ReconnectCount)
 	})
+}
+
+func TestStateManager_GetSyncStateFallsBackAndBackfillsOnRedisMiss(t *testing.T) {
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() { _ = rdb.Close() })
+
+	ctx := context.Background()
+	manager := NewStateManager(rdb)
+	endTime := time.Now().Add(10 * time.Minute).Truncate(time.Millisecond)
+	loaderCalls := 0
+	manager.SetSyncStateLoader(SyncStateLoaderFunc(func(ctx context.Context, auctionID int64) (*SyncState, error) {
+		loaderCalls++
+		return &SyncState{
+			AuctionID:    auctionID,
+			CurrentPrice: decimal.NewFromInt(8800),
+			WinnerID:     42,
+			EndTime:      endTime,
+			Status:       1,
+			UpdatedAt:    time.Now(),
+		}, nil
+	}))
+
+	state, err := manager.GetSyncState(ctx, 6)
+
+	require.NoError(t, err)
+	assert.Equal(t, int64(6), state.AuctionID)
+	assert.True(t, decimal.NewFromInt(8800).Equal(state.CurrentPrice))
+	assert.Equal(t, int64(42), state.WinnerID)
+	assert.Equal(t, 1, state.Status)
+	assert.Equal(t, 1, loaderCalls)
+	assert.True(t, mr.Exists("sync:state:6"))
+
+	_, err = manager.GetSyncState(ctx, 6)
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, loaderCalls, "second read should use Redis backfill instead of loader")
 }
 
 func TestStateManager_StateKey(t *testing.T) {

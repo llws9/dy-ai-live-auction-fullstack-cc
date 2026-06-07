@@ -8,6 +8,7 @@ import (
 
 	"auction-service/dao"
 	"auction-service/model"
+	"auction-service/websocket"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -28,6 +29,7 @@ type AuctionService struct {
 	auctionDAO        *dao.AuctionDAO
 	bidDAO            *dao.BidDAO
 	settlementService *AuctionSettlementService
+	stateManager      *websocket.StateManager
 }
 
 // NewAuctionService 创建竞拍服务
@@ -58,6 +60,10 @@ func (s *AuctionService) SetSettlementService(settlementService *AuctionSettleme
 	if s.bidDAO != nil {
 		s.settlementService.SetBidDAO(s.bidDAO)
 	}
+}
+
+func (s *AuctionService) SetStateManager(stateManager *websocket.StateManager) {
+	s.stateManager = stateManager
 }
 
 // SetSkyLampDAO 设置点天灯DAO（用于更新统计数据）
@@ -177,7 +183,11 @@ func (s *AuctionService) CancelAuctionByCreator(ctx context.Context, id, creator
 		return err
 	}
 
-	return s.auctionDAO.Update(ctx, auction)
+	if err := s.auctionDAO.Update(ctx, auction); err != nil {
+		return err
+	}
+	s.saveSyncState(ctx, auction)
+	return nil
 }
 
 // StartAuction 开始竞拍
@@ -196,7 +206,11 @@ func (s *AuctionService) StartAuction(ctx context.Context, id int64) error {
 		return err
 	}
 
-	return s.auctionDAO.Update(ctx, auction)
+	if err := s.auctionDAO.Update(ctx, auction); err != nil {
+		return err
+	}
+	s.saveSyncState(ctx, auction)
+	return nil
 }
 
 // EndAuction 结束竞拍
@@ -224,7 +238,14 @@ func (s *AuctionService) EndAuction(ctx context.Context, id int64) error {
 		return err
 	}
 
+	if auction, err := s.auctionDAO.GetByID(ctx, id); err == nil {
+		s.saveSyncState(ctx, auction)
+	}
 	return s.settlementService.FinalizeEndedAuction(ctx, id)
+}
+
+func (s *AuctionService) saveSyncState(ctx context.Context, auction *model.Auction) {
+	_ = SaveAuctionSyncState(ctx, s.stateManager, auction)
 }
 
 func (s *AuctionService) persistWinnerFromHighestBid(ctx context.Context, tx *gorm.DB, auction *model.Auction) error {
