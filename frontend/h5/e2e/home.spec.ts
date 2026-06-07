@@ -15,8 +15,8 @@ test.describe('Home Page - 首页分类闭环', () => {
   });
 
   test('点击动态分类 tab 时透传 category_id 并仅展示匹配拍品', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: '星河钻石腕表' })).toBeVisible();
-    await expect(page.getByText('宋代青瓷珍藏')).toBeVisible();
+    // 全部 tab 现为直播间维度：先断言直播间卡渲染
+    await expect(page.getByRole('heading', { name: '星河钻石腕表直播间' })).toBeVisible();
 
     const filteredRequest = page.waitForRequest((request) => {
       const url = new URL(request.url());
@@ -26,6 +26,7 @@ test.describe('Home Page - 首页分类闭环', () => {
     await page.getByRole('button', { name: '珠宝腕表' }).click();
     await filteredRequest;
 
+    // 分类 tab 切回竞拍卡维度
     await expect(page.getByRole('heading', { name: '星河钻石腕表' })).toBeVisible();
     await expect(page.getByText('宋代青瓷珍藏')).not.toBeVisible();
   });
