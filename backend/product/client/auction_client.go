@@ -156,6 +156,52 @@ func (c *AuctionClient) BatchProductAuctionStates(ctx context.Context, productID
 	return result, nil
 }
 
+func (c *AuctionClient) BatchCountAuctionsByLiveStreamIDs(ctx context.Context, liveStreamIDs []int64) (map[int64]int64, error) {
+	if len(liveStreamIDs) == 0 {
+		return map[int64]int64{}, nil
+	}
+	reqURL := fmt.Sprintf("%s/internal/auctions/count-by-live-streams", c.baseURL)
+	payload, err := json.Marshal(map[string]interface{}{"live_stream_ids": liveStreamIDs})
+	if err != nil {
+		return nil, fmt.Errorf("marshal request: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, bytes.NewReader(payload))
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.internalToken != "" {
+		req.Header.Set("X-Internal-Token", c.internalToken)
+	}
+
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("call auction-service: %w", err)
+	}
+	defer resp.Body.Close()
+	defer io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("auction-service returned status %d", resp.StatusCode)
+	}
+	var body struct {
+		Code int `json:"code"`
+		Data struct {
+			Counts map[int64]int64 `json:"counts"`
+		} `json:"data"`
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+	if body.Code != 0 && body.Code != 200 {
+		return nil, fmt.Errorf("auction-service business code %d: %s", body.Code, body.Message)
+	}
+	if body.Data.Counts == nil {
+		return map[int64]int64{}, nil
+	}
+	return body.Data.Counts, nil
+}
+
 func (c *AuctionClient) BatchGetUserSummaries(ctx context.Context, ids []int64) (map[int64]UserSummary, error) {
 	if len(ids) == 0 {
 		return map[int64]UserSummary{}, nil

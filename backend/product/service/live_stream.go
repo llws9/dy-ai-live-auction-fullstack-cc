@@ -99,6 +99,20 @@ func (s *LiveStreamService) ViewerCount(ctx context.Context, id int64) int64 {
 	return count
 }
 
+func (s *LiveStreamService) ViewerCountForLiveStream(ctx context.Context, liveStream *model.LiveStream) int64 {
+	if liveStream == nil {
+		return 0
+	}
+	count := s.ViewerCount(ctx, liveStream.ID)
+	if count > 0 {
+		return count
+	}
+	if liveStream.ViewerCount > 0 {
+		return int64(liveStream.ViewerCount)
+	}
+	return 0
+}
+
 // List 获取直播间列表（管理员用）
 func (s *LiveStreamService) List(ctx context.Context, page, pageSize int) ([]model.LiveStream, int64, error) {
 	offset := (page - 1) * pageSize

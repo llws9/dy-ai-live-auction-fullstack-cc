@@ -120,9 +120,14 @@ func TestGetDetail_VideoURL_FromDB(t *testing.T) {
 
 func TestListAdmin_T4FieldsAndStatusFilter(t *testing.T) {
 	auctionMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/auctions", r.URL.Path)
-		assert.Equal(t, "101", r.URL.Query().Get("live_stream_id"))
-		_, _ = w.Write([]byte(`{"code":200,"data":{"list":[],"total":3}}`))
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/internal/auctions/count-by-live-streams", r.URL.Path)
+		var req struct {
+			LiveStreamIDs []int64 `json:"live_stream_ids"`
+		}
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+		assert.Equal(t, []int64{101}, req.LiveStreamIDs)
+		_, _ = w.Write([]byte(`{"code":200,"message":"success","data":{"counts":{"101":3}}}`))
 	}))
 	t.Cleanup(auctionMock.Close)
 
@@ -170,6 +175,51 @@ func TestListAdmin_T4FieldsAndStatusFilter(t *testing.T) {
 	assert.EqualValues(t, 42, item["viewer_count"])
 	assert.EqualValues(t, 3, item["auction_count"])
 	assert.EqualValues(t, 1, item["status"])
+}
+
+func TestAdminGetReturnsAuctionCountAndViewerFallback(t *testing.T) {
+	auctionMock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/internal/auctions/count-by-live-streams", r.URL.Path)
+		var req struct {
+			LiveStreamIDs []int64 `json:"live_stream_ids"`
+		}
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+		assert.Equal(t, []int64{201}, req.LiveStreamIDs)
+		_, _ = w.Write([]byte(`{"code":200,"message":"success","data":{"counts":{"201":8}}}`))
+	}))
+	t.Cleanup(auctionMock.Close)
+
+	db, err := gorm.Open(sqlite.Open("file::memory:?mode=memory&cache=shared"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Product{}, &model.Category{}, &model.AuctionRule{}, &model.LiveStream{}))
+	require.NoError(t, db.Exec("DELETE FROM live_streams").Error)
+	require.NoError(t, db.Create(&model.LiveStream{
+		ID:          201,
+		CreatorID:   9001,
+		Name:        "带兜底人数",
+		Status:      model.LiveStreamStatusLive,
+		ViewerCount: 19,
+	}).Error)
+
+	svc := service.NewLiveStreamServiceWithMetrics(dao.NewLiveStreamDAO(db), service.StaticLiveViewerCounter{})
+	h := NewLiveStreamHandler(svc)
+	h.SetAuctionClient(client.NewAuctionClient(auctionMock.URL, 0))
+
+	c := app.NewContext(0)
+	c.Request.SetRequestURI("/api/v1/admin/live-streams/201")
+	c.Request.Header.Set("X-User-ID", "2001")
+	c.Request.Header.Set("X-User-Role", "admin")
+	c.Params = append(c.Params, param.Param{Key: "id", Value: "201"})
+
+	h.AdminGet(context.Background(), c)
+
+	require.Equal(t, 200, c.Response.StatusCode())
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	data := body["data"].(map[string]interface{})
+	assert.EqualValues(t, 8, data["auction_count"])
+	assert.EqualValues(t, 19, data["viewer_count"])
 }
 
 func TestListAdminLiveStreamMerchantOnlyOwnStreams(t *testing.T) {
@@ -326,6 +376,21 @@ func TestEndAndBanAdminLiveStream(t *testing.T) {
 	banData := banBody["data"].(map[string]interface{})
 	assert.EqualValues(t, model.LiveStreamStatusBanned, banData["status"])
 	assert.Equal(t, "违规内容", banData["ban_reason"])
+}
+
+func TestBanAdminLiveStreamRejectsBlankReason(t *testing.T) {
+	h := newLiveStreamHandlerWithSeed(t, func(db *gorm.DB) {
+		db.Create(&model.LiveStream{ID: 501, CreatorID: 9001, Name: "待封禁", Status: model.LiveStreamStatusLive})
+	})
+
+	banCtx := app.NewContext(0)
+	banCtx.Request.SetBody([]byte(`{"reason":"   "}`))
+	banCtx.Params = append(banCtx.Params, param.Param{Key: "id", Value: "501"})
+	banCtx.Request.Header.Set("X-User-Role", "admin")
+	banCtx.Request.Header.Set("X-User-ID", "2001")
+	h.BanAdmin(context.Background(), banCtx)
+
+	assert.Equal(t, 400, banCtx.Response.StatusCode())
 }
 
 func TestEndAndBanAdminLiveStreamRequireAdminRole(t *testing.T) {

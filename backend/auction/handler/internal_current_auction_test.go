@@ -72,3 +72,53 @@ func TestCurrentByLiveStreams(t *testing.T) {
 	assert.Equal(t, 1, resp.Data.Items[0].Status)
 	assert.Equal(t, []int64{3, 4}, fetcher.calledIDs)
 }
+
+type fakeAuctionCountProvider struct {
+	calledIDs []int64
+	counts    map[int64]int64
+	err       error
+}
+
+func (f *fakeAuctionCountProvider) CountByLiveStreamIDs(_ context.Context, ids []int64) (map[int64]int64, error) {
+	f.calledIDs = ids
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.counts, nil
+}
+
+func TestCountByLiveStreams(t *testing.T) {
+	provider := &fakeAuctionCountProvider{
+		counts: map[int64]int64{
+			3: 2,
+			4: 7,
+		},
+	}
+	h := server.Default(server.WithHostPorts("127.0.0.1:0"))
+	countHandler := NewInternalAuctionCountHandler(provider)
+	h.POST("/internal/auctions/count-by-live-streams", countHandler.Handle)
+
+	body := `{"live_stream_ids":[3,4]}`
+	w := ut.PerformRequest(
+		h.Engine,
+		http.MethodPost,
+		"/internal/auctions/count-by-live-streams",
+		&ut.Body{Body: bytes.NewReader([]byte(body)), Len: len(body)},
+		ut.Header{Key: "Content-Type", Value: "application/json"},
+	)
+
+	require.Equal(t, http.StatusOK, w.Result().StatusCode())
+
+	var resp struct {
+		Code int `json:"code"`
+		Data struct {
+			Counts map[int64]int64 `json:"counts"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(w.Result().Body(), &resp))
+
+	assert.Equal(t, 200, resp.Code)
+	assert.EqualValues(t, 2, resp.Data.Counts[3])
+	assert.EqualValues(t, 7, resp.Data.Counts[4])
+	assert.Equal(t, []int64{3, 4}, provider.calledIDs)
+}

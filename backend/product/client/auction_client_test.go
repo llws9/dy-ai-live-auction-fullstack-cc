@@ -83,3 +83,29 @@ func TestAuctionClientBatchProductAuctionStates(t *testing.T) {
 	assert.Equal(t, int64(12), *got[102].LatestAuctionID)
 	assert.Equal(t, "sold", got[102].LatestAuctionResult)
 }
+
+func TestAuctionClientBatchCountAuctionsByLiveStreamIDs(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/internal/auctions/count-by-live-streams", r.URL.Path)
+		assert.Equal(t, "secret-token", r.Header.Get("X-Internal-Token"))
+
+		raw, _ := io.ReadAll(r.Body)
+		var reqBody struct {
+			LiveStreamIDs []int64 `json:"live_stream_ids"`
+		}
+		require.NoError(t, json.Unmarshal(raw, &reqBody))
+		assert.Equal(t, []int64{101, 102}, reqBody.LiveStreamIDs)
+
+		_, _ = w.Write([]byte(`{"code":200,"message":"success","data":{"counts":{"101":3,"102":7}}}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewAuctionClient(srv.URL, 0)
+	c.SetInternalToken("secret-token")
+
+	got, err := c.BatchCountAuctionsByLiveStreamIDs(context.Background(), []int64{101, 102})
+	require.NoError(t, err)
+	assert.EqualValues(t, 3, got[101])
+	assert.EqualValues(t, 7, got[102])
+}

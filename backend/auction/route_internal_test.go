@@ -67,6 +67,7 @@ func TestPendingReminderInternalRouteRequiresInternalToken(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 
 	unauthorized := ut.PerformRequest(
