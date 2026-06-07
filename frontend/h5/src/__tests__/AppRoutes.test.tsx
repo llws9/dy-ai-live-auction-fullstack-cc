@@ -1,6 +1,29 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import App from '../App';
 import { LegacyAuctionRedirect, LegacyResultRedirect } from '../routes/legacyRedirects';
+
+jest.mock('../pages/Login', () => ({
+  __esModule: true,
+  default: () => <div>登录页</div>,
+}));
+
+jest.mock('../pages/Home', () => ({
+  __esModule: true,
+  default: () => <div>首页</div>,
+}));
+
+jest.mock('../components/DemoConsole', () => {
+  const { useDemo } = jest.requireActual('../store/demoContext');
+
+  return {
+    __esModule: true,
+    default: () => {
+      useDemo();
+      return <div data-testid="demo-console-mounted">Demo Console</div>;
+    },
+  };
+});
 
 function LocationProbe() {
   const location = useLocation();
@@ -33,5 +56,15 @@ describe('App route closure', () => {
     );
 
     expect(screen.getByTestId('location')).toHaveTextContent('/result?id=42');
+  });
+
+  it('mounts DemoConsole globally inside DemoProvider', async () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('demo-console-mounted')).toBeInTheDocument();
   });
 });

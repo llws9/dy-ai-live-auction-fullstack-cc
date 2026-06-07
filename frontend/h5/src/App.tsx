@@ -2,9 +2,11 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
 import { AuthProvider, useAuth } from './store/authContext'
 import { AuctionProvider } from './store/auctionContext'
+import { DemoProvider } from './store/demoContext'
 import { GrowthBookContextProvider } from './store/growthbookContext'
 import { ThemeProvider } from './store/themeContext'
 import ErrorBoundary from './components/ErrorBoundary'
+import DemoConsole from './components/DemoConsole'
 import { ToastProvider, useToast } from './components/Toast'
 import { setToastFunction } from './services/api'
 import { errorMonitor } from './utils/errorMonitor'
@@ -75,55 +77,58 @@ function App() {
             <ErrorMonitorInitializer />
             <GrowthBookContextProvider>
               <AuctionProvider>
-                <MobileContainer>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <Routes>
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/" element={<Home />} />
-                      <Route path="/live" element={<Live />} />
-                      <Route path="/detail" element={<ProductDetail />} />
-                      <Route path="/auction/:id" element={<LegacyAuctionRedirect />} />
-                      <Route path="/result" element={<Result />} />
-                      <Route path="/result/:id" element={<LegacyResultRedirect />} />
-                      <Route path="/profile" element={
-                        <PrivateRoute>
-                          <Profile />
-                        </PrivateRoute>
-                      } />
-                      <Route path="/notifications" element={
-                        <PrivateRoute>
-                          <Notifications />
-                        </PrivateRoute>
-                      } />
-                      <Route path="/following" element={
-                        <PrivateRoute>
-                          <Follow />
-                        </PrivateRoute>
-                      } />
-                      <Route path="/follow" element={<Navigate to="/following" replace />} />
-                      <Route path="/history" element={
-                        <PrivateRoute>
-                          <History />
-                        </PrivateRoute>
-                      } />
-                      <Route path="/addresses" element={
-                        <PrivateRoute>
-                          <Addresses />
-                        </PrivateRoute>
-                      } />
-                      <Route path="/orders" element={
-                        <PrivateRoute>
-                          <OrderList />
-                        </PrivateRoute>
-                      } />
-                      <Route path="/order/:id" element={
-                        <PrivateRoute>
-                          <OrderDetail />
-                        </PrivateRoute>
-                      } />
-                    </Routes>
-                  </Suspense>
-                </MobileContainer>
+                <DemoProvider>
+                  <MobileContainer>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <Routes>
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/" element={<Home />} />
+                        <Route path="/live" element={<Live />} />
+                        <Route path="/detail" element={<ProductDetail />} />
+                        <Route path="/auction/:id" element={<LegacyAuctionRedirect />} />
+                        <Route path="/result" element={<Result />} />
+                        <Route path="/result/:id" element={<LegacyResultRedirect />} />
+                        <Route path="/profile" element={
+                          <PrivateRoute>
+                            <Profile />
+                          </PrivateRoute>
+                        } />
+                        <Route path="/notifications" element={
+                          <PrivateRoute>
+                            <Notifications />
+                          </PrivateRoute>
+                        } />
+                        <Route path="/following" element={
+                          <PrivateRoute>
+                            <Follow />
+                          </PrivateRoute>
+                        } />
+                        <Route path="/follow" element={<Navigate to="/following" replace />} />
+                        <Route path="/history" element={
+                          <PrivateRoute>
+                            <History />
+                          </PrivateRoute>
+                        } />
+                        <Route path="/addresses" element={
+                          <PrivateRoute>
+                            <Addresses />
+                          </PrivateRoute>
+                        } />
+                        <Route path="/orders" element={
+                          <PrivateRoute>
+                            <OrderList />
+                          </PrivateRoute>
+                        } />
+                        <Route path="/order/:id" element={
+                          <PrivateRoute>
+                            <OrderDetail />
+                          </PrivateRoute>
+                        } />
+                      </Routes>
+                    </Suspense>
+                    <DemoConsole />
+                  </MobileContainer>
+                </DemoProvider>
               </AuctionProvider>
             </GrowthBookContextProvider>
           </AuthProvider>

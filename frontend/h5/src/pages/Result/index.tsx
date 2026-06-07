@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { auctionApi, orderApi, productApi } from '@/services/api';
+import { auctionApi, productApi } from '@/services/api';
 import { useAuth } from '@/store/authContext';
 import PageHeader from '@/components/shared/PageHeader';
 import { repairUtf8Mojibake } from '@/utils/textEncoding';
@@ -76,29 +76,7 @@ const ResultPage: React.FC = () => {
   const [result, setResult] = useState<AuctionResult | null>(null);
   const [product, setProduct] = useState<ProductInfo | null>(null);
   const [loading, setLoading] = useState(true);
-  const [paying, setPaying] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const toastTimerRef = useRef<number | null>(null);
-
-  const showToast = (message: string) => {
-    setToastMessage(message);
-    if (toastTimerRef.current !== null) {
-      window.clearTimeout(toastTimerRef.current);
-    }
-    toastTimerRef.current = window.setTimeout(() => {
-      setToastMessage('');
-      toastTimerRef.current = null;
-    }, 2500);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (toastTimerRef.current !== null) {
-        window.clearTimeout(toastTimerRef.current);
-        toastTimerRef.current = null;
-      }
-    };
-  }, []);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
   const loadResult = useCallback(async () => {
     if (!auctionId) {
@@ -142,23 +120,9 @@ const ResultPage: React.FC = () => {
   const isWinner = Boolean(user?.id && result?.winner_id === user.id);
   const productImage = getFirstImage(product);
   const productName = repairUtf8Mojibake(product?.name) || (auctionNo ? `竞拍场次 #${auctionNo}` : '竞拍结果');
+  const winnerName = repairUtf8Mojibake(wonBid?.user_name) || (result?.winner_id ? `用户${result.winner_id}` : '暂无中标者');
   const statusText = result?.status === 3 ? '已结束' : '结果已生成';
-  const orderStatusText = useMemo(() => getOrderStatusText(order?.status), [order?.status]);
-
-  const handlePay = async () => {
-    if (!orderId || paying) return;
-
-    setPaying(true);
-    try {
-      const paidOrder = await orderApi.pay(orderId);
-      setResult((current) => current ? { ...current, order: paidOrder, order_id: paidOrder?.id ?? orderId } : current);
-      showToast('支付成功，订单已更新');
-    } catch (error: any) {
-      showToast(error?.message || '支付失败，请稍后重试');
-    } finally {
-      setPaying(false);
-    }
-  };
+  const orderStatusText = getOrderStatusText(order?.status);
 
   if (loading) {
     return (
@@ -223,15 +187,15 @@ const ResultPage: React.FC = () => {
           <strong className={styles.finalPrice}>{formatPrice(finalPrice)}</strong>
           <div className={styles.winnerRow}>
             <div>
-              <span className={styles.avatar}>{(wonBid?.user_name || '中').slice(0, 1)}</span>
+              <span className={styles.avatar}>{winnerName.slice(0, 1)}</span>
             </div>
             <div className={styles.winnerInfo}>
-              <strong>{wonBid?.user_name || (result.winner_id ? `用户${result.winner_id}` : '暂无中标者')}</strong>
+              <strong>{winnerName}</strong>
               <span>中标人</span>
             </div>
             <div className={styles.bidTime}>
-              <span>出价时间</span>
               <strong>{wonBid?.created_at ? new Date(wonBid.created_at).toLocaleString() : '---'}</strong>
+              <span>出价时间</span>
             </div>
           </div>
         </section>
@@ -257,34 +221,28 @@ const ResultPage: React.FC = () => {
           )}
         </section>
 
-        <div className={`${styles.actions} ${isWinner ? '' : styles.actionsSingle}`}>
+        <div className={`${styles.actions} ${styles.actionsSingle}`}>
           {isWinner ? (
-            <>
-              <Link to="/" className={styles.secondaryLink}>返回首页</Link>
-              <button
-                className={styles.primaryButton}
-                type="button"
-                onClick={handlePay}
-                disabled={!orderId || paying || order?.status === 1}
-              >
-                {order?.status === 1 ? '已支付' : paying ? '支付中...' : orderId ? '立即支付' : '订单待生成'}
-              </button>
-              <button
-                className={styles.secondaryButton}
-                type="button"
-                onClick={() => orderId && navigate(`/order/${orderId}`)}
-                disabled={!orderId}
-              >
-                {orderId ? '查看订单' : '订单生成中'}
-              </button>
-            </>
+            <button className={styles.primaryButton} type="button" onClick={() => setShowPaymentDialog(true)}>
+              去支付
+            </button>
           ) : (
             <Link to="/" className={styles.primaryLink}>返回首页</Link>
           )}
         </div>
       </main>
 
-      {toastMessage && <div className={styles.toast} role="status">{toastMessage}</div>}
+      {showPaymentDialog && (
+        <div className={styles.dialogBackdrop}>
+          <div className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="payment-dialog-title">
+            <h2 id="payment-dialog-title">支付链路待完善</h2>
+            <p>当前支付链路仍在建设中，暂时无法在 H5 内完成支付。</p>
+            <button className={styles.dialogButton} type="button" onClick={() => setShowPaymentDialog(false)}>
+              我知道了
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
