@@ -109,7 +109,7 @@ describe('demoApi', () => {
     expect(JSON.parse(init.body as string)).toEqual({ mode: 'upcoming' });
   });
 
-  it('posts fixed-price live stream id to the demo merchant endpoint', async () => {
+  it('posts fixed-price auction and live stream ids to the demo merchant endpoint', async () => {
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -117,11 +117,11 @@ describe('demoApi', () => {
     } as Response);
     global.fetch = fetchMock;
 
-    await createDemoFixedPriceItem({ liveStreamId: 456 });
+    await createDemoFixedPriceItem({ auctionId: 123, liveStreamId: 456 });
 
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('/api/test/demo/merchant/fixed-price-items');
-    expect(JSON.parse(init.body as string)).toEqual({ live_stream_id: 456 });
+    expect(JSON.parse(init.body as string)).toEqual({ auction_id: 123, live_stream_id: 456 });
   });
 
   it('posts auction shorten request with a ten second remaining time', async () => {

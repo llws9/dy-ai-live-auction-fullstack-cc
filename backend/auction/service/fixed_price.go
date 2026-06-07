@@ -15,13 +15,14 @@ import (
 
 // 一口价业务错误。handler 层负责映射为对外错误码与 HTTP 状态。
 var (
-	ErrInvalidParam    = errors.New("invalid param")
-	ErrNotStreamOwner  = errors.New("not stream owner")
-	ErrProductNotFound = errors.New("product not found")
-	ErrNotOnSale       = errors.New("fixed price item not on sale")
-	ErrSoldOut         = errors.New("fixed price item sold out")
-	ErrAlreadyBought   = errors.New("user already bought this fixed price item")
-	ErrInsufficient    = errors.New("insufficient balance")
+	ErrInvalidParam        = errors.New("invalid param")
+	ErrNotStreamOwner      = errors.New("not stream owner")
+	ErrProductNotFound     = errors.New("product not found")
+	ErrAuctionNotAvailable = errors.New("auction not available for fixed price item")
+	ErrNotOnSale           = errors.New("fixed price item not on sale")
+	ErrSoldOut             = errors.New("fixed price item sold out")
+	ErrAlreadyBought       = errors.New("user already bought this fixed price item")
+	ErrInsufficient        = errors.New("insufficient balance")
 )
 
 const (
@@ -42,6 +43,11 @@ type StreamOwnerChecker interface {
 // ProductChecker 校验商品是否存在。
 type ProductChecker interface {
 	Exists(ctx context.Context, productID int64) (bool, error)
+}
+
+// AuctionChecker 校验一口价绑定的竞拍场次是否属于当前直播间与商家。
+type AuctionChecker interface {
+	GetByID(ctx context.Context, id int64) (*model.Auction, error)
 }
 
 // BalanceDeducter 在事务内条件扣减用户余额（affected==0 表示余额不足）。
@@ -70,6 +76,7 @@ type FixedPriceService struct {
 	idem        *IdemStore
 	streams     StreamOwnerChecker
 	products    ProductChecker
+	auctions    AuctionChecker
 	clk         Clock
 	broadcaster FixedPriceBroadcaster
 	metrics     *metrics.FixedPriceMetrics
@@ -85,6 +92,7 @@ func NewFixedPriceService(
 	idem *IdemStore,
 	streams StreamOwnerChecker,
 	products ProductChecker,
+	auctions AuctionChecker,
 	clk Clock,
 	broadcaster FixedPriceBroadcaster,
 ) *FixedPriceService {
@@ -103,6 +111,7 @@ func NewFixedPriceService(
 		idem:        idem,
 		streams:     streams,
 		products:    products,
+		auctions:    auctions,
 		clk:         clk,
 		broadcaster: broadcaster,
 	}
@@ -114,6 +123,7 @@ func (s *FixedPriceService) SetMetrics(m *metrics.FixedPriceMetrics) {
 
 // ListItemReq 上架请求。
 type ListItemReq struct {
+	AuctionID    int64
 	LiveStreamID int64
 	ProductID    int64
 	CreatorID    int64
@@ -124,7 +134,7 @@ type ListItemReq struct {
 
 // ListItem 上架一口价商品：校验参数、主播归属、商品存在，落库并初始化 Redis 库存。
 func (s *FixedPriceService) ListItem(ctx context.Context, r ListItemReq) (*model.FixedPriceItem, error) {
-	if !validFixedPriceAmount(r.Price) || r.TotalStock <= 0 || r.TotalStock > maxTotalStock {
+	if r.AuctionID <= 0 || r.LiveStreamID <= 0 || !validFixedPriceAmount(r.Price) || r.TotalStock <= 0 || r.TotalStock > maxTotalStock {
 		return nil, ErrInvalidParam
 	}
 	isOwner, err := s.streams.IsOwner(ctx, r.LiveStreamID, r.CreatorID)
@@ -133,6 +143,9 @@ func (s *FixedPriceService) ListItem(ctx context.Context, r ListItemReq) (*model
 	}
 	if !isOwner {
 		return nil, ErrNotStreamOwner
+	}
+	if err := s.validateAuctionBinding(ctx, r); err != nil {
+		return nil, err
 	}
 	exists, err := s.products.Exists(ctx, r.ProductID)
 	if err != nil {
@@ -146,6 +159,7 @@ func (s *FixedPriceService) ListItem(ctx context.Context, r ListItemReq) (*model
 	}
 
 	item := &model.FixedPriceItem{
+		AuctionID:      r.AuctionID,
 		LiveStreamID:   r.LiveStreamID,
 		ProductID:      r.ProductID,
 		CreatorID:      r.CreatorID,
@@ -166,6 +180,31 @@ func (s *FixedPriceService) ListItem(ctx context.Context, r ListItemReq) (*model
 	s.recordStockRemaining(item.ID, r.TotalStock)
 	s.broadcaster.Listed(ctx, item)
 	return item, nil
+}
+
+func (s *FixedPriceService) validateAuctionBinding(ctx context.Context, r ListItemReq) error {
+	if s.auctions == nil {
+		return ErrAuctionNotAvailable
+	}
+	auction, err := s.auctions.GetByID(ctx, r.AuctionID)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return ErrAuctionNotAvailable
+	}
+	if err != nil {
+		return err
+	}
+	if auction.LiveStreamID == nil || *auction.LiveStreamID != r.LiveStreamID {
+		return ErrAuctionNotAvailable
+	}
+	if auction.CreatorID == nil || *auction.CreatorID != r.CreatorID {
+		return ErrAuctionNotAvailable
+	}
+	switch auction.Status {
+	case model.AuctionStatusPending, model.AuctionStatusOngoing, model.AuctionStatusDelayed:
+		return nil
+	default:
+		return ErrAuctionNotAvailable
+	}
 }
 
 func validFixedPriceAmount(price decimal.Decimal) bool {
@@ -196,10 +235,27 @@ type ListLiveItemsReq struct {
 	LiveStreamID int64
 }
 
+// ListAuctionFixedPriceItemsReq 查询某场竞拍的一口价商品列表。
+type ListAuctionFixedPriceItemsReq struct {
+	AuctionID int64
+}
+
 // LiveFixedPriceItem 是公开直播间一口价列表的单项结果。
 type LiveFixedPriceItem struct {
 	Item           *model.FixedPriceItem
 	RemainingStock int
+}
+
+// ListByAuction 返回指定竞拍场次的在售一口价商品，库存优先使用 Redis 权威值。
+func (s *FixedPriceService) ListByAuction(ctx context.Context, r ListAuctionFixedPriceItemsReq) ([]*LiveFixedPriceItem, error) {
+	if r.AuctionID <= 0 {
+		return nil, ErrInvalidParam
+	}
+	items, err := s.items.ListByAuctionID(ctx, r.AuctionID, []model.FixedPriceStatus{model.FixedPriceStatusOnSale})
+	if err != nil {
+		return nil, err
+	}
+	return s.hydrateFixedPriceItems(ctx, items), nil
 }
 
 // ListByLiveStream 返回指定直播间的在售一口价商品，库存优先使用 Redis 权威值。
@@ -211,15 +267,7 @@ func (s *FixedPriceService) ListByLiveStream(ctx context.Context, r ListLiveItem
 	if err != nil {
 		return nil, err
 	}
-	out := make([]*LiveFixedPriceItem, 0, len(items))
-	for _, item := range items {
-		remaining := item.RemainingStock
-		if live, e := s.stock.Remaining(ctx, item.ID); e == nil {
-			remaining = live
-		}
-		out = append(out, &LiveFixedPriceItem{Item: item, RemainingStock: remaining})
-	}
-	return out, nil
+	return s.hydrateFixedPriceItems(ctx, items), nil
 }
 
 // ListAllByLiveStream 返回指定直播间的全部一口价商品，供管理端查看售罄/下架记录。
@@ -231,6 +279,10 @@ func (s *FixedPriceService) ListAllByLiveStream(ctx context.Context, r ListLiveI
 	if err != nil {
 		return nil, err
 	}
+	return s.hydrateFixedPriceItems(ctx, items), nil
+}
+
+func (s *FixedPriceService) hydrateFixedPriceItems(ctx context.Context, items []*model.FixedPriceItem) []*LiveFixedPriceItem {
 	out := make([]*LiveFixedPriceItem, 0, len(items))
 	for _, item := range items {
 		remaining := item.RemainingStock
@@ -239,7 +291,7 @@ func (s *FixedPriceService) ListAllByLiveStream(ctx context.Context, r ListLiveI
 		}
 		out = append(out, &LiveFixedPriceItem{Item: item, RemainingStock: remaining})
 	}
-	return out, nil
+	return out
 }
 
 // Purchase 抢购一口价商品（方案③ purchase 自成闭环）。

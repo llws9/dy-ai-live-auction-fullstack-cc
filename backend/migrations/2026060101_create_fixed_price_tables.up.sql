@@ -1,6 +1,7 @@
 -- backend/migrations/2026060101_create_fixed_price_tables.up.sql
 CREATE TABLE fixed_price_items (
   id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+  auction_id      BIGINT NOT NULL DEFAULT 0,
   live_stream_id  BIGINT NOT NULL,
   product_id      BIGINT NOT NULL,
   creator_id      BIGINT NOT NULL,
@@ -12,6 +13,7 @@ CREATE TABLE fixed_price_items (
   version         INT NOT NULL DEFAULT 0,
   created_at      DATETIME NOT NULL,
   updated_at      DATETIME NOT NULL,
+  INDEX idx_auction_id (auction_id),
   INDEX idx_live_stream (live_stream_id, status),
   INDEX idx_creator (creator_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

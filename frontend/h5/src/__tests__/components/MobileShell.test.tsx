@@ -691,6 +691,27 @@ describe('MobileShell', () => {
     expect(mockGetPendingLiveReminder).not.toHaveBeenCalled();
   });
 
+  it('does not consume pending live reminder while authenticated user is still on login route', async () => {
+    mockGetPendingLiveReminder.mockResolvedValue({
+      hasReminder: true,
+      stream: { id: 1, name: '直播间', avatarUrl: '' },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/login']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>登录页</main>
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByText('登录页')).toBeInTheDocument());
+    expect(mockGetPendingLiveReminder).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('does not open live reminder when backend returns empty', async () => {
     mockGetPendingLiveReminder.mockResolvedValue({ hasReminder: false, stream: null });
 

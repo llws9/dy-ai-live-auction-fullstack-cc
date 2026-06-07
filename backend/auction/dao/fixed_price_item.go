@@ -76,6 +76,19 @@ func (d *FixedPriceItemDAO) ListByLiveStreamID(ctx context.Context, liveStreamID
 	return items, nil
 }
 
+// ListByAuctionID 按竞拍场次查询一口价商品，可选状态过滤，按创建时间倒序。
+func (d *FixedPriceItemDAO) ListByAuctionID(ctx context.Context, auctionID int64, statuses []model.FixedPriceStatus) ([]*model.FixedPriceItem, error) {
+	var items []*model.FixedPriceItem
+	q := d.db.WithContext(ctx).Where("auction_id = ?", auctionID)
+	if len(statuses) > 0 {
+		q = q.Where("status IN ?", statuses)
+	}
+	if err := q.Order("created_at DESC").Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 // DecrementRemainingStock 更新剩余库存（供异步兜底使用）
 func (d *FixedPriceItemDAO) DecrementRemainingStock(ctx context.Context, id int64, newRemaining int) error {
 	return d.db.WithContext(ctx).

@@ -153,6 +153,27 @@ func TestSDK_CreateProductAsPreservesExplicitImages(t *testing.T) {
 	}
 }
 
+func TestSDK_ErrorResponseUsesBusinessMessage(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusConflict)
+		_, _ = w.Write([]byte(`{"code":409,"message":"当前直播间已有待开始或进行中的竞拍场次"}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	step := c.CreateAuctionAs(context.Background(), Actor{UserID: 9001, Role: RoleMerchant}, CreateAuctionReq{
+		ProductID: 1,
+		Duration:  180,
+	})
+
+	if step.OK {
+		t.Fatalf("expected failed step")
+	}
+	if step.Message != "当前直播间已有待开始或进行中的竞拍场次" {
+		t.Fatalf("message=%q", step.Message)
+	}
+}
+
 func TestSDK_PublishProductAsUsesProductPublishAPI(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v1/products/42/publish" || r.Method != http.MethodPost {

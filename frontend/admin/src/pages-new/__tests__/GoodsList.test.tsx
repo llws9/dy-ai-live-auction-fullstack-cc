@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import GoodsList from '../GoodsList'
 import { productApi } from '@/shared/api'
@@ -107,5 +108,29 @@ describe('GoodsList', () => {
     expect(await screen.findByText('草稿')).toBeInTheDocument()
     expect(screen.getByTitle('设为可排期')).toBeInTheDocument()
     expect(screen.queryByTitle('发布')).not.toBeInTheDocument()
+  })
+
+  it('uses derived status tabs for product lifecycle filtering', async () => {
+    const user = userEvent.setup()
+    renderGoodsList()
+
+    expect(await screen.findByRole('tab', { name: '草稿' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '可排期' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '竞拍中' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '已拍卖' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '流拍' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '已下架' })).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '未发布' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '已发布' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: '竞拍中' }))
+
+    await waitFor(() => {
+      expect(mockedProductApi.list).toHaveBeenLastCalledWith({
+        display_status: 'auctioning',
+        page: 1,
+        page_size: 10,
+      })
+    })
   })
 })

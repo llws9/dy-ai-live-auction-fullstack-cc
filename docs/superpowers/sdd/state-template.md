@@ -13,6 +13,9 @@
 | Branch | `<branch>` |
 | Worktree | `<absolute-worktree-path>` |
 | Base Branch | `<base-branch>` |
+| Base Commit | `<base-commit-sha>` |
+| Target Branch | `<target-branch>` |
+| Worktree Dirty | `<yes-or-no>` |
 | Started At | `<YYYY-MM-DD HH:mm>` |
 | Owner | `<main-agent-or-user>` |
 | Status | `active` |
@@ -53,11 +56,19 @@
 | `blocked` | 被外部条件或设计问题阻塞 |
 | `done` | 已完成并通过验证 |
 
+## Runtime Sources
+
+> 记录本次验证实际使用的服务或 dev server。浏览器看到的行为只认这里记录的代码来源；如果来源不一致，验证无效。
+
+| Service | Command | Branch | Worktree | Commit | Dirty | Ports | Owner |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `<service-name>` | `<start-command>` | `<branch>` | `<absolute-worktree-path>` | `<commit-sha>` | `<yes-or-no>` | `<ports>` | `<task-or-agent>` |
+
 ## Task Matrix
 
-| Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Allowed Files |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `T001` | `<task-title>` | `pending` | `<agent>` | `P1` | `-` | `<scope>` | `<paths>` |
+| Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Write Set | Read Set | Regression Sentinels | Runtime Services |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `T001` | `<task-title>` | `pending` | `<agent>` | `P1` | `-` | `<scope>` | `<paths-or-globs>` | `<paths-or-globs>` | `<tests-or-checks>` | `<services-or-none>` |
 
 ## Wave Plan
 
@@ -77,6 +88,8 @@
 | Completed At | `<YYYY-MM-DD HH:mm>` |
 | Branch | `<branch>` |
 | Worktree | `<absolute-worktree-path>` |
+| Base Commit | `<base-commit-sha>` |
+| Target Branch | `<target-branch>` |
 | Depends On | `-` |
 | Parallel Group | `P1` |
 
@@ -85,10 +98,19 @@
 - `<scope-item-1>`
 - `<scope-item-2>`
 
-**Allowed Files**
+**Write Set**
 
-- `<path-1>`
-- `<path-2>`
+- `<path-or-glob-allowed-to-modify>`
+
+**Read Set**
+
+- `<path-or-glob-read-only>`
+
+**Scope Expansion Requests**
+
+| Time | Requested Files | Reason | Decision |
+| --- | --- | --- | --- |
+| `<YYYY-MM-DD HH:mm>` | `<paths>` | `<reason>` | `<approved-or-rejected>` |
 
 **TDD Plan**
 
@@ -97,15 +119,34 @@
 - Minimal implementation: `<implementation-summary>`
 - Regression scope: `<affected-module-or-command>`
 
+**Regression Sentinels**
+
+- Automated sentinel: `<test-or-command-that-fails-on-rollback>`
+- Manual fallback: `<deterministic-check-if-automation-is-impossible>`
+- Rollback behavior caught: `<what-would-fail-if-regressed>`
+
 **Verification Evidence**
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
 | `<command>` | `<expected-output>` | `<actual-output>` | `not_run` |
 
+**Runtime Source Evidence**
+
+| Service | Branch | Worktree | Commit | Dirty | Command | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| `<service-name>` | `<branch>` | `<absolute-worktree-path>` | `<commit-sha>` | `<yes-or-no>` | `<command>` | `<valid-or-invalid>` |
+
 **Modified Files**
 
 - `<path>`
+
+**Integration Check**
+
+- Target branch: `<target-branch>`
+- Branch relationship: `<ahead-behind-or-rebased>`
+- Diff reviewed: `<git-diff-command-and-result>`
+- Overlapping write-set tasks serialized: `<yes-or-no>`
 
 **Commits**
 
@@ -154,6 +195,11 @@
 - [ ] 所有任务状态已更新。
 - [ ] 没有未解释的 `blocked` 任务。
 - [ ] 每个 `done` 任务都有测试或替代验证证据。
+- [ ] 每个实现型任务都有 write set / read set。
+- [ ] 所有 write set 重叠的任务已串行执行并记录顺序。
+- [ ] 每个 bugfix / UI / 接口契约 / 演示链路修复都有 regression sentinel 或替代验证。
+- [ ] 本地服务或 dev server 的 branch/worktree/commit/dirty status 已记录。
+- [ ] 旧分支合入前已做 diff review，未整分支覆盖当前目标分支。
 - [ ] 每个实现型任务都遵循 TDD 或写明无法 TDD 的原因。
 - [ ] API 契约变更已同步文档。
 - [ ] 最终回答第一句展示当前分支/worktree。

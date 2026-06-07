@@ -142,6 +142,14 @@ func (s *ProductService) ListAdminProducts(ctx context.Context, actorRole string
 	return s.productDAO.ListAdminScoped(ctx, ownerID, status, page, pageSize)
 }
 
+func (s *ProductService) ListAllAdminProducts(ctx context.Context, actorRole string, actorUserID int64) ([]model.Product, error) {
+	var ownerID *int64
+	if actorRole == "merchant" {
+		ownerID = &actorUserID
+	}
+	return s.productDAO.ListAdminScopedAll(ctx, ownerID)
+}
+
 func (s *ProductService) GetAdminProduct(ctx context.Context, actorRole string, actorUserID, id int64) (*model.Product, error) {
 	if actorRole == "merchant" {
 		return s.productDAO.GetByIDAndOwnerID(ctx, id, actorUserID)

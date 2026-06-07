@@ -150,6 +150,8 @@ func writeCreateAuctionError(c *app.RequestContext, err error) {
 	switch {
 	case errors.Is(err, service.ErrActiveAuctionExists):
 		c.JSON(409, map[string]interface{}{"code": 409, "message": err.Error()})
+	case errors.Is(err, service.ErrActiveLiveStreamAuctionExists):
+		c.JSON(409, map[string]interface{}{"code": 409, "message": err.Error()})
 	case errors.Is(err, service.ErrProductOwnershipMismatch),
 		errors.Is(err, service.ErrProductNotSchedulable),
 		errors.Is(err, service.ErrAuctionRuleNotBound),

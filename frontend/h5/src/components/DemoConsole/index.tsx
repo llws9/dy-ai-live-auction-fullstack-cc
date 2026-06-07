@@ -157,15 +157,15 @@ export default function DemoConsole() {
   };
 
   const handleMerchantFixedPrice = async () => {
-    if (!currentLiveStreamId) {
-      showToast('请先进入直播间', 'warning', TOAST_DURATION_MS);
+    if (!currentAuctionId || !currentLiveStreamId) {
+      showToast('请先进入正在竞拍的直播间', 'warning', TOAST_DURATION_MS);
       return;
     }
 
     setRunningAction('merchant-fixed-price');
     try {
-      await createDemoFixedPriceItem({ liveStreamId: currentLiveStreamId });
-      showToast('已为当前直播间创建一口价商品', 'success', TOAST_DURATION_MS);
+      await createDemoFixedPriceItem({ auctionId: currentAuctionId, liveStreamId: currentLiveStreamId });
+      showToast('已为当前场次创建一口价商品', 'success', TOAST_DURATION_MS);
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';
       showToast(`商家动作失败：${message}`, 'error', TOAST_DURATION_MS);

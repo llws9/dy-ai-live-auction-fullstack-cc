@@ -28,7 +28,7 @@ export interface Product {
   category_id?: number | null;
   category_name?: string;
   status: number; // 0=未发布, 1=已发布, 2=已下架
-  display_status?: "auctioning" | "sold" | "unsold" | "schedulable" | "draft" | "unpublished" | "unknown";
+  display_status?: ProductDisplayStatus;
   display_status_label?: string;
   active_auction_id?: number;
   latest_auction_id?: number;
@@ -37,6 +37,15 @@ export interface Product {
   updated_at: string;
   rules?: AuctionRule;
 }
+
+export type ProductDisplayStatus =
+  | "auctioning"
+  | "sold"
+  | "unsold"
+  | "schedulable"
+  | "draft"
+  | "unpublished"
+  | "unknown";
 
 // 商品分类
 export interface Category {

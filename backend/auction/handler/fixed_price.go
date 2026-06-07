@@ -18,6 +18,7 @@ import (
 // FixedPriceUsecase 抽象 service.FixedPriceService，便于 handler 单测注入 fake。
 type FixedPriceUsecase interface {
 	ListItem(ctx context.Context, r service.ListItemReq) (*model.FixedPriceItem, error)
+	ListByAuction(ctx context.Context, r service.ListAuctionFixedPriceItemsReq) ([]*service.LiveFixedPriceItem, error)
 	ListByLiveStream(ctx context.Context, r service.ListLiveItemsReq) ([]*service.LiveFixedPriceItem, error)
 	ListAllByLiveStream(ctx context.Context, r service.ListLiveItemsReq) ([]*service.LiveFixedPriceItem, error)
 	Purchase(ctx context.Context, r service.PurchaseReq) (*service.PurchaseResult, error)
@@ -179,6 +180,7 @@ func (h *FixedPriceHandler) writeInsufficient(ctx context.Context, c *app.Reques
 
 // listItemBody 上架请求体。price 以字符串传递（decimal 精度安全）。
 type listItemBody struct {
+	AuctionID    int64  `json:"auction_id"`
 	LiveStreamID int64  `json:"live_stream_id"`
 	ProductID    int64  `json:"product_id"`
 	Price        string `json:"price"`
@@ -204,6 +206,7 @@ func (h *FixedPriceHandler) List(ctx context.Context, c *app.RequestContext) {
 	}
 
 	item, err := h.uc.ListItem(ctx, service.ListItemReq{
+		AuctionID:    body.AuctionID,
 		LiveStreamID: body.LiveStreamID,
 		ProductID:    body.ProductID,
 		CreatorID:    userID,
@@ -215,6 +218,7 @@ func (h *FixedPriceHandler) List(ctx context.Context, c *app.RequestContext) {
 	case err == nil:
 		c.JSON(200, map[string]any{
 			"id":              item.ID,
+			"auction_id":      item.AuctionID,
 			"live_stream_id":  item.LiveStreamID,
 			"product_id":      item.ProductID,
 			"price":           item.Price.StringFixed(2),
@@ -230,6 +234,8 @@ func (h *FixedPriceHandler) List(ctx context.Context, c *app.RequestContext) {
 		writeFPErr(c, 403, "FP_NOT_STREAM_OWNER", "非主播本人，无法上架", nil)
 	case errors.Is(err, service.ErrProductNotFound):
 		writeFPErr(c, 404, "FP_PRODUCT_NOT_FOUND", "商品不存在", nil)
+	case errors.Is(err, service.ErrAuctionNotAvailable):
+		writeFPErr(c, 400, "FP_AUCTION_NOT_AVAILABLE", "竞拍场次不可用于一口价", nil)
 	default:
 		writeFPErr(c, 500, "FP_INTERNAL", "服务异常", nil)
 	}
@@ -275,6 +281,7 @@ func (h *FixedPriceHandler) Detail(ctx context.Context, c *app.RequestContext) {
 	}
 	c.JSON(200, map[string]any{
 		"id":              item.ID,
+		"auction_id":      item.AuctionID,
 		"live_stream_id":  item.LiveStreamID,
 		"product_id":      item.ProductID,
 		"price":           item.Price.StringFixed(2),
@@ -283,6 +290,20 @@ func (h *FixedPriceHandler) Detail(ctx context.Context, c *app.RequestContext) {
 		"max_per_user":    item.MaxPerUser,
 		"status":          fpStatusString(item.Status),
 	})
+}
+
+// ListByAuction GET /auctions/:id/fixed-price/items。公开读取某场竞拍的一口价列表。
+func (h *FixedPriceHandler) ListByAuction(ctx context.Context, c *app.RequestContext) {
+	auctionID, ok := parseFPItemID(c)
+	if !ok {
+		return
+	}
+	items, err := h.uc.ListByAuction(ctx, service.ListAuctionFixedPriceItemsReq{AuctionID: auctionID})
+	if err != nil {
+		writeFPErr(c, 500, "FP_INTERNAL", "服务异常", nil)
+		return
+	}
+	h.writeFixedPriceItems(ctx, c, items)
 }
 
 // ListByLiveStream GET /live-streams/:id/fixed-price/items。公开读取直播间一口价列表。
@@ -296,12 +317,17 @@ func (h *FixedPriceHandler) ListByLiveStream(ctx context.Context, c *app.Request
 		writeFPErr(c, 500, "FP_INTERNAL", "服务异常", nil)
 		return
 	}
+	h.writeFixedPriceItems(ctx, c, items)
+}
+
+func (h *FixedPriceHandler) writeFixedPriceItems(ctx context.Context, c *app.RequestContext, items []*service.LiveFixedPriceItem) {
 	productSummaries := h.batchProductSummaries(ctx, items)
 	resp := make([]map[string]any, 0, len(items))
 	for _, it := range items {
 		item := it.Item
 		entry := map[string]any{
 			"id":              item.ID,
+			"auction_id":      item.AuctionID,
 			"live_stream_id":  item.LiveStreamID,
 			"product_id":      item.ProductID,
 			"price":           item.Price.StringFixed(2),
@@ -349,6 +375,7 @@ func (h *FixedPriceHandler) ListAllByLiveStream(ctx context.Context, c *app.Requ
 		item := it.Item
 		entry := map[string]any{
 			"id":              item.ID,
+			"auction_id":      item.AuctionID,
 			"live_stream_id":  item.LiveStreamID,
 			"product_id":      item.ProductID,
 			"price":           item.Price.StringFixed(2),
@@ -419,6 +446,7 @@ func (h *FixedPriceHandler) MyPurchase(ctx context.Context, c *app.RequestContex
 
 // RegisterFixedPriceRoutes 在 /api/v1 组下挂载一口价路由。
 func RegisterFixedPriceRoutes(g *route.RouterGroup, h *FixedPriceHandler) {
+	g.GET("/auctions/:id/fixed-price/items", h.ListByAuction)
 	g.GET("/live-streams/:id/fixed-price/items", h.ListByLiveStream)
 	g.GET("/admin/live-streams/:id/fixed-price/items", h.ListAllByLiveStream)
 	fp := g.Group("/fixed-price")

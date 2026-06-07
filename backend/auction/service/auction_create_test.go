@@ -180,6 +180,11 @@ func TestIsActiveAuctionUniqueConflict(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "mysql duplicate on active live stream key is not product conflict",
+			err:  errors.New("Error 1062 (23000): Duplicate entry '77' for key 'uk_active_live_stream'"),
+			want: false,
+		},
+		{
 			name: "unrelated error",
 			err:  errors.New("database connection lost"),
 			want: false,
@@ -189,6 +194,36 @@ func TestIsActiveAuctionUniqueConflict(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.want, isActiveAuctionUniqueConflict(tt.err))
+		})
+	}
+}
+
+func TestIsActiveLiveStreamUniqueConflict(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "mysql duplicate on active live stream key",
+			err:  errors.New("Error 1062 (23000): Duplicate entry '77' for key 'uk_active_live_stream'"),
+			want: true,
+		},
+		{
+			name: "mysql duplicate on active product key is not live stream conflict",
+			err:  errors.New("Error 1062 (23000): Duplicate entry '11' for key 'uk_active_product'"),
+			want: false,
+		},
+		{
+			name: "unrelated error",
+			err:  errors.New("database connection lost"),
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isActiveLiveStreamUniqueConflict(tt.err))
 		})
 	}
 }

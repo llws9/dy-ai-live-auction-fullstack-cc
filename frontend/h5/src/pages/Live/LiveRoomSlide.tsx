@@ -254,7 +254,8 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const hasReachedEndTime = Boolean(auction?.end_time && timeLeft <= 0);
   const isActive = (auction?.status === 1 || auction?.status === 2) && !hasReachedEndTime;
   const effectiveLiveStreamId = liveStreamId || auction?.live_stream_id || liveStream?.id || 0;
-  const { items: fixedPriceItems, socket: fixedPriceSocket } = useFixedPriceItems(effectiveLiveStreamId);
+  const effectiveAuctionId = currentAuctionId || auction?.id || urlAuctionId || 0;
+  const { items: fixedPriceItems, socket: fixedPriceSocket } = useFixedPriceItems(effectiveAuctionId, effectiveLiveStreamId);
   const productImage = getFirstImage(product || auction?.product);
   const hostName = liveStream?.host_name || liveStream?.creator_name || '拍卖师';
   const roomName = repairUtf8Mojibake(liveStream?.name) || '竞拍直播间';

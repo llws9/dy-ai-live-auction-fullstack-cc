@@ -24,7 +24,7 @@ import { Badge, type BadgeProps } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { useNavigate } from "react-router-dom"
-import { productApi, Product } from "@/shared/api"
+import { productApi, Product, ProductDisplayStatus } from "@/shared/api"
 
 const statusMap: Record<number, { label: string; variant: BadgeProps["variant"] }> = {
   0: { label: "草稿", variant: "secondary" },
@@ -32,11 +32,29 @@ const statusMap: Record<number, { label: string; variant: BadgeProps["variant"] 
   2: { label: "已下架", variant: "outline" },
 }
 
+type ProductTabFilter = {
+  value: string
+  label: string
+  status?: number
+  displayStatus?: ProductDisplayStatus
+}
+
+const productTabs: ProductTabFilter[] = [
+  { value: "all", label: "全部" },
+  { value: "draft", label: "草稿", displayStatus: "draft" },
+  { value: "schedulable", label: "可排期", displayStatus: "schedulable" },
+  { value: "auctioning", label: "竞拍中", displayStatus: "auctioning" },
+  { value: "sold", label: "已拍卖", displayStatus: "sold" },
+  { value: "unsold", label: "流拍", displayStatus: "unsold" },
+  { value: "unpublished", label: "已下架", displayStatus: "unpublished" },
+]
+
 export default function GoodsList() {
   const navigate = useNavigate()
   const [products, setProducts] = React.useState<Product[]>([])
   const [loading, setLoading] = React.useState(true)
   const [statusFilter, setStatusFilter] = React.useState<number | undefined>(undefined)
+  const [displayStatusFilter, setDisplayStatusFilter] = React.useState<ProductDisplayStatus | undefined>(undefined)
   const [page, setPage] = React.useState(1)
   const [total, setTotal] = React.useState(0)
   const [searchTerm, setSearchTerm] = React.useState("")
@@ -48,6 +66,7 @@ export default function GoodsList() {
     try {
       const response = await productApi.list({
         status: statusFilter,
+        display_status: displayStatusFilter,
         page,
         page_size: pageSize,
       })
@@ -58,7 +77,7 @@ export default function GoodsList() {
     } finally {
       setLoading(false)
     }
-  }, [statusFilter, page])
+  }, [statusFilter, displayStatusFilter, page])
 
   React.useEffect(() => {
     fetchProducts()
@@ -98,11 +117,9 @@ export default function GoodsList() {
 
   // 状态筛选
   const handleStatusChange = (value: string) => {
-    if (value === 'all') {
-      setStatusFilter(undefined)
-    } else {
-      setStatusFilter(Number(value))
-    }
+    const tab = productTabs.find((item) => item.value === value)
+    setStatusFilter(tab?.status)
+    setDisplayStatusFilter(tab?.displayStatus)
     setPage(1)
   }
 
@@ -135,10 +152,9 @@ export default function GoodsList() {
           <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <Tabs defaultValue="all" onValueChange={handleStatusChange} className="w-full md:w-auto">
               <TabsList className="bg-slate-100 border-none">
-                <TabsTrigger value="all">全部</TabsTrigger>
-                <TabsTrigger value="0">未发布</TabsTrigger>
-                <TabsTrigger value="1">已发布</TabsTrigger>
-                <TabsTrigger value="2">已下架</TabsTrigger>
+                {productTabs.map((tab) => (
+                  <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>
+                ))}
               </TabsList>
             </Tabs>
 

@@ -38,6 +38,10 @@ type fakeFixedPriceUsecase struct {
 	liveItemsErr error
 	liveItemReqs []service.ListLiveItemsReq
 
+	auctionItems    []*service.LiveFixedPriceItem
+	auctionItemsErr error
+	auctionItemReqs []service.ListAuctionFixedPriceItemsReq
+
 	adminItems    []*service.LiveFixedPriceItem
 	adminItemsErr error
 	adminItemReqs []service.ListLiveItemsReq
@@ -68,6 +72,11 @@ func (f *fakeFixedPriceUsecase) ListItem(_ context.Context, r service.ListItemRe
 func (f *fakeFixedPriceUsecase) ListByLiveStream(_ context.Context, r service.ListLiveItemsReq) ([]*service.LiveFixedPriceItem, error) {
 	f.liveItemReqs = append(f.liveItemReqs, r)
 	return f.liveItems, f.liveItemsErr
+}
+
+func (f *fakeFixedPriceUsecase) ListByAuction(_ context.Context, r service.ListAuctionFixedPriceItemsReq) ([]*service.LiveFixedPriceItem, error) {
+	f.auctionItemReqs = append(f.auctionItemReqs, r)
+	return f.auctionItems, f.auctionItemsErr
 }
 
 func (f *fakeFixedPriceUsecase) ListAllByLiveStream(_ context.Context, r service.ListLiveItemsReq) ([]*service.LiveFixedPriceItem, error) {
@@ -256,10 +265,10 @@ func TestPurchaseHandler_Success_PriceAsString(t *testing.T) {
 
 func TestListItemHandler_Success(t *testing.T) {
 	uc := &fakeFixedPriceUsecase{listResult: &model.FixedPriceItem{
-		ID: 7001, Status: model.FixedPriceStatusOnSale, RemainingStock: 100,
+		ID: 7001, AuctionID: 8001, Status: model.FixedPriceStatusOnSale, RemainingStock: 100,
 	}}
 	eng := newFixedPriceTestServer(uc, &fakeFPBalanceProvider{})
-	body := `{"live_stream_id":1001,"product_id":5001,"price":"99.00","total_stock":100,"max_per_user":1}`
+	body := `{"auction_id":8001,"live_stream_id":1001,"product_id":5001,"price":"99.00","total_stock":100,"max_per_user":1}`
 	w := ut.PerformRequest(eng, http.MethodPost, "/api/v1/fixed-price/items", &ut.Body{Body: bytes.NewReader([]byte(body)), Len: len(body)},
 		ut.Header{Key: "X-User-ID", Value: "100"},
 		ut.Header{Key: "X-User-Role", Value: "merchant"},
@@ -273,6 +282,7 @@ func TestListItemHandler_Success(t *testing.T) {
 	// CreatorID 取登录用户，不信任请求体。
 	require.Len(t, uc.listReqs, 1)
 	assert.Equal(t, int64(100), uc.listReqs[0].CreatorID)
+	assert.Equal(t, int64(8001), uc.listReqs[0].AuctionID)
 	assert.Equal(t, "99", uc.listReqs[0].Price.String())
 }
 
@@ -287,6 +297,19 @@ func TestListItemHandler_NonOwner_403(t *testing.T) {
 	resp := w.Result()
 	assert.Equal(t, 403, resp.StatusCode())
 	assert.Equal(t, "FP_NOT_STREAM_OWNER", decodeFPErr(t, resp.Body()).Code)
+}
+
+func TestListItemHandler_AuctionNotAvailable_400(t *testing.T) {
+	uc := &fakeFixedPriceUsecase{listErr: service.ErrAuctionNotAvailable}
+	eng := newFixedPriceTestServer(uc, &fakeFPBalanceProvider{})
+	body := `{"auction_id":8001,"live_stream_id":1001,"product_id":5001,"price":"99.00","total_stock":100}`
+	w := ut.PerformRequest(eng, http.MethodPost, "/api/v1/fixed-price/items", &ut.Body{Body: bytes.NewReader([]byte(body)), Len: len(body)},
+		ut.Header{Key: "X-User-ID", Value: "100"},
+		ut.Header{Key: "X-User-Role", Value: "merchant"},
+		ut.Header{Key: "Content-Type", Value: "application/json"})
+	resp := w.Result()
+	assert.Equal(t, 400, resp.StatusCode())
+	assert.Equal(t, "FP_AUCTION_NOT_AVAILABLE", decodeFPErr(t, resp.Body()).Code)
 }
 
 func TestListItemHandler_AdminRoleRejected(t *testing.T) {
@@ -377,7 +400,7 @@ func TestDetailHandler_NotFound_404(t *testing.T) {
 func TestLiveStreamFixedPriceListHandler_Public(t *testing.T) {
 	uc := &fakeFixedPriceUsecase{liveItems: []*service.LiveFixedPriceItem{{
 		Item: &model.FixedPriceItem{
-			ID: 7001, LiveStreamID: 1001, ProductID: 5001,
+			ID: 7001, AuctionID: 8001, LiveStreamID: 1001, ProductID: 5001,
 			Price: decimal.NewFromInt(99), TotalStock: 100, RemainingStock: 87,
 			MaxPerUser: 1, Status: model.FixedPriceStatusOnSale,
 		},
@@ -396,6 +419,29 @@ func TestLiveStreamFixedPriceListHandler_Public(t *testing.T) {
 	assert.Equal(t, float64(87), out["items"][0]["remaining_stock"])
 	require.Len(t, uc.liveItemReqs, 1)
 	assert.Equal(t, int64(1001), uc.liveItemReqs[0].LiveStreamID)
+}
+
+func TestAuctionFixedPriceListHandler_Public(t *testing.T) {
+	uc := &fakeFixedPriceUsecase{auctionItems: []*service.LiveFixedPriceItem{{
+		Item: &model.FixedPriceItem{
+			ID: 7002, AuctionID: 8002, LiveStreamID: 1001, ProductID: 5002,
+			Price: decimal.NewFromInt(88), TotalStock: 10, RemainingStock: 9,
+			MaxPerUser: 1, Status: model.FixedPriceStatusOnSale,
+		},
+		RemainingStock: 9,
+	}}}
+	eng := newFixedPriceTestServer(uc, &fakeFPBalanceProvider{})
+
+	w := ut.PerformRequest(eng, http.MethodGet, "/api/v1/auctions/8002/fixed-price/items", nil)
+	resp := w.Result()
+	require.Equal(t, 200, resp.StatusCode())
+	var out map[string][]map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body(), &out))
+	require.Len(t, out["items"], 1)
+	assert.Equal(t, float64(7002), out["items"][0]["id"])
+	assert.Equal(t, float64(8002), out["items"][0]["auction_id"])
+	require.Len(t, uc.auctionItemReqs, 1)
+	assert.Equal(t, int64(8002), uc.auctionItemReqs[0].AuctionID)
 }
 
 func TestAdminLiveStreamFixedPriceListHandler_ReturnsAllStatuses(t *testing.T) {

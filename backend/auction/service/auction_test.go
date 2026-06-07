@@ -383,6 +383,33 @@ func TestAuctionService_Creation(t *testing.T) {
 	assert.Equal(t, int64(1), req.LiveStreamID)
 }
 
+func TestAuctionService_CreateAuctionRejectsActiveAuctionInSameLiveStream(t *testing.T) {
+	db := newAuctionServiceTestDB(t)
+	creatorID := int64(1001)
+	liveStreamID := int64(77)
+	require.NoError(t, db.Create(&model.Auction{
+		ProductID:    11,
+		LiveStreamID: &liveStreamID,
+		CreatorID:    &creatorID,
+		Status:       model.AuctionStatusOngoing,
+		StartTime:    time.Now().Add(-time.Minute),
+		EndTime:      time.Now().Add(time.Hour),
+	}).Error)
+
+	svc := NewAuctionService(dao.NewAuctionDAO(db))
+	_, err := svc.CreateAuction(context.Background(), &CreateAuctionRequest{
+		ProductID:      12,
+		CreatorID:      &creatorID,
+		Duration:       3600,
+		ProductOwnerID: creatorID,
+		ProductStatus:  productStatusPublished,
+		RuleBound:      true,
+		LiveStreamID:   liveStreamID,
+	})
+
+	require.ErrorIs(t, err, ErrActiveLiveStreamAuctionExists)
+}
+
 // TestNotificationType_Constants 测试通知类型常量
 func TestNotificationType_Constants(t *testing.T) {
 	assert.Equal(t, model.NotificationType("bid_outbid"), model.NotificationTypeBidOutbid)

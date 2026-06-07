@@ -235,6 +235,17 @@ func TestFixedPriceLiveStreamListRoute_PublicForward(t *testing.T) {
 	assert.Equal(t, "/api/v1/live-streams/1001/fixed-price/items", lastPath.Load().(string))
 }
 
+func TestFixedPriceAuctionListRoute_PublicForward(t *testing.T) {
+	h, _, calls, lastMethod, lastPath, _, _ := newFixedPriceTestGateway(t)
+
+	calls.Store(0)
+	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/auctions/8002/fixed-price/items", nil)
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode())
+	assert.Equal(t, int64(1), calls.Load())
+	assert.Equal(t, http.MethodGet, lastMethod.Load().(string))
+	assert.Equal(t, "/api/v1/auctions/8002/fixed-price/items", lastPath.Load().(string))
+}
+
 func TestFixedPriceAdminLiveStreamListRoute_RequireStreamer(t *testing.T) {
 	h, cfg, calls, lastMethod, lastPath, lastUserID, _ := newFixedPriceTestGateway(t)
 

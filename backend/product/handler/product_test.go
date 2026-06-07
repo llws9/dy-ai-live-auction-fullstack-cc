@@ -672,6 +672,47 @@ func TestProductHandler_AdminListDerivedStatus(t *testing.T) {
 	assert.Equal(t, "草稿", byProduct[104].DisplayStatusLabel)
 }
 
+func TestProductHandler_AdminListFiltersByDisplayStatusBeforePagination(t *testing.T) {
+	h, _ := newProductHandlerWithSeed(t, func(db *gorm.DB) {
+		ownerID := int64(1001)
+		require.NoError(t, db.Create(&[]model.Product{
+			{ID: 101, Name: "Schedulable", OwnerID: &ownerID, Status: model.ProductStatusPublished},
+			{ID: 102, Name: "Active", OwnerID: &ownerID, Status: model.ProductStatusPublished},
+			{ID: 103, Name: "Draft", OwnerID: &ownerID, Status: model.ProductStatusDraft},
+		}).Error)
+	})
+	activeID := int64(11)
+	provider := &fakeProductAuctionStateProvider{states: map[int64]client.ProductAuctionState{
+		102: {ProductID: 102, ActiveAuctionID: &activeID},
+	}}
+	h.SetAuctionStateProvider(provider)
+
+	c := app.NewContext(0)
+	c.Request.SetMethod(http.MethodGet)
+	c.Request.SetRequestURI("/api/v1/admin/products?display_status=auctioning&page=1&page_size=1")
+	c.Request.Header.Set("X-User-ID", "1001")
+	c.Request.Header.Set("X-User-Role", "merchant")
+
+	h.AdminList(context.Background(), c)
+
+	require.Equal(t, http.StatusOK, c.Response.StatusCode())
+	var body struct {
+		Data struct {
+			List []struct {
+				ID            int64  `json:"id"`
+				DisplayStatus string `json:"display_status"`
+			} `json:"list"`
+			Total int64 `json:"total"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	assert.ElementsMatch(t, []int64{101, 102, 103}, provider.gotIDs)
+	assert.Equal(t, int64(1), body.Data.Total)
+	require.Len(t, body.Data.List, 1)
+	assert.Equal(t, int64(102), body.Data.List[0].ID)
+	assert.Equal(t, "auctioning", body.Data.List[0].DisplayStatus)
+}
+
 func TestProductHandler_ErrorHandling(t *testing.T) {
 	t.Run("should return 400 for invalid JSON", func(t *testing.T) {
 		invalidJSON := []byte("invalid json")

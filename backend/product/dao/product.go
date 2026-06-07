@@ -96,6 +96,19 @@ func (d *ProductDAO) ListAdminScoped(ctx context.Context, ownerID *int64, status
 	return products, total, nil
 }
 
+// ListAdminScopedAll returns all admin-visible products before application-level derived status filtering.
+func (d *ProductDAO) ListAdminScopedAll(ctx context.Context, ownerID *int64) ([]model.Product, error) {
+	var products []model.Product
+	query := d.db.WithContext(ctx).Model(&model.Product{})
+	if ownerID != nil {
+		query = query.Where("owner_id = ?", *ownerID)
+	}
+	if err := query.Order("created_at DESC").Find(&products).Error; err != nil {
+		return nil, err
+	}
+	return products, nil
+}
+
 // GetByIDAndOwnerID returns a product only when it belongs to ownerID.
 func (d *ProductDAO) GetByIDAndOwnerID(ctx context.Context, id, ownerID int64) (*model.Product, error) {
 	var product model.Product

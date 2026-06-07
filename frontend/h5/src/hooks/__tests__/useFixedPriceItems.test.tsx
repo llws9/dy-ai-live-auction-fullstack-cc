@@ -107,15 +107,15 @@ describe('useFixedPriceItems', () => {
   it('loads initial items and exposes a byId index', async () => {
     jest.mocked(fetchItems).mockResolvedValue({ items: [baseItem] });
 
-    const { result } = renderHook(() => useFixedPriceItems(1001));
+    const { result } = renderHook(() => useFixedPriceItems(7001, 1001));
 
     await waitFor(() => expect(result.current.items).toEqual([baseItem]));
     expect(result.current.byId[7001]).toEqual(baseItem);
-    expect(fetchItems).toHaveBeenCalledWith(1001);
+    expect(fetchItems).toHaveBeenCalledWith(7001);
   });
 
-  it('skips REST and WS setup until liveStreamId is available', () => {
-    const { result } = renderHook(() => useFixedPriceItems(0));
+  it('skips REST and WS setup until auction and liveStream are available', () => {
+    const { result } = renderHook(() => useFixedPriceItems(0, 0));
 
     expect(fetchItems).not.toHaveBeenCalled();
     expect(mockWsInstances).toHaveLength(0);
@@ -125,7 +125,7 @@ describe('useFixedPriceItems', () => {
 
   it('subscribes to fixed-price websocket messages and applies incremental updates', async () => {
     jest.mocked(fetchItems).mockResolvedValue({ items: [baseItem] });
-    const { result } = renderHook(() => useFixedPriceItems(1001));
+    const { result } = renderHook(() => useFixedPriceItems(7001, 1001));
 
     await waitFor(() => expect(mockWsInstances).toHaveLength(1));
     await waitFor(() => expect(result.current.socket).toBe(mockWsInstances[0]));

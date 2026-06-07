@@ -20,7 +20,7 @@ func TestFixedPriceService_List_ValidatesAndCreates(t *testing.T) {
 	svc := setupFixedPriceService(t)
 	ctx := context.Background()
 	item, err := svc.ListItem(ctx, ListItemReq{
-		LiveStreamID: 1001, ProductID: 5001, CreatorID: 100,
+		AuctionID: 7001, LiveStreamID: 1001, ProductID: 5001, CreatorID: 100,
 		Price: decimal.NewFromFloat(99), TotalStock: 50, MaxPerUser: 1,
 	})
 	require.NoError(t, err)
@@ -33,7 +33,7 @@ func TestFixedPriceService_List_ValidatesAndCreates(t *testing.T) {
 func TestFixedPriceService_List_RejectsInvalidPrice(t *testing.T) {
 	svc := setupFixedPriceService(t)
 	_, err := svc.ListItem(context.Background(), ListItemReq{
-		LiveStreamID: 1, ProductID: 1, CreatorID: 1,
+		AuctionID: 7001, LiveStreamID: 1, ProductID: 1, CreatorID: 1,
 		Price: decimal.Zero, TotalStock: 10,
 	})
 	assert.ErrorIs(t, err, ErrInvalidParam)
@@ -47,7 +47,7 @@ func TestFixedPriceService_List_RejectsPriceOutsideTwoCentScale(t *testing.T) {
 	}
 	for _, price := range tests {
 		_, err := svc.ListItem(context.Background(), ListItemReq{
-			LiveStreamID: 1, ProductID: 1, CreatorID: 1,
+			AuctionID: 7001, LiveStreamID: 1, ProductID: 1, CreatorID: 1,
 			Price: price, TotalStock: 10,
 		})
 		assert.ErrorIs(t, err, ErrInvalidParam)
@@ -57,7 +57,7 @@ func TestFixedPriceService_List_RejectsPriceOutsideTwoCentScale(t *testing.T) {
 func TestFixedPriceService_List_RejectsExcessiveStock(t *testing.T) {
 	svc := setupFixedPriceService(t)
 	_, err := svc.ListItem(context.Background(), ListItemReq{
-		LiveStreamID: 1, ProductID: 1, CreatorID: 1,
+		AuctionID: 7001, LiveStreamID: 1, ProductID: 1, CreatorID: 1,
 		Price: decimal.NewFromInt(10), TotalStock: 10001,
 	})
 	assert.ErrorIs(t, err, ErrInvalidParam)
@@ -66,7 +66,7 @@ func TestFixedPriceService_List_RejectsExcessiveStock(t *testing.T) {
 func TestFixedPriceService_List_RejectsNonOwner(t *testing.T) {
 	svc := setupFixedPriceServiceWithStream(t, 1001, 100) // owner=100
 	_, err := svc.ListItem(context.Background(), ListItemReq{
-		LiveStreamID: 1001, ProductID: 5001, CreatorID: 999, // not owner
+		AuctionID: 7001, LiveStreamID: 1001, ProductID: 5001, CreatorID: 999, // not owner
 		Price: decimal.NewFromInt(99), TotalStock: 10,
 	})
 	assert.ErrorIs(t, err, ErrNotStreamOwner)
@@ -81,14 +81,90 @@ func TestFixedPriceService_List_RejectsMissingProduct(t *testing.T) {
 		NewStockGuard(rdb), NewIdemStore(rdb),
 		&fakeStreamOwner{owners: nil},
 		&fakeProductChecker{missing: map[int64]bool{5001: true}},
+		&fakeAuctionChecker{},
 		nil,
 		nil,
 	)
 	_, err := svc.ListItem(context.Background(), ListItemReq{
-		LiveStreamID: 1001, ProductID: 5001, CreatorID: 100,
+		AuctionID: 7001, LiveStreamID: 1001, ProductID: 5001, CreatorID: 100,
 		Price: decimal.NewFromInt(99), TotalStock: 10,
 	})
 	assert.ErrorIs(t, err, ErrProductNotFound)
+}
+
+func TestFixedPriceService_List_RejectsAuctionFromOtherLiveStream(t *testing.T) {
+	liveStreamID := int64(2002)
+	creatorID := int64(100)
+	db := setupServiceDB(t)
+	rdb := setupTestRedis(t)
+	svc := NewFixedPriceService(
+		db,
+		newItemDAO(db), newPurchaseDAO(db), newBalanceDAO(db),
+		NewStockGuard(rdb), NewIdemStore(rdb),
+		&fakeStreamOwner{owners: map[int64]int64{1001: creatorID}},
+		&fakeProductChecker{},
+		&fakeAuctionChecker{auctions: map[int64]*model.Auction{
+			7001: &model.Auction{ID: 7001, LiveStreamID: &liveStreamID, CreatorID: &creatorID, Status: model.AuctionStatusOngoing},
+		}},
+		nil,
+		nil,
+	)
+
+	_, err := svc.ListItem(context.Background(), ListItemReq{
+		AuctionID: 7001, LiveStreamID: 1001, ProductID: 5001, CreatorID: creatorID,
+		Price: decimal.NewFromInt(99), TotalStock: 10,
+	})
+	assert.ErrorIs(t, err, ErrAuctionNotAvailable)
+}
+
+func TestFixedPriceService_List_RejectsAuctionFromOtherCreator(t *testing.T) {
+	liveStreamID := int64(1001)
+	auctionCreatorID := int64(200)
+	db := setupServiceDB(t)
+	rdb := setupTestRedis(t)
+	svc := NewFixedPriceService(
+		db,
+		newItemDAO(db), newPurchaseDAO(db), newBalanceDAO(db),
+		NewStockGuard(rdb), NewIdemStore(rdb),
+		&fakeStreamOwner{owners: map[int64]int64{liveStreamID: 100}},
+		&fakeProductChecker{},
+		&fakeAuctionChecker{auctions: map[int64]*model.Auction{
+			7001: &model.Auction{ID: 7001, LiveStreamID: &liveStreamID, CreatorID: &auctionCreatorID, Status: model.AuctionStatusOngoing},
+		}},
+		nil,
+		nil,
+	)
+
+	_, err := svc.ListItem(context.Background(), ListItemReq{
+		AuctionID: 7001, LiveStreamID: liveStreamID, ProductID: 5001, CreatorID: 100,
+		Price: decimal.NewFromInt(99), TotalStock: 10,
+	})
+	assert.ErrorIs(t, err, ErrAuctionNotAvailable)
+}
+
+func TestFixedPriceService_List_RejectsEndedAuction(t *testing.T) {
+	liveStreamID := int64(1001)
+	creatorID := int64(100)
+	db := setupServiceDB(t)
+	rdb := setupTestRedis(t)
+	svc := NewFixedPriceService(
+		db,
+		newItemDAO(db), newPurchaseDAO(db), newBalanceDAO(db),
+		NewStockGuard(rdb), NewIdemStore(rdb),
+		&fakeStreamOwner{owners: map[int64]int64{liveStreamID: creatorID}},
+		&fakeProductChecker{},
+		&fakeAuctionChecker{auctions: map[int64]*model.Auction{
+			7001: &model.Auction{ID: 7001, LiveStreamID: &liveStreamID, CreatorID: &creatorID, Status: model.AuctionStatusEnded},
+		}},
+		nil,
+		nil,
+	)
+
+	_, err := svc.ListItem(context.Background(), ListItemReq{
+		AuctionID: 7001, LiveStreamID: liveStreamID, ProductID: 5001, CreatorID: creatorID,
+		Price: decimal.NewFromInt(99), TotalStock: 10,
+	})
+	assert.ErrorIs(t, err, ErrAuctionNotAvailable)
 }
 
 func TestFixedPriceService_ListByLiveStream_ReturnsOnSaleItemsWithRedisStock(t *testing.T) {
@@ -104,6 +180,38 @@ func TestFixedPriceService_ListByLiveStream_ReturnsOnSaleItemsWithRedisStock(t *
 	require.Len(t, items, 1)
 	assert.Equal(t, item.ID, items[0].Item.ID)
 	assert.Equal(t, 4, items[0].RemainingStock)
+}
+
+func TestFixedPriceService_ListByAuctionDoesNotLeakAcrossLiveStreamReusedSessions(t *testing.T) {
+	svc := setupFixedPriceService(t)
+	ctx := context.Background()
+	first, err := svc.ListItem(ctx, ListItemReq{
+		AuctionID:    7001,
+		LiveStreamID: 1001,
+		ProductID:    5001,
+		CreatorID:    100,
+		Price:        decimal.NewFromInt(99),
+		TotalStock:   5,
+		MaxPerUser:   1,
+	})
+	require.NoError(t, err)
+	second, err := svc.ListItem(ctx, ListItemReq{
+		AuctionID:    7002,
+		LiveStreamID: 1001,
+		ProductID:    5002,
+		CreatorID:    100,
+		Price:        decimal.NewFromInt(88),
+		TotalStock:   3,
+		MaxPerUser:   1,
+	})
+	require.NoError(t, err)
+
+	items, err := svc.ListByAuction(ctx, ListAuctionFixedPriceItemsReq{AuctionID: 7002})
+
+	require.NoError(t, err)
+	require.Len(t, items, 1)
+	assert.Equal(t, second.ID, items[0].Item.ID)
+	assert.NotEqual(t, first.ID, items[0].Item.ID)
 }
 
 func TestFixedPriceService_ListAllByLiveStream_ReturnsAllStatusesForAdmin(t *testing.T) {

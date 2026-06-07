@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -115,6 +116,7 @@ type CreateLiveStreamReq struct {
 }
 
 type CreateFixedPriceItemReq struct {
+	AuctionID    int64  `json:"auction_id"`
 	LiveStreamID int64  `json:"live_stream_id"`
 	ProductID    int64  `json:"product_id"`
 	Price        string `json:"price"`
@@ -128,6 +130,7 @@ type LiveStream struct {
 
 type FixedPriceItem struct {
 	ID             int64 `json:"id"`
+	AuctionID      int64 `json:"auction_id"`
 	LiveStreamID   int64 `json:"live_stream_id"`
 	Stock          int64 `json:"stock"`
 	RemainingStock int64 `json:"remaining_stock"`
@@ -371,6 +374,21 @@ func (c *Client) ListFixedPriceItemsByLiveStream(ctx context.Context, actor Acto
 	return resp.Data.Items, step
 }
 
+func (c *Client) ListFixedPriceItemsByAuction(ctx context.Context, actor Actor, auctionID int64) ([]FixedPriceItem, StepResult) {
+	var resp struct {
+		Items []FixedPriceItem `json:"items"`
+		Data  struct {
+			Items []FixedPriceItem `json:"items"`
+		} `json:"data"`
+	}
+	path := "/api/v1/auctions/" + strconv.FormatInt(auctionID, 10) + "/fixed-price/items"
+	step := c.doAs(ctx, "list_fixed_price_items", http.MethodGet, path, actor, nil, nil, &resp)
+	if len(resp.Items) > 0 {
+		return resp.Items, step
+	}
+	return resp.Data.Items, step
+}
+
 // PlaceBid POST /api/v1/auctions/{id}/bids
 func (c *Client) PlaceBid(ctx context.Context, userID, auctionID int64, amount float64) StepResult {
 	body := map[string]any{"amount": amount, "user_id": userID}
@@ -606,7 +624,7 @@ func (c *Client) doAs(ctx context.Context, step, method, path string, actor Acto
 	res.StatusCode = resp.StatusCode
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		res.Message = fmt.Sprintf("HTTP %d", resp.StatusCode)
+		res.Message = readHTTPErrorMessage(resp)
 		return res
 	}
 	if out != nil {
@@ -618,6 +636,31 @@ func (c *Client) doAs(ctx context.Context, step, method, path string, actor Acto
 	}
 	res.OK = true
 	return res
+}
+
+func readHTTPErrorMessage(resp *http.Response) string {
+	fallback := fmt.Sprintf("HTTP %d", resp.StatusCode)
+	if resp == nil || resp.Body == nil {
+		return fallback
+	}
+	data, err := io.ReadAll(resp.Body)
+	if err != nil || len(data) == 0 {
+		return fallback
+	}
+	var body struct {
+		Message string `json:"message"`
+		Error   string `json:"error"`
+	}
+	if err := json.Unmarshal(data, &body); err != nil {
+		return fallback
+	}
+	if body.Message != "" {
+		return body.Message
+	}
+	if body.Error != "" {
+		return body.Error
+	}
+	return fallback
 }
 
 func defaultActor(userID int64) Actor {

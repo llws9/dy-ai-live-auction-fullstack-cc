@@ -21,7 +21,7 @@ describe('fixedPrice API', () => {
     );
   });
 
-  it('fetchItems requests live stream fixed-price items through the gateway API', async () => {
+  it('fetchItems requests auction-scoped fixed-price items through the gateway API', async () => {
     const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ items: [] }));
     global.fetch = fetchMock;
 
@@ -29,7 +29,7 @@ describe('fixedPrice API', () => {
 
     expect(result).toEqual({ items: [] });
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v1/live-streams/1001/fixed-price/items',
+      '/api/v1/auctions/1001/fixed-price/items',
       expect.objectContaining({ method: 'GET' })
     );
   });

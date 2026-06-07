@@ -324,7 +324,7 @@ describe('DemoConsole', () => {
     await user.click(screen.getByRole('button', { name: '商家' }));
     await user.click(screen.getByRole('button', { name: '一口价' }));
 
-    expect(mockShowToast).toHaveBeenCalledWith('请先进入直播间', 'warning', 2500);
+    expect(mockShowToast).toHaveBeenCalledWith('请先进入正在竞拍的直播间', 'warning', 2500);
     expect(mockedCreateDemoFixedPriceItem).not.toHaveBeenCalled();
   });
 
@@ -336,8 +336,8 @@ describe('DemoConsole', () => {
     await user.click(screen.getByRole('button', { name: '商家' }));
     await user.click(screen.getByRole('button', { name: '一口价' }));
 
-    expect(mockedCreateDemoFixedPriceItem).toHaveBeenCalledWith({ liveStreamId: 880301 });
-    expect(mockShowToast).toHaveBeenCalledWith('已为当前直播间创建一口价商品', 'success', 2500);
+    expect(mockedCreateDemoFixedPriceItem).toHaveBeenCalledWith({ auctionId: 12345, liveStreamId: 880301 });
+    expect(mockShowToast).toHaveBeenCalledWith('已为当前场次创建一口价商品', 'success', 2500);
   });
 
   it('shows a short error toast when a merchant action fails', async () => {

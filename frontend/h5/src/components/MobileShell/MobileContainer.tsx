@@ -24,11 +24,12 @@ function MobileContainer({ children }: MobileContainerProps) {
   const userId = user?.id ?? null;
   const identityRef = useRef({ token, userId });
   const isLiveRoute = pathname.startsWith('/live');
+  const isLoginRoute = pathname.startsWith('/login');
 
   identityRef.current = { token, userId };
 
   useEffect(() => {
-    if (authLoading || !isAuthenticated || !token || userId === null || !isLiveStartPopupVisible) {
+    if (authLoading || !isAuthenticated || !token || userId === null || !isLiveStartPopupVisible || isLoginRoute) {
       setIsReminderOpen(false);
       setReminderStream(null);
       return;
@@ -67,7 +68,7 @@ function MobileContainer({ children }: MobileContainerProps) {
     return () => {
       alive = false;
     };
-  }, [authLoading, isAuthenticated, token, userId, pathname, isLiveStartPopupVisible]);
+  }, [authLoading, isAuthenticated, token, userId, pathname, isLiveStartPopupVisible, isLoginRoute]);
 
   return (
     <div className={styles.shell} data-testid="mobile-shell">

@@ -88,6 +88,7 @@ func setupFixedPriceServiceWithBroadcaster(t *testing.T, b FixedPriceBroadcaster
 		NewStockGuard(rdb), NewIdemStore(rdb),
 		&fakeStreamOwner{owners: nil},
 		&fakeProductChecker{},
+		&fakeAuctionChecker{},
 		nil,
 		b,
 	)
@@ -98,7 +99,7 @@ func TestFixedPriceServiceRealtime_ListItemBroadcastsListed(t *testing.T) {
 	svc := setupFixedPriceServiceWithBroadcaster(t, b)
 
 	item, err := svc.ListItem(context.Background(), ListItemReq{
-		LiveStreamID: 1001, ProductID: 5001, CreatorID: 100,
+		AuctionID: 7001, LiveStreamID: 1001, ProductID: 5001, CreatorID: 100,
 		Price: decimal.NewFromInt(99), TotalStock: 10, MaxPerUser: 1,
 	})
 	require.NoError(t, err)

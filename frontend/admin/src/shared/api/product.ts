@@ -1,11 +1,12 @@
 // 商品API
 
 import { get, post, put, del, buildQuery } from './request';
-import { Product, AuctionRule, PaginatedResponse, Category } from './types';
+import { Product, AuctionRule, PaginatedResponse, Category, ProductDisplayStatus } from './types';
 import { normalizeProductListResponse, normalizeProductText } from './productEncoding';
 
 export interface ProductListParams {
   status?: number;
+  display_status?: ProductDisplayStatus;
   page?: number;
   page_size?: number;
 }

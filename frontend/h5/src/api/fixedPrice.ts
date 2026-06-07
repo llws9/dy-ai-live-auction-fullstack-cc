@@ -10,6 +10,7 @@ export type FixedPriceItemStatus = 'on_sale' | 'sold_out' | 'offline' | 'live';
 
 export interface FixedPriceItem {
   id: number;
+  auction_id?: number;
   product_id?: number;
   product?: ProductBrief;
   product_title?: string;
@@ -66,8 +67,8 @@ export function generateIdempotencyKey(): string {
   });
 }
 
-export function fetchItems(liveStreamId: number): Promise<FixedPriceItemsResponse> {
-  return get<FixedPriceItemsResponse>(`/live-streams/${liveStreamId}/fixed-price/items`);
+export function fetchItems(auctionId: number): Promise<FixedPriceItemsResponse> {
+  return get<FixedPriceItemsResponse>(`/auctions/${auctionId}/fixed-price/items`);
 }
 
 export function fetchMyPurchase(itemId: number): Promise<MyPurchaseResult> {

@@ -88,6 +88,9 @@ func main() {
 	if err := dao.EnsureAuctionActiveProductUniqueIndex(db); err != nil {
 		log.Printf("Warning: ensure active product unique index failed: %v", err)
 	}
+	if err := dao.EnsureAuctionActiveLiveStreamUniqueIndex(db); err != nil {
+		log.Printf("Warning: ensure active live stream unique index failed: %v", err)
+	}
 
 	// 初始化 DAO 层
 	auctionDAO := dao.NewAuctionDAO(db)
@@ -232,6 +235,7 @@ func main() {
 		fixedPriceIdem,
 		&liveStreamOwnerChecker{client: liveStreamClient},
 		&productExistsChecker{client: productClient},
+		auctionDAO,
 		nil, // 生产用 realClock
 		fixedPriceBroadcaster,
 	)

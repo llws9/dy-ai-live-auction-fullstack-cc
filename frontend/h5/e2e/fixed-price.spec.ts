@@ -110,7 +110,7 @@ async function mockFixedPriceApis(page: Page, purchaseMode: 'success' | 'insuffi
     const url = new URL(request.url());
     const path = url.pathname.replace('/api/v1', '');
 
-    if (path === '/live-streams/301/fixed-price/items') {
+    if (path === '/auctions/101/fixed-price/items') {
       await route.fulfill(json(success({ items: [fixedPriceItem] })));
       return;
     }

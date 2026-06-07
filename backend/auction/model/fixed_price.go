@@ -18,6 +18,7 @@ const (
 // FixedPriceItem 一口价商品模型
 type FixedPriceItem struct {
 	ID             int64            `json:"id" gorm:"primaryKey;autoIncrement"`
+	AuctionID      int64            `json:"auction_id" gorm:"index;not null;default:0"`
 	LiveStreamID   int64            `json:"live_stream_id" gorm:"index;not null"`
 	ProductID      int64            `json:"product_id" gorm:"not null"`
 	CreatorID      int64            `json:"creator_id" gorm:"index;not null"`

@@ -25,6 +25,7 @@ export type TriggerOtherSkyLampInput = {
 export type DemoMerchantAuctionMode = 'upcoming' | 'ongoing';
 
 export type CreateDemoFixedPriceItemInput = {
+  auctionId: number;
   liveStreamId: number;
 };
 
@@ -117,6 +118,7 @@ export function createDemoMerchantAuction(mode: DemoMerchantAuctionMode) {
 
 export function createDemoFixedPriceItem(input: CreateDemoFixedPriceItemInput) {
   return postDemo('/merchant/fixed-price-items', {
+    auction_id: input.auctionId,
     live_stream_id: input.liveStreamId,
   });
 }

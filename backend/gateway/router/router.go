@@ -104,6 +104,8 @@ func RegisterRoutes(h *server.Hertz, cfg *config.Config, gbClient *growthbook.Cl
 	// 抢购 / 查询我是否已购需要登录；X-Idempotency-Key 由 proxy 透传给下游。
 	authGroup.POST("/fixed-price/items/:id/purchase", auctionProxy.Forward)
 	authGroup.GET("/fixed-price/items/:id/my-purchase", auctionProxy.Forward)
+	// 竞拍场次一口价列表公开访问，H5 直播间按 auction_id 隔离同直播间的不同场次。
+	v1.GET("/auctions/:id/fixed-price/items", auctionProxy.Forward)
 	// 直播间一口价列表公开访问。
 	v1.GET("/live-streams/:id/fixed-price/items", auctionProxy.Forward)
 	// 管理端需要查看售罄/下架记录，必须走受保护的全状态列表。

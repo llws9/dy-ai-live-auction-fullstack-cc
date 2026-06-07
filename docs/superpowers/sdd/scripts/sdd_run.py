@@ -23,6 +23,7 @@ LABELS = {
     "tasks": ("tasks：", "tasks:", "task：", "task:", "任务：", "任务:"),
     "state": ("state：", "state:"),
     "scope": ("scope：", "scope:", "范围：", "范围:"),
+    "target_branch": ("target：", "target:", "target branch：", "target branch:", "目标分支：", "目标分支:"),
 }
 
 
@@ -98,6 +99,7 @@ def parse_user_input(raw: str) -> dict[str, str | None | bool]:
         "tasks": extract_labeled(raw, LABELS["tasks"]),
         "state": extract_labeled(raw, LABELS["state"]),
         "scope": extract_labeled(raw, LABELS["scope"]),
+        "target_branch": extract_labeled(raw, LABELS["target_branch"]),
         "mode": "subagent-driven",
         "resume": has_resume_intent(raw),
     }
@@ -306,6 +308,12 @@ def input_doc_row(doc_type: str, path: str | None, required: str = "yes") -> str
     return f"| {doc_type} | `{path or '-'}` | {required} | {loaded} |"
 
 
+def md_cell(value: str | None) -> str:
+    if value is None:
+        return "-"
+    return value.replace("|", "\\|").replace("\n", " ").strip() or "-"
+
+
 def build_state(
     *,
     repo_root: Path,
@@ -316,9 +324,13 @@ def build_state(
     mode: str,
     branch: str,
     worktree: str,
+    target_branch: str,
 ) -> str:
     now = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
     today = dt.date.today().isoformat()
+    base_branch = target_branch
+    base_commit = run_git(repo_root, ["rev-parse", "HEAD"], "unknown")
+    dirty = "yes" if run_git(repo_root, ["status", "--short"], "") else "no"
     task_items = filter_tasks_by_scope(read_tasks(repo_root / tasks), scope)
     if not task_items:
         task_items = [("T001", "Imported execution task", False)]
@@ -330,11 +342,11 @@ def build_state(
         return "done" if done else "pending"
 
     task_rows = "\n".join(
-        f"| `{task_id}` | `{title}` | `{status_for(done)}` | `unassigned` | `W1` | `-` | `{scope or 'full plan'}` | `from tasks` |"
+        f"| `{task_id}` | `{md_cell(title)}` | `{status_for(done)}` | `unassigned` | `W1` | `-` | `{md_cell(scope or 'full plan')}` | `TBD by main agent before dispatch` | `TBD by main agent before dispatch` | `TBD before implementation` | `none` |"
         for task_id, title, done in task_items
     )
     record_blocks = "\n\n".join(
-        f"""### {task_id} - `{title}`
+        f"""### {task_id} - `{md_cell(title)}`
 
 | Key | Value |
 | --- | --- |
@@ -344,6 +356,8 @@ def build_state(
 | Completed At | `{'recovered' if done else '-'}` |
 | Branch | `{branch}` |
 | Worktree | `{worktree}` |
+| Base Commit | `{base_commit}` |
+| Target Branch | `{target_branch}` |
 | Depends On | `-` |
 | Parallel Group | `W1` |
 
@@ -353,11 +367,60 @@ def build_state(
 - Green: implement the minimum change that makes the test pass.
 - Verify: run targeted and affected regression checks.
 
+**Write Set**
+
+- `TBD by main agent before dispatch`
+
+**Read Set**
+
+- `TBD by main agent before dispatch`
+
+**Scope Expansion Requests**
+
+| Time | Requested Files | Reason | Decision |
+| --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` |
+
+**Regression Sentinels**
+
+- Automated sentinel: `TBD before implementation`
+- Manual fallback: `TBD if automation is impossible`
+- Rollback behavior caught: `TBD`
+
 **Verification Evidence**
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
 | `not_run` | `TDD Red -> Green -> Verify evidence` | `not_run` | `{status_for(done)}` |
+
+**Runtime Source Evidence**
+
+| Service | Branch | Worktree | Commit | Dirty | Command | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` | `-` | `-` | `-` |
+
+**Modified Files**
+
+- `-`
+
+**Integration Check**
+
+- Target branch: `{target_branch}`
+- Branch relationship: `TBD before integration`
+- Diff reviewed: `TBD before integration`
+- Overlapping write-set tasks serialized: `TBD`
+
+**Commits**
+
+- `not_committed`
+
+**Review Notes**
+
+- `-`
+
+**Risks / Blockers**
+
+- `-`
 
 **Handoff**
 
@@ -380,7 +443,10 @@ def build_state(
 | Mode | `{mode}` |
 | Branch | `{branch}` |
 | Worktree | `{worktree}` |
-| Base Branch | `main` |
+| Base Branch | `{base_branch}` |
+| Base Commit | `{base_commit}` |
+| Target Branch | `{target_branch}` |
+| Worktree Dirty | `{dirty}` |
 | Started At | `{now}` |
 | Owner | `main-agent` |
 | Status | `active` |
@@ -390,6 +456,8 @@ def build_state(
 | Type | Path | Required | Loaded |
 | --- | --- | --- | --- |
 {input_doc_row("Agent Rules", "AGENTS.md")}
+{input_doc_row("Constitution", "docs/CONSTITUTION.md")}
+{input_doc_row("Coding Standards", "docs/CODING.md")}
 {input_doc_row("SDD Runbook", "docs/superpowers/sdd/RUNBOOK.md")}
 {input_doc_row("State Template", "docs/superpowers/sdd/state-template.md")}
 {input_doc_row("Plan", plan)}
@@ -407,10 +475,31 @@ def build_state(
 | Pending | `{pending_count}` |
 | Last Updated | `{now}` |
 
+## Status Legend
+
+| Status | Meaning |
+| --- | --- |
+| `pending` | 尚未派发 |
+| `assigned` | 已派发，subagent 尚未开始 |
+| `in_progress` | 正在实现 |
+| `verifying` | 正在测试或构建验证 |
+| `review` | 等待主 agent 复核 |
+| `changes_requested` | 复核要求修改 |
+| `blocked` | 被外部条件或设计问题阻塞 |
+| `done` | 已完成并通过验证 |
+
+## Runtime Sources
+
+> 记录本次验证实际使用的服务或 dev server。浏览器看到的行为只认这里记录的代码来源；如果来源不一致，验证无效。
+
+| Service | Command | Branch | Worktree | Commit | Dirty | Ports | Owner |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` | `-` | `-` | `-` | `-` |
+
 ## Task Matrix
 
-| Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Allowed Files |
-| --- | --- | --- | --- | --- | --- | --- | --- |
+| Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Write Set | Read Set | Regression Sentinels | Runtime Services |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 {task_rows}
 
 ## Wave Plan
@@ -423,12 +512,45 @@ def build_state(
 
 {record_blocks}
 
+## Cross-Task Decisions
+
+| Time | Decision | Reason | Impact | Owner |
+| --- | --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` | `-` |
+
+## API Contract Changes
+
+| API / Field | Change | Frontend Impact | Backend Impact | Docs Updated |
+| --- | --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` | `no` |
+
+## Test Commands
+
+| Area | Command | Required | Last Result | Notes |
+| --- | --- | --- | --- | --- |
+| Backend Gateway | `cd backend/gateway && go test ./...` | no | `not_run` | `-` |
+| Backend Product | `cd backend/product && go test ./...` | no | `not_run` | `-` |
+| Backend Auction | `cd backend/auction && go test ./...` | no | `not_run` | `-` |
+| Frontend Admin | `cd frontend/admin && npm test -- --runInBand` | no | `not_run` | `-` |
+| Frontend Admin Build | `cd frontend/admin && npm run build` | no | `not_run` | `-` |
+| Frontend H5 | `cd frontend/h5 && npm test -- --runInBand` | no | `not_run` | `-` |
+| Frontend H5 Build | `cd frontend/h5 && npm run build` | no | `not_run` | `-` |
+
 ## Final Review Checklist
 
-- [ ] State file was created before subagent dispatch.
-- [ ] Every implementation task records TDD Red -> Green -> Verify evidence.
-- [ ] Every completed subagent response starts with `当前分支/worktree：`.
-- [ ] Verification commands and results are recorded.
+- [ ] 所有任务状态已更新。
+- [ ] 没有未解释的 `blocked` 任务。
+- [ ] 每个 `done` 任务都有测试或替代验证证据。
+- [ ] 每个实现型任务都有 write set / read set。
+- [ ] 所有 write set 重叠的任务已串行执行并记录顺序。
+- [ ] 每个 bugfix / UI / 接口契约 / 演示链路修复都有 regression sentinel 或替代验证。
+- [ ] 本地服务或 dev server 的 branch/worktree/commit/dirty status 已记录。
+- [ ] 旧分支合入前已做 diff review，未整分支覆盖当前目标分支。
+- [ ] 冲突解决后已证明 main 基线行为和任务分支有效优化都被保留、替代或明确废弃。
+- [ ] 每个实现型任务都遵循 TDD 或写明无法 TDD 的原因。
+- [ ] API 契约变更已同步文档。
+- [ ] 最终回答第一句展示当前分支/worktree。
+- [ ] 用户已获得下一步选项：继续下一波、发起 review、提交 PR、归档。
 
 ## Final Handoff
 
@@ -449,6 +571,7 @@ def ensure_state(args: argparse.Namespace) -> dict[str, object]:
     tasks = normalize_path(args.tasks) or parsed["tasks"]
     state = normalize_path(args.state) or parsed["state"]
     scope = normalize_path(args.scope) or parsed["scope"]
+    target_branch = normalize_path(args.target_branch) or parsed["target_branch"] or "main"
     mode = normalize_path(args.mode) or parsed["mode"] or "subagent-driven"
     resume = bool(args.resume or parsed["resume"])
     inferred = False
@@ -471,7 +594,7 @@ def ensure_state(args: argparse.Namespace) -> dict[str, object]:
         state_path = Path(state)
         state_rel = relative_or_original(repo_root, str(state_path))
         absolute_state = state_path if state_path.is_absolute() else repo_root / state_path
-        if absolute_state.exists():
+        if absolute_state.exists() and not args.force:
             recovered = recover_inputs_from_state(absolute_state)
             plan = plan or recovered["plan"]
             tasks = tasks or recovered["tasks"]
@@ -484,6 +607,7 @@ def ensure_state(args: argparse.Namespace) -> dict[str, object]:
                 "plan": relative_or_original(repo_root, str(plan)) if plan else None,
                 "tasks": relative_or_original(repo_root, str(tasks)) if tasks else None,
                 "scope": scope,
+                "target_branch": target_branch,
                 "mode": mode,
                 "resume": True,
                 "inferred": inferred,
@@ -523,6 +647,7 @@ def ensure_state(args: argparse.Namespace) -> dict[str, object]:
                     "plan": plan_rel,
                     "tasks": tasks_rel,
                     "scope": scope,
+                    "target_branch": target_branch,
                     "mode": mode,
                     "hint": "Pass state:<path> to resume intentionally, choose another topic/state path, or rerun with --force.",
                 }
@@ -535,6 +660,7 @@ def ensure_state(args: argparse.Namespace) -> dict[str, object]:
             "plan": plan_rel,
             "tasks": tasks_rel,
             "scope": scope,
+            "target_branch": target_branch,
             "mode": mode,
             "resume": resume,
             "inferred": inferred,
@@ -550,6 +676,7 @@ def ensure_state(args: argparse.Namespace) -> dict[str, object]:
         mode=str(mode),
         branch=branch,
         worktree=worktree,
+        target_branch=str(target_branch),
     )
     absolute_state.write_text(content, encoding="utf-8")
     return {
@@ -560,6 +687,7 @@ def ensure_state(args: argparse.Namespace) -> dict[str, object]:
         "plan": plan_rel,
         "tasks": tasks_rel,
         "scope": scope,
+        "target_branch": target_branch,
         "mode": mode,
         "resume": resume,
         "inferred": inferred,
@@ -575,6 +703,7 @@ def main() -> int:
     parser.add_argument("--tasks")
     parser.add_argument("--state")
     parser.add_argument("--scope")
+    parser.add_argument("--target-branch", default=None)
     parser.add_argument("--mode")
     parser.add_argument("--topic")
     parser.add_argument("--resume", action="store_true")

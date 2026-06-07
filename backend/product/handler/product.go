@@ -183,10 +183,19 @@ func (h *ProductHandler) AdminList(ctx context.Context, c *app.RequestContext) {
 	if !ok {
 		return
 	}
-	status := parseProductStatusQuery(c)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	displayStatus, ok := parseProductDisplayStatusQuery(c)
+	if !ok {
+		return
+	}
 
+	if displayStatus != "" {
+		h.adminListByDisplayStatus(ctx, c, actor, displayStatus, page, pageSize)
+		return
+	}
+
+	status := parseProductStatusQuery(c)
 	products, total, err := h.productService.ListAdminProducts(ctx, actor.Role, actor.UserID, status, page, pageSize)
 	if err != nil {
 		c.JSON(500, map[string]interface{}{"code": 500, "message": "获取商品列表失败: " + err.Error()})
@@ -201,6 +210,30 @@ func (h *ProductHandler) AdminList(ctx context.Context, c *app.RequestContext) {
 		"message": "success",
 		"data": map[string]interface{}{
 			"list":      items,
+			"total":     total,
+			"page":      page,
+			"page_size": pageSize,
+		},
+	})
+}
+
+func (h *ProductHandler) adminListByDisplayStatus(ctx context.Context, c *app.RequestContext, actor AdminActor, displayStatus string, page, pageSize int) {
+	page, pageSize = normalizeAdminListPagination(page, pageSize)
+	products, err := h.productService.ListAllAdminProducts(ctx, actor.Role, actor.UserID)
+	if err != nil {
+		c.JSON(500, map[string]interface{}{"code": 500, "message": "获取商品列表失败: " + err.Error()})
+		return
+	}
+
+	states := h.loadProductAuctionStates(ctx, products)
+	items := filterAdminProductItemsByDisplayStatus(buildAdminProductItems(products, states), displayStatus)
+	pagedItems, total := paginateAdminProductItems(items, page, pageSize)
+
+	c.JSON(200, map[string]interface{}{
+		"code":    200,
+		"message": "success",
+		"data": map[string]interface{}{
+			"list":      pagedItems,
 			"total":     total,
 			"page":      page,
 			"page_size": pageSize,
@@ -260,6 +293,39 @@ func buildAdminProductItems(products []model.Product, states map[int64]client.Pr
 		items = append(items, item)
 	}
 	return items
+}
+
+func filterAdminProductItemsByDisplayStatus(items []adminProductItem, displayStatus string) []adminProductItem {
+	filtered := make([]adminProductItem, 0, len(items))
+	for _, item := range items {
+		if item.DisplayStatus == displayStatus {
+			filtered = append(filtered, item)
+		}
+	}
+	return filtered
+}
+
+func paginateAdminProductItems(items []adminProductItem, page, pageSize int) ([]adminProductItem, int64) {
+	total := int64(len(items))
+	start := (page - 1) * pageSize
+	if start >= len(items) {
+		return []adminProductItem{}, total
+	}
+	end := start + pageSize
+	if end > len(items) {
+		end = len(items)
+	}
+	return items[start:end], total
+}
+
+func normalizeAdminListPagination(page, pageSize int) (int, int) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 || pageSize > 100 {
+		pageSize = 20
+	}
+	return page, pageSize
 }
 
 func (h *ProductHandler) AdminGet(ctx context.Context, c *app.RequestContext) {
@@ -354,6 +420,20 @@ func parseProductStatusQuery(c *app.RequestContext) *model.ProductStatus {
 	}
 	status := model.ProductStatus(s)
 	return &status
+}
+
+func parseProductDisplayStatusQuery(c *app.RequestContext) (string, bool) {
+	displayStatus := c.Query("display_status")
+	if displayStatus == "" {
+		return "", true
+	}
+	switch displayStatus {
+	case "auctioning", "sold", "unsold", "schedulable", "draft", "unpublished", "unknown":
+		return displayStatus, true
+	default:
+		c.JSON(400, map[string]interface{}{"code": 400, "message": "无效的商品展示状态"})
+		return "", false
+	}
 }
 
 func parseProductIDParam(c *app.RequestContext) (int64, bool) {

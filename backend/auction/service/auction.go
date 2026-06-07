@@ -19,6 +19,7 @@ var (
 	ErrProductNotSchedulable          = errors.New("商品未进入竞拍池")
 	ErrAuctionRuleNotBound            = errors.New("规则模板不存在或不属于当前商家")
 	ErrActiveAuctionExists            = errors.New("该商品已有待开始或进行中的竞拍场次")
+	ErrActiveLiveStreamAuctionExists  = errors.New("当前直播间已有待开始或进行中的竞拍场次")
 	ErrSoldProductCannotBeReauctioned = errors.New("已成交商品不能再次创建竞拍")
 )
 
@@ -123,6 +124,13 @@ func (s *AuctionService) CreateAuction(ctx context.Context, req *CreateAuctionRe
 	if active != nil {
 		return nil, ErrActiveAuctionExists
 	}
+	activeInLiveStream, err := s.auctionDAO.GetActiveByLiveStreamID(ctx, req.LiveStreamID)
+	if err != nil {
+		return nil, err
+	}
+	if activeInLiveStream != nil {
+		return nil, ErrActiveLiveStreamAuctionExists
+	}
 
 	latest, err := s.auctionDAO.GetLatestTerminalByProductID(ctx, req.ProductID)
 	if err != nil {
@@ -146,6 +154,9 @@ func (s *AuctionService) CreateAuction(ctx context.Context, req *CreateAuctionRe
 	}
 
 	if err := s.auctionDAO.Create(ctx, auction); err != nil {
+		if isActiveLiveStreamUniqueConflict(err) {
+			return nil, ErrActiveLiveStreamAuctionExists
+		}
 		if isActiveAuctionUniqueConflict(err) {
 			return nil, ErrActiveAuctionExists
 		}
@@ -160,6 +171,13 @@ func isActiveAuctionUniqueConflict(err error) bool {
 		return false
 	}
 	return strings.Contains(err.Error(), "uk_active_product")
+}
+
+func isActiveLiveStreamUniqueConflict(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "uk_active_live_stream")
 }
 
 // GetAuction 获取竞拍详情

@@ -142,6 +142,11 @@ func TestMerchantDemoAuctionCreatesFreshProductsForRepeatedOngoingClicks(t *test
 	if len(fake.publishedProductIDs) != 2 {
 		t.Fatalf("expected two published products, got %d", len(fake.publishedProductIDs))
 	}
+	for _, req := range fake.productReqs {
+		if req.Status != 0 {
+			t.Fatalf("merchant auction demo must create draft products before explicit publish, status=%d", req.Status)
+		}
+	}
 	if fake.auctionReqs[0].ProductID == fake.auctionReqs[1].ProductID {
 		t.Fatalf("repeated clicks must create different demo products, got product_id=%d", fake.auctionReqs[0].ProductID)
 	}
@@ -150,6 +155,12 @@ func TestMerchantDemoAuctionCreatesFreshProductsForRepeatedOngoingClicks(t *test
 	}
 	if fake.waitStartedCalls != 2 {
 		t.Fatalf("ongoing mode should wait for auction started twice, got %d", fake.waitStartedCalls)
+	}
+	if len(fake.startedLiveStreamIDs) != 2 {
+		t.Fatalf("ongoing mode should start live streams twice, got %d", len(fake.startedLiveStreamIDs))
+	}
+	if fake.startedLiveStreamIDs[0] != fake.auctionReqs[0].LiveStreamID || fake.startedLiveStreamIDs[1] != fake.auctionReqs[1].LiveStreamID {
+		t.Fatalf("ongoing demo must start the auction live streams, started=%v auctionReqs=%v", fake.startedLiveStreamIDs, fake.auctionReqs)
 	}
 	if len(fake.ruleReqs) != 2 {
 		t.Fatalf("expected two auction rule requests, got %d", len(fake.ruleReqs))
@@ -177,7 +188,7 @@ func TestMerchantDemoFixedPriceUsesRequestedLiveStream(t *testing.T) {
 	const secret = "demo-secret"
 	fake := &fakeDemoAuctionClient{}
 	h := NewDemoHandler(fake, nil, secret)
-	c := newDemoRequestContext(t, secret, `{"live_stream_id":880301}`)
+	c := newDemoRequestContext(t, secret, `{"auction_id":770501,"live_stream_id":880301}`)
 
 	h.PostMerchantFixedPriceItem(context.Background(), c)
 
@@ -190,11 +201,17 @@ func TestMerchantDemoFixedPriceUsesRequestedLiveStream(t *testing.T) {
 	if fake.fixedReqs[0].LiveStreamID != 880301 {
 		t.Fatalf("live_stream_id=%d want 880301", fake.fixedReqs[0].LiveStreamID)
 	}
+	if fake.fixedReqs[0].AuctionID != 770501 {
+		t.Fatalf("auction_id=%d want 770501", fake.fixedReqs[0].AuctionID)
+	}
 	if fake.fixedReqs[0].ProductID == 0 {
 		t.Fatalf("fixed price item should use newly created demo product")
 	}
 	if len(fake.publishedProductIDs) != 1 || fake.publishedProductIDs[0] != fake.fixedReqs[0].ProductID {
 		t.Fatalf("fixed price demo product must be published before listing, published=%v fixedReq=%+v", fake.publishedProductIDs, fake.fixedReqs[0])
+	}
+	if len(fake.productReqs) != 1 || fake.productReqs[0].Status != 0 {
+		t.Fatalf("fixed price demo must create a draft product before explicit publish, productReqs=%+v", fake.productReqs)
 	}
 }
 
@@ -309,18 +326,19 @@ func newDemoRequestContext(t *testing.T, secret string, body string) *app.Reques
 }
 
 type fakeDemoAuctionClient struct {
-	nextProductID       int64
-	nextLiveStreamID    int64
-	nextAuctionID       int64
-	nextFixedID         int64
-	waitStartedCalls    int
-	productReqs         []auctioncli.CreateProductReq
-	publishedProductIDs []int64
-	ruleReqs            []auctioncli.CreateAuctionRuleReq
-	auctionReqs         []auctioncli.CreateAuctionReq
-	fixedReqs           []auctioncli.CreateFixedPriceItemReq
-	skyLampUserID       int64
-	skyLampAuctionID    int64
+	nextProductID        int64
+	nextLiveStreamID     int64
+	nextAuctionID        int64
+	nextFixedID          int64
+	waitStartedCalls     int
+	startedLiveStreamIDs []int64
+	productReqs          []auctioncli.CreateProductReq
+	publishedProductIDs  []int64
+	ruleReqs             []auctioncli.CreateAuctionRuleReq
+	auctionReqs          []auctioncli.CreateAuctionReq
+	fixedReqs            []auctioncli.CreateFixedPriceItemReq
+	skyLampUserID        int64
+	skyLampAuctionID     int64
 }
 
 func (f *fakeDemoAuctionClient) nextID(counter *int64, base int64) int64 {
@@ -366,6 +384,11 @@ func (f *fakeDemoAuctionClient) CreateLiveStream(_ context.Context, _ auctioncli
 func (f *fakeDemoAuctionClient) CreateAuctionAs(_ context.Context, _ auctioncli.Actor, req auctioncli.CreateAuctionReq) auctioncli.StepResult {
 	f.auctionReqs = append(f.auctionReqs, req)
 	return f.ok("create_auction", f.nextID(&f.nextAuctionID, 3001))
+}
+
+func (f *fakeDemoAuctionClient) StartLive(_ context.Context, _ auctioncli.Actor, liveStreamID int64) auctioncli.StepResult {
+	f.startedLiveStreamIDs = append(f.startedLiveStreamIDs, liveStreamID)
+	return f.ok("start_live", liveStreamID)
 }
 
 func (f *fakeDemoAuctionClient) WaitAuctionStarted(_ context.Context, auctionID int64, _, _ time.Duration) auctioncli.StepResult {

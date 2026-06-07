@@ -46,6 +46,28 @@ func (f *fakeProductChecker) Exists(_ context.Context, productID int64) (bool, e
 	return true, nil
 }
 
+type fakeAuctionChecker struct {
+	auctions map[int64]*model.Auction
+	missing  map[int64]bool
+}
+
+func (f *fakeAuctionChecker) GetByID(_ context.Context, id int64) (*model.Auction, error) {
+	if f == nil || f.missing[id] {
+		return nil, gorm.ErrRecordNotFound
+	}
+	if auction, ok := f.auctions[id]; ok {
+		return auction, nil
+	}
+	liveStreamID := int64(1001)
+	creatorID := int64(100)
+	return &model.Auction{
+		ID:           id,
+		LiveStreamID: &liveStreamID,
+		CreatorID:    &creatorID,
+		Status:       model.AuctionStatusOngoing,
+	}, nil
+}
+
 // fakeClock 手动推进的时钟，用于驱动异步清理。
 type fakeClock struct {
 	mu      sync.Mutex
@@ -156,6 +178,7 @@ func setupFixedPriceServiceWithClock(t *testing.T, clk Clock) *FixedPriceService
 		NewIdemStore(rdb),
 		&fakeStreamOwner{owners: nil},
 		&fakeProductChecker{},
+		&fakeAuctionChecker{},
 		clk,
 		nil,
 	)
@@ -175,6 +198,7 @@ func setupFixedPriceServiceWithStream(t *testing.T, liveStreamID, ownerUserID in
 		NewIdemStore(rdb),
 		&fakeStreamOwner{owners: map[int64]int64{liveStreamID: ownerUserID}},
 		&fakeProductChecker{},
+		&fakeAuctionChecker{},
 		nil,
 		nil,
 	)
@@ -184,7 +208,7 @@ func setupFixedPriceServiceWithStream(t *testing.T, liveStreamID, ownerUserID in
 func setupItem(t *testing.T, svc *FixedPriceService, stock int, price decimal.Decimal) *model.FixedPriceItem {
 	t.Helper()
 	item, err := svc.ListItem(context.Background(), ListItemReq{
-		LiveStreamID: 1001, ProductID: 5001, CreatorID: 100,
+		AuctionID: 7001, LiveStreamID: 1001, ProductID: 5001, CreatorID: 100,
 		Price: price, TotalStock: stock, MaxPerUser: 1,
 	})
 	require.NoError(t, err)

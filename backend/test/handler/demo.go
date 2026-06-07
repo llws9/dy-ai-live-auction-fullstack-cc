@@ -31,6 +31,7 @@ type demoAuctionClient interface {
 	PublishProductAs(ctx context.Context, actor auctioncli.Actor, productID int64) auctioncli.StepResult
 	CreateAuctionRule(ctx context.Context, actor auctioncli.Actor, productID int64, req auctioncli.CreateAuctionRuleReq) auctioncli.StepResult
 	CreateLiveStream(ctx context.Context, actor auctioncli.Actor, req auctioncli.CreateLiveStreamReq) auctioncli.StepResult
+	StartLive(ctx context.Context, actor auctioncli.Actor, liveStreamID int64) auctioncli.StepResult
 	CreateAuctionAs(ctx context.Context, actor auctioncli.Actor, req auctioncli.CreateAuctionReq) auctioncli.StepResult
 	WaitAuctionStarted(ctx context.Context, auctionID int64, interval, timeout time.Duration) auctioncli.StepResult
 	CreateFixedPriceItem(ctx context.Context, actor auctioncli.Actor, req auctioncli.CreateFixedPriceItemReq) auctioncli.StepResult
@@ -73,6 +74,7 @@ type merchantAuctionRequest struct {
 }
 
 type merchantFixedPriceRequest struct {
+	AuctionID    int64 `json:"auction_id"`
 	LiveStreamID int64 `json:"live_stream_id"`
 }
 
@@ -223,6 +225,13 @@ func validateMerchantAuctionMode(mode string) error {
 func validateDemoLiveStreamID(liveStreamID int64) error {
 	if liveStreamID <= 0 {
 		return fmt.Errorf("live_stream_id is required")
+	}
+	return nil
+}
+
+func validateDemoAuctionID(auctionID int64) error {
+	if auctionID <= 0 {
+		return fmt.Errorf("auction_id is required")
 	}
 	return nil
 }
@@ -447,7 +456,7 @@ func (h *DemoHandler) PostMerchantAuction(ctx context.Context, c *app.RequestCon
 	product := h.bizCli.CreateProductAs(ctx, actor, auctioncli.CreateProductReq{
 		Name:        nextDemoProductName(req.Mode),
 		Description: "Demo Console merchant auction fixture",
-		Status:      1,
+		Status:      0,
 	})
 	if !product.OK || product.RefID <= 0 {
 		writeDemoStepError(c, product)
@@ -501,6 +510,11 @@ func (h *DemoHandler) PostMerchantAuction(ctx context.Context, c *app.RequestCon
 		return
 	}
 	if req.Mode == "ongoing" {
+		liveStarted := h.bizCli.StartLive(ctx, actor, live.RefID)
+		if !liveStarted.OK {
+			writeDemoStepError(c, liveStarted)
+			return
+		}
 		started := h.bizCli.WaitAuctionStarted(ctx, auction.RefID, 100*time.Millisecond, 5*time.Second)
 		if !started.OK {
 			writeDemoStepError(c, started)
@@ -538,12 +552,16 @@ func (h *DemoHandler) PostMerchantFixedPriceItem(ctx context.Context, c *app.Req
 		c.JSON(400, map[string]any{"error": err.Error()})
 		return
 	}
+	if err := validateDemoAuctionID(req.AuctionID); err != nil {
+		c.JSON(400, map[string]any{"error": err.Error()})
+		return
+	}
 
 	actor := demoMerchantActor()
 	product := h.bizCli.CreateProductAs(ctx, actor, auctioncli.CreateProductReq{
 		Name:        nextDemoProductName("fixed_price"),
 		Description: "Demo Console fixed-price fixture",
-		Status:      1,
+		Status:      0,
 	})
 	if !product.OK || product.RefID <= 0 {
 		writeDemoStepError(c, product)
@@ -558,6 +576,7 @@ func (h *DemoHandler) PostMerchantFixedPriceItem(ctx context.Context, c *app.Req
 	const price = "99.00"
 	const stock int64 = 10
 	item := h.bizCli.CreateFixedPriceItem(ctx, actor, auctioncli.CreateFixedPriceItemReq{
+		AuctionID:    req.AuctionID,
 		LiveStreamID: req.LiveStreamID,
 		ProductID:    product.RefID,
 		Price:        price,

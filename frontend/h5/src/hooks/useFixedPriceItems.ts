@@ -88,18 +88,19 @@ export function reduceItems(state: FixedPriceItem[], action: FixedPriceAction): 
   }
 }
 
-export function useFixedPriceItems(liveStreamId: number) {
+export function useFixedPriceItems(auctionId: number, liveStreamId: number) {
   const [items, dispatch] = useReducer(reduceItems, [] as FixedPriceItem[]);
   const [socket, setSocket] = useState<WebSocketService | null>(null);
 
   useEffect(() => {
-    if (liveStreamId <= 0) {
+    if (auctionId <= 0) {
+      dispatch({ type: 'init', payload: { items: [] } });
       return undefined;
     }
 
     let active = true;
 
-    fetchItems(liveStreamId)
+    fetchItems(auctionId)
       .then((response) => {
         if (active) {
           dispatch({ type: 'init', payload: { items: response.items } });
@@ -114,7 +115,7 @@ export function useFixedPriceItems(liveStreamId: number) {
     return () => {
       active = false;
     };
-  }, [liveStreamId]);
+  }, [auctionId]);
 
   useEffect(() => {
     if (liveStreamId <= 0) {

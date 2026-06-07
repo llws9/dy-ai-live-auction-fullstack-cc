@@ -46,6 +46,7 @@ func setupFailFastService(t *testing.T) (*FixedPriceService, *miniredis.Miniredi
 		NewIdemStore(rdb),
 		&fakeStreamOwner{owners: nil},
 		&fakeProductChecker{},
+		&fakeAuctionChecker{},
 		nil,
 		nil,
 	)
@@ -86,6 +87,7 @@ func TestListItem_RedisInitFailed_DoesNotLeaveOnSaleItem(t *testing.T) {
 
 	mr.Close()
 	_, err := svc.ListItem(ctx, ListItemReq{
+		AuctionID:    7001,
 		LiveStreamID: 1001,
 		ProductID:    5001,
 		CreatorID:    100,
