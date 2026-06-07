@@ -214,6 +214,8 @@ func main() {
 	userAddressHandler := handler.NewUserAddressHandler(userAddressDAO)
 	internalUserHandler := handler.NewInternalUserHandler(userDAO)
 	currentAuctionHandler := handler.NewInternalCurrentAuctionHandler(handler.NewCurrentAuctionDAOFetcher(auctionDAO))
+	nextAuctionHandler := handler.NewInternalNextAuctionHandler(handler.NewNextAuctionDAOFetcher(auctionDAO))
+	recentDealsHandler := handler.NewInternalRecentDealsHandler(handler.NewRecentDealsDAOFetcher(auctionDAO), 3)
 	internalDemoAuctionHandler := handler.NewInternalDemoAuctionHandler(auctionDAO, hub)
 	productAuctionsHandler := handler.NewInternalProductAuctionsHandler(auctionDAO)
 	auctionCountHandler := handler.NewInternalAuctionCountHandler(auctionDAO)
@@ -333,6 +335,8 @@ func main() {
 		internalDemoAuctionHandler,
 		productAuctionsHandler,
 		auctionCountHandler,
+		nextAuctionHandler,
+		recentDealsHandler,
 	)
 
 	// 注册 Prometheus metrics 端点
@@ -494,7 +498,7 @@ func registerRoutes(h *server.Hertz, internalAPIToken string, auctionHandler *ha
 	v1.POST("/users/me/addresses/:id/default", userAddressHandler.SetDefault)
 }
 
-func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, internalUserHandler *handler.InternalUserHandler, userBalanceHandler *handler.UserBalanceHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler, currentAuctionHandler *handler.InternalCurrentAuctionHandler, internalDemoAuctionHandler *handler.InternalDemoAuctionHandler, productAuctionsHandler *handler.InternalProductAuctionsHandler, auctionCountHandler *handler.InternalAuctionCountHandler) {
+func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, internalUserHandler *handler.InternalUserHandler, userBalanceHandler *handler.UserBalanceHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler, currentAuctionHandler *handler.InternalCurrentAuctionHandler, internalDemoAuctionHandler *handler.InternalDemoAuctionHandler, productAuctionsHandler *handler.InternalProductAuctionsHandler, auctionCountHandler *handler.InternalAuctionCountHandler, nextAuctionHandler *handler.InternalNextAuctionHandler, recentDealsHandler *handler.InternalRecentDealsHandler) {
 	internal := h.Group("/internal", internalAuth)
 	if internalUserHandler != nil {
 		internal.POST("/users/batch", internalUserHandler.BatchByIDs)
@@ -517,6 +521,12 @@ func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, inter
 	}
 	if auctionCountHandler != nil {
 		internal.POST("/auctions/count-by-live-streams", auctionCountHandler.Handle)
+	}
+	if nextAuctionHandler != nil {
+		internal.POST("/auctions/next-by-live-streams", nextAuctionHandler.Handle)
+	}
+	if recentDealsHandler != nil {
+		internal.POST("/auctions/recent-deals-by-live-streams", recentDealsHandler.Handle)
 	}
 }
 
