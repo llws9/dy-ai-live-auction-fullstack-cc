@@ -221,7 +221,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const [skyLampActive, setSkyLampActive] = useState(false);
   const [skyLampNotice, setSkyLampNotice] = useState<SkyLampNoticeState | null>(null);
   const [following, setFollowing] = useState(false);
-  const [followersCount, setFollowersCount] = useState(0);
+  const [, setFollowersCount] = useState(0);
   const [followingPending, setFollowingPending] = useState(false);
   const [connected, setConnected] = useState(false);
   const [toast, setToast] = useState('');
@@ -260,7 +260,6 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const hostName = liveStream?.host_name || liveStream?.creator_name || '拍卖师';
   const roomName = repairUtf8Mojibake(liveStream?.name) || '竞拍直播间';
   const productName = repairUtf8Mojibake(product?.name || auction?.product?.name) || '竞拍商品';
-  const productIntro = repairUtf8Mojibake(product?.description || auction?.product?.description || roomName);
   const liveCoverImage = productImage || liveStream?.cover_image || '';
   const hostAvatar = liveStream?.host_avatar || liveStream?.avatar || '';
   const hasEnded = auction?.status === 3 || hasReachedEndTime;
@@ -944,10 +943,32 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
               <p className={styles.hostName}>{hostName}</p>
               <p className={styles.viewerCount}>{(liveStream?.viewer_count ?? 0).toLocaleString()} 在线</p>
             </div>
+            <button
+              className={styles.followBtn}
+              disabled={followingPending}
+              onClick={handleFollow}
+              type="button"
+            >
+              {followingPending ? '处理中...' : following ? '已收藏' : '收藏'}
+            </button>
           </div>
-          <div className={styles.statusPill}>
-            <span className={isActive ? styles.liveDot : styles.statusDot} />
-            {getEffectiveStatusText(auction.status, hasReachedEndTime)}
+          <div className={styles.rightActions}>
+            <div className={styles.viewersRow} aria-label="在线人数">
+              <div className={styles.avatarsGroup} aria-hidden="true">
+                <span className={styles.viewerAvatar}>
+                  {hostAvatar ? <img src={hostAvatar} alt="" /> : hostName.slice(0, 1)}
+                </span>
+              </div>
+              <span className={styles.viewerCountPill}>{(liveStream?.viewer_count ?? 0).toLocaleString()}</span>
+              <Link className={styles.closeBtn} to="/" aria-label="退出直播间">×</Link>
+            </div>
+            <Link className={styles.productDetailBtn} to={`/detail?id=${auctionId}`}>
+              商品详情 ›
+            </Link>
+            <div className={styles.statusPill}>
+              <span className={isActive ? styles.liveDot : styles.statusDot} />
+              {getEffectiveStatusText(auction.status, hasReachedEndTime)}
+            </div>
           </div>
         </header>
       </div>
@@ -1025,20 +1046,6 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           <strong>{formatTimeLeft(timeLeft)}</strong>
           <em>{connected ? '实时同步中' : '实时连接中'}</em>
         </div>
-
-        <article className={styles.productCard}>
-          {productImage ? <img src={productImage} alt={productName} /> : <div className={styles.productFallback}>暂无图片</div>}
-          <div>
-            <h1>{productName}</h1>
-            <p>{productIntro}</p>
-            <div className={styles.followRow}>
-              <button className={styles.followButton} disabled={followingPending} onClick={handleFollow} type="button">
-                {followingPending ? '处理中...' : following ? '已收藏' : '收藏'}
-              </button>
-              <span>{followersCount.toLocaleString()} 人收藏</span>
-            </div>
-          </div>
-        </article>
 
         <section className={styles.rankingBlock}>
           <div className={styles.rankingGlow}></div>
