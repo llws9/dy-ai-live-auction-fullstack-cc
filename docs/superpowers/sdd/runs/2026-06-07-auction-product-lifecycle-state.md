@@ -699,3 +699,35 @@
 - `dadb81b0 feat(product): derive admin product auction status`
 - `8cff22a0 feat(admin): align product and auction lifecycle UI`
 - `20d3a4e5 test: document one-active-auction fixture constraint`
+
+## Final Review Amendment
+
+当前分支/worktree：feat/auction-product-lifecycle @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-auction-product-lifecycle
+
+**状态**
+
+- `changes_requested_fixed`
+
+**修复项**
+
+- `backend/test/client/auction.Client.CreateProductAs` 不再依赖 create payload 的 `status=1` 副作用；商家调用方请求 `Status: 1` 时，先创建 Draft，再显式调用 `/api/v1/products/:id/publish`。
+- Admin 创建竞拍场次的商品下拉框仅展示 `display_status === "schedulable"` 的商品，避免已成交、流拍和竞拍中商品进入候选池。
+- Admin 「竞拍中」tab 同时加载 `status=1` 和 `status=2`，覆盖延时竞拍。
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `cd backend/test && go test ./client/auction` | `PASS targeted SDK tests` | `PASS` | `pass` |
+| `cd frontend/admin && npm test -- --runInBand AuctionList.createAuction.test.tsx` | `PASS targeted Admin lifecycle tests` | `PASS: 1 suite / 5 tests` | `pass` |
+| `cd backend/test && go test ./...` | `PASS all test-service packages` | `PASS` | `pass` |
+| `cd frontend/admin && npm test -- --runInBand` | `PASS all Admin Jest suites` | `PASS: 27 suites / 114 tests` | `pass` |
+
+**Modified Files**
+
+- `backend/test/client/auction/client.go`
+- `backend/test/client/auction/client_test.go`
+- `backend/test/scenario/antisnipe/factory_test.go`
+- `frontend/admin/src/pages-new/AuctionList.tsx`
+- `frontend/admin/src/pages-new/__tests__/AuctionList.createAuction.test.tsx`
+- `docs/superpowers/sdd/runs/2026-06-07-auction-product-lifecycle-state.md`

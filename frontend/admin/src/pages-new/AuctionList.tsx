@@ -32,7 +32,7 @@ export default function AuctionList() {
   const { user } = useAuth()
   const [auctions, setAuctions] = React.useState<any[]>([])
   const [loading, setLoading] = React.useState(true)
-  const [statusFilter, setStatusFilter] = React.useState<number | undefined>(undefined)
+  const [statusFilter, setStatusFilter] = React.useState<number | number[] | undefined>(undefined)
   const [activeTab, setActiveTab] = React.useState("all")
   const [searchTerm, setSearchTerm] = React.useState("")
   const [page, setPage] = React.useState(1)
@@ -62,12 +62,20 @@ export default function AuctionList() {
   const fetchAuctions = React.useCallback(async () => {
     setLoading(true)
     try {
-      const response = await auctionApi.list({
-        status: statusFilter,
+      const baseParams = {
         search: searchTerm || undefined,
         page,
         page_size: pageSize,
-      })
+      }
+      const response = Array.isArray(statusFilter)
+        ? await Promise.all(statusFilter.map((status) => auctionApi.list({ ...baseParams, status }))).then((items) => ({
+          list: items.flatMap((item) => item.list || []),
+          total: items.reduce((sum, item) => sum + (item.total || 0), 0),
+        }))
+        : await auctionApi.list({
+          ...baseParams,
+          status: statusFilter,
+        })
       setAuctions(response.list || [])
       setTotal(response.total || 0)
     } catch (e) {
@@ -102,7 +110,7 @@ export default function AuctionList() {
     if (value === 'all') {
       setStatusFilter(undefined)
     } else {
-      const statusValue = { active: 1, sold: 3, unsold: 3, cancelled: 4 }[value as "active" | "sold" | "unsold" | "cancelled"]
+      const statusValue = { active: [1, 2], sold: 3, unsold: 3, cancelled: 4 }[value as "active" | "sold" | "unsold" | "cancelled"]
       setStatusFilter(statusValue)
     }
     setPage(1)
@@ -117,7 +125,7 @@ export default function AuctionList() {
         productApi.list({ status: 1, page: 1, page_size: 100 }),
         auctionRuleTemplateApi.list({ page: 1, page_size: 100 }),
       ])
-      const nextProducts = productResponse.list || []
+      const nextProducts = (productResponse.list || []).filter((product) => product.display_status === "schedulable")
       const nextTemplates = templateResponse.list || []
       setProducts(nextProducts)
       setTemplates(nextTemplates)
@@ -186,6 +194,7 @@ export default function AuctionList() {
   const visibleAuctions = React.useMemo(() => {
     if (activeTab === "sold") return filteredAuctions.filter((auction) => auction.status === 3 && !!auction.winner_id)
     if (activeTab === "unsold") return filteredAuctions.filter((auction) => auction.status === 3 && !auction.winner_id)
+    if (activeTab === "active") return filteredAuctions.filter((auction) => auction.status === 1 || auction.status === 2)
     return filteredAuctions
   }, [activeTab, filteredAuctions])
 

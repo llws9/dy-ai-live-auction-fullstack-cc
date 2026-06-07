@@ -117,7 +117,6 @@ func TestSDK_CreateProductAsAddsDefaultImageWhenMissing(t *testing.T) {
 	step := c.CreateProductAs(context.Background(), Actor{UserID: 9001, Role: RoleMerchant}, CreateProductReq{
 		Name:        "fixture product",
 		Description: "auto generated fixture",
-		Status:      1,
 	})
 	if !step.OK {
 		t.Fatalf("CreateProductAs failed: %s err=%v", step.Message, step.Err)
@@ -145,13 +144,58 @@ func TestSDK_CreateProductAsPreservesExplicitImages(t *testing.T) {
 	step := c.CreateProductAs(context.Background(), Actor{UserID: 9001, Role: RoleMerchant}, CreateProductReq{
 		Name:   "fixture product",
 		Images: []string{"https://cdn.example.com/custom-product.jpg"},
-		Status: 1,
 	})
 	if !step.OK {
 		t.Fatalf("CreateProductAs failed: %s err=%v", step.Message, step.Err)
 	}
 	if len(captured.Images) != 1 || captured.Images[0] != "https://cdn.example.com/custom-product.jpg" {
 		t.Fatalf("explicit images should be preserved, got %#v", captured.Images)
+	}
+}
+
+func TestSDK_CreateProductAsPublishesRequestedPublishedProduct(t *testing.T) {
+	var calls []string
+	var captured CreateProductReq
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls = append(calls, r.Method+" "+r.URL.Path)
+		switch r.Method + " " + r.URL.Path {
+		case "POST /api/v1/admin/products":
+			if err := json.NewDecoder(r.Body).Decode(&captured); err != nil {
+				t.Fatalf("decode body: %v", err)
+			}
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"code":201,"data":{"id":42}}`))
+		case "POST /api/v1/products/42/publish":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"code":200,"data":{"id":42,"status":1}}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	step := c.CreateProductAs(context.Background(), Actor{UserID: 9001, Role: RoleMerchant}, CreateProductReq{
+		Name:   "fixture product",
+		Status: 1,
+	})
+	if !step.OK {
+		t.Fatalf("CreateProductAs failed: %s err=%v", step.Message, step.Err)
+	}
+	if step.RefID != 42 {
+		t.Fatalf("RefID: want 42, got %d", step.RefID)
+	}
+	if captured.Status != 0 {
+		t.Fatalf("create request must not rely on status=1 side effect, got status %d", captured.Status)
+	}
+	want := []string{"POST /api/v1/admin/products", "POST /api/v1/products/42/publish"}
+	if len(calls) != len(want) {
+		t.Fatalf("calls: want %#v, got %#v", want, calls)
+	}
+	for i := range want {
+		if calls[i] != want[i] {
+			t.Fatalf("call[%d]: want %s, got %s", i, want[i], calls[i])
+		}
 	}
 }
 
