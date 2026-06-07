@@ -123,7 +123,7 @@ func TestMerchantDemoValidateAuctionMode(t *testing.T) {
 	}
 }
 
-func TestMerchantDemoAuctionCreatesFreshProductsForRepeatedOngoingClicks(t *testing.T) {
+func TestMerchantDemoAuctionReusesMerchantLiveStreamForRepeatedOngoingClicks(t *testing.T) {
 	const secret = "demo-secret"
 	fake := &fakeDemoAuctionClient{}
 	h := NewDemoHandler(fake, nil, secret)
@@ -155,6 +155,17 @@ func TestMerchantDemoAuctionCreatesFreshProductsForRepeatedOngoingClicks(t *test
 	}
 	if fake.waitStartedCalls != 2 {
 		t.Fatalf("ongoing mode should wait for auction started twice, got %d", fake.waitStartedCalls)
+	}
+	if len(fake.liveStreamReqs) != 2 {
+		t.Fatalf("expected two get-or-create live stream requests, got %d", len(fake.liveStreamReqs))
+	}
+	for _, req := range fake.liveStreamReqs {
+		if req.Name != "Demo 商家直播间" || req.ProductID != 0 {
+			t.Fatalf("merchant auction demo must target a stable merchant live stream, req=%+v", req)
+		}
+	}
+	if fake.auctionReqs[0].LiveStreamID != fake.auctionReqs[1].LiveStreamID {
+		t.Fatalf("repeated clicks must reuse merchant live stream, got live_stream_ids=%d,%d", fake.auctionReqs[0].LiveStreamID, fake.auctionReqs[1].LiveStreamID)
 	}
 	if len(fake.startedLiveStreamIDs) != 2 {
 		t.Fatalf("ongoing mode should start live streams twice, got %d", len(fake.startedLiveStreamIDs))
@@ -335,6 +346,7 @@ type fakeDemoAuctionClient struct {
 	productReqs          []auctioncli.CreateProductReq
 	publishedProductIDs  []int64
 	ruleReqs             []auctioncli.CreateAuctionRuleReq
+	liveStreamReqs       []auctioncli.CreateLiveStreamReq
 	auctionReqs          []auctioncli.CreateAuctionReq
 	fixedReqs            []auctioncli.CreateFixedPriceItemReq
 	skyLampUserID        int64
@@ -377,8 +389,12 @@ func (f *fakeDemoAuctionClient) CreateAuctionRule(_ context.Context, _ auctioncl
 	return f.ok("create_auction_rule", productID)
 }
 
-func (f *fakeDemoAuctionClient) CreateLiveStream(_ context.Context, _ auctioncli.Actor, _ auctioncli.CreateLiveStreamReq) auctioncli.StepResult {
-	return f.ok("create_live_stream", f.nextID(&f.nextLiveStreamID, 2001))
+func (f *fakeDemoAuctionClient) CreateLiveStream(_ context.Context, _ auctioncli.Actor, req auctioncli.CreateLiveStreamReq) auctioncli.StepResult {
+	f.liveStreamReqs = append(f.liveStreamReqs, req)
+	if f.nextLiveStreamID == 0 {
+		f.nextLiveStreamID = 2001
+	}
+	return f.ok("create_live_stream", f.nextLiveStreamID)
 }
 
 func (f *fakeDemoAuctionClient) CreateAuctionAs(_ context.Context, _ auctioncli.Actor, req auctioncli.CreateAuctionReq) auctioncli.StepResult {

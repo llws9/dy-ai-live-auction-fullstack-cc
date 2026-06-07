@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"gorm.io/gorm"
@@ -52,8 +53,9 @@ func (h *AuctionHandler) SetRuleFetcher(fetcher auctionRuleFetcher) {
 
 // CreateAuctionRequest 创建竞拍请求
 type CreateAuctionRequest struct {
-	ProductID int64 `json:"product_id" binding:"required"`
-	Duration  int   `json:"duration" binding:"required"`
+	ProductID int64      `json:"product_id" binding:"required"`
+	Duration  int        `json:"duration" binding:"required"`
+	StartTime *time.Time `json:"start_time,omitempty"`
 }
 
 const (
@@ -137,6 +139,7 @@ func (h *AuctionHandler) Create(ctx context.Context, c *app.RequestContext) {
 		ProductStatus:  info.Status,
 		RuleBound:      info.RuleBound,
 		LiveStreamID:   live.ID,
+		StartTime:      derefTime(req.StartTime),
 	})
 	if err != nil {
 		writeCreateAuctionError(c, err)
@@ -144,6 +147,13 @@ func (h *AuctionHandler) Create(ctx context.Context, c *app.RequestContext) {
 	}
 
 	c.JSON(201, auction)
+}
+
+func derefTime(value *time.Time) time.Time {
+	if value == nil {
+		return time.Time{}
+	}
+	return *value
 }
 
 func writeCreateAuctionError(c *app.RequestContext, err error) {

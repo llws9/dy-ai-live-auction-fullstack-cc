@@ -31,7 +31,6 @@ func TestAuctionService_CreateAuctionValidatesProductLifecycle(t *testing.T) {
 			req: &CreateAuctionRequest{
 				ProductID: 11, CreatorID: &merchantID, Duration: 3600,
 				ProductOwnerID: 1001, ProductStatus: 1, RuleBound: true, LiveStreamID: 77,
-				StartTime: time.Now().Add(-24 * time.Hour), EndTime: time.Now().Add(-23 * time.Hour),
 			},
 			wantCreated: true,
 		},
@@ -161,6 +160,30 @@ func TestAuctionService_CreateAuctionValidatesProductLifecycle(t *testing.T) {
 			assert.WithinDuration(t, got.StartTime.Add(time.Hour), got.EndTime, time.Second)
 		})
 	}
+}
+
+func TestAuctionService_CreateAuctionUsesRequestedFutureStartTime(t *testing.T) {
+	db := newAuctionCreateTestDB(t)
+	merchantID := int64(1001)
+	requestedStart := time.Now().Add(30 * time.Minute).Truncate(time.Second)
+
+	svc := NewAuctionService(dao.NewAuctionDAO(db))
+	got, err := svc.CreateAuction(context.Background(), &CreateAuctionRequest{
+		ProductID:      11,
+		CreatorID:      &merchantID,
+		Duration:       3600,
+		ProductOwnerID: merchantID,
+		ProductStatus:  1,
+		RuleBound:      true,
+		LiveStreamID:   77,
+		StartTime:      requestedStart,
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.Equal(t, model.AuctionStatusPending, got.Status)
+	assert.True(t, got.StartTime.Equal(requestedStart), "start_time should preserve the requested schedule")
+	assert.True(t, got.EndTime.Equal(requestedStart.Add(time.Hour)), "end_time should be derived from scheduled start_time + duration")
 }
 
 func TestIsActiveAuctionUniqueConflict(t *testing.T) {

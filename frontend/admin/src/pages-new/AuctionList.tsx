@@ -27,6 +27,17 @@ function getAuctionStatus(auction: any): { label: string; variant: BadgeProps["v
   return { label: "未知", variant: "secondary" }
 }
 
+function formatDateTimeLocal(date: Date) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return local.toISOString().slice(0, 16)
+}
+
+function parseDateTimeLocalToISO(value: string) {
+  if (!value) return ""
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString()
+}
+
 export default function AuctionList() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -47,6 +58,7 @@ export default function AuctionList() {
     product_id: "",
     template_id: "",
     duration: 3600,
+    start_time: formatDateTimeLocal(new Date()),
   })
   const pageSize = 20
 
@@ -134,6 +146,7 @@ export default function AuctionList() {
         product_id: nextProducts[0]?.id ? String(nextProducts[0].id) : "",
         template_id: defaultTemplate?.id ? String(defaultTemplate.id) : "",
         duration: defaultTemplate?.duration || 3600,
+        start_time: formatDateTimeLocal(new Date()),
       })
     } catch (e) {
       console.error('加载创建竞拍依赖失败:', e)
@@ -165,12 +178,17 @@ export default function AuctionList() {
       setCreateError("请选择商品、规则模板并填写有效竞拍时长")
       return
     }
+    const startTime = parseDateTimeLocalToISO(createForm.start_time)
+    if (!startTime) {
+      setCreateError("请填写有效开拍时间")
+      return
+    }
 
     setCreateSubmitting(true)
     setCreateError("")
     try {
       await productApi.applyRuleTemplate(productID, templateID)
-      await auctionApi.create({ product_id: productID, duration })
+      await auctionApi.create({ product_id: productID, duration, start_time: startTime })
       setCreateOpen(false)
       await fetchAuctions()
       await fetchStats()
@@ -229,7 +247,7 @@ export default function AuctionList() {
               {createLoading ? (
                 <div className="text-sm text-slate-500">加载商品和模板中...</div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   {products.length === 0 && (
                     <div className="md:col-span-3 rounded-md bg-amber-50 p-3 text-sm text-amber-700">
                       暂无可排期商品
@@ -269,6 +287,15 @@ export default function AuctionList() {
                       min={1}
                       value={createForm.duration}
                       onChange={(e) => setCreateForm((current) => ({ ...current, duration: Number(e.target.value) }))}
+                    />
+                  </label>
+                  <label className="space-y-1 text-sm text-slate-600">
+                    <span>开拍时间</span>
+                    <Input
+                      aria-label="开拍时间"
+                      type="datetime-local"
+                      value={createForm.start_time}
+                      onChange={(e) => setCreateForm((current) => ({ ...current, start_time: e.target.value }))}
                     />
                   </label>
                 </div>

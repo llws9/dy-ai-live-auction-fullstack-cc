@@ -125,10 +125,39 @@ describe('AuctionList create auction with rule template', () => {
     await waitFor(() => {
       expect(mockedProductApi.applyRuleTemplate).toHaveBeenCalledWith(501, 301)
     })
-    expect(mockedAuctionApi.create).toHaveBeenCalledWith({ product_id: 501, duration: 3600 })
+    expect(mockedAuctionApi.create).toHaveBeenCalledWith(expect.objectContaining({
+      product_id: 501,
+      duration: 3600,
+      start_time: expect.any(String),
+    }))
     expect(mockedProductApi.applyRuleTemplate.mock.invocationCallOrder[0]).toBeLessThan(
       mockedAuctionApi.create.mock.invocationCallOrder[0]
     )
+  })
+
+  it('submits scheduled start time when merchant creates an auction', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <AuctionList />
+      </MemoryRouter>
+    )
+
+    await user.click(await screen.findByRole('button', { name: '创建竞拍场次' }))
+
+    const startInput = await screen.findByLabelText('开拍时间')
+    await user.clear(startInput)
+    await user.type(startInput, '2026-06-08T10:30')
+    await user.click(screen.getByRole('button', { name: '确认创建竞拍' }))
+
+    await waitFor(() => {
+      expect(mockedAuctionApi.create).toHaveBeenCalledWith({
+        product_id: 501,
+        duration: 3600,
+        start_time: new Date('2026-06-08T10:30').toISOString(),
+      })
+    })
   })
 
   it('shows empty schedulable products state', async () => {

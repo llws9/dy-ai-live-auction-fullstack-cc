@@ -464,9 +464,8 @@ func (h *DemoHandler) PostMerchantAuction(ctx context.Context, c *app.RequestCon
 	}
 
 	live := h.bizCli.CreateLiveStream(ctx, actor, auctioncli.CreateLiveStreamReq{
-		Name:        fmt.Sprintf("Demo 直播间 %d", product.RefID),
+		Name:        "Demo 商家直播间",
 		Description: "Demo Console merchant auction fixture",
-		ProductID:   product.RefID,
 	})
 	if !live.OK || live.RefID <= 0 {
 		writeDemoStepError(c, live)

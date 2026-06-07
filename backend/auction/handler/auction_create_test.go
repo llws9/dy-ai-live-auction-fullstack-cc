@@ -5,6 +5,7 @@ import (
 	"context"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/ut"
@@ -55,6 +56,33 @@ func TestAuctionHandler_CreateRequiresMerchantAndWritesLiveStream(t *testing.T) 
 	require.NoError(t, db.First(&auction, "product_id = ?", 11).Error)
 	require.NotNil(t, auction.LiveStreamID)
 	assert.Equal(t, int64(77), *auction.LiveStreamID)
+}
+
+func TestAuctionHandler_CreateAcceptsScheduledStartTime(t *testing.T) {
+	db := newAuctionHandlerCreateTestDB(t)
+	auctionDAO := dao.NewAuctionDAO(db)
+	svc := service.NewAuctionService(auctionDAO)
+	h := NewAuctionHandler(svc)
+	pc := &fakeCreateProductClient{
+		info: &client.AuctionProductInfo{ID: 11, OwnerID: 1001, Status: 1, RuleBound: true},
+		live: &client.LiveStreamInfo{ID: 77, CreatorID: 1001, Status: 1},
+	}
+	h.SetProductClient(pc)
+
+	startTime := time.Now().Add(30 * time.Minute).UTC().Truncate(time.Second)
+	body := []byte(`{"product_id":11,"duration":3600,"start_time":"` + startTime.Format(time.RFC3339) + `"}`)
+	app := server.Default(server.WithHostPorts("127.0.0.1:0"))
+	app.POST("/api/v1/auctions", h.Create)
+	resp := ut.PerformRequest(app.Engine, http.MethodPost, "/api/v1/auctions", &ut.Body{Body: bytes.NewReader(body), Len: len(body)},
+		ut.Header{Key: "Content-Type", Value: "application/json"},
+		ut.Header{Key: "X-User-ID", Value: "1001"},
+		ut.Header{Key: "X-User-Role", Value: "merchant"})
+
+	require.Equal(t, http.StatusCreated, resp.Result().StatusCode())
+	var auction model.Auction
+	require.NoError(t, db.First(&auction, "product_id = ?", 11).Error)
+	assert.True(t, auction.StartTime.Equal(startTime), "handler should pass start_time into service")
+	assert.True(t, auction.EndTime.Equal(startTime.Add(time.Hour)))
 }
 
 func TestAuctionHandler_CreateRejectsUserRole(t *testing.T) {

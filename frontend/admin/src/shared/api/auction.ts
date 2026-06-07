@@ -29,7 +29,7 @@ export const auctionApi = {
   get: (id: number) => get<Auction>(`/auctions/${id}`).then(normalizeAuctionText),
 
   // 创建竞拍场次
-  create: (data: { product_id: number; duration: number; live_stream_id?: number }) => post<Auction>('/auctions', data).then(normalizeAuctionText),
+  create: (data: { product_id: number; duration: number; live_stream_id?: number; start_time?: string }) => post<Auction>('/auctions', data).then(normalizeAuctionText),
 
   // 获取出价记录
   getBids: (id: number) => get<Bid[]>(`/auctions/${id}/bids`),

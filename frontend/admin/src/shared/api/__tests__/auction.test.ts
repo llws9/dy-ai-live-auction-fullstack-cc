@@ -61,4 +61,16 @@ describe('auctionApi.list', () => {
 
     expect(post).toHaveBeenCalledWith('/auctions', { product_id: 501, duration: 3600 });
   });
+
+  it('creates scheduled auction with start_time contract', async () => {
+    (post as jest.Mock).mockResolvedValue({ id: 1, product_id: 501, title: 'Demo' });
+
+    await auctionApi.create({ product_id: 501, duration: 3600, start_time: '2026-06-08T10:30:00.000Z' });
+
+    expect(post).toHaveBeenCalledWith('/auctions', {
+      product_id: 501,
+      duration: 3600,
+      start_time: '2026-06-08T10:30:00.000Z',
+    });
+  });
 });

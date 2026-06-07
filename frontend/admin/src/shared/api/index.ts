@@ -35,7 +35,7 @@ export const auctionApi = {
 
   get: (id: number) => get<any>(`/auctions/${id}`).then(normalizeAuctionText),
 
-  create: (data: { product_id: number; duration: number; live_stream_id?: number }) => post<any>('/auctions', data).then(normalizeAuctionText),
+  create: (data: { product_id: number; duration: number; live_stream_id?: number; start_time?: string }) => post<any>('/auctions', data).then(normalizeAuctionText),
 
   getBids: (id: number) => get<any[]>(`/auctions/${id}/bids`),
 

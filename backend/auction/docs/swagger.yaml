@@ -9,6 +9,8 @@ definitions:
         type: integer
       start_price:
         type: number
+      start_time:
+        type: string
     required:
     - duration
     - product_id

@@ -638,6 +638,9 @@ const docTemplate = `{
                 },
                 "start_price": {
                     "type": "number"
+                },
+                "start_time": {
+                    "type": "string"
                 }
             }
         },

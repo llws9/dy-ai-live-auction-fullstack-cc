@@ -82,12 +82,7 @@ type CreateAuctionRequest struct {
 	ProductStatus  int
 	RuleBound      bool
 	LiveStreamID   int64
-	// Deprecated: compatibility for pre-T6 handler/tests. Ignored by CreateAuction;
-	// Task 6 will migrate callers to Duration-based scheduling.
-	StartTime time.Time
-	// Deprecated: compatibility for pre-T6 handler/tests. Ignored by CreateAuction;
-	// Task 6 will migrate callers to Duration-based scheduling.
-	EndTime time.Time
+	StartTime      time.Time
 }
 
 // CreateAuction 创建竞拍
@@ -140,7 +135,10 @@ func (s *AuctionService) CreateAuction(ctx context.Context, req *CreateAuctionRe
 		return nil, ErrSoldProductCannotBeReauctioned
 	}
 
-	now := time.Now()
+	startTime := time.Now()
+	if !req.StartTime.IsZero() {
+		startTime = req.StartTime
+	}
 	liveStreamID := req.LiveStreamID
 	auction := &model.Auction{
 		ProductID:    req.ProductID,
@@ -148,8 +146,8 @@ func (s *AuctionService) CreateAuction(ctx context.Context, req *CreateAuctionRe
 		CreatorID:    req.CreatorID,
 		Status:       model.AuctionStatusPending,
 		CurrentPrice: decimal.Zero,
-		StartTime:    now,
-		EndTime:      now.Add(time.Duration(req.Duration) * time.Second),
+		StartTime:    startTime,
+		EndTime:      startTime.Add(time.Duration(req.Duration) * time.Second),
 		DelayUsed:    0,
 	}
 
