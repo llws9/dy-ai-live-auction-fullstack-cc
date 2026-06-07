@@ -18,9 +18,14 @@ const maxAdminLiveStreamPageSize = 100
 
 const maxPublicLiveStreamPageSize = 50
 
+type ProductNameResolver interface {
+	GetByIDs(ctx context.Context, ids []int64) ([]model.Product, error)
+}
+
 type LiveStreamHandler struct {
-	liveStreamService *service.LiveStreamService
-	auctionClient     *client.AuctionClient
+	liveStreamService   *service.LiveStreamService
+	auctionClient       *client.AuctionClient
+	productNameResolver ProductNameResolver
 }
 
 func NewLiveStreamHandler(liveStreamService *service.LiveStreamService) *LiveStreamHandler {
@@ -31,6 +36,10 @@ func NewLiveStreamHandler(liveStreamService *service.LiveStreamService) *LiveStr
 
 func (h *LiveStreamHandler) SetAuctionClient(ac *client.AuctionClient) {
 	h.auctionClient = ac
+}
+
+func (h *LiveStreamHandler) SetProductNameResolver(r ProductNameResolver) {
+	h.productNameResolver = r
 }
 
 // ListAdmin 管理端直播间列表 (T011)
@@ -356,8 +365,9 @@ func (h *LiveStreamHandler) BanAdmin(ctx context.Context, c *app.RequestContext)
 	})
 }
 
-// ListPublic 公开直播间列表 (H5 feed)：仅返回直播中（status=1）的直播间，
-// 并为每个直播间补当前竞拍信息 current_auction_id/current_product_id/current_price。
+// ListPublic 公开直播间列表 (H5 feed)：返回 NotStarted/Live 候选直播间，
+// 为每个直播间补当前竞拍 current_*、下一场 next_auction、近期成交 recent_deals（含商品名），
+// 并丢弃既无 current 又无 next 的空壳直播间。
 func (h *LiveStreamHandler) ListPublic(ctx context.Context, c *app.RequestContext) {
 	page, err := parseAdminLiveStreamIntQuery(c, "page", 1)
 	if err != nil {
@@ -379,39 +389,100 @@ func (h *LiveStreamHandler) ListPublic(ctx context.Context, c *app.RequestContex
 		pageSize = maxPublicLiveStreamPageSize
 	}
 
-	live := int(model.LiveStreamStatusLive)
-	statusFilter := &live
-
-	liveStreams, total, err := h.liveStreamService.ListAdmin(ctx, page, pageSize, statusFilter)
+	liveStreams, _, err := h.liveStreamService.ListPublicCandidates(ctx, page, pageSize)
 	if err != nil {
 		log.Printf("LiveStream ListPublic failed: page=%d pageSize=%d err=%v", page, pageSize, err)
 		c.JSON(500, map[string]interface{}{"code": 500, "message": "获取直播间列表失败"})
 		return
 	}
 
+	ids := make([]int64, 0, len(liveStreams))
+	for _, ls := range liveStreams {
+		ids = append(ids, ls.ID)
+	}
+
 	current := map[int64]client.CurrentAuctionItem{}
-	if h.auctionClient != nil && len(liveStreams) > 0 {
-		ids := make([]int64, 0, len(liveStreams))
-		for _, ls := range liveStreams {
-			ids = append(ids, ls.ID)
-		}
+	next := map[int64]client.NextAuctionItem{}
+	recent := map[int64][]client.DealAuctionItem{}
+	if h.auctionClient != nil && len(ids) > 0 {
 		if got, err := h.auctionClient.CurrentByLiveStreamIDs(ctx, ids); err != nil {
-			log.Printf("LiveStream ListPublic current-by-live-streams failed (degraded): err=%v", err)
+			log.Printf("ListPublic current degraded: err=%v", err)
 		} else {
 			current = got
+		}
+		if got, err := h.auctionClient.NextByLiveStreamIDs(ctx, ids); err != nil {
+			log.Printf("ListPublic next degraded: err=%v", err)
+		} else {
+			next = got
+		}
+		if got, err := h.auctionClient.RecentDealsByLiveStreamIDs(ctx, ids, 3); err != nil {
+			log.Printf("ListPublic recent-deals degraded: err=%v", err)
+		} else {
+			recent = got
+		}
+	}
+
+	productIDs := map[int64]struct{}{}
+	for _, it := range next {
+		productIDs[it.ProductID] = struct{}{}
+	}
+	for _, deals := range recent {
+		for _, d := range deals {
+			productIDs[d.ProductID] = struct{}{}
+		}
+	}
+	nameByID := map[int64]string{}
+	if h.productNameResolver != nil && len(productIDs) > 0 {
+		pids := make([]int64, 0, len(productIDs))
+		for id := range productIDs {
+			pids = append(pids, id)
+		}
+		if products, err := h.productNameResolver.GetByIDs(ctx, pids); err != nil {
+			log.Printf("ListPublic product-name resolve degraded: err=%v", err)
+		} else {
+			for _, p := range products {
+				nameByID[p.ID] = p.Name
+			}
 		}
 	}
 
 	list := make([]map[string]interface{}, 0, len(liveStreams))
-	for _, ls := range liveStreams {
+	for i := range liveStreams {
+		ls := liveStreams[i]
 		var currentAuctionID interface{} = nil
 		var currentProductID interface{} = nil
 		var currentPrice interface{} = nil
+		_, hasCurrent := current[ls.ID]
 		if item, ok := current[ls.ID]; ok {
 			currentAuctionID = item.AuctionID
 			currentProductID = item.ProductID
 			currentPrice = item.CurrentPrice
 		}
+
+		var nextAuction interface{} = nil
+		nx, hasNext := next[ls.ID]
+		if hasNext {
+			nextAuction = map[string]interface{}{
+				"auction_id":   nx.AuctionID,
+				"product_id":   nx.ProductID,
+				"product_name": nameByID[nx.ProductID],
+				"start_price":  nx.StartPrice,
+				"start_time":   nx.StartTime,
+			}
+		}
+
+		if !hasCurrent && !hasNext {
+			continue
+		}
+
+		recentDeals := make([]map[string]interface{}, 0)
+		for _, d := range recent[ls.ID] {
+			recentDeals = append(recentDeals, map[string]interface{}{
+				"product_name": nameByID[d.ProductID],
+				"final_price":  d.FinalPrice,
+			})
+		}
+
 		list = append(list, map[string]interface{}{
 			"id":                 ls.ID,
 			"name":               ls.Name,
@@ -423,6 +494,8 @@ func (h *LiveStreamHandler) ListPublic(ctx context.Context, c *app.RequestContex
 			"current_auction_id": currentAuctionID,
 			"current_product_id": currentProductID,
 			"current_price":      currentPrice,
+			"next_auction":       nextAuction,
+			"recent_deals":       recentDeals,
 		})
 	}
 
@@ -430,7 +503,7 @@ func (h *LiveStreamHandler) ListPublic(ctx context.Context, c *app.RequestContex
 		"code": 200,
 		"data": map[string]interface{}{
 			"list":      list,
-			"total":     total,
+			"total":     len(list),
 			"page":      page,
 			"page_size": pageSize,
 		},

@@ -300,6 +300,91 @@ func (c *AuctionClient) GetFollowersCount(ctx context.Context, liveStreamID int6
 	return body.Data.Count, nil
 }
 
+type NextAuctionItem struct {
+	LiveStreamID int64  `json:"live_stream_id"`
+	AuctionID    int64  `json:"auction_id"`
+	ProductID    int64  `json:"product_id"`
+	StartPrice   string `json:"start_price"`
+	StartTime    string `json:"start_time"`
+}
+
+type DealAuctionItem struct {
+	AuctionID  int64  `json:"auction_id"`
+	ProductID  int64  `json:"product_id"`
+	FinalPrice string `json:"final_price"`
+	EndTime    string `json:"end_time"`
+}
+
+func (c *AuctionClient) NextByLiveStreamIDs(ctx context.Context, ids []int64) (map[int64]NextAuctionItem, error) {
+	result := make(map[int64]NextAuctionItem)
+	if len(ids) == 0 {
+		return result, nil
+	}
+	var body struct {
+		Code int `json:"code"`
+		Data struct {
+			Items []NextAuctionItem `json:"items"`
+		} `json:"data"`
+	}
+	if err := c.postInternal(ctx, "/internal/auctions/next-by-live-streams",
+		map[string]interface{}{"live_stream_ids": ids}, &body); err != nil {
+		return nil, err
+	}
+	for _, it := range body.Data.Items {
+		result[it.LiveStreamID] = it
+	}
+	return result, nil
+}
+
+func (c *AuctionClient) RecentDealsByLiveStreamIDs(ctx context.Context, ids []int64, n int) (map[int64][]DealAuctionItem, error) {
+	result := make(map[int64][]DealAuctionItem)
+	if len(ids) == 0 {
+		return result, nil
+	}
+	var body struct {
+		Code int `json:"code"`
+		Data struct {
+			Items []struct {
+				LiveStreamID int64             `json:"live_stream_id"`
+				Deals        []DealAuctionItem `json:"deals"`
+			} `json:"items"`
+		} `json:"data"`
+	}
+	if err := c.postInternal(ctx, "/internal/auctions/recent-deals-by-live-streams",
+		map[string]interface{}{"live_stream_ids": ids, "limit": n}, &body); err != nil {
+		return nil, err
+	}
+	for _, it := range body.Data.Items {
+		result[it.LiveStreamID] = it.Deals
+	}
+	return result, nil
+}
+
+func (c *AuctionClient) postInternal(ctx context.Context, path string, payload interface{}, out interface{}) error {
+	b, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal request: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(b))
+	if err != nil {
+		return fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.internalToken != "" {
+		req.Header.Set("X-Internal-Token", c.internalToken)
+	}
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return fmt.Errorf("call auction-service: %w", err)
+	}
+	defer resp.Body.Close()
+	defer io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("auction-service returned status %d", resp.StatusCode)
+	}
+	return json.NewDecoder(resp.Body).Decode(out)
+}
+
 func (c *AuctionClient) CountAuctionsByLiveStreamID(ctx context.Context, liveStreamID int64) (int64, error) {
 	values := url.Values{}
 	values.Set("live_stream_id", fmt.Sprintf("%d", liveStreamID))
