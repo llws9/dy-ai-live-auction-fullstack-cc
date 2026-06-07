@@ -45,9 +45,11 @@ type ProductChecker interface {
 	Exists(ctx context.Context, productID int64) (bool, error)
 }
 
-// AuctionChecker 校验一口价绑定的竞拍场次是否属于当前直播间与商家。
+// AuctionChecker 校验一口价绑定的竞拍场次是否属于当前直播间与商家，
+// 并支持查询某商品是否正处于 active 竞拍（失败关闭）。
 type AuctionChecker interface {
 	GetByID(ctx context.Context, id int64) (*model.Auction, error)
+	GetActiveByProductID(ctx context.Context, productID int64) (*model.Auction, error)
 }
 
 // BalanceDeducter 在事务内条件扣减用户余额（affected==0 表示余额不足）。

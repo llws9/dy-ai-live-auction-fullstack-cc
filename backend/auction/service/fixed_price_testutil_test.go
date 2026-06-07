@@ -47,8 +47,9 @@ func (f *fakeProductChecker) Exists(_ context.Context, productID int64) (bool, e
 }
 
 type fakeAuctionChecker struct {
-	auctions map[int64]*model.Auction
-	missing  map[int64]bool
+	auctions        map[int64]*model.Auction
+	missing         map[int64]bool
+	activeByProduct map[int64]*model.Auction
 }
 
 func (f *fakeAuctionChecker) GetByID(_ context.Context, id int64) (*model.Auction, error) {
@@ -66,6 +67,13 @@ func (f *fakeAuctionChecker) GetByID(_ context.Context, id int64) (*model.Auctio
 		CreatorID:    &creatorID,
 		Status:       model.AuctionStatusOngoing,
 	}, nil
+}
+
+func (f *fakeAuctionChecker) GetActiveByProductID(_ context.Context, productID int64) (*model.Auction, error) {
+	if f == nil || f.activeByProduct == nil {
+		return nil, nil
+	}
+	return f.activeByProduct[productID], nil
 }
 
 // fakeClock 手动推进的时钟，用于驱动异步清理。
