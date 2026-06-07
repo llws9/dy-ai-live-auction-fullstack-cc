@@ -189,21 +189,6 @@ func (d *LiveStreamDAO) ListAdmin(ctx context.Context, offset, limit int, status
 	return liveStreams, total, nil
 }
 
-// ListPublicCandidates 返回首页候选直播间：status IN (NotStarted, Live)，排除 Ended/Banned。
-// 排序：Live 优先（status DESC），再按 created_at DESC。
-func (d *LiveStreamDAO) ListPublicCandidates(ctx context.Context, offset, limit int) ([]model.LiveStream, int64, error) {
-	statuses := []model.LiveStreamStatus{model.LiveStreamStatusNotStarted, model.LiveStreamStatusLive}
-	base := d.db.WithContext(ctx).Model(&model.LiveStream{}).Where("status IN ?", statuses)
-
-	var total int64
-	if err := base.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var rows []model.LiveStream
-	err := base.Order("status DESC, created_at DESC").Offset(offset).Limit(limit).Find(&rows).Error
-	return rows, total, err
-}
-
 // ListAdminScoped returns all live streams for admins or only creator streams for merchants.
 func (d *LiveStreamDAO) ListAdminScoped(ctx context.Context, offset, limit int, statusFilter *int, creatorID *int64) ([]model.LiveStream, int64, error) {
 	var liveStreams []model.LiveStream

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { auctionApi, followApi, liveStreamApi, productApi, productReminderApi } from '@/services/api';
+import { auctionApi, followApi, productApi, productReminderApi } from '@/services/api';
 import { notificationApi } from '@/services/notification';
 import { useTouchpointNotifications } from '@/hooks/useTouchpointNotifications';
 import { useAuth } from '@/store/authContext';
@@ -9,7 +9,6 @@ import BadgeDot from '@/components/BadgeDot';
 import { trackEvent } from '@/utils/trackEvent';
 import { notifyTouchpointSummaryInvalidated } from '@/utils/touchpointSummaryEvents';
 import { repairUtf8Mojibake } from '@/utils/textEncoding';
-import LiveRoomCard, { LiveRoomItem } from './LiveRoomCard';
 import styles from './Home.module.css';
 
 // 固定 tab：「全部」「收藏」无需 category_id；动态 tab 来自 GET /categories
@@ -295,7 +294,6 @@ const HomePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('全部');
   const [categories, setCategories] = useState<CategoryTab[]>([]);
   const [auctions, setAuctions] = useState<HomeAuction[]>([]);
-  const [liveRooms, setLiveRooms] = useState<LiveRoomItem[]>([]);
   const [favoriteLiveStreams, setFavoriteLiveStreams] = useState<LiveStream[]>([]);
   const [loading, setLoading] = useState(true);
   const [subscribedProductIds, setSubscribedProductIds] = useState<Set<number>>(() => new Set());
@@ -379,25 +377,9 @@ const HomePage: React.FC = () => {
         const response = await followApi.getFollowedLiveStreams(1, 20);
         setFavoriteLiveStreams(extractList<LiveStream>(response));
         setAuctions([]);
-        setLiveRooms([]);
       } catch (error) {
         console.error('获取收藏直播间失败:', error);
         setFavoriteLiveStreams([]);
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    if (activeTab === '全部') {
-      try {
-        const response = await liveStreamApi.list(1, 20);
-        setLiveRooms(extractList<LiveRoomItem>(response));
-        setAuctions([]);
-        setFavoriteLiveStreams([]);
-      } catch (error) {
-        console.error('获取直播间列表失败:', error);
-        setLiveRooms([]);
       } finally {
         setLoading(false);
       }
@@ -409,16 +391,17 @@ const HomePage: React.FC = () => {
         page: 1,
         page_size: 20,
       };
-      const matched = categories.find((c) => c.name === activeTab);
-      if (matched) {
-        params.category_id = matched.id;
+      if (activeTab !== '全部') {
+        const matched = categories.find((c) => c.name === activeTab);
+        if (matched) {
+          params.category_id = matched.id;
+        }
       }
 
       const response = await auctionApi.list(params);
       const rawAuctions = extractList<RawAuction>(response);
 
       setFavoriteLiveStreams([]);
-      setLiveRooms([]);
       setAuctions(sortAuctionsForHome(rawAuctions.map((auction) => normalizeAuction(auction))));
     } catch (error) {
       console.error('获取竞拍列表失败:', error);
@@ -534,29 +517,11 @@ const HomePage: React.FC = () => {
             <span className={styles.loadingSpinner} />
             <span className={styles.loadingText}>加载竞拍中...</span>
           </div>
-        ) : (activeTab === '收藏'
-          ? favoriteLiveStreams.length === 0
-          : activeTab === '全部'
-            ? liveRooms.length === 0
-            : auctions.length === 0) ? (
+        ) : (activeTab === '收藏' ? favoriteLiveStreams.length === 0 : auctions.length === 0) ? (
           <div className={styles.empty}>
             <span className={styles.emptyIcon}>◇</span>
             <p className={styles.emptyText}>{activeTab === '收藏' ? '暂无收藏直播间' : '暂无竞拍数据'}</p>
             {activeTab === '收藏' && <p className={styles.emptyHint}>浏览直播时点击收藏按钮即可添加。</p>}
-          </div>
-        ) : activeTab === '全部' ? (
-          <div className={styles.grid}>
-            {liveRooms.map((room) => (
-              <LiveRoomCard
-                key={room.id}
-                room={room}
-                subscribedProductIds={subscribedProductIds}
-                onSubscribe={(productId) => handleSubscribeReminder(productId)}
-                onEnter={(liveStreamId, auctionId) =>
-                  navigate(`/live?id=${liveStreamId}&auction_id=${auctionId ?? ''}`)
-                }
-              />
-            ))}
           </div>
         ) : activeTab === '收藏' ? (
           <div className={styles.grid}>

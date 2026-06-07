@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import HomePage from '../index';
-import { auctionApi, followApi, liveStreamApi, productApi, productReminderApi } from '../../../services/api';
+import { auctionApi, followApi, productApi, productReminderApi } from '../../../services/api';
 import { notificationApi } from '../../../services/notification';
 import { useAuth } from '../../../store/authContext';
 import { trackEvent } from '../../../utils/trackEvent';
@@ -10,10 +10,6 @@ import { trackEvent } from '../../../utils/trackEvent';
 jest.mock('../../../services/api', () => ({
   auctionApi: {
     list: jest.fn(),
-  },
-  liveStreamApi: {
-    list: jest.fn(),
-    get: jest.fn(),
   },
   productApi: {
     get: jest.fn(),
@@ -52,7 +48,6 @@ jest.mock('../../../utils/trackEvent', () => ({
 }));
 
 const mockedAuctionApi = auctionApi as jest.Mocked<typeof auctionApi>;
-const mockedLiveStreamApi = liveStreamApi as jest.Mocked<typeof liveStreamApi>;
 const mockedProductApi = productApi as jest.Mocked<typeof productApi>;
 const mockedFollowApi = followApi as jest.Mocked<typeof followApi>;
 const mockedProductReminderApi = productReminderApi as jest.Mocked<typeof productReminderApi>;
@@ -66,14 +61,6 @@ const renderHome = () =>
       <HomePage />
     </MemoryRouter>
   );
-
-// 竞拍卡片现仅在分类 tab 渲染（「全部」已切到直播间维度）。
-// 该 helper 渲染后切到「珠宝腕表」分类 tab，复用原竞拍卡片渲染路径。
-const renderHomeOnCategory = async () => {
-  renderHome();
-  const tab = await screen.findByRole('button', { name: '珠宝腕表' });
-  fireEvent.click(tab);
-};
 
 const mockAuthAuthenticated = () => {
   mockedUseAuth.mockReturnValue({
@@ -109,7 +96,6 @@ describe('HomePage 分类联动 (T2.10)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedAuctionApi.list.mockResolvedValue({ list: [], total: 0 });
-    mockedLiveStreamApi.list.mockResolvedValue({ list: [], total: 0 });
     mockedProductApi.listCategories.mockResolvedValue([
       { id: 1, name: '珠宝腕表' },
       { id: 2, name: '艺术品' },
@@ -122,51 +108,17 @@ describe('HomePage 分类联动 (T2.10)', () => {
     mockAuthAuthenticated();
   });
 
-  it('mount 时「全部」tab 走直播间维度并渲染从后端拉取的分类 tabs', async () => {
+  it('mount 时不传 category_id，渲染从后端拉取的分类 tabs', async () => {
     renderHome();
 
-    await waitFor(() => expect(mockedLiveStreamApi.list).toHaveBeenCalledWith(1, 20));
-    expect(mockedAuctionApi.list).not.toHaveBeenCalled();
+    await waitFor(() => expect(mockedAuctionApi.list).toHaveBeenCalled());
+    const firstCall = mockedAuctionApi.list.mock.calls[0][0] as Record<string, unknown> | undefined;
+    expect(firstCall).toEqual(expect.objectContaining({ page: 1, page_size: 20 }));
+    expect(firstCall).not.toHaveProperty('category_id');
 
     await waitFor(() => expect(mockedProductApi.listCategories).toHaveBeenCalled());
     expect(await screen.findByRole('button', { name: '珠宝腕表' })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: '艺术品' })).toBeInTheDocument();
-  });
-
-  it('「全部」tab 渲染直播间维度卡片', async () => {
-    mockedLiveStreamApi.list.mockResolvedValue({
-      list: [
-        {
-          id: 1,
-          name: '瑾瑜珠宝行',
-          status: 1,
-          current_auction_id: 11,
-          current_price: '1200.00',
-          recent_deals: [{ product_name: '和田玉牌', final_price: '500.00' }],
-        },
-        {
-          id: 2,
-          name: '云裳阁',
-          status: 0,
-          current_auction_id: null,
-          next_auction: {
-            auction_id: 21,
-            product_id: 9,
-            product_name: '翡翠手镯',
-            start_price: '300.00',
-            start_time: '2026-06-08T10:00:00Z',
-          },
-          recent_deals: [],
-        },
-      ],
-      total: 2,
-    });
-
-    renderHome();
-
-    expect(await screen.findByRole('heading', { name: '瑾瑜珠宝行' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '云裳阁' })).toBeInTheDocument();
-    expect(screen.getByText(/翡翠手镯/)).toBeInTheDocument();
   });
 
   it('点击分类 tab 时透传 category_id 调用 auctionApi.list', async () => {
@@ -187,7 +139,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
 
     renderHome();
 
-    await waitFor(() => expect(mockedLiveStreamApi.list).toHaveBeenCalled());
+    await waitFor(() => expect(mockedAuctionApi.list).toHaveBeenCalled());
     expect(screen.getByRole('button', { name: '全部' })).toBeInTheDocument();
   });
 
@@ -207,7 +159,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
   it('首页头部快捷入口使用 SVG 图形图标而不是文字占位', async () => {
     renderHome();
 
-    await waitFor(() => expect(mockedLiveStreamApi.list).toHaveBeenCalled());
+    await waitFor(() => expect(mockedAuctionApi.list).toHaveBeenCalled());
 
     const searchAction = screen.getByLabelText('搜索暂未开放');
     const followAction = screen.getByLabelText('我的收藏');
@@ -222,10 +174,6 @@ describe('HomePage 分类联动 (T2.10)', () => {
   });
 
   it('修复首页竞拍卡片中的 cp1252 风格中文乱码', async () => {
-    // '老蜜蜡手串' 的 UTF-8 字节被按 Latin-1 误解析后的乱码
-    const garbled = String.fromCharCode(
-      0xe8, 0x80, 0x81, 0xe8, 0x9c, 0x9c, 0xe8, 0x9c, 0xa1, 0xe6, 0x89, 0x8b, 0xe4, 0xb8, 0xb2
-    );
     mockedAuctionApi.list.mockResolvedValue({
       list: [
         {
@@ -236,17 +184,17 @@ describe('HomePage 分类联动 (T2.10)', () => {
           current_price: 3400,
           product: {
             id: 13,
-            name: garbled,
+            name: 'è€èœœèœ¡æ‰‹ä¸²',
           },
         },
       ],
       total: 1,
     });
 
-    await renderHomeOnCategory();
+    renderHome();
 
     await waitFor(() => expect(screen.getByRole('heading', { name: '老蜜蜡手串' })).toBeTruthy());
-    expect(screen.queryByText(garbled)).toBeNull();
+    expect(screen.queryByText('è€èœœèœ¡æ‰‹ä¸²')).toBeNull();
   });
 
   it('首页竞拍卡片兼容后端 list 返回的 product.image 首图字段', async () => {
@@ -268,7 +216,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
       total: 1,
     });
 
-    await renderHomeOnCategory();
+    renderHome();
 
     const image = await screen.findByRole('img', { name: '高冰飘花翡翠吊坠' });
     expect(image).toHaveAttribute('src', 'https://example.com/jade-pendant.jpg');
@@ -296,7 +244,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
       total: 1,
     });
 
-    await renderHomeOnCategory();
+    renderHome();
 
     await screen.findByRole('heading', { name: '起拍价拍品' });
     expect(screen.getByText('暂无出价')).toBeInTheDocument();
@@ -323,7 +271,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
       total: 1,
     });
 
-    await renderHomeOnCategory();
+    renderHome();
 
     const image = await screen.findByRole('img', { name: '压测拍品 1780733852' });
     expect(image).toHaveAttribute('src', expect.stringContaining('/api/ide/v1/text_to_image'));
@@ -349,7 +297,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
       total: 1,
     });
 
-    await renderHomeOnCategory();
+    renderHome();
 
     await screen.findByRole('heading', { name: '青花瓷摆件' });
     expect(await screen.findByText('已结束')).toBeInTheDocument();
@@ -385,7 +333,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
       total: 3,
     });
 
-    await renderHomeOnCategory();
+    renderHome();
 
     const headings = await screen.findAllByRole('heading', { level: 2 });
     expect(headings.map((heading) => heading.textContent)).toEqual([
@@ -412,7 +360,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
     });
     mockedProductReminderApi.subscribe.mockResolvedValue({ product_id: 88 });
 
-    await renderHomeOnCategory();
+    renderHome();
 
     await screen.findByRole('heading', { name: '手作陶瓷茶具套装' });
     expect(await screen.findByText(/^开拍/)).toBeInTheDocument();
@@ -446,7 +394,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
       total: 1,
     });
 
-    await renderHomeOnCategory();
+    renderHome();
 
     await screen.findByRole('heading', { name: '手作陶瓷茶具套装' });
     expect(await screen.findByRole('button', { name: '已订阅' })).toBeDisabled();
@@ -475,7 +423,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
       total: 2,
     });
 
-    await renderHomeOnCategory();
+    renderHome();
 
     await screen.findByRole('heading', { name: '直播中拍品' });
     expect(await screen.findByText('2次出价')).toBeInTheDocument();
@@ -501,7 +449,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
 
     renderHome();
 
-    await waitFor(() => expect(mockedLiveStreamApi.list).toHaveBeenCalled());
+    await waitFor(() => expect(mockedAuctionApi.list).toHaveBeenCalled());
     fireEvent.click(screen.getByRole('button', { name: '收藏' }));
 
     await waitFor(() => expect(mockedFollowApi.getFollowedLiveStreams).toHaveBeenCalledWith(1, 20));
@@ -528,7 +476,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
 
     renderHome();
 
-    await waitFor(() => expect(mockedLiveStreamApi.list).toHaveBeenCalled());
+    await waitFor(() => expect(mockedAuctionApi.list).toHaveBeenCalled());
     fireEvent.click(screen.getByRole('button', { name: '收藏' }));
 
     expect(await screen.findByText('已结束')).toBeInTheDocument();
@@ -553,7 +501,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
 
     renderHome();
 
-    await waitFor(() => expect(mockedLiveStreamApi.list).toHaveBeenCalled());
+    await waitFor(() => expect(mockedAuctionApi.list).toHaveBeenCalled());
     fireEvent.click(screen.getByRole('button', { name: '收藏' }));
 
     expect(await screen.findByRole('heading', { name: '沉香手串专场' })).toBeInTheDocument();
@@ -565,7 +513,6 @@ describe('HomePage 未读消息红点 (T3.6 / F-D2)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedAuctionApi.list.mockResolvedValue({ list: [], total: 0 });
-    mockedLiveStreamApi.list.mockResolvedValue({ list: [], total: 0 });
     mockedProductApi.listCategories.mockResolvedValue([]);
     mockedFollowApi.getFollowedLiveStreams.mockResolvedValue({ list: [] });
     mockedNotificationApi.getUnreadCount.mockResolvedValue({ count: 0 });
@@ -615,7 +562,7 @@ describe('HomePage 未读消息红点 (T3.6 / F-D2)', () => {
 
     renderHome();
 
-    await waitFor(() => expect(mockedLiveStreamApi.list).toHaveBeenCalled());
+    await waitFor(() => expect(mockedAuctionApi.list).toHaveBeenCalled());
     expect(mockedNotificationApi.getUnreadCount).not.toHaveBeenCalled();
     expect(screen.queryByLabelText(/条待处理提醒/)).not.toBeInTheDocument();
   });
