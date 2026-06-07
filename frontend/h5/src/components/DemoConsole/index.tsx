@@ -229,7 +229,7 @@ export default function DemoConsole() {
                 onClick={handleShortenAuction}
                 disabled={runningAction === 'shorten-auction'}
               >
-                竞拍延时
+                倒计时
               </button>
               <button type="button" className="demo-console__item demo-console__item--secondary" onClick={() => setView('root')}>
                 返回
