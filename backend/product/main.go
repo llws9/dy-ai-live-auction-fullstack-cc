@@ -154,6 +154,7 @@ func main() {
 	}
 	auctionClient := client.NewAuctionClient(auctionSvcURL, 2*time.Second)
 	auctionClient.SetInternalToken(os.Getenv("INTERNAL_API_TOKEN"))
+	productHandler.SetAuctionStateProvider(auctionClient)
 	orderService.SetUserSummaryProvider(auctionUserSummaryAdapter{client: auctionClient})
 	liveStreamHandler.SetAuctionClient(auctionClient)
 	categoryHandler := handler.NewCategoryHandler(categoryService)

@@ -8,6 +8,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/route/param"
+	"product-service/client"
 	"product-service/model"
 	"product-service/service"
 
@@ -21,6 +22,20 @@ import (
 )
 
 func int64Ptr(v int64) *int64 { return &v }
+
+type fakeProductAuctionStateProvider struct {
+	gotIDs []int64
+	states map[int64]client.ProductAuctionState
+	err    error
+}
+
+func (f *fakeProductAuctionStateProvider) BatchProductAuctionStates(_ context.Context, ids []int64) (map[int64]client.ProductAuctionState, error) {
+	f.gotIDs = append([]int64(nil), ids...)
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.states, nil
+}
 
 func newProductHandlerWithSeed(t *testing.T, seed func(db *gorm.DB)) (*ProductHandler, *gorm.DB) {
 	t.Helper()
@@ -548,6 +563,87 @@ func TestProductHandler_AdminListMerchantOnlyOwnProducts(t *testing.T) {
 	assert.Equal(t, int64(1), body.Data.Total)
 	require.Len(t, body.Data.List, 1)
 	assert.Equal(t, "A", body.Data.List[0].Name)
+}
+
+func TestProductHandler_AdminListDerivedStatus(t *testing.T) {
+	h, _ := newProductHandlerWithSeed(t, func(db *gorm.DB) {
+		ownerID := int64(1001)
+		require.NoError(t, db.Create(&[]model.Product{
+			{ID: 101, Name: "Active", OwnerID: &ownerID, Status: model.ProductStatusPublished},
+			{ID: 102, Name: "Sold", OwnerID: &ownerID, Status: model.ProductStatusPublished},
+			{ID: 103, Name: "Unsold", OwnerID: &ownerID, Status: model.ProductStatusPublished},
+			{ID: 104, Name: "Draft", OwnerID: &ownerID, Status: model.ProductStatusDraft},
+		}).Error)
+	})
+	activeID := int64(11)
+	latestSoldID := int64(12)
+	latestUnsoldID := int64(13)
+	provider := &fakeProductAuctionStateProvider{states: map[int64]client.ProductAuctionState{
+		101: {ProductID: 101, ActiveAuctionID: &activeID},
+		102: {ProductID: 102, LatestAuctionID: &latestSoldID, LatestAuctionResult: "sold"},
+		103: {ProductID: 103, LatestAuctionID: &latestUnsoldID, LatestAuctionResult: "unsold"},
+	}}
+	h.SetAuctionStateProvider(provider)
+
+	c := app.NewContext(0)
+	c.Request.SetMethod(http.MethodGet)
+	c.Request.SetRequestURI("/api/v1/admin/products?page=1&page_size=20")
+	c.Request.Header.Set("X-User-ID", "1001")
+	c.Request.Header.Set("X-User-Role", "merchant")
+
+	h.AdminList(context.Background(), c)
+
+	require.Equal(t, http.StatusOK, c.Response.StatusCode())
+	var body struct {
+		Data struct {
+			List []struct {
+				ID                  int64  `json:"id"`
+				DisplayStatus       string `json:"display_status"`
+				DisplayStatusLabel  string `json:"display_status_label"`
+				ActiveAuctionID     *int64 `json:"active_auction_id"`
+				LatestAuctionID     *int64 `json:"latest_auction_id"`
+				LatestAuctionResult string `json:"latest_auction_result"`
+			} `json:"list"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
+	require.Len(t, body.Data.List, 4)
+
+	byProduct := make(map[int64]struct {
+		DisplayStatus       string
+		DisplayStatusLabel  string
+		ActiveAuctionID     *int64
+		LatestAuctionID     *int64
+		LatestAuctionResult string
+	}, len(body.Data.List))
+	for _, item := range body.Data.List {
+		byProduct[item.ID] = struct {
+			DisplayStatus       string
+			DisplayStatusLabel  string
+			ActiveAuctionID     *int64
+			LatestAuctionID     *int64
+			LatestAuctionResult string
+		}{
+			DisplayStatus:       item.DisplayStatus,
+			DisplayStatusLabel:  item.DisplayStatusLabel,
+			ActiveAuctionID:     item.ActiveAuctionID,
+			LatestAuctionID:     item.LatestAuctionID,
+			LatestAuctionResult: item.LatestAuctionResult,
+		}
+	}
+
+	assert.ElementsMatch(t, []int64{101, 102, 103, 104}, provider.gotIDs)
+	assert.Equal(t, "auctioning", byProduct[101].DisplayStatus)
+	assert.Equal(t, "竞拍中", byProduct[101].DisplayStatusLabel)
+	require.NotNil(t, byProduct[101].ActiveAuctionID)
+	assert.Equal(t, int64(11), *byProduct[101].ActiveAuctionID)
+	assert.Equal(t, "sold", byProduct[102].DisplayStatus)
+	assert.Equal(t, "已拍卖", byProduct[102].DisplayStatusLabel)
+	assert.Equal(t, "sold", byProduct[102].LatestAuctionResult)
+	assert.Equal(t, "unsold", byProduct[103].DisplayStatus)
+	assert.Equal(t, "流拍", byProduct[103].DisplayStatusLabel)
+	assert.Equal(t, "draft", byProduct[104].DisplayStatus)
+	assert.Equal(t, "草稿", byProduct[104].DisplayStatusLabel)
 }
 
 func TestProductHandler_ErrorHandling(t *testing.T) {

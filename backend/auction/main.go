@@ -203,6 +203,7 @@ func main() {
 	userAddressHandler := handler.NewUserAddressHandler(userAddressDAO)
 	internalUserHandler := handler.NewInternalUserHandler(userDAO)
 	currentAuctionHandler := handler.NewInternalCurrentAuctionHandler(handler.NewCurrentAuctionDAOFetcher(auctionDAO))
+	productAuctionsHandler := handler.NewInternalProductAuctionsHandler(auctionDAO)
 	statisticsHandler := handler.NewStatisticsHandler(service.NewStatisticsService(statisticsDAO))
 
 	// 一口价秒杀（A5 M1）：dao + Redis 库存/幂等 + service + handler。
@@ -314,6 +315,7 @@ func main() {
 		liveReminderHandler,
 		liveStreamStatsHandler,
 		currentAuctionHandler,
+		productAuctionsHandler,
 	)
 
 	// 注册 Prometheus metrics 端点
@@ -475,7 +477,7 @@ func registerRoutes(h *server.Hertz, internalAPIToken string, auctionHandler *ha
 	v1.POST("/users/me/addresses/:id/default", userAddressHandler.SetDefault)
 }
 
-func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, internalUserHandler *handler.InternalUserHandler, userBalanceHandler *handler.UserBalanceHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler, currentAuctionHandler *handler.InternalCurrentAuctionHandler) {
+func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, internalUserHandler *handler.InternalUserHandler, userBalanceHandler *handler.UserBalanceHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler, currentAuctionHandler *handler.InternalCurrentAuctionHandler, productAuctionsHandlers ...*handler.InternalProductAuctionsHandler) {
 	internal := h.Group("/internal", internalAuth)
 	if internalUserHandler != nil {
 		internal.POST("/users/batch", internalUserHandler.BatchByIDs)
@@ -487,6 +489,13 @@ func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, inter
 	internal.POST("/live-streams/:id/start", liveStreamStatsHandler.StartLive)
 	if currentAuctionHandler != nil {
 		internal.POST("/auctions/current-by-live-streams", currentAuctionHandler.Handle)
+	}
+	var productAuctionsHandler *handler.InternalProductAuctionsHandler
+	if len(productAuctionsHandlers) > 0 {
+		productAuctionsHandler = productAuctionsHandlers[0]
+	}
+	if productAuctionsHandler != nil {
+		internal.POST("/auctions/by-products", productAuctionsHandler.Handle)
 	}
 }
 

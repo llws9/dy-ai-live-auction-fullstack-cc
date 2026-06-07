@@ -3,19 +3,26 @@ package handler
 import (
 	"context"
 	"errors"
+	"log"
 	"strconv"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"gorm.io/gorm"
 
+	"product-service/client"
 	"product-service/model"
 	"product-service/service"
 )
 
+type productAuctionStateProvider interface {
+	BatchProductAuctionStates(ctx context.Context, productIDs []int64) (map[int64]client.ProductAuctionState, error)
+}
+
 // ProductHandler 商品 Handler
 type ProductHandler struct {
-	productService *service.ProductService
+	productService       *service.ProductService
+	auctionStateProvider productAuctionStateProvider
 }
 
 // NewProductHandler 创建商品 Handler
@@ -23,6 +30,19 @@ func NewProductHandler(productService *service.ProductService) *ProductHandler {
 	return &ProductHandler{
 		productService: productService,
 	}
+}
+
+func (h *ProductHandler) SetAuctionStateProvider(provider productAuctionStateProvider) {
+	h.auctionStateProvider = provider
+}
+
+type adminProductItem struct {
+	model.Product
+	DisplayStatus       string `json:"display_status"`
+	DisplayStatusLabel  string `json:"display_status_label"`
+	ActiveAuctionID     *int64 `json:"active_auction_id,omitempty"`
+	LatestAuctionID     *int64 `json:"latest_auction_id,omitempty"`
+	LatestAuctionResult string `json:"latest_auction_result,omitempty"`
 }
 
 // Create 创建商品
@@ -173,16 +193,73 @@ func (h *ProductHandler) AdminList(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
+	states := h.loadProductAuctionStates(ctx, products)
+	items := buildAdminProductItems(products, states)
+
 	c.JSON(200, map[string]interface{}{
 		"code":    200,
 		"message": "success",
 		"data": map[string]interface{}{
-			"list":      products,
+			"list":      items,
 			"total":     total,
 			"page":      page,
 			"page_size": pageSize,
 		},
 	})
+}
+
+func (h *ProductHandler) loadProductAuctionStates(ctx context.Context, products []model.Product) map[int64]client.ProductAuctionState {
+	if h.auctionStateProvider == nil || len(products) == 0 {
+		return map[int64]client.ProductAuctionState{}
+	}
+	productIDs := make([]int64, 0, len(products))
+	for _, product := range products {
+		productIDs = append(productIDs, product.ID)
+	}
+	states, err := h.auctionStateProvider.BatchProductAuctionStates(ctx, productIDs)
+	if err != nil {
+		log.Printf("admin product auction states unavailable: product_ids=%v err=%v", productIDs, err)
+		return map[int64]client.ProductAuctionState{}
+	}
+	return states
+}
+
+func buildAdminProductItems(products []model.Product, states map[int64]client.ProductAuctionState) []adminProductItem {
+	items := make([]adminProductItem, 0, len(products))
+	for _, product := range products {
+		item := adminProductItem{Product: product}
+		state, ok := states[product.ID]
+		if ok {
+			item.ActiveAuctionID = state.ActiveAuctionID
+			item.LatestAuctionID = state.LatestAuctionID
+			item.LatestAuctionResult = state.LatestAuctionResult
+		}
+		switch {
+		case ok && state.ActiveAuctionID != nil:
+			item.DisplayStatus = "auctioning"
+			item.DisplayStatusLabel = "竞拍中"
+		case ok && state.LatestAuctionResult == "sold":
+			item.DisplayStatus = "sold"
+			item.DisplayStatusLabel = "已拍卖"
+		case ok && state.LatestAuctionResult == "unsold":
+			item.DisplayStatus = "unsold"
+			item.DisplayStatusLabel = "流拍"
+		case product.Status == model.ProductStatusPublished:
+			item.DisplayStatus = "schedulable"
+			item.DisplayStatusLabel = "可排期"
+		case product.Status == model.ProductStatusDraft:
+			item.DisplayStatus = "draft"
+			item.DisplayStatusLabel = "草稿"
+		case product.Status == model.ProductStatusUnpublished:
+			item.DisplayStatus = "unpublished"
+			item.DisplayStatusLabel = "已下架"
+		default:
+			item.DisplayStatus = "unknown"
+			item.DisplayStatusLabel = "未知"
+		}
+		items = append(items, item)
+	}
+	return items
 }
 
 func (h *ProductHandler) AdminGet(ctx context.Context, c *app.RequestContext) {

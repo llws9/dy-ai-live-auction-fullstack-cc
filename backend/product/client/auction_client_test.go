@@ -53,3 +53,33 @@ func TestCurrentByLiveStreamIDs_NonOKReturnsError(t *testing.T) {
 	_, err := c.CurrentByLiveStreamIDs(context.Background(), []int64{1})
 	require.Error(t, err)
 }
+
+func TestAuctionClientBatchProductAuctionStates(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/internal/auctions/by-products", r.URL.Path)
+		assert.Equal(t, "secret-token", r.Header.Get("X-Internal-Token"))
+
+		raw, _ := io.ReadAll(r.Body)
+		var reqBody struct {
+			ProductIDs []int64 `json:"product_ids"`
+		}
+		require.NoError(t, json.Unmarshal(raw, &reqBody))
+		assert.Equal(t, []int64{101, 102}, reqBody.ProductIDs)
+
+		_, _ = w.Write([]byte(`{"code":200,"message":"success","data":{"items":[{"product_id":101,"active_auction_id":11,"active_status":1},{"product_id":102,"latest_auction_id":12,"latest_auction_status":3,"latest_auction_result":"sold"}]}}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewAuctionClient(srv.URL, 0)
+	c.SetInternalToken("secret-token")
+
+	got, err := c.BatchProductAuctionStates(context.Background(), []int64{101, 102})
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	require.NotNil(t, got[101].ActiveAuctionID)
+	assert.Equal(t, int64(11), *got[101].ActiveAuctionID)
+	require.NotNil(t, got[102].LatestAuctionID)
+	assert.Equal(t, int64(12), *got[102].LatestAuctionID)
+	assert.Equal(t, "sold", got[102].LatestAuctionResult)
+}
