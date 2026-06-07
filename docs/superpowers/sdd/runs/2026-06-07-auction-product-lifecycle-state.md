@@ -33,12 +33,12 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `9` |
-| Done | `7` |
+| Done | `8` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Review | `0` |
-| Pending | `2` |
-| Last Updated | `2026-06-07 15:57` |
+| Pending | `1` |
+| Last Updated | `2026-06-07 16:00` |
 
 ## Task Matrix
 
@@ -51,7 +51,7 @@
 | `T5` | `AuctionService 创建竞拍 Fail-closed 校验` | `done` | `implementer` | `W4` | `T4` | `Task 5` | `backend/auction/service/auction.go; backend/auction/service/auction_create_test.go; backend/auction/service/auction_test.go; backend/auction/service/auction_admin_scope_test.go` |
 | `T6` | `Auction Create Handler 编排 product-service 与业务错误码` | `done` | `implementer` | `W5` | `T3,T5` | `Task 6` | `backend/auction/handler/auction.go; backend/auction/handler/auction_create_test.go; backend/auction/handler/auction_admin_scope_test.go` |
 | `T7` | `Product AdminList 返回派生展示状态` | `done` | `main-agent` | `W6` | `T4` | `Task 7` | `backend/auction/handler/internal_product_auctions.go; backend/auction/main.go; backend/product/client/auction_client.go; backend/product/handler/product.go; backend/product/main.go; tests listed in plan` |
-| `T8` | `Admin 前端文案、筛选与错误展示` | `pending` | `unassigned` | `W7` | `T7` | `Task 8` | `frontend/admin/src/shared/api/types.ts; frontend/admin/src/pages-new/GoodsList.tsx; frontend/admin/src/pages-new/AuctionList.tsx; frontend admin tests` |
+| `T8` | `Admin 前端文案、筛选与错误展示` | `done` | `main-agent` | `W7` | `T7` | `Task 8` | `frontend/admin/src/shared/api/types.ts; frontend/admin/src/pages-new/GoodsList.tsx; frontend/admin/src/pages-new/AuctionList.tsx; frontend admin tests` |
 | `T9` | `数据一致性检查与 test-service 约束固化` | `pending` | `unassigned` | `W8` | `T6` | `Task 9` | `backend/test/scenario/antisnipe/factory.go; scripts/check-auction-product-consistency.sql` |
 
 ## Wave Plan
@@ -564,10 +564,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-07 15:58` |
+| Completed At | `2026-06-07 16:00` |
 | Branch | `feat/auction-product-lifecycle` |
 | Worktree | `/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-auction-product-lifecycle` |
 | Depends On | `T7` |
@@ -584,11 +584,36 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `TDD Red -> Green -> Verify evidence` | `not_run` | `pending` |
+| `cd frontend/admin && npm test -- --runInBand src/pages-new/__tests__/GoodsList.test.tsx src/pages-new/__tests__/AuctionList.createAuction.test.tsx` | `RED fail before implementation` | `FAIL: missing 草稿/设为可排期 wording, missing 暂无可排期商品 empty state, tabs still 进行中/待开始/已结束` | `red_confirmed` |
+| `cd frontend/admin && npm test -- --runInBand src/pages-new/__tests__/GoodsList.test.tsx src/pages-new/__tests__/AuctionList.createAuction.test.tsx` | `PASS after minimal implementation` | `PASS: 2 suites, 5 tests` | `pass` |
+| `cd frontend/admin && npm test -- --runInBand` | `PASS admin frontend regression` | `PASS: 27 suites, 112 tests` | `pass` |
+| `cd frontend/admin && npm run build` | `PASS production build` | `PASS: tsc && vite build completed` | `pass` |
+
+**Implementation Notes**
+
+- Extended `Product` API type with derived lifecycle display fields returned by T7.
+- Updated GoodsList to show `display_status_label` and changed publish wording to `设为可排期`.
+- Updated AuctionList status labels/tabs to `竞拍中`, `已拍卖`, `流拍`, `已取消`.
+- Added client-side sold/unsold filtering on top of the existing `status=3` backend filter.
+- Added empty schedulable-products notice and disabled create submit when no schedulable product is available.
+
+**Modified Files**
+
+- `frontend/admin/src/shared/api/types.ts`
+- `frontend/admin/src/pages-new/GoodsList.tsx`
+- `frontend/admin/src/pages-new/AuctionList.tsx`
+- `frontend/admin/src/pages-new/__tests__/GoodsList.test.tsx`
+- `frontend/admin/src/pages-new/__tests__/AuctionList.createAuction.test.tsx`
+- `docs/superpowers/sdd/runs/2026-06-07-auction-product-lifecycle-state.md`
+
+**Risks**
+
+- `sold` and `unsold` tabs still rely on backend `status=3` plus frontend `winner_id` filtering, matching the plan's known backend filter limitation.
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `当前分支/worktree：feat/auction-product-lifecycle @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-auction-product-lifecycle`
+- Result: `DONE`
 
 ### T9 - `数据一致性检查与 test-service 约束固化`
 

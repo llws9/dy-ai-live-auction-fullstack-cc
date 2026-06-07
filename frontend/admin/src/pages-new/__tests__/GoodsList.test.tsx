@@ -80,4 +80,32 @@ describe('GoodsList', () => {
     expect(await screen.findByText('艺术收藏')).toBeInTheDocument()
     expect(screen.getByText('未分类')).toBeInTheDocument()
   })
+
+  it('shows schedulable wording instead of publish wording', async () => {
+    mockedProductApi.list.mockResolvedValueOnce({
+      list: [
+        {
+          id: 11,
+          name: '青花瓷',
+          description: '',
+          images: [],
+          category_id: null,
+          category_name: '',
+          status: 0,
+          display_status_label: '草稿',
+          created_at: '2026-06-07T00:00:00Z',
+          updated_at: '2026-06-07T00:00:00Z',
+        },
+      ],
+      total: 1,
+      page: 1,
+      page_size: 10,
+    } as any)
+
+    renderGoodsList()
+
+    expect(await screen.findByText('草稿')).toBeInTheDocument()
+    expect(screen.getByTitle('设为可排期')).toBeInTheDocument()
+    expect(screen.queryByTitle('发布')).not.toBeInTheDocument()
+  })
 })

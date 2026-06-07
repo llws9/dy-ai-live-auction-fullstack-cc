@@ -128,4 +128,34 @@ describe('AuctionList create auction with rule template', () => {
       mockedAuctionApi.create.mock.invocationCallOrder[0]
     )
   })
+
+  it('shows empty schedulable products state', async () => {
+    const user = userEvent.setup()
+    mockedProductApi.list.mockResolvedValueOnce({ list: [], total: 0, page: 1, page_size: 100 })
+
+    render(
+      <MemoryRouter>
+        <AuctionList />
+      </MemoryRouter>
+    )
+
+    await user.click(await screen.findByRole('button', { name: '创建竞拍场次' }))
+
+    expect(await screen.findByText('暂无可排期商品')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '确认创建竞拍' })).toBeDisabled()
+  })
+
+  it('shows sold and unsold lifecycle tabs', async () => {
+    render(
+      <MemoryRouter>
+        <AuctionList />
+      </MemoryRouter>
+    )
+
+    expect(await screen.findByRole('tab', { name: '全部场次' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '竞拍中' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '已拍卖' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '流拍' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: '已取消' })).toBeInTheDocument()
+  })
 })

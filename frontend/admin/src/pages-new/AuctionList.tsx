@@ -17,12 +17,14 @@ import { auctionApi, auctionRuleTemplateApi, productApi, statisticsApi, type Auc
 import { useAuth } from "@/shared/auth"
 import { MERCHANT_ROLE } from "@/shared/auth/roles"
 
-const statusMap: Record<number, { label: string; variant: BadgeProps["variant"] }> = {
-  0: { label: "待开始", variant: "blue" },
-  1: { label: "进行中", variant: "success" },
-  2: { label: "延时中", variant: "warning" },
-  3: { label: "已结束", variant: "outline" },
-  4: { label: "已取消", variant: "secondary" },
+function getAuctionStatus(auction: any): { label: string; variant: BadgeProps["variant"] } {
+  if (auction.status === 0) return { label: "待开始", variant: "blue" }
+  if (auction.status === 1) return { label: "竞拍中", variant: "success" }
+  if (auction.status === 2) return { label: "竞拍中（延时）", variant: "warning" }
+  if (auction.status === 3 && auction.winner_id) return { label: "已拍卖", variant: "outline" }
+  if (auction.status === 3 && !auction.winner_id) return { label: "流拍", variant: "secondary" }
+  if (auction.status === 4) return { label: "已取消", variant: "secondary" }
+  return { label: "未知", variant: "secondary" }
 }
 
 export default function AuctionList() {
@@ -31,6 +33,7 @@ export default function AuctionList() {
   const [auctions, setAuctions] = React.useState<any[]>([])
   const [loading, setLoading] = React.useState(true)
   const [statusFilter, setStatusFilter] = React.useState<number | undefined>(undefined)
+  const [activeTab, setActiveTab] = React.useState("all")
   const [searchTerm, setSearchTerm] = React.useState("")
   const [page, setPage] = React.useState(1)
   const [total, setTotal] = React.useState(0)
@@ -95,10 +98,11 @@ export default function AuctionList() {
 
   // 状态筛选
   const handleStatusChange = (value: string) => {
+    setActiveTab(value)
     if (value === 'all') {
       setStatusFilter(undefined)
     } else {
-      const statusValue = { ongoing: 1, pending: 0, completed: 3 }[value]
+      const statusValue = { active: 1, sold: 3, unsold: 3, cancelled: 4 }[value as "active" | "sold" | "unsold" | "cancelled"]
       setStatusFilter(statusValue)
     }
     setPage(1)
@@ -145,6 +149,10 @@ export default function AuctionList() {
     const productID = Number(createForm.product_id)
     const templateID = Number(createForm.template_id)
     const duration = Number(createForm.duration)
+    if (products.length === 0) {
+      setCreateError("暂无可排期商品")
+      return
+    }
     if (!productID || !templateID || duration <= 0) {
       setCreateError("请选择商品、规则模板并填写有效竞拍时长")
       return
@@ -174,6 +182,12 @@ export default function AuctionList() {
       (a.live_stream_name || '').toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [auctions, searchTerm])
+
+  const visibleAuctions = React.useMemo(() => {
+    if (activeTab === "sold") return filteredAuctions.filter((auction) => auction.status === 3 && !!auction.winner_id)
+    if (activeTab === "unsold") return filteredAuctions.filter((auction) => auction.status === 3 && !auction.winner_id)
+    return filteredAuctions
+  }, [activeTab, filteredAuctions])
 
   return (
     <div className="space-y-6">
@@ -207,6 +221,11 @@ export default function AuctionList() {
                 <div className="text-sm text-slate-500">加载商品和模板中...</div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {products.length === 0 && (
+                    <div className="md:col-span-3 rounded-md bg-amber-50 p-3 text-sm text-amber-700">
+                      暂无可排期商品
+                    </div>
+                  )}
                   <label className="space-y-1 text-sm text-slate-600">
                     <span>竞拍商品</span>
                     <select
@@ -249,7 +268,7 @@ export default function AuctionList() {
                 <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
                   取消
                 </Button>
-                <Button type="submit" disabled={createLoading || createSubmitting} className="bg-amber-500 hover:bg-amber-600 text-[#0f172a]">
+                <Button type="submit" disabled={createLoading || createSubmitting || products.length === 0} className="bg-amber-500 hover:bg-amber-600 text-[#0f172a]">
                   {createSubmitting ? "创建中..." : "确认创建竞拍"}
                 </Button>
               </div>
@@ -270,9 +289,10 @@ export default function AuctionList() {
             <Tabs defaultValue="all" onValueChange={handleStatusChange} className="w-full md:w-auto">
               <TabsList className="bg-slate-100 border-none">
                 <TabsTrigger value="all">全部场次</TabsTrigger>
-                <TabsTrigger value="ongoing">进行中</TabsTrigger>
-                <TabsTrigger value="pending">待开始</TabsTrigger>
-                <TabsTrigger value="completed">已结束</TabsTrigger>
+                <TabsTrigger value="active">竞拍中</TabsTrigger>
+                <TabsTrigger value="sold">已拍卖</TabsTrigger>
+                <TabsTrigger value="unsold">流拍</TabsTrigger>
+                <TabsTrigger value="cancelled">已取消</TabsTrigger>
               </TabsList>
             </Tabs>
 
@@ -296,10 +316,10 @@ export default function AuctionList() {
             <div className="p-8 text-center text-slate-500">加载中...</div>
           ) : (
             <div className="divide-y divide-slate-100">
-              {filteredAuctions.length === 0 ? (
+              {visibleAuctions.length === 0 ? (
                 <div className="p-8 text-center text-slate-500">暂无竞拍数据</div>
               ) : (
-                filteredAuctions.map((auction) => (
+                visibleAuctions.map((auction) => (
                   <div
                     key={auction.id}
                     className="p-6 hover:bg-slate-50 transition-all cursor-pointer group"
@@ -311,8 +331,8 @@ export default function AuctionList() {
                           <h3 className="text-lg font-bold text-slate-900 group-hover:text-amber-600 transition-colors">
                             {auction.product?.name || `竞拍场次 #${auction.id}`}
                           </h3>
-                          <Badge variant={statusMap[auction.status]?.variant || 'secondary'}>
-                            {statusMap[auction.status]?.label || '未知'}
+                          <Badge variant={getAuctionStatus(auction).variant}>
+                            {getAuctionStatus(auction).label}
                           </Badge>
                         </div>
                         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-500">

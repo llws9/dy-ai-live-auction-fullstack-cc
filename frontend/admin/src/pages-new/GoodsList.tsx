@@ -27,8 +27,8 @@ import { useNavigate } from "react-router-dom"
 import { productApi, Product } from "@/shared/api"
 
 const statusMap: Record<number, { label: string; variant: BadgeProps["variant"] }> = {
-  0: { label: "未发布", variant: "secondary" },
-  1: { label: "已发布", variant: "success" },
+  0: { label: "草稿", variant: "secondary" },
+  1: { label: "可排期", variant: "success" },
   2: { label: "已下架", variant: "outline" },
 }
 
@@ -81,7 +81,7 @@ export default function GoodsList() {
       await productApi.publish(id)
       fetchProducts()
     } catch (e) {
-      console.error('发布失败:', e)
+      console.error('设为可排期失败:', e)
     }
   }
 
@@ -205,7 +205,7 @@ export default function GoodsList() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={statusMap[item.status]?.variant || 'secondary'}>
-                          {statusMap[item.status]?.label || '未知'}
+                          {item.display_status_label || statusMap[item.status]?.label || '未知'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-slate-500 text-sm">
@@ -227,7 +227,7 @@ export default function GoodsList() {
                               size="icon"
                               className="text-slate-400 hover:text-green-500"
                               onClick={() => handlePublish(item.id)}
-                              title="发布"
+                              title="设为可排期"
                             >
                               <Upload className="w-4 h-4" />
                             </Button>
