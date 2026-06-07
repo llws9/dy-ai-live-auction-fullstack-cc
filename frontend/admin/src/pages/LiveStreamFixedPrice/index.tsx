@@ -17,8 +17,10 @@ import {
   auctionApi,
   fixedPriceAdminApi,
   liveStreamApi,
+  productApi,
   type FixedPriceAdminItem,
   type FixedPriceAdminStatus,
+  type Product,
 } from "@/shared/api"
 
 interface LiveStreamFixedPriceProps {
@@ -56,6 +58,7 @@ export default function LiveStreamFixedPrice({ liveStreamId: propLiveStreamId }:
   const [loading, setLoading] = React.useState(true)
   const [submitting, setSubmitting] = React.useState(false)
   const [auctionOptions, setAuctionOptions] = React.useState<any[]>([])
+  const [productOptions, setProductOptions] = React.useState<Product[]>([])
   const [auctionId, setAuctionId] = React.useState("")
   const [productId, setProductId] = React.useState("")
   const [price, setPrice] = React.useState("")
@@ -99,16 +102,20 @@ export default function LiveStreamFixedPrice({ liveStreamId: propLiveStreamId }:
 
     setLoading(true)
     try {
-      const [response, auctionResponse] = await Promise.all([
+      const [response, auctionResponse, productResponse] = await Promise.all([
         fixedPriceAdminApi.list(liveStreamId, { page: 1, page_size: pageSize }),
         auctionApi.list({ live_stream_id: liveStreamId, page: 1, page_size: 100 }),
+        productApi.list({ display_status: 'schedulable', page: 1, page_size: 100 }),
       ])
       const nextItems = (response.items || []).map(normalizeItem)
       const nextAuctions = (auctionResponse.list || []).filter((auction: any) => [0, 1, 2].includes(Number(auction.status)))
+      const nextProducts = productResponse.list || []
       setItems(nextItems)
       setTotal(response.total ?? nextItems.length)
       setAuctionOptions(nextAuctions)
+      setProductOptions(nextProducts)
       setAuctionId((current) => current || (nextAuctions[0]?.id ? String(nextAuctions[0].id) : ""))
+      setProductId((current) => current || (nextProducts[0]?.id ? String(nextProducts[0].id) : ""))
     } catch (error) {
       console.error("获取一口价列表失败:", error)
       alert("获取一口价列表失败")
@@ -146,6 +153,10 @@ export default function LiveStreamFixedPrice({ liveStreamId: propLiveStreamId }:
         total_stock: created.total_stock ?? Number(stock),
         remaining_stock: created.remaining_stock ?? Number(stock),
         status: created.status || "on_sale",
+      }
+      const selectedProductName = productOptions.find((p) => String(p.id) === productId)?.name
+      if (selectedProductName) {
+        completedItem.product_title = selectedProductName
       }
       setItems((prev) => [normalizeItem(completedItem), ...prev])
       setTotal((prev) => prev + 1)
@@ -230,15 +241,25 @@ export default function LiveStreamFixedPrice({ liveStreamId: propLiveStreamId }:
               </select>
             </label>
             <label className="space-y-2 text-sm font-medium text-slate-700">
-              商品 ID
-              <Input
-                type="number"
-                min="1"
+              搭售商品
+              <select
+                aria-label="搭售商品"
+                className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
                 value={productId}
                 onChange={(event) => setProductId(event.target.value)}
                 required
-                placeholder="例如 5001"
-              />
+                disabled={productOptions.length === 0}
+              >
+                {productOptions.length === 0 ? (
+                  <option value="">暂无可搭售商品，请先创建并发布商品</option>
+                ) : (
+                  productOptions.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.name}（#{product.id}）
+                    </option>
+                  ))
+                )}
+              </select>
             </label>
             <label className="space-y-2 text-sm font-medium text-slate-700">
               一口价
@@ -260,7 +281,7 @@ export default function LiveStreamFixedPrice({ liveStreamId: propLiveStreamId }:
                 placeholder="20"
               />
             </label>
-            <Button type="submit" disabled={submitting || !auctionId} className="self-end bg-amber-500 text-[#0f172a] hover:bg-amber-600">
+            <Button type="submit" disabled={submitting || !auctionId || productOptions.length === 0} className="self-end bg-amber-500 text-[#0f172a] hover:bg-amber-600">
               <Plus className="mr-2 w-4 h-4" />
               新增上架
             </Button>
