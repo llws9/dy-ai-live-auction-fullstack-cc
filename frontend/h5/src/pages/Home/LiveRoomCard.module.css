@@ -1,0 +1,37 @@
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl, 16px);
+  box-shadow: var(--shadow-key);
+  overflow: hidden;
+  margin-bottom: var(--spacing-4, 16px);
+}
+.imageWrapper { position: relative; aspect-ratio: 16 / 9; background: var(--bg-elevated); }
+.cover { width: 100%; height: 100%; object-fit: cover; }
+.statusLive,
+.statusUpcoming {
+  position: absolute; top: 8px; left: 8px;
+  padding: 2px 8px; border-radius: 999px; font-size: 12px; color: #fff;
+}
+.statusLive { background: var(--text-brand, #c9a96e); }
+.statusUpcoming { background: rgba(0, 0, 0, 0.55); }
+.viewers {
+  position: absolute; top: 8px; right: 8px;
+  padding: 2px 8px; border-radius: 999px; font-size: 12px;
+  background: rgba(0, 0, 0, 0.45); color: #fff;
+}
+.body { padding: var(--spacing-3, 12px); }
+.name { margin: 0 0 6px; font-size: 16px; color: var(--text-primary); }
+.price { margin: 0; font-size: 15px; color: var(--text-brand); font-weight: 600; }
+.nextLine { margin: 0; font-size: 13px; color: var(--text-secondary); }
+.nextProduct { color: var(--text-primary); }
+.deals { list-style: none; margin: 8px 0 0; padding: 0; }
+.dealItem { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+.actions { margin-top: 12px; }
+.primaryButton,
+.secondaryButton {
+  width: 100%; padding: 10px 0; border-radius: var(--radius-md, 8px);
+  font-size: 14px; border: none; cursor: pointer;
+}
+.primaryButton { background: var(--text-brand, #c9a96e); color: #1a1a1a; }
+.secondaryButton { background: transparent; color: var(--text-brand); border: 1px solid var(--text-brand); }
