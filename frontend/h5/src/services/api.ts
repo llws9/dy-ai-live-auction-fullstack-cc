@@ -182,11 +182,25 @@ async function request<T>(
       await handleErrorResponse(response);
     }
 
-    // 检查响应内容
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      const data = await response.json();
+    const contentType = response.headers.get('content-type') || '';
+    let data: any;
+    let hasParsedBody = false;
+    if (contentType.includes('application/json')) {
+      data = await response.json();
+      hasParsedBody = true;
+    } else {
+      const responseText = await response.text();
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText);
+          hasParsedBody = true;
+        } catch (_error) {
+          return response as any;
+        }
+      }
+    }
 
+    if (hasParsedBody) {
       // 检查业务错误码
       if (data.code !== undefined && !SUCCESS_CODES.has(data.code)) {
         const error = new ApiError(
@@ -204,7 +218,7 @@ async function request<T>(
         throw error;
       }
 
-      return data.data || data;
+      return Object.prototype.hasOwnProperty.call(data, 'data') ? data.data : data;
     }
 
     return response as any;

@@ -280,6 +280,7 @@ func main() {
 
 	// 启动热度自动更新定时任务
 	liveStreamStatsService := service.NewLiveStreamStatsService()
+	internalDemoAuctionHandler.SetLiveRestarter(liveStreamStatsService)
 	liveSessionResolver := service.NewLiveStatsSessionResolverWithMetadata(liveStreamStatsService, liveStreamClient)
 	liveReminderService := service.NewLiveReminderService(userLiveStreamFollowDAO, liveSessionResolver, liveStreamReminderReceiptDAO)
 	liveReminderHandler := handler.NewLiveReminderHandler(liveReminderService)
@@ -508,6 +509,7 @@ func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, inter
 	}
 	if internalDemoAuctionHandler != nil {
 		internal.POST("/test/auctions/shorten", internalDemoAuctionHandler.Shorten)
+		internal.POST("/test/live-streams/:id/restart", internalDemoAuctionHandler.RestartLiveSession)
 	}
 	if productAuctionsHandler != nil {
 		internal.POST("/auctions/by-products", productAuctionsHandler.Handle)

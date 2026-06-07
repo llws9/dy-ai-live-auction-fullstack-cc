@@ -14,6 +14,26 @@ interface MobileContainerProps {
 
 const LIVE_START_POPUP_VISIBILITY_KEY = 'live-start-popup-visibility';
 
+let pendingLiveReminderRequest:
+  | {
+      key: string;
+      promise: ReturnType<typeof notificationApi.getPendingLiveReminder>;
+    }
+  | null = null;
+
+function getPendingLiveReminderOnce(key: string) {
+  if (pendingLiveReminderRequest?.key === key) {
+    return pendingLiveReminderRequest.promise;
+  }
+  const promise = notificationApi.getPendingLiveReminder().finally(() => {
+    if (pendingLiveReminderRequest?.key === key) {
+      pendingLiveReminderRequest = null;
+    }
+  });
+  pendingLiveReminderRequest = { key, promise };
+  return promise;
+}
+
 function MobileContainer({ children }: MobileContainerProps) {
   const { pathname } = useLocation();
   const [isReminderOpen, setIsReminderOpen] = useState(false);
@@ -23,6 +43,7 @@ function MobileContainer({ children }: MobileContainerProps) {
   const isLiveStartPopupVisible = popupVisibilityVariant !== false;
   const userId = user?.id ?? null;
   const identityRef = useRef({ token, userId });
+  const reminderTokenRef = useRef<string | null>(null);
   const isLiveRoute = pathname.startsWith('/live');
   const isLoginRoute = pathname.startsWith('/login');
 
@@ -32,23 +53,25 @@ function MobileContainer({ children }: MobileContainerProps) {
     if (authLoading || !isAuthenticated || !token || userId === null || !isLiveStartPopupVisible || isLoginRoute) {
       setIsReminderOpen(false);
       setReminderStream(null);
+      reminderTokenRef.current = null;
       return;
     }
 
-    let alive = true;
-    const identitySnapshot = { token, userId };
-    setIsReminderOpen(false);
-    setReminderStream(null);
+    const identitySnapshot = { token };
+    if (reminderTokenRef.current !== token) {
+      setIsReminderOpen(false);
+      setReminderStream(null);
+      reminderTokenRef.current = token;
+    }
 
     const isCurrentIdentity = () => {
       const latest = identityRef.current;
-      return latest.token === identitySnapshot.token && latest.userId === identitySnapshot.userId;
+      return latest.token === identitySnapshot.token;
     };
 
-    notificationApi
-      .getPendingLiveReminder()
+    getPendingLiveReminderOnce(token)
       .then((result) => {
-        if (!alive || !isCurrentIdentity() || !result.hasReminder || !result.stream) {
+        if (!isCurrentIdentity() || !result.hasReminder || !result.stream) {
           return;
         }
         setReminderStream(result.stream);
@@ -65,9 +88,7 @@ function MobileContainer({ children }: MobileContainerProps) {
         localStorage.removeItem('pending_live_reminder');
       });
 
-    return () => {
-      alive = false;
-    };
+    return undefined;
   }, [authLoading, isAuthenticated, token, userId, pathname, isLiveStartPopupVisible, isLoginRoute]);
 
   return (

@@ -517,6 +517,15 @@ func (c *Client) ShortenAuction(ctx context.Context, auctionID int64, remainingS
 	return step
 }
 
+func (c *Client) RestartLiveSession(ctx context.Context, liveStreamID int64) StepResult {
+	path := "/internal/test/live-streams/" + strconv.FormatInt(liveStreamID, 10) + "/restart"
+	step := c.doAs(ctx, "restart_live_session", http.MethodPost, path, Actor{}, map[string]any{}, map[string]string{
+		"X-Internal-Token": c.internalToken,
+	}, nil)
+	step.RefID = liveStreamID
+	return step
+}
+
 func (c *Client) PurchaseFixedPriceItem(ctx context.Context, actor Actor, itemID int64, idemKey string) (int64, StepResult) {
 	path := "/api/v1/fixed-price/items/" + strconv.FormatInt(itemID, 10) + "/purchase"
 	var resp fixedPricePurchaseResp

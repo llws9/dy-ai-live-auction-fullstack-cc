@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"strconv"
 	"testing"
@@ -18,6 +19,35 @@ import (
 	"auction-service/model"
 	"auction-service/websocket"
 )
+
+type fakeDemoLiveRestarter struct {
+	ended   []int64
+	started []int64
+}
+
+func (f *fakeDemoLiveRestarter) EndLive(_ context.Context, liveStreamID int64) error {
+	f.ended = append(f.ended, liveStreamID)
+	return nil
+}
+
+func (f *fakeDemoLiveRestarter) StartLive(_ context.Context, liveStreamID int64) error {
+	f.started = append(f.started, liveStreamID)
+	return nil
+}
+
+func TestInternalDemoAuctionRestartLiveSessionEndsThenStarts(t *testing.T) {
+	restarter := &fakeDemoLiveRestarter{}
+	h := server.Default(server.WithHostPorts("127.0.0.1:0"))
+	handler := NewInternalDemoAuctionHandler(nil, websocket.NewHub())
+	handler.SetLiveRestarter(restarter)
+	h.POST("/internal/test/live-streams/:id/restart", handler.RestartLiveSession)
+
+	w := ut.PerformRequest(h.Engine, http.MethodPost, "/internal/test/live-streams/880301/restart", nil)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, []int64{880301}, restarter.ended)
+	require.Equal(t, []int64{880301}, restarter.started)
+}
 
 func TestInternalDemoAuctionShortenUpdatesEndTimeAndBroadcastsTimeSync(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})

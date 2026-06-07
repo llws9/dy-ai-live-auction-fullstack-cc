@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { StrictMode } from 'react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Link, MemoryRouter } from 'react-router-dom';
 import MobileContainer from '../../components/MobileShell/MobileContainer';
 import BottomNav from '../../components/MobileShell/BottomNav';
@@ -657,6 +658,44 @@ describe('MobileShell', () => {
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.queryByText('旧账号直播间')).not.toBeInTheDocument();
+  });
+
+  it('deduplicates concurrent pending reminder requests so stale cleanup does not consume the modal', async () => {
+    const request = createDeferred<{
+      hasReminder: boolean;
+      stream: {
+        id: string | number;
+        name: string;
+        avatarUrl: string;
+        statusText?: string;
+      } | null;
+    }>();
+    mockGetPendingLiveReminder.mockReturnValue(request.promise);
+
+    render(
+      <StrictMode>
+        <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+          <ThemeProvider>
+            <MobileContainer>
+              <main>页面内容</main>
+            </MobileContainer>
+          </ThemeProvider>
+        </MemoryRouter>
+      </StrictMode>,
+    );
+
+    await waitFor(() => expect(mockGetPendingLiveReminder).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      request.resolve({
+        hasReminder: true,
+        stream: { id: 88, name: '正在直播间', avatarUrl: '', statusText: '正在直播' },
+      });
+      await request.promise;
+    });
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('正在直播间')).toBeInTheDocument();
   });
 
   it('does not request pending reminder before login is confirmed', async () => {

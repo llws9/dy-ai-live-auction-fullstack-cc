@@ -3,7 +3,7 @@ jest.mock('../../utils/errorMessages', () => ({
   logError: jest.fn(),
 }));
 
-import { auctionApi, buildLoginRedirectPath, orderApi, setToastFunction, skyLampApi, userApi } from '../api';
+import { auctionApi, buildLoginRedirectPath, get, orderApi, setToastFunction, skyLampApi, userApi } from '../api';
 
 describe('api service auth header', () => {
   beforeEach(() => {
@@ -98,6 +98,22 @@ describe('api service auth header', () => {
     window.history.pushState({}, '', '/profile?from=history');
 
     expect(buildLoginRedirectPath()).toBe('/login?redirect=%2Fprofile%3Ffrom%3Dhistory');
+  });
+
+  it('parses JSON bodies even when upstream marks them as text/plain', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: () => 'text/plain; charset=utf-8' },
+      text: async () => JSON.stringify({
+        code: 0,
+        data: { hasReminder: true, stream: { id: 1, name: '直播间' } },
+      }),
+    } as Response);
+    global.fetch = fetchMock;
+
+    const result = await get<{ hasReminder: boolean; stream: { id: number; name: string } }>('/live/pending-reminder');
+
+    expect(result).toEqual({ hasReminder: true, stream: { id: 1, name: '直播间' } });
   });
 
   it('passes category_id to /auctions list query when provided (T2.10)', async () => {

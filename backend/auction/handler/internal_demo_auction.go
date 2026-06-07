@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -18,12 +19,43 @@ import (
 type InternalDemoAuctionHandler struct {
 	auctionDAO *dao.AuctionDAO
 	timeSync   *websocket.TimeSyncService
+	live       DemoLiveRestarter
 }
 
 func NewInternalDemoAuctionHandler(auctionDAO *dao.AuctionDAO, hub *websocket.Hub) *InternalDemoAuctionHandler {
 	timeSync := websocket.NewTimeSyncService()
 	timeSync.SetHub(hub)
 	return &InternalDemoAuctionHandler{auctionDAO: auctionDAO, timeSync: timeSync}
+}
+
+type DemoLiveRestarter interface {
+	EndLive(ctx context.Context, liveStreamID int64) error
+	StartLive(ctx context.Context, liveStreamID int64) error
+}
+
+func (h *InternalDemoAuctionHandler) SetLiveRestarter(live DemoLiveRestarter) {
+	h.live = live
+}
+
+func (h *InternalDemoAuctionHandler) RestartLiveSession(ctx context.Context, c *app.RequestContext) {
+	if h.live == nil {
+		c.JSON(http.StatusInternalServerError, map[string]any{"code": 500, "message": "live restarter not configured"})
+		return
+	}
+	liveStreamID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || liveStreamID <= 0 {
+		c.JSON(http.StatusBadRequest, map[string]any{"code": 400, "message": "invalid live_stream_id"})
+		return
+	}
+	if err := h.live.EndLive(ctx, liveStreamID); err != nil {
+		c.JSON(http.StatusInternalServerError, map[string]any{"code": 500, "message": "end live failed"})
+		return
+	}
+	if err := h.live.StartLive(ctx, liveStreamID); err != nil {
+		c.JSON(http.StatusInternalServerError, map[string]any{"code": 500, "message": "start live failed"})
+		return
+	}
+	c.JSON(http.StatusOK, map[string]any{"ok": true, "live_stream_id": liveStreamID})
 }
 
 func (h *InternalDemoAuctionHandler) Shorten(ctx context.Context, c *app.RequestContext) {

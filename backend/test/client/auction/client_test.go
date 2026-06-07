@@ -274,6 +274,37 @@ func TestSDK_ShortenAuctionUsesInternalTestAPI(t *testing.T) {
 	}
 }
 
+func TestSDK_RestartLiveSessionUsesInternalTestAPI(t *testing.T) {
+	var capturedPath string
+	var capturedToken string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedPath = r.URL.Path
+		capturedToken = r.Header.Get("X-Internal-Token")
+		if r.Method != http.MethodPost {
+			t.Fatalf("method: want POST, got %s", r.Method)
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"ok":true,"live_stream_id":880301}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	c.SetInternalToken("dev-token")
+	step := c.RestartLiveSession(context.Background(), 880301)
+	if !step.OK {
+		t.Fatalf("RestartLiveSession failed: %s err=%v", step.Message, step.Err)
+	}
+	if capturedPath != "/internal/test/live-streams/880301/restart" {
+		t.Fatalf("path: want /internal/test/live-streams/880301/restart, got %s", capturedPath)
+	}
+	if capturedToken != "dev-token" {
+		t.Fatalf("X-Internal-Token: want dev-token, got %q", capturedToken)
+	}
+	if step.RefID != 880301 {
+		t.Fatalf("RefID: want 880301, got %d", step.RefID)
+	}
+}
+
 // TestSDK_CreateAuction 创建拍卖 → 201 + 返回 ID
 func TestSDK_CreateAuction(t *testing.T) {
 	startTime := time.Now().Add(time.Minute).Truncate(time.Second)

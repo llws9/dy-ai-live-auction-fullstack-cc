@@ -32,6 +32,7 @@ type demoAuctionClient interface {
 	CreateAuctionRule(ctx context.Context, actor auctioncli.Actor, productID int64, req auctioncli.CreateAuctionRuleReq) auctioncli.StepResult
 	CreateLiveStream(ctx context.Context, actor auctioncli.Actor, req auctioncli.CreateLiveStreamReq) auctioncli.StepResult
 	StartLive(ctx context.Context, actor auctioncli.Actor, liveStreamID int64) auctioncli.StepResult
+	FollowLiveStream(ctx context.Context, actor auctioncli.Actor, liveStreamID int64) auctioncli.StepResult
 	CreateAuctionAs(ctx context.Context, actor auctioncli.Actor, req auctioncli.CreateAuctionReq) auctioncli.StepResult
 	WaitAuctionStarted(ctx context.Context, auctionID int64, interval, timeout time.Duration) auctioncli.StepResult
 	CreateFixedPriceItem(ctx context.Context, actor auctioncli.Actor, req auctioncli.CreateFixedPriceItemReq) auctioncli.StepResult
@@ -41,6 +42,7 @@ type demoAuctionClient interface {
 type demoInternalAuctionClient interface {
 	TopUpUserBalance(ctx context.Context, userID int64, amount string) (string, auctioncli.StepResult)
 	ShortenAuction(ctx context.Context, auctionID int64, remainingSeconds int) auctioncli.StepResult
+	RestartLiveSession(ctx context.Context, liveStreamID int64) auctioncli.StepResult
 }
 
 // DemoHandler 处理演示控制面板触发的同步业务动作。
@@ -253,6 +255,13 @@ func demoMerchantActor() auctioncli.Actor {
 	}
 }
 
+func demoBuyerActors() []auctioncli.Actor {
+	return []auctioncli.Actor{
+		{UserID: buyerAUserID, Role: auctioncli.RoleUser},
+		{UserID: buyerBUserID, Role: auctioncli.RoleUser},
+	}
+}
+
 func nextDemoProductName(kind string) string {
 	seq := demoMerchantSequence.Add(1)
 	return fmt.Sprintf("DEMO_商家动作_%s_%d_%d", kind, time.Now().UnixNano(), seq)
@@ -272,6 +281,23 @@ func decimalToBidAmount(amount decimal.Decimal) (float64, error) {
 		return 0, fmt.Errorf("amount is outside supported bid range")
 	}
 	return bidAmount, nil
+}
+
+func isActiveLiveStreamAuctionConflict(step auctioncli.StepResult) bool {
+	return step.StatusCode == 409 && strings.Contains(step.Message, "直播间")
+}
+
+func (h *DemoHandler) restartDemoLiveSession(ctx context.Context, c *app.RequestContext, liveStreamID int64) bool {
+	if h.internalCli == nil {
+		c.JSON(500, map[string]any{"error": "demo internal auction client is not configured"})
+		return false
+	}
+	restarted := h.internalCli.RestartLiveSession(ctx, liveStreamID)
+	if !restarted.OK {
+		writeDemoStepError(c, restarted)
+		return false
+	}
+	return true
 }
 
 // PostFollowBid 以统一 seed 的买家B身份对指定拍卖发起一次跟价出价。
@@ -471,6 +497,13 @@ func (h *DemoHandler) PostMerchantAuction(ctx context.Context, c *app.RequestCon
 		writeDemoStepError(c, live)
 		return
 	}
+	for _, buyer := range demoBuyerActors() {
+		follow := h.bizCli.FollowLiveStream(ctx, buyer, live.RefID)
+		if !follow.OK {
+			writeDemoStepError(c, follow)
+			return
+		}
+	}
 
 	const durationSec = 180
 	rule := h.bizCli.CreateAuctionRule(ctx, actor, product.RefID, auctioncli.CreateAuctionRuleReq{
@@ -504,6 +537,21 @@ func (h *DemoHandler) PostMerchantAuction(ctx context.Context, c *app.RequestCon
 		Duration:     durationSec,
 		StartTime:    &startTime,
 	})
+	if !auction.OK && req.Mode == "ongoing" && isActiveLiveStreamAuctionConflict(auction) {
+		if !h.restartDemoLiveSession(ctx, c, live.RefID) {
+			return
+		}
+		c.JSON(200, map[string]any{
+			"ok":             true,
+			"mode":           req.Mode,
+			"product_id":     product.RefID,
+			"live_stream_id": live.RefID,
+			"auction_id":     0,
+			"reused":         true,
+			"message":        "当前直播间已有进行中的竞拍，已刷新开播提醒",
+		})
+		return
+	}
 	if !auction.OK || auction.RefID <= 0 {
 		writeDemoStepError(c, auction)
 		return
@@ -512,6 +560,9 @@ func (h *DemoHandler) PostMerchantAuction(ctx context.Context, c *app.RequestCon
 		liveStarted := h.bizCli.StartLive(ctx, actor, live.RefID)
 		if !liveStarted.OK {
 			writeDemoStepError(c, liveStarted)
+			return
+		}
+		if !h.restartDemoLiveSession(ctx, c, live.RefID) {
 			return
 		}
 		started := h.bizCli.WaitAuctionStarted(ctx, auction.RefID, 100*time.Millisecond, 5*time.Second)
