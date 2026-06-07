@@ -7,9 +7,9 @@
 ## 2. 核心调整项 (Key Changes)
 
 ### 2.1 移除商品大卡片，提升出价排行
-- **当前状态**：屏幕中下部有一个 `<article className={styles.productCard}>` 占据了较大面积。
-- **调整方案**：彻底移除该 `<article>` 标签及其包含的商品大卡片。
-- **关联影响**：商品卡片移除后，下方的“出价排行” (`<section className={styles.rankingBlock}>`) 将自然上移，获得更多的展示空间。
+- **当前状态**：底部抽屉（`BidDock` 的 `.sheet`，仅 `sheet !== null` 时展开）内有一个 `<article className={styles.productCard}>` 占据了较大面积。注意它并非屏幕常驻元素，而是抽屉展开后才出现。
+- **调整方案**：彻底移除该 `<article>` 标签及其包含的商品大卡片（商品图、名称、简介、抽屉内收藏行）。
+- **关联影响**：在展开的抽屉内，商品卡片移除后下方的“出价排行” (`<section className={styles.rankingBlock}>`) 将自然上移，获得更多的展示空间，提升抽屉内布局适配性。
 
 ### 2.2 主播信息与收藏按钮融合 (左上角)
 - **当前状态**：收藏按钮原本附着在商品卡片上。
@@ -25,7 +25,7 @@
   - **右上角第一行**：将“在线人数”提取为独立组件，置于右上角。左侧展示最多 3 个用户的重叠头像，右侧为半透明的数字胶囊，最右侧保留退出 (`X`) 按钮。
   - **右上角第二行 (方案 C 融合)**：在在线人数下方，新增一个主题适配的微胶囊样式“商品详情 >”按钮。
   - **头像数据 MVP 规则**：本次不新增后端接口契约。若现有直播间详情没有在线观众头像列表，则头像区只使用已有可用头像（如主播头像、当前用户头像）和本地占位头像；不足 3 个不强行补真实用户数据，不伪造在线用户身份。
-  - **交互**：点击“商品详情”按钮必须复用现有 URL sheet 机制，调用 `openSheet('info')`，由 `sheet=info` 驱动 Bottom Sheet 展示。不得新增独立的 `setDetailSheetVisible` 本地状态，避免破坏浏览器返回键关闭抽屉的现有行为。
+  - **交互（已确认：小工作量方案）**：点击“商品详情”按钮直接跳转至现有商品详情页 `/detail?id=<auctionId>`（对应 `App.tsx` 中 `path="/detail"` 的 `ProductDetail` 页面，通过 `useSearchParams().get('id')` 接收 auctionId）。**不开抽屉、不新增侧边卡片、不新增 `sheet=info` 内容**。实现使用 react-router 的 `<Link to={`/detail?id=${auctionId}`}>`，离开直播间后用户可通过浏览器返回键回到直播间。
 
 ### 2.4 系统提示保留与强化
 - **当前状态**：直播互动层已有 `ChatPanel`，视觉方案中出现“系统提示：欢迎来到直播间！”样式。
@@ -58,16 +58,16 @@
       <div className={styles.viewerCount}>{(liveStream?.viewer_count ?? 0).toLocaleString()}</div>
       <Link className={styles.closeBtn} to="/">X</Link>
     </div>
-    
-    {/* 商品详情入口 (原方案C)，复用现有 URL sheet=info */}
-    <button className={styles.productDetailBtn} onClick={() => openSheet('info')}>
+
+    {/* 商品详情入口 (方案C)，直接跳转现有详情页 */}
+    <Link className={styles.productDetailBtn} to={`/detail?id=${auctionId}`}>
       商品详情 &gt;
-    </button>
+    </Link>
   </div>
 </header>
 ```
 
-商品详情 Bottom Sheet 继续由现有 `BidDock` / `sheet` 渲染链路承载。详情内容至少包含：商品图片、商品名称、商品简介、当前最高价、起拍价、加价幅度、直播间收藏人数与当前收藏状态。
+点击“商品详情”跳转至 `/detail?id=<auctionId>`，由现有 `ProductDetail` 页面渲染完整商品信息（商品图片、名称、简介、价格、加价信息等），无需在直播间内新增详情面板。底部抽屉（`BidDock` / `sheet`）经本次改造后仅承载出价相关内容（价格、倒计时、出价排行、出价框），不再包含商品大卡片。
 
 ## 4. 视觉与样式指南 (Visual & Styling Guidelines)
 

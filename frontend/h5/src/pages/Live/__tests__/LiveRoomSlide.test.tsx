@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import LiveRoomSlide from '../LiveRoomSlide';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi, skyLampApi } from '../../../services/api';
@@ -260,6 +260,33 @@ describe('LiveRoomSlide', () => {
     expect(mockedTrackBusinessEvent.mock.calls.filter(([event]) => event === 'live_room_enter')).toHaveLength(1);
   });
 
+  it('renders top follow action, online viewers, and a product detail link in the header', async () => {
+    const { container } = renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    const header = container.querySelector('header');
+    expect(header).toBeInTheDocument();
+    expect(within(header as HTMLElement).getByRole('button', { name: '收藏' })).toBeInTheDocument();
+    const viewersRow = within(header as HTMLElement).getByLabelText('在线人数');
+    const productDetailLink = within(header as HTMLElement).getByRole('link', { name: /商品详情/ });
+    const statusPill = within(header as HTMLElement).getByText('正在竞拍');
+    expect(viewersRow).toHaveTextContent('128');
+    expect(productDetailLink).toHaveAttribute('href', '/detail?id=5');
+    expect(productDetailLink.previousElementSibling).toBe(viewersRow);
+    expect(statusPill.previousElementSibling).toBe(productDetailLink);
+  });
+
+  it('does not render the product card follow row in the bid drawer while keeping ranking visible', async () => {
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    fireEvent.click(await screen.findByTestId('bid-dock'));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/人收藏/)).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('出价排行')).toBeInTheDocument();
+  });
+
   it('publishes the resolved auction id to DemoContext and clears it on unmount', async () => {
     const { unmount } = renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
 
@@ -500,9 +527,11 @@ describe('LiveRoomSlide', () => {
 
     renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
 
-    fireEvent.click(await screen.findByText('明代紫砂壶'));
+    fireEvent.click(await screen.findByTestId('bid-dock'));
 
-    expect(await screen.findByText('1 人收藏')).toBeInTheDocument();
+    await waitFor(() => expect(mockedFollowApi.getFollowersStats).toHaveBeenCalledWith(3));
+    expect(screen.queryByText(/人收藏/)).not.toBeInTheDocument();
+    expect(screen.getByText('出价排行')).toBeInTheDocument();
   });
 
   it('uses auction rule as authoritative increment when product detail has no rules', async () => {
@@ -851,10 +880,10 @@ describe('LiveRoomSlide', () => {
     expect(screen.getByText('名家手作孤品')).toBeInTheDocument();
     expect(screen.queryByText(/æ|å|ç|è/)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('明代紫砂壶'));
+    fireEvent.click(screen.getByTestId('bid-dock'));
 
-    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(1);
-    expect(screen.getAllByText('名家手作孤品').length).toBeGreaterThan(1);
+    expect(await screen.findByText('出价排行')).toBeInTheDocument();
+    expect(screen.queryByText(/æ|å|ç|è/)).not.toBeInTheDocument();
   });
 
   it('repairs mojibake ranking user names before rendering', async () => {

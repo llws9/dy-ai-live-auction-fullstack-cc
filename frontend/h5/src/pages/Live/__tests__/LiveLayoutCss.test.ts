@@ -75,15 +75,16 @@ describe('Live layout css', () => {
     expect(liveEmptyPageCss).toContain('align-items: flex-start;');
   });
 
-  it('prevents long product names from overflowing the auction card', () => {
+  it('keeps the bid sheet focused on ranking after removing the product card', () => {
     const css = readLiveCss();
-    const productCardContentCss = css.match(/\.productCard\s*>\s*div\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
-    const productTitleCss = getClassBlock(css, 'productCard h1');
+    const rankingBlockCss = getClassBlock(css, 'rankingBlock');
 
-    expect(productCardContentCss).toContain('min-width: 0;');
-    expect(productTitleCss).toContain('overflow: hidden;');
-    expect(productTitleCss).toContain('text-overflow: ellipsis;');
-    expect(productTitleCss).toContain('white-space: nowrap;');
+    expect(css).not.toContain('.productCard');
+    expect(css).not.toContain('.productFallback');
+    expect(css).not.toContain('.followRow');
+    expect(css).not.toContain('.followButton');
+    expect(rankingBlockCss).toContain('position: relative;');
+    expect(rankingBlockCss).toContain('padding: 16px;');
   });
 
   it('keeps the auction ended summary in the luxury shimmer treatment', () => {
