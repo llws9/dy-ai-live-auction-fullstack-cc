@@ -19,6 +19,7 @@ var (
 	ErrNotStreamOwner      = errors.New("not stream owner")
 	ErrProductNotFound     = errors.New("product not found")
 	ErrAuctionNotAvailable = errors.New("auction not available for fixed price item")
+	ErrProductInAuction    = errors.New("product is in active auction")
 	ErrNotOnSale           = errors.New("fixed price item not on sale")
 	ErrSoldOut             = errors.New("fixed price item sold out")
 	ErrAlreadyBought       = errors.New("user already bought this fixed price item")
@@ -155,6 +156,15 @@ func (s *FixedPriceService) ListItem(ctx context.Context, r ListItemReq) (*model
 	}
 	if !exists {
 		return nil, ErrProductNotFound
+	}
+	if s.auctions != nil {
+		active, err := s.auctions.GetActiveByProductID(ctx, r.ProductID)
+		if err != nil {
+			return nil, err
+		}
+		if active != nil {
+			return nil, ErrProductInAuction
+		}
 	}
 	if r.MaxPerUser <= 0 {
 		r.MaxPerUser = 1

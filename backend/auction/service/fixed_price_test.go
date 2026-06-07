@@ -466,3 +466,35 @@ func TestOffline_AsyncCleanupAfterDelay(t *testing.T) {
 		return err == redis.Nil
 	})
 }
+
+func TestFixedPriceService_List_RejectsProductInActiveAuction(t *testing.T) {
+	liveStreamID := int64(1001)
+	creatorID := int64(100)
+	db := setupServiceDB(t)
+	rdb := setupTestRedis(t)
+	otherLiveStream := int64(2002)
+	svc := NewFixedPriceService(
+		db,
+		newItemDAO(db), newPurchaseDAO(db), newBalanceDAO(db),
+		NewStockGuard(rdb), NewIdemStore(rdb),
+		&fakeStreamOwner{owners: map[int64]int64{liveStreamID: creatorID}},
+		&fakeProductChecker{},
+		&fakeAuctionChecker{
+			auctions: map[int64]*model.Auction{
+				7001: {ID: 7001, LiveStreamID: &liveStreamID, CreatorID: &creatorID, Status: model.AuctionStatusOngoing},
+			},
+			activeByProduct: map[int64]*model.Auction{
+				5002: {ID: 9999, LiveStreamID: &otherLiveStream, CreatorID: &creatorID, Status: model.AuctionStatusOngoing},
+			},
+		},
+		nil,
+		nil,
+	)
+
+	_, err := svc.ListItem(context.Background(), ListItemReq{
+		AuctionID: 7001, LiveStreamID: liveStreamID, ProductID: 5002, CreatorID: creatorID,
+		Price: decimal.NewFromInt(99), TotalStock: 10,
+	})
+
+	assert.ErrorIs(t, err, ErrProductInAuction)
+}
