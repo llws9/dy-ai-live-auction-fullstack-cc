@@ -22,8 +22,10 @@ func NewStatisticsDAO(db *gorm.DB) *StatisticsDAO {
 // OverviewStatistics 统计总览
 type OverviewStatistics struct {
 	TotalAuctions int64   `json:"total_auctions"`
+	TotalOrders   int64   `json:"total_orders"`
 	SuccessRate   float64 `json:"success_rate"`
 	TotalRevenue  float64 `json:"total_revenue"`
+	TodayRevenue  float64 `json:"today_revenue"`
 	TotalUsers    int64   `json:"total_users"`
 	ActiveUsers   int64   `json:"active_users"`
 }
@@ -100,6 +102,7 @@ func (d *StatisticsDAO) GetOverviewScoped(ctx context.Context, sellerID *int64) 
 	var totalOrders int64
 	d.scopedOrderQuery(ctx, sellerID).Count(&totalOrders)
 	overview.TotalAuctions = totalOrders
+	overview.TotalOrders = totalOrders
 
 	// 成功订单数
 	var successOrders int64
@@ -119,6 +122,18 @@ func (d *StatisticsDAO) GetOverviewScoped(ctx context.Context, sellerID *int64) 
 		Select("COALESCE(SUM(final_price), 0)").
 		Scan(&totalRevenue)
 	overview.TotalRevenue = totalRevenue
+
+	// 今日成交额
+	var todayRevenue float64
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	tomorrowStart := todayStart.AddDate(0, 0, 1)
+	d.scopedOrderQuery(ctx, sellerID).
+		Where("status >= ?", model.OrderStatusPaid).
+		Where("created_at >= ? AND created_at < ?", todayStart, tomorrowStart).
+		Select("COALESCE(SUM(final_price), 0)").
+		Scan(&todayRevenue)
+	overview.TodayRevenue = todayRevenue
 
 	// 总用户数
 	var totalUsers int64

@@ -730,7 +730,13 @@ const docTemplate = `{
                 "total_auctions": {
                     "type": "integer"
                 },
+                "total_orders": {
+                    "type": "integer"
+                },
                 "total_revenue": {
+                    "type": "number"
+                },
+                "today_revenue": {
                     "type": "number"
                 },
                 "total_users": {
