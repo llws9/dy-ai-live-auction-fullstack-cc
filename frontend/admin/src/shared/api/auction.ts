@@ -3,6 +3,7 @@
 import { get, post, put, buildQuery } from './request';
 import { Auction, Bid, AuctionResult, PaginatedResponse } from './types';
 import { normalizeAuctionListResponse, normalizeAuctionText } from './auctionEncoding';
+import { normalizeBids } from './bidEncoding';
 
 export interface AuctionListParams {
   status?: number;
@@ -32,7 +33,7 @@ export const auctionApi = {
   create: (data: { product_id: number; duration: number; live_stream_id?: number; start_time?: string }) => post<Auction>('/auctions', data).then(normalizeAuctionText),
 
   // 获取出价记录
-  getBids: (id: number) => get<Bid[]>(`/auctions/${id}/bids`),
+  getBids: (id: number) => get<Bid[]>(`/auctions/${id}/bids`).then(normalizeBids),
 
   // 获取竞拍排名
   getRanking: (id: number) => get<Bid[]>(`/auctions/${id}/ranking`),

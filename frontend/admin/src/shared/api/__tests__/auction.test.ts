@@ -73,4 +73,47 @@ describe('auctionApi.list', () => {
       start_time: '2026-06-08T10:30:00.000Z',
     });
   });
+
+  it('normalizes bid amount and buyer names before auction detail renders them', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: {
+        get: (name: string) => (name.toLowerCase() === 'content-type' ? 'application/json' : null),
+      },
+      json: async () => ([
+        {
+          id: 11,
+          auction_id: 7001,
+          user_id: 9101,
+          amount: '1200.00',
+          created_at: '2026-06-08T00:06:00Z',
+        },
+        {
+          id: 12,
+          auction_id: 7001,
+          user_id: 9102,
+          user_name: 'æ¼”ç¤ºä¹°å®¶B',
+          amount: 1300,
+          created_at: '2026-06-08T00:06:10Z',
+        },
+      ]),
+    });
+
+    const result = await auctionApi.getBids(7001);
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        user_id: 9101,
+        user_name: '演示买家A',
+        amount: 1200,
+        price: 1200,
+      }),
+      expect.objectContaining({
+        user_id: 9102,
+        user_name: '演示买家B',
+        amount: 1300,
+        price: 1300,
+      }),
+    ]);
+  });
 });

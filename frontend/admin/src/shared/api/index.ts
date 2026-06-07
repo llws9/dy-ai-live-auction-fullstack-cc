@@ -2,6 +2,8 @@
 
 import { get, post, put, del, buildQuery, ApiError, setToastFunction } from './request';
 import { normalizeAuctionListResponse, normalizeAuctionText } from './auctionEncoding';
+import { normalizeBids } from './bidEncoding';
+import { normalizeOrderListResponse, normalizeOrderText } from './orderEncoding';
 export { productApi } from './product';
 
 // 重新导出类型
@@ -37,7 +39,7 @@ export const auctionApi = {
 
   create: (data: { product_id: number; duration: number; live_stream_id?: number; start_time?: string }) => post<any>('/auctions', data).then(normalizeAuctionText),
 
-  getBids: (id: number) => get<any[]>(`/auctions/${id}/bids`),
+  getBids: (id: number) => get<any[]>(`/auctions/${id}/bids`).then(normalizeBids),
 
   getRanking: (id: number) => get<any[]>(`/auctions/${id}/ranking`),
 
@@ -64,11 +66,11 @@ export const orderApi = {
         shipped_count?: number;
         completed_count?: number;
       };
-    }>(`/admin/orders?${query}`);
+    }>(`/admin/orders?${query}`).then(normalizeOrderListResponse);
   },
 
   // admin 端订单详情：使用 /admin/orders/:id（不被 winner_id 过滤）。
-  get: (id: number) => get<any>(`/admin/orders/${id}`),
+  get: (id: number) => get<any>(`/admin/orders/${id}`).then(normalizeOrderText),
 
   updateStatus: (id: number, status: number) => put<any>(`/orders/${id}`, { status }),
 
