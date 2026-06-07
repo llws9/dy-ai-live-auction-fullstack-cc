@@ -157,14 +157,12 @@ func (s *FixedPriceService) ListItem(ctx context.Context, r ListItemReq) (*model
 	if !exists {
 		return nil, ErrProductNotFound
 	}
-	if s.auctions != nil {
-		active, err := s.auctions.GetActiveByProductID(ctx, r.ProductID)
-		if err != nil {
-			return nil, err
-		}
-		if active != nil {
-			return nil, ErrProductInAuction
-		}
+	active, err := s.auctions.GetActiveByProductID(ctx, r.ProductID)
+	if err != nil {
+		return nil, err
+	}
+	if active != nil {
+		return nil, ErrProductInAuction
 	}
 	if r.MaxPerUser <= 0 {
 		r.MaxPerUser = 1
