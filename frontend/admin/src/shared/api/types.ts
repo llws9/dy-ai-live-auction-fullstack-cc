@@ -28,6 +28,11 @@ export interface Product {
   category_id?: number | null;
   category_name?: string;
   status: number; // 0=未发布, 1=已发布, 2=已下架
+  display_status?: "auctioning" | "sold" | "unsold" | "schedulable" | "draft" | "unpublished" | "unknown";
+  display_status_label?: string;
+  active_auction_id?: number;
+  latest_auction_id?: number;
+  latest_auction_result?: "sold" | "unsold";
   created_at: string;
   updated_at: string;
   rules?: AuctionRule;

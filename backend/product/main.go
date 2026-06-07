@@ -154,6 +154,7 @@ func main() {
 	}
 	auctionClient := client.NewAuctionClient(auctionSvcURL, 2*time.Second)
 	auctionClient.SetInternalToken(os.Getenv("INTERNAL_API_TOKEN"))
+	productHandler.SetAuctionStateProvider(auctionClient)
 	orderService.SetUserSummaryProvider(auctionUserSummaryAdapter{client: auctionClient})
 	liveStreamHandler.SetAuctionClient(auctionClient)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
@@ -267,6 +268,8 @@ func registerRoutes(h *server.Hertz, productHandler *handler.ProductHandler, rul
 	internal := h.Group("/internal", internalAuth)
 	internal.GET("/products", internalHandler.ListByCategory)
 	internal.POST("/products/batch", internalHandler.BatchByIDs)
+	internal.GET("/products/:id/auction-info", internalHandler.GetAuctionProductInfo)
 	internal.POST("/live-streams/batch", internalHandler.BatchLiveStreams)
+	internal.POST("/live-streams/get-or-create", internalHandler.GetOrCreateActiveLiveStream)
 	internal.POST("/orders/from-auction-result", orderHandler.CreateFromAuctionResult)
 }

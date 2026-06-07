@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"auction-service/dao"
@@ -11,6 +12,16 @@ import (
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
+
+var (
+	ErrProductOwnershipMismatch       = errors.New("商品不存在或不属于当前商家")
+	ErrProductNotSchedulable          = errors.New("商品未进入竞拍池")
+	ErrAuctionRuleNotBound            = errors.New("规则模板不存在或不属于当前商家")
+	ErrActiveAuctionExists            = errors.New("该商品已有待开始或进行中的竞拍场次")
+	ErrSoldProductCannotBeReauctioned = errors.New("已成交商品不能再次创建竞拍")
+)
+
+const productStatusPublished = 1 // mirrors product-service model.ProductStatusPublished
 
 // AuctionService 竞拍服务
 type AuctionService struct {
@@ -57,35 +68,92 @@ func (s *AuctionService) SetSkyLampDAO(skyLampDAO *dao.SkyLampDAO) {
 
 // CreateAuctionRequest 创建竞拍请求
 type CreateAuctionRequest struct {
-	ProductID    int64
-	LiveStreamID *int64
-	CreatorID    *int64
-	StartTime    time.Time
-	EndTime      time.Time
+	ProductID      int64
+	CreatorID      *int64
+	Duration       int
+	ProductOwnerID int64
+	ProductStatus  int
+	RuleBound      bool
+	LiveStreamID   int64
+	// Deprecated: compatibility for pre-T6 handler/tests. Ignored by CreateAuction;
+	// Task 6 will migrate callers to Duration-based scheduling.
+	StartTime time.Time
+	// Deprecated: compatibility for pre-T6 handler/tests. Ignored by CreateAuction;
+	// Task 6 will migrate callers to Duration-based scheduling.
+	EndTime time.Time
 }
 
 // CreateAuction 创建竞拍
 func (s *AuctionService) CreateAuction(ctx context.Context, req *CreateAuctionRequest) (*model.Auction, error) {
-	if req.EndTime.Before(req.StartTime) {
-		return nil, errors.New("结束时间不能早于开始时间")
+	if req == nil {
+		return nil, errors.New("创建竞拍请求不能为空")
+	}
+	if req.CreatorID == nil || *req.CreatorID <= 0 {
+		return nil, errors.New("创建者ID非法")
+	}
+	if req.ProductID <= 0 {
+		return nil, errors.New("商品ID非法")
+	}
+	if req.Duration <= 0 {
+		return nil, errors.New("竞拍时长必须大于0")
+	}
+	if req.ProductOwnerID != *req.CreatorID {
+		return nil, ErrProductOwnershipMismatch
+	}
+	if req.ProductStatus != productStatusPublished {
+		return nil, ErrProductNotSchedulable
+	}
+	if !req.RuleBound {
+		return nil, ErrAuctionRuleNotBound
+	}
+	if req.LiveStreamID <= 0 {
+		return nil, errors.New("直播间不可用")
 	}
 
+	active, err := s.auctionDAO.GetActiveByProductID(ctx, req.ProductID)
+	if err != nil {
+		return nil, err
+	}
+	if active != nil {
+		return nil, ErrActiveAuctionExists
+	}
+
+	latest, err := s.auctionDAO.GetLatestTerminalByProductID(ctx, req.ProductID)
+	if err != nil {
+		return nil, err
+	}
+	if latest != nil && latest.Status == model.AuctionStatusEnded && latest.WinnerID != nil {
+		return nil, ErrSoldProductCannotBeReauctioned
+	}
+
+	now := time.Now()
+	liveStreamID := req.LiveStreamID
 	auction := &model.Auction{
 		ProductID:    req.ProductID,
-		LiveStreamID: req.LiveStreamID,
+		LiveStreamID: &liveStreamID,
 		CreatorID:    req.CreatorID,
 		Status:       model.AuctionStatusPending,
 		CurrentPrice: decimal.Zero,
-		StartTime:    req.StartTime,
-		EndTime:      req.EndTime,
+		StartTime:    now,
+		EndTime:      now.Add(time.Duration(req.Duration) * time.Second),
 		DelayUsed:    0,
 	}
 
 	if err := s.auctionDAO.Create(ctx, auction); err != nil {
+		if isActiveAuctionUniqueConflict(err) {
+			return nil, ErrActiveAuctionExists
+		}
 		return nil, err
 	}
 
 	return auction, nil
+}
+
+func isActiveAuctionUniqueConflict(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "uk_active_product")
 }
 
 // GetAuction 获取竞拍详情

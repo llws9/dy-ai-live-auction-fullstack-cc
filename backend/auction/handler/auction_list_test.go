@@ -44,6 +44,14 @@ func (f *fakeProductClient) BatchGetSummaries(_ context.Context, ids []int64) (m
 	return f.batchOut, nil
 }
 
+func (f *fakeProductClient) GetAuctionProductInfo(_ context.Context, _ int64) (*client.AuctionProductInfo, error) {
+	return nil, nil
+}
+
+func (f *fakeProductClient) GetOrCreateActiveLiveStream(_ context.Context, _ int64, _ string) (*client.LiveStreamInfo, error) {
+	return nil, nil
+}
+
 // fakeLister 模拟 service.ListAuctionsWithFilters，断言收到的 filters。
 type fakeLister struct {
 	called      bool

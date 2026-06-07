@@ -8,6 +8,7 @@ import (
 	"product-service/model"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -306,7 +307,7 @@ func (suite *ProductTestSuite) TestPublishProduct() {
 	ctx := context.Background()
 
 	// 创建测试商品
-	created, err := suite.service.CreateProduct(ctx, &CreateProductRequest{
+	created, err := suite.service.CreateProductForOwner(ctx, 1, &CreateProductRequest{
 		Name: "Test Product",
 	})
 	suite.NoError(err)
@@ -319,6 +320,85 @@ func (suite *ProductTestSuite) TestPublishProduct() {
 	product, err := suite.service.GetProduct(ctx, int64(created.ID))
 	suite.NoError(err)
 	suite.Equal(model.ProductStatusPublished, product.Status)
+}
+
+func TestProductService_PublishProductOnlyMarksProductPublished(t *testing.T) {
+	ctx := context.Background()
+	db := newProductServiceTestDB(t)
+	svc := NewProductService(dao.NewProductDAO(db), dao.NewAuctionRuleDAO(db), dao.NewLiveStreamDAO(db))
+
+	product := &model.Product{
+		OwnerID: ptrInt64(1001),
+		Name:    "draft product",
+		Status:  model.ProductStatusDraft,
+	}
+	require.NoError(t, db.Create(product).Error)
+
+	got, liveStream, err := svc.PublishProduct(ctx, int64(product.ID), 1001, nil)
+
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.Equal(t, model.ProductStatusPublished, got.Status)
+	assert.Nil(t, liveStream)
+
+	var count int64
+	require.NoError(t, db.Model(&model.LiveStream{}).Count(&count).Error)
+	assert.Equal(t, int64(0), count)
+}
+
+func TestProductService_PublishProductRejectsOwnerlessProduct(t *testing.T) {
+	ctx := context.Background()
+	db := newProductServiceTestDB(t)
+	svc := NewProductService(dao.NewProductDAO(db), dao.NewAuctionRuleDAO(db), dao.NewLiveStreamDAO(db))
+
+	product := &model.Product{
+		Name:   "ownerless draft product",
+		Status: model.ProductStatusDraft,
+	}
+	require.NoError(t, db.Create(product).Error)
+
+	got, liveStream, err := svc.PublishProduct(ctx, int64(product.ID), 1001, nil)
+
+	require.Error(t, err)
+	assert.Nil(t, got)
+	assert.Nil(t, liveStream)
+	assert.Contains(t, err.Error(), "商品不存在或不属于当前商家")
+}
+
+func TestProductService_PublishProductRejectsNonDraft(t *testing.T) {
+	ctx := context.Background()
+	db := newProductServiceTestDB(t)
+	svc := NewProductService(dao.NewProductDAO(db), dao.NewAuctionRuleDAO(db), dao.NewLiveStreamDAO(db))
+
+	product := &model.Product{
+		OwnerID: ptrInt64(1001),
+		Name:    "published product",
+		Status:  model.ProductStatusPublished,
+	}
+	require.NoError(t, db.Create(product).Error)
+
+	got, liveStream, err := svc.PublishProduct(ctx, int64(product.ID), 1001, nil)
+
+	require.Error(t, err)
+	assert.Nil(t, got)
+	assert.Nil(t, liveStream)
+	assert.Contains(t, err.Error(), "只有草稿状态的商品可以发布")
+}
+
+func newProductServiceTestDB(t *testing.T) *gorm.DB {
+	t.Helper()
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	sqlDB.SetMaxOpenConns(1)
+	require.NoError(t, db.AutoMigrate(
+		&model.Product{},
+		&model.Category{},
+		&model.LiveStream{},
+		&model.AuctionRule{},
+	))
+	return db
 }
 
 // TestCreateAuctionRule 测试创建竞拍规则

@@ -3,7 +3,6 @@ package main
 import (
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/ut"
@@ -24,10 +23,13 @@ func TestAuctionAdminRoutesRequireInternalToken(t *testing.T) {
 	svc := service.NewAuctionService(dao.NewAuctionDAO(db))
 	ownerID := int64(1001)
 	_, err = svc.CreateAuction(t.Context(), &service.CreateAuctionRequest{
-		ProductID: 1,
-		CreatorID: &ownerID,
-		StartTime: time.Now(),
-		EndTime:   time.Now().Add(time.Hour),
+		ProductID:      1,
+		CreatorID:      &ownerID,
+		Duration:       3600,
+		ProductOwnerID: ownerID,
+		ProductStatus:  1,
+		RuleBound:      true,
+		LiveStreamID:   1,
 	})
 	require.NoError(t, err)
 
