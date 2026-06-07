@@ -72,4 +72,24 @@ describe('Live layout css', () => {
     expect(productTitleCss).toContain('text-overflow: ellipsis;');
     expect(productTitleCss).toContain('white-space: nowrap;');
   });
+
+  it('keeps the auction ended summary in the luxury shimmer treatment', () => {
+    const css = readLiveCss();
+    const endedSummaryCss = getClassBlock(css, 'endedSummary');
+    const endedSummaryBeforeCss = css.match(/\.endedSummary::before\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    const endedSummaryAfterCss = css.match(/\.endedSummary::after\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    const endedProductNameCss = getClassBlock(css, 'endedSummary p');
+    const endedPriceCss = getClassBlock(css, 'endedSummary strong');
+
+    expect(endedSummaryCss).toContain('overflow: hidden;');
+    expect(endedSummaryCss).toContain('text-align: center;');
+    expect(endedSummaryCss).toContain('max-width: 360px;');
+    expect(endedSummaryCss).toContain('margin: 0 auto;');
+    expect(endedSummaryBeforeCss).toContain('animation: endedSummaryShimmer 2.5s infinite;');
+    expect(endedSummaryAfterCss).toContain("content: 'SOLD';");
+    expect(endedProductNameCss).toContain('overflow: hidden;');
+    expect(endedProductNameCss).toContain('text-overflow: ellipsis;');
+    expect(endedProductNameCss).toContain('white-space: nowrap;');
+    expect(endedPriceCss).toContain('font-size: 42px;');
+  });
 });
