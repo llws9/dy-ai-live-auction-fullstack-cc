@@ -312,6 +312,19 @@ func TestListItemHandler_AuctionNotAvailable_400(t *testing.T) {
 	assert.Equal(t, "FP_AUCTION_NOT_AVAILABLE", decodeFPErr(t, resp.Body()).Code)
 }
 
+func TestListItemHandler_ProductInAuction_409(t *testing.T) {
+	uc := &fakeFixedPriceUsecase{listErr: service.ErrProductInAuction}
+	eng := newFixedPriceTestServer(uc, &fakeFPBalanceProvider{})
+	body := `{"auction_id":8001,"live_stream_id":1001,"product_id":5001,"price":"99.00","total_stock":100}`
+	w := ut.PerformRequest(eng, http.MethodPost, "/api/v1/fixed-price/items", &ut.Body{Body: bytes.NewReader([]byte(body)), Len: len(body)},
+		ut.Header{Key: "X-User-ID", Value: "100"},
+		ut.Header{Key: "X-User-Role", Value: "merchant"},
+		ut.Header{Key: "Content-Type", Value: "application/json"})
+	resp := w.Result()
+	assert.Equal(t, 409, resp.StatusCode())
+	assert.Equal(t, "FP_PRODUCT_IN_AUCTION", decodeFPErr(t, resp.Body()).Code)
+}
+
 func TestListItemHandler_AdminRoleRejected(t *testing.T) {
 	uc := &fakeFixedPriceUsecase{listResult: &model.FixedPriceItem{ID: 7001}}
 	eng := newFixedPriceTestServer(uc, &fakeFPBalanceProvider{})

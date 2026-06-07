@@ -18,6 +18,7 @@ import {
   fixedPriceAdminApi,
   liveStreamApi,
   productApi,
+  ApiError,
   type FixedPriceAdminItem,
   type FixedPriceAdminStatus,
   type Product,
@@ -164,7 +165,12 @@ export default function LiveStreamFixedPrice({ liveStreamId: propLiveStreamId }:
       setStock("")
     } catch (error) {
       console.error("上架一口价商品失败:", error)
-      alert("上架一口价商品失败")
+      if (error instanceof ApiError && (error.code as unknown) === "FP_PRODUCT_IN_AUCTION") {
+        alert("该商品正在参与竞拍，无法用于一口价，请重新选择")
+        fetchItems()
+      } else {
+        alert("上架一口价商品失败")
+      }
     } finally {
       setSubmitting(false)
     }

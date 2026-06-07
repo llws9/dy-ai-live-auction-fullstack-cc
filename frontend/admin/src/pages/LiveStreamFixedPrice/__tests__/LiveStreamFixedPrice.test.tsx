@@ -1,9 +1,16 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import LiveStreamFixedPrice from '../index'
-import { auctionApi, fixedPriceAdminApi, liveStreamApi, productApi } from '@/shared/api'
+import { auctionApi, fixedPriceAdminApi, liveStreamApi, productApi, ApiError } from '@/shared/api'
 
 jest.mock('@/shared/api', () => ({
+  ApiError: class ApiError extends Error {
+    code?: unknown
+    constructor(message: string, _status?: number, code?: unknown) {
+      super(message)
+      this.code = code
+    }
+  },
   auctionApi: {
     list: jest.fn(),
   },
@@ -141,6 +148,26 @@ describe('LiveStreamFixedPrice', () => {
     const select = await screen.findByLabelText('搭售商品')
     await waitFor(() => expect(select).toBeDisabled())
     expect(screen.getByText('暂无可搭售商品，请先创建并发布商品')).toBeInTheDocument()
+  })
+
+  it('shows a dedicated message and refreshes when the product is in an active auction', async () => {
+    const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {})
+    listItemMock.mockRejectedValue(new (ApiError as any)('conflict', 409, 'FP_PRODUCT_IN_AUCTION'))
+
+    renderPage()
+
+    await waitFor(() => expect(screen.getByLabelText('竞拍场次')).toHaveValue('8001'))
+    await waitFor(() => expect(productListMock).toHaveBeenCalled())
+    fireEvent.change(screen.getByLabelText('搭售商品'), { target: { value: '5002' } })
+    fireEvent.change(screen.getByLabelText('一口价'), { target: { value: '199.00' } })
+    fireEvent.change(screen.getByLabelText('库存'), { target: { value: '5' } })
+
+    listMock.mockClear()
+    fireEvent.click(screen.getByRole('button', { name: '新增上架' }))
+
+    await waitFor(() => expect(alertSpy).toHaveBeenCalledWith('该商品正在参与竞拍，无法用于一口价，请重新选择'))
+    // 失败后重新拉取可售商品列表，把被抢拍的商品从下拉移除。
+    await waitFor(() => expect(listMock).toHaveBeenCalled())
   })
 
   it('confirms offline and updates the row status', async () => {
