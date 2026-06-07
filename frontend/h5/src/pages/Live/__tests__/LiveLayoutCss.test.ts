@@ -26,13 +26,14 @@ describe('Live layout css', () => {
     expect(liveChatOverlayCss).toContain('width: min(50vw, 210px);');
   });
 
-  it('expands the bid drawer to 80 percent and shrinks the live view to the remaining 20 percent', () => {
+  it('keeps the opened bid sheet to half height so the live view remains prominent', () => {
     const css = readLiveCss();
     const videoAreaCompactCss = getClassBlock(css, 'videoAreaCompact');
     const sheetCss = getClassBlock(css, 'sheet');
 
-    expect(videoAreaCompactCss).toContain('height: 20%;');
-    expect(sheetCss).toContain('height: 80dvh;');
+    expect(videoAreaCompactCss).toContain('height: 50%;');
+    expect(sheetCss).toContain('height: 50dvh;');
+    expect(sheetCss).toContain('box-sizing: border-box;');
   });
 
   it('keeps live empty upcoming state colors bound to theme tokens', () => {
@@ -59,5 +60,16 @@ describe('Live layout css', () => {
     const liveEmptyPageCss = getClassBlock(css, 'liveEmptyPage');
 
     expect(liveEmptyPageCss).toContain('align-items: flex-start;');
+  });
+
+  it('prevents long product names from overflowing the auction card', () => {
+    const css = readLiveCss();
+    const productCardContentCss = css.match(/\.productCard\s*>\s*div\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    const productTitleCss = getClassBlock(css, 'productCard h1');
+
+    expect(productCardContentCss).toContain('min-width: 0;');
+    expect(productTitleCss).toContain('overflow: hidden;');
+    expect(productTitleCss).toContain('text-overflow: ellipsis;');
+    expect(productTitleCss).toContain('white-space: nowrap;');
   });
 });
