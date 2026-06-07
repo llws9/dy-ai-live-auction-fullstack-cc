@@ -3,6 +3,8 @@ import { createContext, ReactNode, useContext, useState } from 'react';
 interface DemoContextType {
   currentAuctionId: number | null;
   setCurrentAuctionId: (auctionId: number | null) => void;
+  currentLiveStreamId: number | null;
+  setCurrentLiveStreamId: (liveStreamId: number | null) => void;
 }
 
 const DemoContext = createContext<DemoContextType | undefined>(undefined);
@@ -13,10 +15,13 @@ interface DemoProviderProps {
 
 export function DemoProvider({ children }: DemoProviderProps) {
   const [currentAuctionId, setCurrentAuctionId] = useState<number | null>(null);
+  const [currentLiveStreamId, setCurrentLiveStreamId] = useState<number | null>(null);
 
   const value: DemoContextType = {
     currentAuctionId,
     setCurrentAuctionId,
+    currentLiveStreamId,
+    setCurrentLiveStreamId,
   };
 
   return <DemoContext.Provider value={value}>{children}</DemoContext.Provider>;

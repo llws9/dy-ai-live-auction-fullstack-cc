@@ -16,9 +16,10 @@ import (
 )
 
 type AuctionHandler struct {
-	auctionService *service.AuctionService
-	productClient  client.ProductClient
-	ruleFetcher    auctionRuleFetcher
+	auctionService   *service.AuctionService
+	productClient    client.ProductClient
+	liveStreamClient client.LiveStreamClient
+	ruleFetcher      auctionRuleFetcher
 }
 
 // NewAuctionHandler 创建竞拍 Handler
@@ -33,6 +34,11 @@ func (h *AuctionHandler) SetProductClient(pc client.ProductClient) {
 	h.productClient = pc
 }
 
+// SetLiveStreamClient 注入 product-service 直播间内部接口客户端，用于校验竞拍归属。
+func (h *AuctionHandler) SetLiveStreamClient(lc client.LiveStreamClient) {
+	h.liveStreamClient = lc
+}
+
 // SetRuleFetcher 注入竞拍规则读取器，用于详情接口返回前端出价所需的权威规则。
 func (h *AuctionHandler) SetRuleFetcher(fetcher auctionRuleFetcher) {
 	h.ruleFetcher = fetcher
@@ -40,10 +46,12 @@ func (h *AuctionHandler) SetRuleFetcher(fetcher auctionRuleFetcher) {
 
 // CreateAuctionRequest 创建竞拍请求
 type CreateAuctionRequest struct {
-	ProductID  int64   `json:"product_id" binding:"required"`
-	StartPrice float64 `json:"start_price"`
-	Increment  float64 `json:"increment"`
-	Duration   int     `json:"duration" binding:"required"`
+	ProductID    int64      `json:"product_id" binding:"required"`
+	LiveStreamID *int64     `json:"live_stream_id,omitempty"`
+	StartPrice   float64    `json:"start_price"`
+	Increment    float64    `json:"increment"`
+	Duration     int        `json:"duration" binding:"required"`
+	StartTime    *time.Time `json:"start_time,omitempty"`
 }
 
 const (
@@ -82,12 +90,41 @@ func (h *AuctionHandler) Create(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
+	startTime := time.Now()
+	if req.StartTime != nil {
+		startTime = *req.StartTime
+	}
+	if req.LiveStreamID != nil && *req.LiveStreamID <= 0 {
+		c.JSON(400, map[string]interface{}{
+			"code":    400,
+			"message": "live_stream_id invalid",
+		})
+		return
+	}
+	if req.LiveStreamID != nil {
+		if creatorID == nil {
+			c.JSON(401, map[string]interface{}{"code": 401, "message": "未认证，请先登录"})
+			return
+		}
+		if err := h.validateLiveStreamOwnership(ctx, *req.LiveStreamID, *creatorID); err != nil {
+			status := 403
+			if errors.Is(err, errLiveStreamNotFound) {
+				status = 404
+			} else if errors.Is(err, errLiveStreamOwnershipUnavailable) {
+				status = 500
+			}
+			c.JSON(status, map[string]interface{}{"code": status, "message": err.Error()})
+			return
+		}
+	}
+
 	// 创建竞拍场次请求
 	auctionReq := &service.CreateAuctionRequest{
-		ProductID: req.ProductID,
-		CreatorID: creatorID,
-		StartTime: time.Now(),
-		EndTime:   time.Now().Add(time.Duration(req.Duration) * time.Second),
+		ProductID:    req.ProductID,
+		LiveStreamID: req.LiveStreamID,
+		CreatorID:    creatorID,
+		StartTime:    startTime,
+		EndTime:      startTime.Add(time.Duration(req.Duration) * time.Second),
 	}
 
 	auction, err := h.auctionService.CreateAuction(ctx, auctionReq)
@@ -100,6 +137,30 @@ func (h *AuctionHandler) Create(ctx context.Context, c *app.RequestContext) {
 	}
 
 	c.JSON(201, auction)
+}
+
+var (
+	errLiveStreamNotFound             = errors.New("live_stream_id not found")
+	errLiveStreamNotOwned             = errors.New("live_stream_id not owned by current merchant")
+	errLiveStreamOwnershipUnavailable = errors.New("live_stream ownership checker unavailable")
+)
+
+func (h *AuctionHandler) validateLiveStreamOwnership(ctx context.Context, liveStreamID, creatorID int64) error {
+	if h.liveStreamClient == nil {
+		return errLiveStreamOwnershipUnavailable
+	}
+	streams, err := h.liveStreamClient.BatchGetLiveStreams(ctx, []int64{liveStreamID})
+	if err != nil {
+		return err
+	}
+	stream, ok := streams[liveStreamID]
+	if !ok {
+		return errLiveStreamNotFound
+	}
+	if stream.CreatorID != creatorID {
+		return errLiveStreamNotOwned
+	}
+	return nil
 }
 
 func (h *AuctionHandler) AdminList(ctx context.Context, c *app.RequestContext) {

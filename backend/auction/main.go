@@ -188,6 +188,7 @@ func main() {
 	// 直播间客户端（T3.3 / spec B §4.1：调 product /internal/live-streams/batch）。
 	liveStreamClient := client.NewHTTPLiveStreamClient(productSvcURL, 2*time.Second)
 	liveStreamClient.SetInternalToken(internalAPIToken)
+	auctionHandler.SetLiveStreamClient(liveStreamClient)
 	bidHandler := handler.NewBidHandler(bidService)
 	wsHandler := handler.NewWSHandler()
 	userHandler := handler.NewUserHandler(userDAO)
@@ -200,6 +201,7 @@ func main() {
 	userAddressHandler := handler.NewUserAddressHandler(userAddressDAO)
 	internalUserHandler := handler.NewInternalUserHandler(userDAO)
 	currentAuctionHandler := handler.NewInternalCurrentAuctionHandler(handler.NewCurrentAuctionDAOFetcher(auctionDAO))
+	internalDemoAuctionHandler := handler.NewInternalDemoAuctionHandler(auctionDAO, hub)
 	statisticsHandler := handler.NewStatisticsHandler(service.NewStatisticsService(statisticsDAO))
 
 	// 一口价秒杀（A5 M1）：dao + Redis 库存/幂等 + service + handler。
@@ -311,6 +313,7 @@ func main() {
 		liveReminderHandler,
 		liveStreamStatsHandler,
 		currentAuctionHandler,
+		internalDemoAuctionHandler,
 	)
 
 	// 注册 Prometheus metrics 端点
@@ -472,7 +475,7 @@ func registerRoutes(h *server.Hertz, internalAPIToken string, auctionHandler *ha
 	v1.POST("/users/me/addresses/:id/default", userAddressHandler.SetDefault)
 }
 
-func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, internalUserHandler *handler.InternalUserHandler, userBalanceHandler *handler.UserBalanceHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler, currentAuctionHandler *handler.InternalCurrentAuctionHandler) {
+func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, internalUserHandler *handler.InternalUserHandler, userBalanceHandler *handler.UserBalanceHandler, liveReminderHandler *handler.LiveReminderHandler, liveStreamStatsHandler *handler.LiveStreamStatsHandler, currentAuctionHandler *handler.InternalCurrentAuctionHandler, internalDemoAuctionHandler *handler.InternalDemoAuctionHandler) {
 	internal := h.Group("/internal", internalAuth)
 	if internalUserHandler != nil {
 		internal.POST("/users/batch", internalUserHandler.BatchByIDs)
@@ -484,6 +487,9 @@ func registerInternalRoutes(h *server.Hertz, internalAuth app.HandlerFunc, inter
 	internal.POST("/live-streams/:id/start", liveStreamStatsHandler.StartLive)
 	if currentAuctionHandler != nil {
 		internal.POST("/auctions/current-by-live-streams", currentAuctionHandler.Handle)
+	}
+	if internalDemoAuctionHandler != nil {
+		internal.POST("/test/auctions/shorten", internalDemoAuctionHandler.Shorten)
 	}
 }
 

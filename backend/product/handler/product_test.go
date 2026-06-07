@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -516,6 +517,33 @@ func TestProductHandler_AdminCreateMerchantSetsOwnerID(t *testing.T) {
 	require.Len(t, products, 1)
 	require.NotNil(t, products[0].OwnerID)
 	assert.Equal(t, int64(1001), *products[0].OwnerID)
+}
+
+func TestProductHandlerPublishUsesForwardedUserHeaders(t *testing.T) {
+	ownerID := int64(1001)
+	h, db := newProductHandlerWithSeed(t, func(db *gorm.DB) {
+		require.NoError(t, db.Create(&model.Product{
+			Name:    "Publish Me",
+			OwnerID: &ownerID,
+			Status:  model.ProductStatusDraft,
+		}).Error)
+	})
+
+	var product model.Product
+	require.NoError(t, db.First(&product).Error)
+	c := newProductRequestContext(http.MethodPost, "/api/v1/products/1/publish", nil)
+	c.Params = append(c.Params, param.Param{Key: "id", Value: strconv.FormatInt(product.ID, 10)})
+	c.Request.Header.Set("X-User-ID", "1001")
+	c.Request.Header.Set("X-User-Role", "merchant")
+
+	h.PublishHandler(context.Background(), c)
+
+	require.Equal(t, http.StatusOK, c.Response.StatusCode())
+	var reloaded model.Product
+	require.NoError(t, db.First(&reloaded, product.ID).Error)
+	assert.Equal(t, model.ProductStatusPublished, reloaded.Status)
+	var liveStream model.LiveStream
+	require.NoError(t, db.Where("creator_id = ?", ownerID).First(&liveStream).Error)
 }
 
 func TestProductHandler_AdminListMerchantOnlyOwnProducts(t *testing.T) {

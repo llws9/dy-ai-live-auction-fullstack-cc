@@ -37,6 +37,25 @@ func TestAuctionServiceCreateAuctionStoresCreatorID(t *testing.T) {
 	require.Equal(t, creatorID, *auction.CreatorID)
 }
 
+func TestAuctionServiceCreateAuctionStoresLiveStreamIDAndStartTime(t *testing.T) {
+	svc := setupAuctionAdminScopeService(t)
+	liveStreamID := int64(880301)
+	startTime := time.Now().Add(time.Minute).Truncate(time.Second)
+
+	auction, err := svc.CreateAuction(context.Background(), &CreateAuctionRequest{
+		ProductID:    1,
+		LiveStreamID: &liveStreamID,
+		StartTime:    startTime,
+		EndTime:      startTime.Add(3 * time.Minute),
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, auction.LiveStreamID)
+	require.Equal(t, liveStreamID, *auction.LiveStreamID)
+	require.WithinDuration(t, startTime, auction.StartTime, time.Second)
+	require.Equal(t, model.AuctionStatusPending, auction.Status)
+}
+
 func TestAuctionServiceListAdminScopedMerchantOnlyOwnAuctions(t *testing.T) {
 	svc := setupAuctionAdminScopeService(t)
 	ctx := context.Background()

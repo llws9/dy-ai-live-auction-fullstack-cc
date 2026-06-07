@@ -13,6 +13,17 @@ export type RechargeDemoUserInput = {
   amount: MoneyInput;
 };
 
+export type ShortenDemoAuctionInput = {
+  auctionId: number;
+  remainingSeconds: number;
+};
+
+export type DemoMerchantAuctionMode = 'upcoming' | 'ongoing';
+
+export type CreateDemoFixedPriceItemInput = {
+  liveStreamId: number;
+};
+
 function toMoneyString(value: MoneyInput): string {
   return String(value);
 }
@@ -80,5 +91,22 @@ export function rechargeDemoUser(input: RechargeDemoUserInput) {
   return postDemo('/recharge', {
     user_id: input.userId,
     amount: toMoneyString(input.amount),
+  });
+}
+
+export function shortenDemoAuction(input: ShortenDemoAuctionInput) {
+  return postDemo('/auctions/shorten', {
+    auction_id: input.auctionId,
+    remaining_seconds: input.remainingSeconds,
+  });
+}
+
+export function createDemoMerchantAuction(mode: DemoMerchantAuctionMode) {
+  return postDemo('/merchant/auctions', { mode });
+}
+
+export function createDemoFixedPriceItem(input: CreateDemoFixedPriceItemInput) {
+  return postDemo('/merchant/fixed-price-items', {
+    live_stream_id: input.liveStreamId,
   });
 }

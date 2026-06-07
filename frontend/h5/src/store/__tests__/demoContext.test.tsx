@@ -11,18 +11,23 @@ describe('DemoProvider', () => {
     const { result } = renderHook(() => useDemo(), { wrapper });
 
     expect(result.current.currentAuctionId).toBeNull();
+    expect(result.current.currentLiveStreamId).toBeNull();
 
     act(() => {
       result.current.setCurrentAuctionId(42);
+      result.current.setCurrentLiveStreamId(88);
     });
 
     expect(result.current.currentAuctionId).toBe(42);
+    expect(result.current.currentLiveStreamId).toBe(88);
 
     act(() => {
       result.current.setCurrentAuctionId(null);
+      result.current.setCurrentLiveStreamId(null);
     });
 
     expect(result.current.currentAuctionId).toBeNull();
+    expect(result.current.currentLiveStreamId).toBeNull();
   });
 
   it('fails closed when useDemo is called outside DemoProvider', () => {

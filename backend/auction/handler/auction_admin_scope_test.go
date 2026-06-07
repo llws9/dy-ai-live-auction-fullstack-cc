@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
+	"auction-service/client"
 	"auction-service/dao"
 	"auction-service/model"
 	"auction-service/service"
@@ -59,6 +60,51 @@ func TestAuctionHandlerAdminListMerchantOnlyOwnAuctions(t *testing.T) {
 	require.EqualValues(t, 1, item["product_id"])
 }
 
+func TestAuctionHandlerCreateAcceptsStartTimeAndLiveStreamID(t *testing.T) {
+	h, db := setupAuctionAdminScopeHandlerWithDB(t)
+	h.SetLiveStreamClient(fakeAuctionLiveStreamClient{
+		streams: map[int64]client.LiveStreamSummary{
+			880301: {ID: 880301, CreatorID: 1001},
+		},
+	})
+	ctx := context.Background()
+	startTime := time.Now().Add(time.Minute).Truncate(time.Second)
+
+	c := app.NewContext(0)
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request.Header.Set("X-User-ID", "1001")
+	c.Request.SetBodyString(`{"product_id":42,"duration":180,"start_time":"` + startTime.Format(time.RFC3339) + `","live_stream_id":880301}`)
+
+	h.Create(ctx, c)
+
+	require.Equal(t, 201, c.Response.StatusCode())
+	var auction model.Auction
+	require.NoError(t, db.First(&auction).Error)
+	require.NotNil(t, auction.LiveStreamID)
+	require.Equal(t, int64(880301), *auction.LiveStreamID)
+	require.WithinDuration(t, startTime, auction.StartTime, time.Second)
+	require.WithinDuration(t, startTime.Add(180*time.Second), auction.EndTime, time.Second)
+}
+
+func TestAuctionHandlerCreateRejectsLiveStreamOwnedByOtherMerchant(t *testing.T) {
+	h, _ := setupAuctionAdminScopeHandlerWithDB(t)
+	h.SetLiveStreamClient(fakeAuctionLiveStreamClient{
+		streams: map[int64]client.LiveStreamSummary{
+			880301: {ID: 880301, CreatorID: 2002},
+		},
+	})
+	ctx := context.Background()
+
+	c := app.NewContext(0)
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request.Header.Set("X-User-ID", "1001")
+	c.Request.SetBodyString(`{"product_id":42,"duration":180,"live_stream_id":880301}`)
+
+	h.Create(ctx, c)
+
+	require.Equal(t, 403, c.Response.StatusCode())
+}
+
 func TestAuctionHandlerAdminGetMerchantRejectsOtherOwner(t *testing.T) {
 	h := setupAuctionAdminScopeHandler(t)
 	ctx := context.Background()
@@ -96,6 +142,24 @@ func TestAuctionHandlerCancelMerchantRejectsOtherOwner(t *testing.T) {
 	reloaded, err := h.auctionService.GetAuction(ctx, auction.ID)
 	require.NoError(t, err)
 	require.Equal(t, model.AuctionStatusPending, reloaded.Status)
+}
+
+type fakeAuctionLiveStreamClient struct {
+	streams map[int64]client.LiveStreamSummary
+	err     error
+}
+
+func (f fakeAuctionLiveStreamClient) BatchGetLiveStreams(_ context.Context, ids []int64) (map[int64]client.LiveStreamSummary, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	out := make(map[int64]client.LiveStreamSummary)
+	for _, id := range ids {
+		if stream, ok := f.streams[id]; ok {
+			out[id] = stream
+		}
+	}
+	return out, nil
 }
 
 func TestAuctionHandlerCancelEndedAuctionReturnsConflict(t *testing.T) {

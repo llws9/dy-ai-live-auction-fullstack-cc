@@ -1,4 +1,10 @@
-import { rechargeDemoUser, triggerFollowBid } from '../demoApi';
+import {
+  createDemoFixedPriceItem,
+  createDemoMerchantAuction,
+  rechargeDemoUser,
+  shortenDemoAuction,
+  triggerFollowBid,
+} from '../demoApi';
 
 describe('demoApi', () => {
   const originalFetch = global.fetch;
@@ -68,5 +74,53 @@ describe('demoApi', () => {
     } as Response);
 
     await expect(triggerFollowBid({ auctionId: 42 })).rejects.toThrow('跟价冲突，请重试');
+  });
+
+  it('posts merchant auction mode to the demo merchant endpoint', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    } as Response);
+    global.fetch = fetchMock;
+
+    await createDemoMerchantAuction('upcoming');
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/test/demo/merchant/auctions');
+    expect(JSON.parse(init.body as string)).toEqual({ mode: 'upcoming' });
+  });
+
+  it('posts fixed-price live stream id to the demo merchant endpoint', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    } as Response);
+    global.fetch = fetchMock;
+
+    await createDemoFixedPriceItem({ liveStreamId: 456 });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/test/demo/merchant/fixed-price-items');
+    expect(JSON.parse(init.body as string)).toEqual({ live_stream_id: 456 });
+  });
+
+  it('posts auction shorten request with a ten second remaining time', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    } as Response);
+    global.fetch = fetchMock;
+
+    await shortenDemoAuction({ auctionId: 456, remainingSeconds: 10 });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/test/demo/auctions/shorten');
+    expect(JSON.parse(init.body as string)).toEqual({
+      auction_id: 456,
+      remaining_seconds: 10,
+    });
   });
 });

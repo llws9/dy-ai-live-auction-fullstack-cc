@@ -4,7 +4,13 @@ import DemoConsole from '../index';
 import { useAuth } from '../../../store/authContext';
 import { useDemo } from '../../../store/demoContext';
 import { useToast } from '../../Toast';
-import { rechargeDemoUser, triggerFollowBid } from '../../../services/demoApi';
+import {
+  createDemoFixedPriceItem,
+  createDemoMerchantAuction,
+  rechargeDemoUser,
+  shortenDemoAuction,
+  triggerFollowBid,
+} from '../../../services/demoApi';
 
 jest.mock('../../../store/authContext', () => ({
   useAuth: jest.fn(),
@@ -19,8 +25,19 @@ jest.mock('../../Toast', () => ({
 }));
 
 jest.mock('../../../services/demoApi', () => ({
+  createDemoFixedPriceItem: jest.fn(),
+  createDemoMerchantAuction: jest.fn(),
+  shortenDemoAuction: jest.fn(),
   triggerFollowBid: jest.fn(),
   rechargeDemoUser: jest.fn(),
+}));
+
+const mockNavigate = jest.fn();
+let mockPathname = '/';
+
+jest.mock('react-router-dom', () => ({
+  useLocation: () => ({ pathname: mockPathname }),
+  useNavigate: () => mockNavigate,
 }));
 
 const mockedUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
@@ -28,10 +45,13 @@ const mockedUseDemo = useDemo as jest.MockedFunction<typeof useDemo>;
 const mockedUseToast = useToast as jest.MockedFunction<typeof useToast>;
 const mockedTriggerFollowBid = triggerFollowBid as jest.MockedFunction<typeof triggerFollowBid>;
 const mockedRechargeDemoUser = rechargeDemoUser as jest.MockedFunction<typeof rechargeDemoUser>;
+const mockedCreateDemoMerchantAuction = createDemoMerchantAuction as jest.MockedFunction<typeof createDemoMerchantAuction>;
+const mockedCreateDemoFixedPriceItem = createDemoFixedPriceItem as jest.MockedFunction<typeof createDemoFixedPriceItem>;
+const mockedShortenDemoAuction = shortenDemoAuction as jest.MockedFunction<typeof shortenDemoAuction>;
 const mockLogin = jest.fn();
 const mockShowToast = jest.fn();
 
-function renderConsole(currentAuctionId: number | null = 12345) {
+function renderConsole(currentAuctionId: number | null = 12345, currentLiveStreamId: number | null = 88) {
   mockedUseAuth.mockReturnValue({
     isAuthenticated: true,
     user: { id: 1, email: 'buyer@example.com', name: '买家A', role: 0 },
@@ -46,6 +66,8 @@ function renderConsole(currentAuctionId: number | null = 12345) {
   mockedUseDemo.mockReturnValue({
     currentAuctionId,
     setCurrentAuctionId: jest.fn(),
+    currentLiveStreamId,
+    setCurrentLiveStreamId: jest.fn(),
   });
   mockedUseToast.mockReturnValue({
     showToast: mockShowToast,
@@ -58,9 +80,13 @@ function renderConsole(currentAuctionId: number | null = 12345) {
 describe('DemoConsole', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockPathname = '/';
     mockLogin.mockResolvedValue(undefined);
     mockedTriggerFollowBid.mockResolvedValue({ ok: true });
     mockedRechargeDemoUser.mockResolvedValue({ ok: true });
+    mockedCreateDemoMerchantAuction.mockResolvedValue({ ok: true });
+    mockedCreateDemoFixedPriceItem.mockResolvedValue({ ok: true });
+    mockedShortenDemoAuction.mockResolvedValue({ ok: true });
   });
 
   it('shows the assistive touch menu and second-level skeletons', async () => {
@@ -73,6 +99,7 @@ describe('DemoConsole', () => {
     expect(screen.getByRole('button', { name: '账号' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '演示' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '充值' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '商家' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '关闭' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '账号' }));
@@ -88,6 +115,21 @@ describe('DemoConsole', () => {
     expect(screen.getByRole('button', { name: '他人跟价' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '并发压测' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '竞拍延时' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '返回' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '返回' }));
+    await user.click(screen.getByRole('button', { name: '充值' }));
+
+    expect(screen.getByRole('button', { name: '演示账户A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '演示账户B' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '返回' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '返回' }));
+    await user.click(screen.getByRole('button', { name: '商家' }));
+
+    expect(screen.getByRole('button', { name: '即将开播' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '正在竞拍' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '一口价' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '返回' })).toBeInTheDocument();
   });
 
@@ -113,6 +155,23 @@ describe('DemoConsole', () => {
       phone: '13800138003',
       password: 'Demo@123456',
     });
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('navigates from login page to home after switching a demo account', async () => {
+    const user = userEvent.setup();
+    mockPathname = '/login';
+    renderConsole();
+
+    await user.click(screen.getByTestId('demo-console-fab'));
+    await user.click(screen.getByRole('button', { name: '账号' }));
+    await user.click(screen.getByRole('button', { name: '买家A' }));
+
+    expect(mockLogin).toHaveBeenCalledWith({
+      phone: '13800138001',
+      password: 'Demo@123456',
+    });
+    expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
   });
 
   it('shows an error toast when account switching fails', async () => {
@@ -174,15 +233,19 @@ describe('DemoConsole', () => {
     expect(mockShowToast).toHaveBeenCalledWith('跟价失败：跟价冲突，请重试', 'error', 2500);
   });
 
-  it('recharges demo buyer B with a fixed amount for background bidding', async () => {
+  it('recharges demo buyer A and B with a fixed amount from the second-level menu', async () => {
     const user = userEvent.setup();
     renderConsole();
 
     await user.click(screen.getByTestId('demo-console-fab'));
     await user.click(screen.getByRole('button', { name: '充值' }));
+    await user.click(screen.getByRole('button', { name: '演示账户A' }));
+    await user.click(screen.getByRole('button', { name: '演示账户B' }));
 
-    expect(mockedRechargeDemoUser).toHaveBeenCalledWith({ userId: 9102, amount: '10000.00' });
-    expect(mockShowToast).toHaveBeenCalledWith('已为B账户充值', 'success', 2500);
+    expect(mockedRechargeDemoUser).toHaveBeenNthCalledWith(1, { userId: 9101, amount: '10000.00' });
+    expect(mockedRechargeDemoUser).toHaveBeenNthCalledWith(2, { userId: 9102, amount: '10000.00' });
+    expect(mockShowToast).toHaveBeenCalledWith('已为演示账户A充值', 'success', 2500);
+    expect(mockShowToast).toHaveBeenCalledWith('已为演示账户B充值', 'success', 2500);
   });
 
   it('shows a short error toast when recharge fails', async () => {
@@ -192,22 +255,109 @@ describe('DemoConsole', () => {
 
     await user.click(screen.getByTestId('demo-console-fab'));
     await user.click(screen.getByRole('button', { name: '充值' }));
+    await user.click(screen.getByRole('button', { name: '演示账户B' }));
 
     expect(mockShowToast).toHaveBeenCalledWith('充值失败：余额服务不可用', 'error', 2500);
   });
 
-  it('keeps pressure and delay as prompt-only demo actions', async () => {
+  it('creates upcoming and ongoing merchant auctions from the merchant menu', async () => {
+    const user = userEvent.setup();
+    renderConsole();
+
+    await user.click(screen.getByTestId('demo-console-fab'));
+    await user.click(screen.getByRole('button', { name: '商家' }));
+    await user.click(screen.getByRole('button', { name: '即将开播' }));
+    await user.click(screen.getByRole('button', { name: '正在竞拍' }));
+
+    expect(mockedCreateDemoMerchantAuction).toHaveBeenNthCalledWith(1, 'upcoming');
+    expect(mockedCreateDemoMerchantAuction).toHaveBeenNthCalledWith(2, 'ongoing');
+    expect(mockShowToast).toHaveBeenCalledWith('已创建1分钟后开播的竞拍', 'success', 2500);
+    expect(mockShowToast).toHaveBeenCalledWith('已创建正在竞拍场次', 'success', 2500);
+  });
+
+  it('warns and skips fixed-price creation outside a live room', async () => {
+    const user = userEvent.setup();
+    renderConsole(12345, null);
+
+    await user.click(screen.getByTestId('demo-console-fab'));
+    await user.click(screen.getByRole('button', { name: '商家' }));
+    await user.click(screen.getByRole('button', { name: '一口价' }));
+
+    expect(mockShowToast).toHaveBeenCalledWith('请先进入直播间', 'warning', 2500);
+    expect(mockedCreateDemoFixedPriceItem).not.toHaveBeenCalled();
+  });
+
+  it('creates a fixed-price item for the current live room', async () => {
+    const user = userEvent.setup();
+    renderConsole(12345, 880301);
+
+    await user.click(screen.getByTestId('demo-console-fab'));
+    await user.click(screen.getByRole('button', { name: '商家' }));
+    await user.click(screen.getByRole('button', { name: '一口价' }));
+
+    expect(mockedCreateDemoFixedPriceItem).toHaveBeenCalledWith({ liveStreamId: 880301 });
+    expect(mockShowToast).toHaveBeenCalledWith('已为当前直播间创建一口价商品', 'success', 2500);
+  });
+
+  it('shows a short error toast when a merchant action fails', async () => {
+    const user = userEvent.setup();
+    mockedCreateDemoMerchantAuction.mockRejectedValueOnce(new Error('创建失败'));
+    renderConsole();
+
+    await user.click(screen.getByTestId('demo-console-fab'));
+    await user.click(screen.getByRole('button', { name: '商家' }));
+    await user.click(screen.getByRole('button', { name: '即将开播' }));
+
+    expect(mockShowToast).toHaveBeenCalledWith('商家动作失败：创建失败', 'error', 2500);
+  });
+
+  it('shortens the current auction to ten seconds from the demo menu', async () => {
+    const user = userEvent.setup();
+    renderConsole(777);
+
+    await user.click(screen.getByTestId('demo-console-fab'));
+    await user.click(screen.getByRole('button', { name: '演示' }));
+    await user.click(screen.getByRole('button', { name: '竞拍延时' }));
+
+    expect(mockedShortenDemoAuction).toHaveBeenCalledWith({ auctionId: 777, remainingSeconds: 10 });
+    expect(mockShowToast).toHaveBeenCalledWith('竞拍将在10秒后结束', 'success', 2500);
+  });
+
+  it('warns and skips auction shorten when there is no current auction', async () => {
+    const user = userEvent.setup();
+    renderConsole(null);
+
+    await user.click(screen.getByTestId('demo-console-fab'));
+    await user.click(screen.getByRole('button', { name: '演示' }));
+    await user.click(screen.getByRole('button', { name: '竞拍延时' }));
+
+    expect(mockShowToast).toHaveBeenCalledWith('请先进入直播间', 'warning', 2500);
+    expect(mockedShortenDemoAuction).not.toHaveBeenCalled();
+  });
+
+  it('shows a short error toast when auction shorten fails', async () => {
+    const user = userEvent.setup();
+    mockedShortenDemoAuction.mockRejectedValueOnce(new Error('竞拍已结束'));
+    renderConsole(777);
+
+    await user.click(screen.getByTestId('demo-console-fab'));
+    await user.click(screen.getByRole('button', { name: '演示' }));
+    await user.click(screen.getByRole('button', { name: '竞拍延时' }));
+
+    expect(mockShowToast).toHaveBeenCalledWith('竞拍延时失败：竞拍已结束', 'error', 2500);
+  });
+
+  it('keeps pressure as a prompt-only demo action', async () => {
     const user = userEvent.setup();
     renderConsole();
 
     await user.click(screen.getByTestId('demo-console-fab'));
     await user.click(screen.getByRole('button', { name: '演示' }));
     await user.click(screen.getByRole('button', { name: '并发压测' }));
-    await user.click(screen.getByRole('button', { name: '竞拍延时' }));
 
     expect(mockShowToast).toHaveBeenCalledWith('并发压测暂未接入后端链路', 'info', 2500);
-    expect(mockShowToast).toHaveBeenCalledWith('竞拍延时请通过临近结束出价触发', 'info', 2500);
     expect(mockedTriggerFollowBid).not.toHaveBeenCalled();
+    expect(mockedShortenDemoAuction).not.toHaveBeenCalled();
     expect(mockedRechargeDemoUser).not.toHaveBeenCalled();
   });
 });

@@ -155,9 +155,77 @@ func TestSDK_CreateProductAsPreservesExplicitImages(t *testing.T) {
 	}
 }
 
+func TestSDK_PublishProductAsUsesProductPublishAPI(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/products/42/publish" || r.Method != http.MethodPost {
+			t.Fatalf("path/method: %s %s", r.Method, r.URL.Path)
+		}
+		if r.Header.Get("X-User-Role") != "merchant" {
+			t.Fatalf("X-User-Role: want merchant, got %q", r.Header.Get("X-User-Role"))
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"code":200,"message":"发布成功"}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	step := c.PublishProductAs(context.Background(), Actor{UserID: 9001, Role: RoleMerchant}, 42)
+	if !step.OK {
+		t.Fatalf("PublishProductAs failed: %s err=%v", step.Message, step.Err)
+	}
+	if step.RefID != 42 {
+		t.Fatalf("RefID: want 42, got %d", step.RefID)
+	}
+}
+
+func TestSDK_ShortenAuctionUsesInternalTestAPI(t *testing.T) {
+	var captured map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/internal/test/auctions/shorten" || r.Method != http.MethodPost {
+			t.Fatalf("path/method: %s %s", r.Method, r.URL.Path)
+		}
+		if r.Header.Get("X-Internal-Token") != "dev-token" {
+			t.Fatalf("X-Internal-Token: got %q", r.Header.Get("X-Internal-Token"))
+		}
+		if err := json.NewDecoder(r.Body).Decode(&captured); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"ok":true,"auction_id":42,"remaining_seconds":10}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	c.SetInternalToken("dev-token")
+	step := c.ShortenAuction(context.Background(), 42, 10)
+	if !step.OK {
+		t.Fatalf("ShortenAuction failed: %s err=%v", step.Message, step.Err)
+	}
+	if captured["auction_id"] != float64(42) || captured["remaining_seconds"] != float64(10) {
+		t.Fatalf("body=%#v", captured)
+	}
+	if step.RefID != 42 {
+		t.Fatalf("RefID: want 42, got %d", step.RefID)
+	}
+}
+
 // TestSDK_CreateAuction 创建拍卖 → 201 + 返回 ID
 func TestSDK_CreateAuction(t *testing.T) {
+	startTime := time.Now().Add(time.Minute).Truncate(time.Second)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/auctions" || r.Method != http.MethodPost {
+			t.Fatalf("path/method: %s %s", r.Method, r.URL.Path)
+		}
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		if body["live_stream_id"] != float64(880301) {
+			t.Fatalf("live_stream_id not sent: %#v", body)
+		}
+		if body["start_time"] != startTime.Format(time.RFC3339) {
+			t.Fatalf("start_time: got %#v want %s", body["start_time"], startTime.Format(time.RFC3339))
+		}
 		w.WriteHeader(201)
 		_, _ = w.Write([]byte(`{"id":7,"product_id":42,"status":0,"current_price":100}`))
 	}))
@@ -165,7 +233,7 @@ func TestSDK_CreateAuction(t *testing.T) {
 
 	c := NewClient(srv.URL, 3*time.Second)
 	step := c.CreateAuction(context.Background(), 100001, CreateAuctionReq{
-		ProductID: 42, StartPrice: 100, Increment: 10, Duration: 30,
+		ProductID: 42, StartPrice: 100, Increment: 10, Duration: 30, StartTime: &startTime, LiveStreamID: 880301,
 	})
 	if !step.OK {
 		t.Fatalf("CreateAuction failed: %s", step.Message)

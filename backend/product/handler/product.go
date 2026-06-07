@@ -408,14 +408,8 @@ func (h *ProductHandler) PublishHandler(ctx context.Context, c *app.RequestConte
 		req.RuleID = nil
 	}
 
-	userID := c.GetInt64("user_id")
-	userRole := c.GetInt("user_role")
-
-	if userRole != 1 && userRole != 2 {
-		c.JSON(403, map[string]interface{}{
-			"code":    403,
-			"message": "权限不足：需要商家或管理员权限",
-		})
+	actor, ok := readAdminActor(c)
+	if !ok {
 		return
 	}
 
@@ -432,7 +426,7 @@ func (h *ProductHandler) PublishHandler(ctx context.Context, c *app.RequestConte
 		startTime = &t
 	}
 
-	product, liveStream, err := h.productService.PublishProduct(ctx, productID, userID, startTime)
+	product, liveStream, err := h.productService.PublishProduct(ctx, productID, actor.UserID, startTime)
 	if err != nil {
 		c.JSON(500, map[string]interface{}{
 			"code":    500,

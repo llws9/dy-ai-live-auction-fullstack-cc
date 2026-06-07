@@ -343,12 +343,14 @@ describe('LiveRoom migration', () => {
 
     await waitFor(() => expect(mockWebSocketInstance.onNotification).toHaveBeenCalledTimes(1));
 
-    notificationHandler?.({
-      id: 201,
-      type: 'auction_won',
-      title: '恭喜中标',
-      content: '请尽快完成支付',
-      data: { auction_id: 99 },
+    act(() => {
+      notificationHandler?.({
+        id: 201,
+        type: 'auction_won',
+        title: '恭喜中标',
+        content: '请尽快完成支付',
+        data: { auction_id: 99, final_price: '1300.00' },
+      });
     });
 
     const toastConfig = mockShowGlobalToast.mock.calls[0][0];
@@ -358,6 +360,8 @@ describe('LiveRoom migration', () => {
       message: '请尽快完成支付',
       actionText: '去支付',
     }));
+    expect(await screen.findByTestId('bid-success-animation')).toHaveTextContent('明代紫砂壶');
+    expect(screen.getByTestId('bid-success-animation')).toHaveTextContent('¥1,300');
 
     toastConfig.onAction();
     expect(mockNavigate).toHaveBeenCalledWith('/result?id=99');
@@ -383,12 +387,14 @@ describe('LiveRoom migration', () => {
 
     await waitFor(() => expect(mockWebSocketInstance.onNotification).toHaveBeenCalledTimes(1));
 
-    notificationHandler?.({
-      id: 202,
-      type: 'auction_won',
-      title: '恭喜中标',
-      content: '请尽快完成支付',
-      data: {},
+    act(() => {
+      notificationHandler?.({
+        id: 202,
+        type: 'auction_won',
+        title: '恭喜中标',
+        content: '请尽快完成支付',
+        data: {},
+      });
     });
 
     const toastConfig = mockShowGlobalToast.mock.calls[0][0];

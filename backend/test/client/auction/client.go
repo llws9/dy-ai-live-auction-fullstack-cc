@@ -89,10 +89,12 @@ type CreateProductReq struct {
 
 // CreateAuctionReq 创建拍卖
 type CreateAuctionReq struct {
-	ProductID  int64   `json:"product_id"`
-	StartPrice float64 `json:"start_price"`
-	Increment  float64 `json:"increment"`
-	Duration   int     `json:"duration"` // 秒
+	ProductID    int64      `json:"product_id"`
+	LiveStreamID int64      `json:"live_stream_id,omitempty"`
+	StartPrice   float64    `json:"start_price"`
+	Increment    float64    `json:"increment"`
+	Duration     int        `json:"duration"` // 秒
+	StartTime    *time.Time `json:"start_time,omitempty"`
 }
 
 type CreateAuctionRuleReq struct {
@@ -269,6 +271,13 @@ func (c *Client) CreateProductAs(ctx context.Context, actor Actor, req CreatePro
 	}
 	step := c.doAs(ctx, "create_product", http.MethodPost, path, actor, req, nil, &resp)
 	step.RefID = firstNonZero(resp.ID, resp.Data.ID)
+	return step
+}
+
+func (c *Client) PublishProductAs(ctx context.Context, actor Actor, productID int64) StepResult {
+	path := "/api/v1/products/" + strconv.FormatInt(productID, 10) + "/publish"
+	step := c.doAs(ctx, "publish_product", http.MethodPost, path, actor, map[string]any{}, nil, nil)
+	step.RefID = productID
 	return step
 }
 
@@ -463,6 +472,15 @@ func (c *Client) TopUpUserBalance(ctx context.Context, userID int64, amount stri
 		return resp.Data.Balance, step
 	}
 	return resp.Balance, step
+}
+
+func (c *Client) ShortenAuction(ctx context.Context, auctionID int64, remainingSeconds int) StepResult {
+	step := c.doAs(ctx, "shorten_auction", http.MethodPost, "/internal/test/auctions/shorten", Actor{}, map[string]any{
+		"auction_id":        auctionID,
+		"remaining_seconds": remainingSeconds,
+	}, map[string]string{"X-Internal-Token": c.internalToken}, nil)
+	step.RefID = auctionID
+	return step
 }
 
 func (c *Client) PurchaseFixedPriceItem(ctx context.Context, actor Actor, itemID int64, idemKey string) (int64, StepResult) {

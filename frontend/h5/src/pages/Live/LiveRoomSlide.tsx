@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchMyPurchase, type FixedPriceItem } from '@/api/fixedPrice';
+import { BidSuccessAnimation } from '@/components/auction/BidSuccessAnimation';
 import FixedPriceCard from '@/components/FixedPriceCard';
 import FixedPriceFlair from '@/components/FixedPriceFlair';
 import FixedPricePurchaseModal from '@/components/FixedPricePurchaseModal';
@@ -72,6 +73,12 @@ interface BidSuccessFlair {
   id: number;
   amount: number;
   userName: string;
+}
+
+interface WonAnimationState {
+  productName: string;
+  price: number;
+  imageUrl?: string;
 }
 
 export interface LiveRoomSlideProps {
@@ -192,7 +199,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated, token, user } = useAuth();
-  const { setCurrentAuctionId } = useDemo();
+  const { setCurrentAuctionId, setCurrentLiveStreamId } = useDemo();
 
   const [auctionId, setAuctionId] = useState(0);
   const [auction, setAuction] = useState<Auction | null>(null);
@@ -214,12 +221,17 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const [connected, setConnected] = useState(false);
   const [toast, setToast] = useState('');
   const [bidSuccessFlair, setBidSuccessFlair] = useState<BidSuccessFlair | null>(null);
+  const [wonAnimation, setWonAnimation] = useState<WonAnimationState | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const { showToast: showGlobalToast } = useToast();
   const wsRef = useRef<WebSocketService | null>(null);
   const enteredRoomsRef = useRef<Set<string>>(new Set());
   const bidFlairDelayTimerRef = useRef<number | null>(null);
   const bidFlairHideTimerRef = useRef<number | null>(null);
+  const wonAnimationDataRef = useRef<WonAnimationState>({
+    productName: '竞拍商品',
+    price: 0,
+  });
   const [fixedPriceModalItem, setFixedPriceModalItem] = useState<FixedPriceItem | null>(null);
   const [purchasedFixedPriceItemIds, setPurchasedFixedPriceItemIds] = useState<Set<number>>(() => new Set());
 
@@ -237,8 +249,23 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const effectiveLiveStreamId = liveStreamId || auction?.live_stream_id || liveStream?.id || 0;
   const { items: fixedPriceItems, socket: fixedPriceSocket } = useFixedPriceItems(effectiveLiveStreamId);
   const productImage = getFirstImage(product || auction?.product);
+  const hostName = liveStream?.host_name || liveStream?.creator_name || '拍卖师';
+  const roomName = repairUtf8Mojibake(liveStream?.name) || '竞拍直播间';
+  const productName = repairUtf8Mojibake(product?.name || auction?.product?.name) || '竞拍商品';
+  const productIntro = repairUtf8Mojibake(product?.description || auction?.product?.description || roomName);
+  const liveCoverImage = productImage || liveStream?.cover_image || '';
+  const hostAvatar = liveStream?.host_avatar || liveStream?.avatar || '';
+  const hasEnded = auction?.status === 3 || hasReachedEndTime;
   const fixedPriceItemIds = useMemo(() => fixedPriceItems.map((item) => item.id), [fixedPriceItems]);
   const currentUserDisplayName = useMemo(() => repairUtf8Mojibake(user?.name) || '当前用户', [user?.name]);
+
+  useEffect(() => {
+    wonAnimationDataRef.current = {
+      productName,
+      price: currentPrice || startPrice,
+      imageUrl: productImage || undefined,
+    };
+  }, [currentPrice, productImage, productName, startPrice]);
 
   useEffect(() => {
     setPurchasedFixedPriceItemIds(new Set());
@@ -251,6 +278,14 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       setCurrentAuctionId(null);
     };
   }, [active, auctionId, setCurrentAuctionId]);
+
+  useEffect(() => {
+    setCurrentLiveStreamId(active && effectiveLiveStreamId > 0 ? effectiveLiveStreamId : null);
+
+    return () => {
+      setCurrentLiveStreamId(null);
+    };
+  }, [active, effectiveLiveStreamId, setCurrentLiveStreamId]);
 
   useEffect(() => {
     const eventProductId = auction?.product_id ?? auction?.product?.id;
@@ -370,13 +405,19 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     setSearchParams(params, { replace: true });
   }, [active, searchParams, setSearchParams]);
 
+  useEffect(() => {
+    if (hasEnded && sheet !== null) {
+      closeSheet();
+    }
+  }, [closeSheet, hasEnded, sheet]);
+
   const normalizeRanking = useCallback((items: any[]): RankingItem[] => {
     return items
       .map((item, index) => ({
         rank: item.rank ?? index + 1,
         id: item.id ?? item.user_id ?? index,
         user_id: item.user_id,
-        user_name: item.user_name || item.username || `用户${item.user_id ?? index + 1}`,
+        user_name: repairUtf8Mojibake(item.user_name || item.username) || `用户${item.user_id ?? index + 1}`,
         amount: Number(item.amount ?? item.bid_amount ?? 0),
         created_at: item.created_at,
       }))
@@ -568,10 +609,13 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         setRanking(normalizeRanking(extractList(data)));
       }
     });
-    ws.on('auction_ended', (data) => {
+    const onAuctionEnded = (data: any) => {
       if (!belongsToThisRoom(data)) return;
       setAuction((previous) => previous ? { ...previous, status: 3, current_price: toAmount(data?.final_price, toAmount(previous.current_price)) } : previous);
-    });
+    };
+
+    ws.on('auction_ended', onAuctionEnded);
+    ws.on('auction_end', onAuctionEnded);
     const unsubscribeNotification = ws.onNotification((notification) => {
       const id = notification.id;
       if (id && shownNotificationIds.has(id)) {
@@ -584,6 +628,15 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       const payload = toastPayloadFromNotification(notification);
       if (!payload) {
         return;
+      }
+
+      if (notification.type === 'auction_won') {
+        const animationData = wonAnimationDataRef.current;
+        setWonAnimation({
+          productName: animationData.productName,
+          price: toAmount(notification?.data?.final_price, animationData.price),
+          imageUrl: animationData.imageUrl,
+        });
       }
 
       showGlobalToast({
@@ -609,6 +662,8 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       ws.off('chat_message', onChatMessage);
       ws.off('delay_triggered', onDelayTriggered);
       ws.off('time_sync', onTimeSync);
+      ws.off('auction_ended', onAuctionEnded);
+      ws.off('auction_end', onAuctionEnded);
       ws.disconnect();
       wsRef.current = null;
       useLiveChatStore.getState().reset();
@@ -781,13 +836,6 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     );
   }
 
-  const hostName = liveStream?.host_name || liveStream?.creator_name || '拍卖师';
-  const roomName = repairUtf8Mojibake(liveStream?.name) || '竞拍直播间';
-  const productName = repairUtf8Mojibake(product?.name || auction?.product?.name) || '竞拍商品';
-  const productIntro = repairUtf8Mojibake(product?.description || auction?.product?.description || roomName);
-  const liveCoverImage = productImage || liveStream?.cover_image || '';
-  const hostAvatar = liveStream?.host_avatar || liveStream?.avatar || '';
-
   return (
     <section className={styles.page}>
       <div className={`${styles.videoArea} ${sheet !== null ? styles.videoAreaCompact : ''}`}>
@@ -853,20 +901,31 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         />
       </section>
 
-      <BidDock
-        product={product || auction?.product}
-        productImage={productImage}
-        roomName={roomName}
-        currentPrice={currentPrice || startPrice}
-        sheet={sheet}
-        isAuthenticated={isAuthenticated}
-        bidDisabled={!isActive}
-        bidDisabledText={hasReachedEndTime ? '已结束' : '不可出价'}
-        skyLampActive={skyLampActive}
-        onOpen={openSheet}
-        onClose={closeSheet}
-        onRequireLogin={() => showToast('请先登录后出价')}
-      >
+      {hasEnded ? (
+        <section className={styles.endedSummary} aria-label="竞拍结束摘要">
+          <span className={styles.endedEyebrow}>AUCTION CLOSED</span>
+          <h1>本场竞拍已结束</h1>
+          <p>{productName}</p>
+          <strong>成交价 ¥{formatMoney(currentPrice || startPrice)}</strong>
+          <Link className={styles.endedResultButton} to={`/result?id=${auctionId}`}>
+            查看竞拍结果
+          </Link>
+        </section>
+      ) : (
+        <BidDock
+          product={product || auction?.product}
+          productImage={productImage}
+          roomName={roomName}
+          currentPrice={currentPrice || startPrice}
+          sheet={sheet}
+          isAuthenticated={isAuthenticated}
+          bidDisabled={!isActive}
+          bidDisabledText="不可出价"
+          skyLampActive={skyLampActive}
+          onOpen={openSheet}
+          onClose={closeSheet}
+          onRequireLogin={() => showToast('请先登录后出价')}
+        >
         <div className={styles.priceBlock}>
           <span className={styles.priceLabel}>当前最高价</span>
           <strong>¥{formatMoney(currentPrice || startPrice)}</strong>
@@ -1036,7 +1095,8 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           {!isAuthenticated && <p className={styles.authHint}>请先登录后出价</p>}
           {!isActive && <p className={styles.authHint}>当前竞拍不可出价</p>}
         </section>
-      </BidDock>
+        </BidDock>
+      )}
 
       {skyLampNoticeVisible && (
         <div className={styles.skyLampNotice} role="status">
@@ -1060,6 +1120,14 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
             <strong>¥{formatMoney(bidSuccessFlair.amount)}</strong>
           </span>
         </div>
+      )}
+      {wonAnimation && (
+        <BidSuccessAnimation
+          productName={wonAnimation.productName}
+          price={wonAnimation.price}
+          imageUrl={wonAnimation.imageUrl}
+          onAnimationEnd={() => setWonAnimation(null)}
+        />
       )}
       {toast && <div className={styles.toast} role="status">{toast}</div>}
       {fixedPriceModalItem && (

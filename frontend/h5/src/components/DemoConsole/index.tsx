@@ -1,11 +1,19 @@
 import { useState } from 'react';
-import { rechargeDemoUser, triggerFollowBid } from '../../services/demoApi';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  createDemoFixedPriceItem,
+  createDemoMerchantAuction,
+  rechargeDemoUser,
+  shortenDemoAuction,
+  triggerFollowBid,
+} from '../../services/demoApi';
+import type { DemoMerchantAuctionMode } from '../../services/demoApi';
 import { useAuth } from '../../store/authContext';
 import { useDemo } from '../../store/demoContext';
 import { useToast } from '../Toast';
 import './DemoConsole.css';
 
-type MenuView = 'root' | 'accounts' | 'demo';
+type MenuView = 'root' | 'accounts' | 'demo' | 'recharge' | 'merchant';
 
 interface DemoAccount {
   label: string;
@@ -13,9 +21,11 @@ interface DemoAccount {
 }
 
 const DEMO_PASSWORD = 'Demo@123456';
+const BUYER_A_USER_ID = 9101;
 const BUYER_B_USER_ID = 9102;
-const BUYER_B_RECHARGE_AMOUNT = '10000.00';
+const DEMO_RECHARGE_AMOUNT = '10000.00';
 const TOAST_DURATION_MS = 2500;
+const SHORTEN_AUCTION_REMAINING_SECONDS = 10;
 
 const DEMO_ACCOUNTS: DemoAccount[] = [
   { label: '买家A', phone: '13800138001' },
@@ -23,10 +33,17 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
   { label: '管理员', phone: '13800138003' },
 ];
 
+const RECHARGE_TARGETS = [
+  { label: '演示账户A', userID: BUYER_A_USER_ID },
+  { label: '演示账户B', userID: BUYER_B_USER_ID },
+];
+
 export default function DemoConsole() {
   const { login } = useAuth();
-  const { currentAuctionId } = useDemo();
+  const { currentAuctionId, currentLiveStreamId } = useDemo();
   const { showToast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<MenuView>('root');
   const [switchingPhone, setSwitchingPhone] = useState<string | null>(null);
@@ -42,6 +59,9 @@ export default function DemoConsole() {
     try {
       await login({ phone: account.phone, password: DEMO_PASSWORD });
       showToast(`已切换到${account.label}`, 'success', TOAST_DURATION_MS);
+      if (location.pathname === '/login') {
+        navigate('/', { replace: true });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';
       showToast(`切换账号失败：${message}`, 'error', TOAST_DURATION_MS);
@@ -68,14 +88,68 @@ export default function DemoConsole() {
     }
   };
 
-  const handleRechargeBuyerB = async () => {
-    setRunningAction('recharge');
+  const handleRecharge = async (target: (typeof RECHARGE_TARGETS)[number]) => {
+    const actionKey = `recharge-${target.userID}`;
+    setRunningAction(actionKey);
     try {
-      await rechargeDemoUser({ userId: BUYER_B_USER_ID, amount: BUYER_B_RECHARGE_AMOUNT });
-      showToast('已为B账户充值', 'success', TOAST_DURATION_MS);
+      await rechargeDemoUser({ userId: target.userID, amount: DEMO_RECHARGE_AMOUNT });
+      showToast(`已为${target.label}充值`, 'success', TOAST_DURATION_MS);
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';
       showToast(`充值失败：${message}`, 'error', TOAST_DURATION_MS);
+    } finally {
+      setRunningAction(null);
+    }
+  };
+
+  const handleShortenAuction = async () => {
+    if (!currentAuctionId) {
+      showToast('请先进入直播间', 'warning', TOAST_DURATION_MS);
+      return;
+    }
+
+    setRunningAction('shorten-auction');
+    try {
+      await shortenDemoAuction({
+        auctionId: currentAuctionId,
+        remainingSeconds: SHORTEN_AUCTION_REMAINING_SECONDS,
+      });
+      showToast('竞拍将在10秒后结束', 'success', TOAST_DURATION_MS);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '请稍后重试';
+      showToast(`竞拍延时失败：${message}`, 'error', TOAST_DURATION_MS);
+    } finally {
+      setRunningAction(null);
+    }
+  };
+
+  const handleMerchantAuction = async (mode: DemoMerchantAuctionMode) => {
+    const actionKey = `merchant-auction-${mode}`;
+    setRunningAction(actionKey);
+    try {
+      await createDemoMerchantAuction(mode);
+      showToast(mode === 'upcoming' ? '已创建1分钟后开播的竞拍' : '已创建正在竞拍场次', 'success', TOAST_DURATION_MS);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '请稍后重试';
+      showToast(`商家动作失败：${message}`, 'error', TOAST_DURATION_MS);
+    } finally {
+      setRunningAction(null);
+    }
+  };
+
+  const handleMerchantFixedPrice = async () => {
+    if (!currentLiveStreamId) {
+      showToast('请先进入直播间', 'warning', TOAST_DURATION_MS);
+      return;
+    }
+
+    setRunningAction('merchant-fixed-price');
+    try {
+      await createDemoFixedPriceItem({ liveStreamId: currentLiveStreamId });
+      showToast('已为当前直播间创建一口价商品', 'success', TOAST_DURATION_MS);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '请稍后重试';
+      showToast(`商家动作失败：${message}`, 'error', TOAST_DURATION_MS);
     } finally {
       setRunningAction(null);
     }
@@ -100,10 +174,12 @@ export default function DemoConsole() {
               <button
                 type="button"
                 className="demo-console__item"
-                onClick={handleRechargeBuyerB}
-                disabled={runningAction === 'recharge'}
+                onClick={() => setView('recharge')}
               >
                 充值
+              </button>
+              <button type="button" className="demo-console__item" onClick={() => setView('merchant')}>
+                商家
               </button>
               <button type="button" className="demo-console__item demo-console__item--danger" onClick={handleClose}>
                 关闭
@@ -149,10 +225,62 @@ export default function DemoConsole() {
               </button>
               <button
                 type="button"
-                className="demo-console__item demo-console__item--placeholder"
-                onClick={() => showPromptOnlyAction('竞拍延时请通过临近结束出价触发')}
+                className="demo-console__item"
+                onClick={handleShortenAuction}
+                disabled={runningAction === 'shorten-auction'}
               >
                 竞拍延时
+              </button>
+              <button type="button" className="demo-console__item demo-console__item--secondary" onClick={() => setView('root')}>
+                返回
+              </button>
+            </>
+          )}
+
+          {view === 'recharge' && (
+            <>
+              {RECHARGE_TARGETS.map((target) => (
+                <button
+                  key={target.userID}
+                  type="button"
+                  className="demo-console__item"
+                  onClick={() => handleRecharge(target)}
+                  disabled={runningAction === `recharge-${target.userID}`}
+                >
+                  {target.label}
+                </button>
+              ))}
+              <button type="button" className="demo-console__item demo-console__item--secondary" onClick={() => setView('root')}>
+                返回
+              </button>
+            </>
+          )}
+
+          {view === 'merchant' && (
+            <>
+              <button
+                type="button"
+                className="demo-console__item"
+                onClick={() => handleMerchantAuction('upcoming')}
+                disabled={runningAction === 'merchant-auction-upcoming'}
+              >
+                即将开播
+              </button>
+              <button
+                type="button"
+                className="demo-console__item"
+                onClick={() => handleMerchantAuction('ongoing')}
+                disabled={runningAction === 'merchant-auction-ongoing'}
+              >
+                正在竞拍
+              </button>
+              <button
+                type="button"
+                className="demo-console__item"
+                onClick={handleMerchantFixedPrice}
+                disabled={runningAction === 'merchant-fixed-price'}
+              >
+                一口价
               </button>
               <button type="button" className="demo-console__item demo-console__item--secondary" onClick={() => setView('root')}>
                 返回

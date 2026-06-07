@@ -11,6 +11,7 @@ import { useDemo } from '../../../store/demoContext';
 const mockShowGlobalToast = jest.fn();
 const mockNavigate = jest.fn();
 const mockSetCurrentAuctionId = jest.fn();
+const mockSetCurrentLiveStreamId = jest.fn();
 let mockAuthUser = { id: 9, name: '测试用户', role: 0 };
 const mockWebSocketInstance = {
   on: jest.fn(),
@@ -157,6 +158,8 @@ describe('LiveRoomSlide', () => {
     mockedUseDemo.mockReturnValue({
       currentAuctionId: null,
       setCurrentAuctionId: mockSetCurrentAuctionId,
+      currentLiveStreamId: null,
+      setCurrentLiveStreamId: mockSetCurrentLiveStreamId,
     });
     mockWebSocketInstance.connect.mockResolvedValue(undefined);
     mockWebSocketInstance.onNotification.mockReturnValue(jest.fn());
@@ -261,10 +264,12 @@ describe('LiveRoomSlide', () => {
     const { unmount } = renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
 
     await waitFor(() => expect(mockSetCurrentAuctionId).toHaveBeenCalledWith(5));
+    await waitFor(() => expect(mockSetCurrentLiveStreamId).toHaveBeenCalledWith(3));
 
     unmount();
 
     expect(mockSetCurrentAuctionId).toHaveBeenLastCalledWith(null);
+    expect(mockSetCurrentLiveStreamId).toHaveBeenLastCalledWith(null);
   });
 
   it('places a bid and refreshes ranking', async () => {
@@ -640,7 +645,7 @@ describe('LiveRoomSlide', () => {
     await waitFor(() => expect(screen.getByTestId('location-search')).not.toHaveTextContent('sheet'));
   });
 
-  it('disables bid actions when an active-status auction has reached end_time', async () => {
+  it('shows an ended summary instead of the bid dock when an active-status auction has reached end_time', async () => {
     mockedAuctionApi.get.mockResolvedValue({
       id: 5,
       product_id: 7,
@@ -653,13 +658,33 @@ describe('LiveRoomSlide', () => {
     renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
 
     expect((await screen.findAllByText('已结束')).length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: '已结束' })).toBeDisabled();
+    expect(screen.getByText('本场竞拍已结束')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '查看竞拍结果' })).toHaveAttribute('href', '/result?id=5');
+    expect(screen.queryByTestId('bid-dock')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '出价' })).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByText('当前最高价 ¥1,200').closest('div')!);
-    expect(await screen.findByText('00:00')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '竞拍已结束' })).toBeDisabled();
     expect(mockedBidApi.placeBid).not.toHaveBeenCalled();
+  });
+
+  it('switches to ended summary when the backend auction_end event arrives', async () => {
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    expect(screen.getByTestId('bid-dock')).toBeInTheDocument();
+
+    const auctionEndHandler = getWebSocketHandler('auction_end');
+    expect(auctionEndHandler).toBeDefined();
+
+    act(() => {
+      auctionEndHandler!({
+        auction_id: 5,
+        winner_id: 9,
+        final_price: '1300.00',
+      });
+    });
+
+    expect(await screen.findByText('本场竞拍已结束')).toBeInTheDocument();
+    expect(screen.queryByTestId('bid-dock')).not.toBeInTheDocument();
+    expect(screen.getByText('成交价 ¥1,300')).toBeInTheDocument();
   });
 
   it('repairs mojibake product and room copy in collapsed and expanded states', async () => {
@@ -689,5 +714,17 @@ describe('LiveRoomSlide', () => {
 
     expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(1);
     expect(screen.getAllByText('名家手作孤品').length).toBeGreaterThan(1);
+  });
+
+  it('repairs mojibake ranking user names before rendering', async () => {
+    mockedBidApi.getRanking.mockResolvedValue([
+      { rank: 1, user_id: 9102, user_name: toUtf8Mojibake('演示买家B'), amount: 1200 },
+    ]);
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+    fireEvent.click(await screen.findByText('明代紫砂壶'));
+
+    expect(await screen.findByText('演示买家B')).toBeInTheDocument();
+    expect(screen.queryByText(/æ¼|ç¤|ä¹/)).not.toBeInTheDocument();
   });
 });

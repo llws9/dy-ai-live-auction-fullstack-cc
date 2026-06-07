@@ -133,6 +133,10 @@ func main() {
 		demo := api.Group("/demo")
 		demo.POST("/follow-bid", demoHandler.PostFollowBid)
 		demo.POST("/recharge", demoHandler.PostRecharge)
+		demo.POST("/auctions/shorten", demoHandler.PostShortenAuction)
+		merchantDemo := demo.Group("/merchant")
+		merchantDemo.POST("/auctions", demoHandler.PostMerchantAuction)
+		merchantDemo.POST("/fixed-price-items", demoHandler.PostMerchantFixedPriceItem)
 		hlog.Infof("[boot] /api/test/* registered")
 	} else {
 		hlog.Warnf("[boot] /api/test/* disabled (no DB)")

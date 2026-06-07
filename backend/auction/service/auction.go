@@ -57,10 +57,11 @@ func (s *AuctionService) SetSkyLampDAO(skyLampDAO *dao.SkyLampDAO) {
 
 // CreateAuctionRequest 创建竞拍请求
 type CreateAuctionRequest struct {
-	ProductID int64
-	CreatorID *int64
-	StartTime time.Time
-	EndTime   time.Time
+	ProductID    int64
+	LiveStreamID *int64
+	CreatorID    *int64
+	StartTime    time.Time
+	EndTime      time.Time
 }
 
 // CreateAuction 创建竞拍
@@ -71,6 +72,7 @@ func (s *AuctionService) CreateAuction(ctx context.Context, req *CreateAuctionRe
 
 	auction := &model.Auction{
 		ProductID:    req.ProductID,
+		LiveStreamID: req.LiveStreamID,
 		CreatorID:    req.CreatorID,
 		Status:       model.AuctionStatusPending,
 		CurrentPrice: decimal.Zero,

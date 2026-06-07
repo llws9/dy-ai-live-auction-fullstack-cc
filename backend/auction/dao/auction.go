@@ -97,6 +97,14 @@ func (d *AuctionDAO) UpdateStatus(ctx context.Context, id int64, status model.Au
 		Update("status", status).Error
 }
 
+// UpdateEndTime updates an auction's end time without changing delay accounting.
+func (d *AuctionDAO) UpdateEndTime(ctx context.Context, id int64, endTime time.Time) error {
+	return d.db.WithContext(ctx).
+		Model(&model.Auction{}).
+		Where("id = ?", id).
+		Update("end_time", endTime).Error
+}
+
 // UpdatePrice 更新当前价格和中标者（使用乐观锁）
 func (d *AuctionDAO) UpdatePrice(ctx context.Context, id int64, price decimal.Decimal, winnerID int64, expectedVersion int) error {
 	result := d.db.WithContext(ctx).
