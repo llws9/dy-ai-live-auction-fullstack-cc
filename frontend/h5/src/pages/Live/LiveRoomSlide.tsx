@@ -952,7 +952,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         </header>
       </div>
 
-      {fixedPriceItems.length > 0 && (
+      {!hasEnded && fixedPriceItems.length > 0 && (
         <div
           className={`${styles.fixedPriceList} ${sheet !== null ? styles.fixedPriceListHidden : ''}`}
           aria-label="一口价商品列表"
@@ -977,12 +977,14 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         </div>
       )}
 
-      <section className={styles.liveChatOverlay} aria-label="直播互动">
-        <ChatPanel
-          currentUserId={user?.id ?? 0}
-          onSend={(text, clientMsgId) => wsRef.current?.sendChat(text, clientMsgId) ?? false}
-        />
-      </section>
+      {!hasEnded && (
+        <section className={styles.liveChatOverlay} aria-label="直播互动">
+          <ChatPanel
+            currentUserId={user?.id ?? 0}
+            onSend={(text, clientMsgId) => wsRef.current?.sendChat(text, clientMsgId) ?? false}
+          />
+        </section>
+      )}
 
       {hasEnded ? (
         <section className={styles.endedSummary} aria-label="竞拍结束摘要">

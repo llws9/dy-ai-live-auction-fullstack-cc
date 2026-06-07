@@ -762,6 +762,19 @@ describe('LiveRoomSlide', () => {
       current_price: 1200,
       end_time: new Date(Date.now() - 1000).toISOString(),
     });
+    mockedUseFixedPriceItems.mockReturnValue({
+      items: [{
+        id: 7001,
+        auction_id: 5,
+        product_brief: { id: 8001, title: '一口价翡翠', cover_image: '/fp.jpg' },
+        price: '99.00',
+        total_stock: 10,
+        remaining_stock: 10,
+        status: 'on_sale',
+      }],
+      byId: {},
+      socket: null,
+    });
 
     renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
 
@@ -769,15 +782,33 @@ describe('LiveRoomSlide', () => {
     expect(screen.getByText('本场竞拍已结束')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '查看竞拍结果' })).toHaveAttribute('href', '/result?id=5');
     expect(screen.queryByTestId('bid-dock')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('chat-panel')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('一口价商品列表')).not.toBeInTheDocument();
+    expect(screen.queryByRole('article', { name: /一口价翡翠 一口价商品/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '出价' })).not.toBeInTheDocument();
     expect(mockedBidApi.placeBid).not.toHaveBeenCalled();
   });
 
   it('switches to ended summary when the backend auction_end event arrives', async () => {
+    mockedUseFixedPriceItems.mockReturnValue({
+      items: [{
+        id: 7001,
+        auction_id: 5,
+        product_brief: { id: 8001, title: '一口价翡翠', cover_image: '/fp.jpg' },
+        price: '99.00',
+        total_stock: 10,
+        remaining_stock: 10,
+        status: 'on_sale',
+      }],
+      byId: {},
+      socket: null,
+    });
     renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
 
     expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
     expect(screen.getByTestId('bid-dock')).toBeInTheDocument();
+    expect(screen.getByTestId('chat-panel')).toBeInTheDocument();
+    expect(screen.getByRole('article', { name: /一口价翡翠 一口价商品/ })).toBeInTheDocument();
 
     const auctionEndHandler = getWebSocketHandler('auction_end');
     expect(auctionEndHandler).toBeDefined();
@@ -792,6 +823,8 @@ describe('LiveRoomSlide', () => {
 
     expect(await screen.findByText('本场竞拍已结束')).toBeInTheDocument();
     expect(screen.queryByTestId('bid-dock')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('chat-panel')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('一口价商品列表')).not.toBeInTheDocument();
     expect(screen.getByText('成交价 ¥1,300')).toBeInTheDocument();
   });
 
