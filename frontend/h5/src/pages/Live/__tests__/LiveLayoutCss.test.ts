@@ -26,6 +26,15 @@ describe('Live layout css', () => {
     expect(liveChatOverlayCss).toContain('width: min(50vw, 210px);');
   });
 
+  it('expands the bid drawer to 80 percent and shrinks the live view to the remaining 20 percent', () => {
+    const css = readLiveCss();
+    const videoAreaCompactCss = getClassBlock(css, 'videoAreaCompact');
+    const sheetCss = getClassBlock(css, 'sheet');
+
+    expect(videoAreaCompactCss).toContain('height: 20%;');
+    expect(sheetCss).toContain('height: 80dvh;');
+  });
+
   it('keeps live empty upcoming state colors bound to theme tokens', () => {
     const css = readLiveCss();
     const liveEmptyPageCss = getClassBlock(css, 'liveEmptyPage');

@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>竞拍结束 UI 预览 - 高视觉刺激版</title>
+<style>
+/* CSS Variables from colors.css */
+:root {
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 24px;
+  --spacing-6: 32px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-weight-bold: 600;
+}
+
+:root[data-theme="dark"],
+:root:not([data-theme]) {
+  --bg-page: #1a1a1a;
+  --bg-surface: #262626;
+  --bg-elevated: rgba(44, 44, 44, 0.78);
+  --text-primary: #f5f0e8;
+  --text-secondary: #a09888;
+  --text-tertiary: #737373;
+  --text-brand: #c9a96e;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --shadow-key: 0 8px 24px rgba(0, 0, 0, 0.40);
+  --surface-glass: rgba(44, 44, 44, 0.78);
+  --chip-bg: rgba(44, 44, 44, 0.82);
+  --chip-border: rgba(255, 255, 255, 0.08);
+  --icon-tile-bg: rgba(201, 169, 110, 0.10);
+  --card-border-accent: rgba(201, 169, 110, 0.12);
+  --text-inverse: #1a1a1a;
+}
+
+:root[data-theme="light"] {
+  --bg-page: #faf7f2;
+  --bg-surface: #ffffff;
+  --bg-elevated: rgba(255, 255, 255, 0.92);
+  --text-primary: #2a2520;
+  --text-secondary: #6b6358;
+  --text-tertiary: #a3a3a3;
+  --text-brand: #8a6a2a;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --shadow-key: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --surface-glass: rgba(255, 255, 255, 0.78);
+  --chip-bg: rgba(255, 255, 255, 0.58);
+  --chip-border: rgba(89, 67, 32, 0.10);
+  --icon-tile-bg: rgba(138, 106, 42, 0.08);
+  --card-border-accent: rgba(138, 106, 42, 0.16);
+  --text-inverse: #ffffff;
+}
+
+body {
+  margin: 0;
+  padding: 80px 40px 40px;
+  background: #111;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.controls {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+}
+
+.controls button {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 999px;
+  cursor: pointer;
+  border: none;
+  background: #fff;
+  color: #000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transition: transform 0.2s;
+}
+.controls button:active {
+  transform: translateX(-50%) scale(0.95);
+}
+
+.device-frame {
+  width: 375px;
+  height: 812px;
+  background: var(--bg-page);
+  position: relative;
+  border-radius: 40px;
+  overflow: hidden;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.5);
+  border: 12px solid #222;
+}
+
+.device-frame::before {
+  content: " ";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150px;
+  height: 30px;
+  background: #222;
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
+  z-index: 20;
+}
+
+.frame-title {
+  position: absolute;
+  top: 60px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  color: var(--text-primary);
+  font-weight: bold;
+  opacity: 0.5;
+}
+
+/* =========================================
+   版本 4：呼吸极光风 (Aurora Glow)
+   特点：超大字号、强背景光晕呼吸动画
+   ========================================= */
+@keyframes breatheGlow {
+  0% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.4); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 0.3; }
+}
+@keyframes floatUp {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.endedSummaryV4 {
+  position: absolute;
+  bottom: calc(var(--spacing-5) + env(safe-area-inset-bottom, 20px));
+  left: var(--spacing-4);
+  right: var(--spacing-4);
+  z-index: 8;
+  background: var(--bg-elevated);
+  border: 1px solid var(--card-border-accent);
+  border-radius: 24px;
+  padding: var(--spacing-6) var(--spacing-5);
+  overflow: hidden;
+  text-align: center;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+  animation: floatUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.endedSummaryV4 .glow-bg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200px;
+  height: 200px;
+  margin-top: -100px;
+  margin-left: -100px;
+  background: radial-gradient(circle, var(--text-brand) 0%, transparent 70%);
+  animation: breatheGlow 3s ease-in-out infinite;
+  z-index: 0;
+  pointer-events: none;
+}
+.endedSummaryV4 .v4-content {
+  position: relative;
+  z-index: 1;
+}
+.endedSummaryV4 .v4-eyebrow {
+  display: inline-block;
+  background: var(--text-primary);
+  color: var(--bg-page);
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  margin-bottom: var(--spacing-4);
+}
+.endedSummaryV4 .v4-title {
+  margin: 0;
+  font-size: 20px;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-2);
+}
+.endedSummaryV4 .v4-price-box {
+  margin: var(--spacing-4) 0;
+}
+.endedSummaryV4 .v4-currency {
+  font-size: 24px;
+  color: var(--text-brand);
+  vertical-align: super;
+  font-weight: bold;
+}
+.endedSummaryV4 .v4-price {
+  font-size: 56px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--text-brand);
+  text-shadow: 0 4px 16px var(--icon-tile-bg);
+}
+.endedSummaryV4 .v4-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--text-brand), var(--bg-page));
+  color: var(--text-primary);
+  text-decoration: none;
+  border-radius: 16px;
+  font-weight: bold;
+  font-size: 16px;
+  box-sizing: border-box;
+  border: 1px solid var(--card-border-accent);
+}
+
+/* =========================================
+   版本 5：黑金典藏风 (Luxury Shimmer)
+   特点：扫光动效、巨大背景水印、奢华卡片质感
+   ========================================= */
+@keyframes shimmer {
+  0% { transform: translateX(-150%) skewX(-20deg); }
+  100% { transform: translateX(200%) skewX(-20deg); }
+}
+
+.endedSummaryV5 {
+  position: absolute;
+  bottom: calc(var(--spacing-5) + env(safe-area-inset-bottom, 20px));
+  left: var(--spacing-4);
+  right: var(--spacing-4);
+  z-index: 8;
+  background: var(--bg-surface);
+  border-radius: 16px;
+  border: 1px solid var(--text-brand);
+  overflow: hidden;
+  box-shadow: inset 0 0 40px var(--icon-tile-bg), 0 12px 32px var(--shadow-key);
+  padding: var(--spacing-5);
+}
+.endedSummaryV5 .v5-shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255,255,255,0.2), transparent);
+  z-index: 2;
+  animation: shimmer 2.5s infinite;
+  pointer-events: none;
+}
+.endedSummaryV5 .v5-watermark {
+  position: absolute;
+  right: -10px;
+  bottom: 20px;
+  font-size: 80px;
+  font-weight: 900;
+  font-style: italic;
+  color: var(--text-brand);
+  opacity: 0.1;
+  z-index: 0;
+  line-height: 1;
+  pointer-events: none;
+}
+.endedSummaryV5 .v5-content {
+  position: relative;
+  z-index: 1;
+}
+.endedSummaryV5 .v5-badge {
+  color: var(--text-brand);
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: var(--spacing-1);
+}
+.endedSummaryV5 .v5-price {
+  font-size: 42px;
+  font-weight: 900;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-2);
+  font-family: serif;
+}
+.endedSummaryV5 .v5-title {
+  margin: 0 0 var(--spacing-4) 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.endedSummaryV5 .v5-btn {
+  display: inline-block;
+  background: var(--text-brand);
+  color: var(--bg-page);
+  padding: 10px 24px;
+  border-radius: var(--radius-full);
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+/* =========================================
+   版本 6：冲击波视效 (Arcade / High-Impact)
+   特点：倾斜排版、强烈撞色、弹性入场
+   ========================================= */
+@keyframes popSkew {
+  0% { transform: scale(0.8) skewX(-8deg); opacity: 0; }
+  60% { transform: scale(1.05) skewX(-8deg); opacity: 1; }
+  100% { transform: scale(1) skewX(-8deg); opacity: 1; }
+}
+
+.endedSummaryV6 {
+  position: absolute;
+  bottom: calc(var(--spacing-5) + env(safe-area-inset-bottom, 20px));
+  left: var(--spacing-5);
+  right: var(--spacing-5);
+  z-index: 8;
+}
+.endedSummaryV6 .v6-skew-box {
+  background: var(--bg-surface);
+  border: 3px solid var(--text-primary);
+  box-shadow: 8px 8px 0 var(--text-brand);
+  transform: skewX(-8deg);
+  padding: var(--spacing-4);
+  animation: popSkew 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+.endedSummaryV6 .v6-unskew {
+  transform: skewX(8deg);
+}
+.endedSummaryV6 .v6-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: var(--spacing-3);
+  border-bottom: 2px dashed var(--border-subtle);
+  padding-bottom: var(--spacing-2);
+}
+.endedSummaryV6 .v6-icon {
+  font-size: 20px;
+}
+.endedSummaryV6 .v6-status {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--text-primary);
+  letter-spacing: 1px;
+}
+.endedSummaryV6 .v6-price-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-4);
+}
+.endedSummaryV6 .v6-label {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--text-secondary);
+}
+.endedSummaryV6 .v6-price {
+  background: var(--text-primary);
+  color: var(--bg-page);
+  padding: 4px 12px;
+  font-size: 28px;
+  font-weight: 900;
+  display: inline-block;
+  transform: rotate(3deg);
+}
+.endedSummaryV6 .v6-btn {
+  display: block;
+  text-align: center;
+  background: var(--text-brand);
+  color: var(--bg-page);
+  padding: 12px;
+  text-decoration: none;
+  font-weight: 900;
+  font-size: 16px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.endedSummaryV6 .v6-btn:active {
+  background: var(--text-primary);
+}
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <button id="themeToggle">切换日/夜间模式 (当前：夜间)</button>
+</div>
+
+<!-- V4 -->
+<div class="device-frame">
+  <div class="frame-title">版本 4：呼吸极光风 (动效光晕)</div>
+  <section class="endedSummaryV4">
+    <div class="glow-bg"></div>
+    <div class="v4-content">
+      <div class="v4-eyebrow">AUCTION CLOSED</div>
+      <h1 class="v4-title">本场竞拍已结束</h1>
+      <div class="v4-price-box">
+        <span class="v4-currency">¥</span><span class="v4-price">100</span>
+      </div>
+      <a class="v4-btn" href="javascript:void(0)">查看竞拍结果</a>
+    </div>
+  </section>
+</div>
+
+<!-- V5 -->
+<div class="device-frame">
+  <div class="frame-title">版本 5：黑金典藏风 (流光质感)</div>
+  <section class="endedSummaryV5">
+    <div class="v5-shimmer"></div>
+    <div class="v5-watermark">SOLD</div>
+    <div class="v5-content">
+      <div class="v5-badge">FINAL PRICE</div>
+      <div class="v5-price">¥ 100</div>
+      <h1 class="v5-title">本场竞拍已圆满结束</h1>
+      <a class="v5-btn" href="javascript:void(0)">查看结果</a>
+    </div>
+  </section>
+</div>
+
+<!-- V6 -->
+<div class="device-frame">
+  <div class="frame-title">版本 6：冲击波视效 (潮酷倾斜)</div>
+  <section class="endedSummaryV6">
+    <div class="v6-skew-box">
+      <div class="v6-unskew">
+        <div class="v6-header">
+          <span class="v6-icon">🔥</span>
+          <span class="v6-status">AUCTION CLOSED</span>
+        </div>
+        <div class="v6-price-wrap">
+          <span class="v6-label">成交价</span>
+          <strong class="v6-price">¥100</strong>
+        </div>
+        <a class="v6-btn" href="javascript:void(0)">VIEW RESULT &rarr;</a>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  const toggleBtn = document.getElementById('themeToggle');
+  const htmlEl = document.documentElement;
+
+  toggleBtn.addEventListener('click', () => {
+    const currentTheme = htmlEl.getAttribute('data-theme');
+    if (currentTheme === 'dark') {
+      htmlEl.setAttribute('data-theme', 'light');
+      toggleBtn.textContent = '切换日/夜间模式 (当前：日间)';
+    } else {
+      htmlEl.setAttribute('data-theme', 'dark');
+      toggleBtn.textContent = '切换日/夜间模式 (当前：夜间)';
+    }
+  });
+</script>
+</body>
+</html>

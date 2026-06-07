@@ -1,6 +1,8 @@
-import React from 'react';
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { repairUtf8Mojibake } from '@/utils/textEncoding';
 import styles from './Live.module.css';
+
+const SHEET_TRANSITION_MS = 350;
 
 interface BidDockProps {
   product?: { name?: string; description?: string } | null;
@@ -15,7 +17,7 @@ interface BidDockProps {
   onOpen: (sheet: 'bid' | 'info') => void;
   onClose: () => void;
   onRequireLogin: () => void;
-  children?: React.ReactNode;
+  children?: ReactNode;
 }
 
 const formatMoney = (amount: number) => amount.toLocaleString('zh-CN', {
@@ -23,7 +25,7 @@ const formatMoney = (amount: number) => amount.toLocaleString('zh-CN', {
   maximumFractionDigits: 2,
 });
 
-const BidDock: React.FC<BidDockProps> = ({
+const BidDock = ({
   product,
   productImage,
   roomName,
@@ -37,11 +39,47 @@ const BidDock: React.FC<BidDockProps> = ({
   onClose,
   onRequireLogin,
   children,
-}) => {
+}: BidDockProps) => {
   const productName = repairUtf8Mojibake(product?.name) || '竞拍商品';
   const productIntro = repairUtf8Mojibake(product?.description || roomName);
+  const [renderedSheet, setRenderedSheet] = useState<'bid' | 'info' | null>(null);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const previousSheetRef = useRef<'bid' | 'info' | null>(null);
 
-  const handleBidClick = (event: React.MouseEvent) => {
+  useEffect(() => {
+    let frameId: number | null = null;
+    let closeTimerId: number | null = null;
+    const wasClosed = previousSheetRef.current === null;
+    previousSheetRef.current = sheet;
+
+    if (sheet !== null) {
+      setRenderedSheet(sheet);
+      if (wasClosed) {
+        setIsSheetOpen(false);
+        frameId = window.requestAnimationFrame(() => {
+          setIsSheetOpen(true);
+        });
+      } else {
+        setIsSheetOpen(true);
+      }
+    } else {
+      setIsSheetOpen(false);
+      closeTimerId = window.setTimeout(() => {
+        setRenderedSheet(null);
+      }, SHEET_TRANSITION_MS);
+    }
+
+    return () => {
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+      if (closeTimerId !== null) {
+        window.clearTimeout(closeTimerId);
+      }
+    };
+  }, [sheet]);
+
+  const handleBidClick = (event: MouseEvent) => {
     event.stopPropagation();
     if (bidDisabled) return;
     if (!isAuthenticated) {
@@ -84,7 +122,7 @@ const BidDock: React.FC<BidDockProps> = ({
         </button>
       </div>
 
-      {sheet !== null && (
+      {renderedSheet !== null && (
         <>
           <div
             className={styles.mask}
@@ -92,7 +130,7 @@ const BidDock: React.FC<BidDockProps> = ({
             onClick={onClose}
           />
           <div
-            className={`${styles.sheet} ${styles.sheetOpen}`}
+            className={`${styles.sheet} ${isSheetOpen ? styles.sheetOpen : ''}`}
             onClick={(event) => event.stopPropagation()}
           >
             <button

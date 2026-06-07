@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import BidDock from '../BidDock';
 
 const baseProps = {
@@ -57,5 +57,67 @@ describe('BidDock', () => {
     fireEvent.click(screen.getByTestId('bid-dock-mask'));
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('打开抽屉时先挂载闭合态，再进入滑入态', () => {
+    const rafCallbacks: FrameRequestCallback[] = [];
+    const requestAnimationFrameSpy = jest
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback) => {
+        rafCallbacks.push(callback);
+        return rafCallbacks.length;
+      });
+
+    render(
+      <BidDock {...baseProps} sheet="bid">
+        <div>出价表单</div>
+      </BidDock>
+    );
+
+    const sheet = screen.getByLabelText('收起竞拍面板').parentElement;
+    expect(sheet).toHaveClass('sheet');
+    expect(sheet).not.toHaveClass('sheetOpen');
+
+    act(() => {
+      rafCallbacks.forEach((callback) => callback(16));
+    });
+
+    expect(sheet).toHaveClass('sheetOpen');
+    requestAnimationFrameSpy.mockRestore();
+  });
+
+  it('关闭抽屉时先播放下滑动画，再卸载 DOM', () => {
+    jest.useFakeTimers();
+    const requestAnimationFrameSpy = jest
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback) => {
+        callback(16);
+        return 1;
+      });
+
+    const { rerender } = render(
+      <BidDock {...baseProps} sheet="bid">
+        <div>出价表单</div>
+      </BidDock>
+    );
+
+    const sheet = screen.getByLabelText('收起竞拍面板').parentElement;
+    expect(sheet).toHaveClass('sheetOpen');
+
+    rerender(
+      <BidDock {...baseProps} sheet={null}>
+        <div>出价表单</div>
+      </BidDock>
+    );
+
+    expect(screen.getByLabelText('收起竞拍面板').parentElement).not.toHaveClass('sheetOpen');
+
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
+
+    expect(screen.queryByLabelText('收起竞拍面板')).not.toBeInTheDocument();
+    requestAnimationFrameSpy.mockRestore();
+    jest.useRealTimers();
   });
 });
