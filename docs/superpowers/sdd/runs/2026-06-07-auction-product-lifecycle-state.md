@@ -33,12 +33,12 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `9` |
-| Done | `8` |
+| Done | `9` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Review | `0` |
-| Pending | `1` |
-| Last Updated | `2026-06-07 16:00` |
+| Pending | `0` |
+| Last Updated | `2026-06-07 16:03` |
 
 ## Task Matrix
 
@@ -52,7 +52,7 @@
 | `T6` | `Auction Create Handler 编排 product-service 与业务错误码` | `done` | `implementer` | `W5` | `T3,T5` | `Task 6` | `backend/auction/handler/auction.go; backend/auction/handler/auction_create_test.go; backend/auction/handler/auction_admin_scope_test.go` |
 | `T7` | `Product AdminList 返回派生展示状态` | `done` | `main-agent` | `W6` | `T4` | `Task 7` | `backend/auction/handler/internal_product_auctions.go; backend/auction/main.go; backend/product/client/auction_client.go; backend/product/handler/product.go; backend/product/main.go; tests listed in plan` |
 | `T8` | `Admin 前端文案、筛选与错误展示` | `done` | `main-agent` | `W7` | `T7` | `Task 8` | `frontend/admin/src/shared/api/types.ts; frontend/admin/src/pages-new/GoodsList.tsx; frontend/admin/src/pages-new/AuctionList.tsx; frontend admin tests` |
-| `T9` | `数据一致性检查与 test-service 约束固化` | `pending` | `unassigned` | `W8` | `T6` | `Task 9` | `backend/test/scenario/antisnipe/factory.go; scripts/check-auction-product-consistency.sql` |
+| `T9` | `数据一致性检查与 test-service 约束固化` | `done` | `main-agent` | `W8` | `T6` | `Task 9` | `backend/test/scenario/antisnipe/factory.go; scripts/check-auction-product-consistency.sql` |
 
 ## Wave Plan
 
@@ -619,10 +619,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-07 16:01` |
+| Completed At | `2026-06-07 16:03` |
 | Branch | `feat/auction-product-lifecycle` |
 | Worktree | `/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-auction-product-lifecycle` |
 | Depends On | `T6` |
@@ -639,19 +639,38 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `TDD Red -> Green -> Verify evidence` | `not_run` | `pending` |
+| `red applicability review` | `Document why no failing behavior test applies before implementation` | `Task is comment + read-only SQL check only; no production behavior to fail. Verification relies on SQL content review and test-service regression.` | `not_applicable_documented` |
+| `cd backend/test && go test ./... -run 'Test.*(AntiSnipe\|Pressure\|E2E)' -count=1` | `Run targeted scenario names if present` | `PASS command; packages reported [no tests to run] for matching regex` | `pass_no_matching_tests` |
+| `sed -n '1,120p' scripts/check-auction-product-consistency.sql` | `SQL contains three read-only checks` | `PASS: missing product, creator mismatch, and duplicate active auction checks present` | `pass` |
+| `cd backend/test && go test ./... -count=1` | `PASS fallback regression` | `PASS: all test-service packages passed` | `pass` |
+
+**Implementation Notes**
+
+- Documented that `SDKAuctionFactory.Prepare` must create an independent product per call because active auctions are unique by `product_id`.
+- Added `scripts/check-auction-product-consistency.sql` with read-only checks for missing product facts, creator/owner mismatch, and duplicate active auctions.
+
+**Modified Files**
+
+- `backend/test/scenario/antisnipe/factory.go`
+- `scripts/check-auction-product-consistency.sql`
+- `docs/superpowers/sdd/runs/2026-06-07-auction-product-lifecycle-state.md`
+
+**Risks**
+
+- SQL is a manual/operator check and is not executed automatically in CI.
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `当前分支/worktree：feat/auction-product-lifecycle @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-auction-product-lifecycle`
+- Result: `DONE`
 
 
 ## Final Review Checklist
 
-- [ ] State file was created before subagent dispatch.
-- [ ] Every implementation task records TDD Red -> Green -> Verify evidence.
-- [ ] Every completed subagent response starts with `当前分支/worktree：`.
-- [ ] Verification commands and results are recorded.
+- [x] State file was created before subagent dispatch.
+- [x] Every implementation task records TDD Red -> Green -> Verify evidence.
+- [x] Every completed subagent response starts with `当前分支/worktree：`.
+- [x] Verification commands and results are recorded.
 
 ## Final Handoff
 
