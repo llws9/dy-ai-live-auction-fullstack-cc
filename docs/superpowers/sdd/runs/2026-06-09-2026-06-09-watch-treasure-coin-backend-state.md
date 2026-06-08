@@ -15,10 +15,10 @@
 | Base Branch | `main` |
 | Base Commit | `351a147089502bac70ae6d7ed5fafa4a303ab584` |
 | Target Branch | `main` |
-| Worktree Dirty | `yes` |
+| Worktree Dirty | `no after final state commit` |
 | Started At | `2026-06-09 01:39` |
 | Owner | `main-agent` |
-| Status | `active` |
+| Status | `completed` |
 
 ## Input Documents
 
@@ -38,11 +38,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `7` |
-| Done | `6` |
+| Done | `7` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `1` |
-| Last Updated | `2026-06-09 02:52` |
+| Pending | `0` |
+| Last Updated | `2026-06-09 02:42` |
 
 ## Status Legend
 
@@ -75,7 +75,7 @@
 | `T004` | `Handler：3 个 HTTP 端点` | `done` | `subagent` | `W4` | `T003` | `handler + handler tests` | `backend/auction/handler/treasure.go; backend/auction/handler/treasure_test.go` | `backend/auction/service/treasure.go; backend/auction/handler/user_balance_http.go; frontend/h5/src/services/api.ts; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./handler/ -run TestTreasureHandler -v` | `none` |
 | `T005` | `Auction 装配：AutoMigrate + main.go 路由` | `done` | `subagent` | `W5` | `T004` | `auction main wiring` | `backend/auction/main.go` | `backend/auction/model/treasure.go; backend/auction/dao/treasure.go; backend/auction/service/treasure.go; backend/auction/handler/treasure.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go build ./... && go test ./dao/ ./service/ ./handler/` | `none` |
 | `T006` | `Gateway 路由代理` | `done` | `subagent` | `W6` | `T005` | `gateway authGroup proxy` | `backend/gateway/router/router.go` | `backend/gateway/middleware/*; backend/gateway/handler/*; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/gateway && go build ./... && go test ./...` | `none` |
-| `T007` | `端到端联调验证` | `pending` | `unassigned` | `W7` | `T006` | `verification only` | `docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md` | `backend/auction/**; backend/gateway/**; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./dao/ ./service/ ./handler/ && cd ../gateway && go test ./...` | `auction/gateway optional if manual curl is performed` |
+| `T007` | `端到端联调验证` | `done` | `main-agent` | `W7` | `T006` | `verification only` | `docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md` | `backend/auction/**; backend/gateway/**; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./dao/ ./service/ ./handler/ -count=1; cd backend/gateway && go test ./... -count=1; gateway static route sentinel represented in T006 state` | `none` |
 
 ## Wave Plan
 
@@ -730,6 +730,122 @@
 - First response line used: `pending final response`
 
 
+### T007 - `最终验证与状态归档`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-09 02:42` |
+| Completed At | `2026-06-09 02:42` |
+| Branch | `feat/watch-treasure-coin-backend` |
+| Worktree | `/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-watch-treasure-coin-backend` |
+| Commit | `9e13ade9a20ff71448bd4e1164e3907d82ede641` |
+| Dirty Status | `clean before state update; state update committed separately` |
+| Base Commit | `351a147089502bac70ae6d7ed5fafa4a303ab584` |
+| Target Branch | `main` |
+| Depends On | `T006` |
+| Parallel Group | `W7` |
+
+**Scope**
+
+- Run final verification commands requested by T007.
+- Record branch/worktree/commit/dirty status.
+- Review `main...HEAD` diff file list.
+- Update final checklist, execution summary, and final handoff.
+- Do not modify business code.
+
+**Write Set**
+
+- `docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md`
+
+**Read Set**
+
+- `backend/auction/**`
+- `backend/gateway/**`
+- `docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md`
+
+**Scope Expansion Requests**
+
+| Time | Requested Files | Reason | Decision |
+| --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` |
+
+**Regression Sentinels**
+
+- TreasureDAO sentinel represented by `TestTreasureDAO_AddWatchSeconds_AccumulatesPerDate` and `TestTreasureDAO_ClaimTx_DuplicateIsIdempotent`.
+- TreasureService sentinels represented by heartbeat atomic concurrency, daily key, status state, threshold, invalid tier, and duplicate claim tests recorded in T003.
+- TreasureHandler sentinels represented by response shape, auth, error mapping, invalid JSON, and duplicate conflict tests recorded in T004.
+- Gateway static route sentinel represented in T006: exactly three treasure/watch routes under `authGroup`, not public `v1`.
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `python3 docs/superpowers/sdd/scripts/sdd_run.py --repo-root . --input "state: docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md plan: docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md scope: T007 target branch: main"` | `resume existing state for T007` | `created=false; branch=feat/watch-treasure-coin-backend; worktree=/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-watch-treasure-coin-backend; scope=T007; target_branch=main` | `pass` |
+| `cd backend/auction && go test ./dao/ ./service/ ./handler/ -count=1` | `auction DAO/service/handler tests pass fresh` | `ok auction-service/dao 2.873s; ok auction-service/service 7.384s; ok auction-service/handler 3.286s` | `pass` |
+| `cd backend/auction && go build ./...` | `auction-service builds` | `exit 0, no output` | `pass` |
+| `cd backend/gateway && go test ./... -count=1` | `gateway-service tests pass fresh` | `ok gateway-service 2.037s; ok gateway-service/config 0.703s; ok gateway-service/dao 1.387s; gateway-service/docs no test files; ok gateway-service/handler 2.527s; ok gateway-service/middleware 1.689s; gateway-service/model no test files; gateway-service/pkg/growthbook no test files; ok gateway-service/pkg/metrics 1.003s; gateway-service/pkg/nacos no test files; ok gateway-service/router 2.707s` | `pass` |
+| `cd backend/gateway && go build ./...` | `gateway-service builds` | `exit 0, no output` | `pass` |
+| `git diff main...HEAD --name-only` | `review changed file list before final handoff` | `14 files: auction dao/handler/main/migration/model/service files; gateway router; plan; state; spec` | `pass` |
+| `git status --short` | `clean before final state edit` | `no output` | `pass` |
+
+**Runtime Source Evidence**
+
+| Service | Branch | Worktree | Commit | Dirty | Command | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| `none` | `feat/watch-treasure-coin-backend` | `/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-watch-treasure-coin-backend` | `9e13ade9a20ff71448bd4e1164e3907d82ede641` | `clean before state update` | `no runtime services started` | `not_applicable` |
+
+**Diff Reviewed Against main**
+
+- `backend/auction/dao/testutil_test.go`
+- `backend/auction/dao/treasure.go`
+- `backend/auction/dao/treasure_test.go`
+- `backend/auction/handler/treasure.go`
+- `backend/auction/handler/treasure_test.go`
+- `backend/auction/main.go`
+- `backend/auction/migration/003_create_treasure_tables.sql`
+- `backend/auction/model/treasure.go`
+- `backend/auction/service/treasure.go`
+- `backend/auction/service/treasure_test.go`
+- `backend/gateway/router/router.go`
+- `docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md`
+- `docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md`
+- `docs/superpowers/specs/2026-06-09-watch-treasure-coin-design.md`
+
+**Modified Files**
+
+- `docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md`
+
+**Integration Check**
+
+- Target branch: `main`
+- Branch relationship: `feature branch verified against main...HEAD diff; no integration performed by T007`
+- Diff reviewed: `git diff main...HEAD --name-only`
+- Overlapping write-set tasks serialized: `yes; T007 only modifies state after T006 is done`
+- Runtime services: `none`
+
+**Commits**
+
+- Planned state commit: `docs(sdd): finalize treasure backend verification`
+
+**Review Notes**
+
+- Final verification used only build/test/static Git commands; no services were started.
+- T007 modified only the allowed state file.
+- Gateway static route sentinel from T006 remains recorded and represented in final sentinel list.
+
+**Risks / Blockers**
+
+- `none`
+
+**Handoff**
+
+- Completion summary: `All 7 SDD tasks are done; final auction/gateway tests and builds passed; state archived for T007.`
+- Remaining work: `none`
+- First response line used: `当前分支/worktree：feat/watch-treasure-coin-backend @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-watch-treasure-coin-backend`
+
+
 ## Cross-Task Decisions
 
 | Time | Decision | Reason | Impact | Owner |
@@ -746,13 +862,16 @@
 
 | Area | Command | Required | Last Result | Notes |
 | --- | --- | --- | --- | --- |
-| Backend Gateway | `cd backend/gateway && go test ./...` | yes for T006 | `pass` | `all gateway packages pass; router 1.105s` |
+| Backend Gateway | `cd backend/gateway && go test ./... -count=1` | yes for T007 | `pass` | `fresh final verify pass; router 2.707s` |
 | Backend Product | `cd backend/product && go test ./...` | no | `not_run` | `-` |
 | Backend Auction | `cd backend/auction && go test ./dao/ -run TestTreasureDAO -v -count=1` | yes for T002 | `pass` | `6 TreasureDAO tests pass` |
 | Backend Auction Service | `cd backend/auction && go test ./service/ -run TestTreasureService -v -count=1` | yes for T003 | `pass` | `9 TreasureService tests pass` |
 | Backend Auction Handler | `cd backend/auction && go test ./handler/ -run TestTreasureHandler -v -count=1` | yes for T004 | `pass` | `7 TreasureHandler tests pass` |
 | Backend Auction Build | `cd backend/auction && go build ./...` | yes for T005 | `pass` | `exit 0, no output` |
-| Backend Auction T005 | `cd backend/auction && go test ./dao/ ./service/ ./handler/ -count=1` | yes for T005 | `pass` | `dao/service/handler fresh pass` |
+| Backend Auction Final | `cd backend/auction && go test ./dao/ ./service/ ./handler/ -count=1` | yes for T007 | `pass` | `dao 2.873s; service 7.384s; handler 3.286s` |
+| Backend Gateway Build | `cd backend/gateway && go build ./...` | yes for T007 | `pass` | `exit 0, no output` |
+| Git Diff Review | `git diff main...HEAD --name-only` | yes for T007 | `pass` | `14 files reviewed` |
+| Git Status | `git status --short` | yes for T007 | `pass` | `clean before final state edit` |
 | Frontend Admin | `cd frontend/admin && npm test -- --runInBand` | no | `not_run` | `-` |
 | Frontend Admin Build | `cd frontend/admin && npm run build` | no | `not_run` | `-` |
 | Frontend H5 | `cd frontend/h5 && npm test -- --runInBand` | no | `not_run` | `-` |
@@ -760,19 +879,19 @@
 
 ## Final Review Checklist
 
-- [ ] 所有任务状态已更新。
-- [ ] 没有未解释的 `blocked` 任务。
-- [ ] 每个 `done` 任务都有测试或替代验证证据。
-- [ ] 每个实现型任务都有 write set / read set。
-- [ ] 所有 write set 重叠的任务已串行执行并记录顺序。
-- [ ] 每个 bugfix / UI / 接口契约 / 演示链路修复都有 regression sentinel 或替代验证。
-- [ ] 本地服务或 dev server 的 branch/worktree/commit/dirty status 已记录。
-- [ ] 旧分支合入前已做 diff review，未整分支覆盖当前目标分支。
-- [ ] 冲突解决后已证明 main 基线行为和任务分支有效优化都被保留、替代或明确废弃。
-- [ ] 每个实现型任务都遵循 TDD 或写明无法 TDD 的原因。
-- [ ] API 契约变更已同步文档。
-- [ ] 最终回答第一句展示当前分支/worktree。
-- [ ] 用户已获得下一步选项：继续下一波、发起 review、提交 PR、归档。
+- [x] 所有任务状态已更新。
+- [x] 没有未解释的 `blocked` 任务。
+- [x] 每个 `done` 任务都有测试或替代验证证据。
+- [x] 每个实现型任务都有 write set / read set。
+- [x] 所有 write set 重叠的任务已串行执行并记录顺序。
+- [x] 每个 bugfix / UI / 接口契约 / 演示链路修复都有 regression sentinel 或替代验证。
+- [x] 本地服务或 dev server 的 branch/worktree/commit/dirty status 已记录。
+- [x] 旧分支合入前已做 diff review，未整分支覆盖当前目标分支。
+- [x] 冲突解决后已证明 main 基线行为和任务分支有效优化都被保留、替代或明确废弃。
+- [x] 每个实现型任务都遵循 TDD 或写明无法 TDD 的原因。
+- [x] API 契约变更已同步文档。
+- [x] 最终回答第一句展示当前分支/worktree。
+- [x] 用户已获得下一步选项：继续下一波、发起 review、提交 PR、归档。
 
 ## Final Handoff
 
@@ -780,4 +899,32 @@
 
 **状态**
 
-- `T006 done; waiting for downstream W7`
+- `completed`
+
+**完成项**
+
+- `T001-T007` 全部完成；Execution Summary 为 `Done=7, Pending=0, In Progress=0, Blocked=0`。
+- 最终验证命令全部通过：auction dao/service/handler tests、auction build、gateway tests、gateway build。
+- `main...HEAD` diff 文件清单已复核并记录。
+- 未启动 runtime services。
+
+**未完成项**
+
+- `none`
+
+**验证结果**
+
+- `cd backend/auction && go test ./dao/ ./service/ ./handler/ -count=1`：pass。
+- `cd backend/auction && go build ./...`：pass。
+- `cd backend/gateway && go test ./... -count=1`：pass。
+- `cd backend/gateway && go build ./...`：pass。
+- `git diff main...HEAD --name-only`：14 files reviewed。
+- `git status --short`：clean before final state edit。
+
+**未解决风险**
+
+- `none`
+
+**建议下一步**
+
+- 发起最终 review / PR，或按项目流程合入目标分支 `main`。
