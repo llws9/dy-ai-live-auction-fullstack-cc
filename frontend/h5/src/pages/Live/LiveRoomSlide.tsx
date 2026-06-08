@@ -27,6 +27,7 @@ interface Auction {
   live_stream_id?: number;
   status?: number;
   current_price?: number | string;
+  winner_id?: number | string | null;
   start_price?: number | string;
   end_time?: string;
   rules?: ProductRules;
@@ -261,6 +262,8 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
 
   const auctionRules = auction?.rules ?? auction?.rule ?? auction?.auction_rule;
   const currentPrice = toAmount(auction?.current_price);
+  const winnerId = Number(auction?.winner_id ?? 0);
+  const isConfirmedUnsold = auction?.status === 3 && winnerId <= 0;
   const increment = toAmount(auctionRules?.increment ?? product?.rules?.increment, 100);
   const startPrice = toAmount(auctionRules?.start_price ?? product?.rules?.start_price ?? auction?.start_price);
   const minBid = Math.max(currentPrice, startPrice) + increment;
@@ -764,7 +767,12 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     });
     const onAuctionEnded = (data: any) => {
       if (!belongsToThisRoom(data)) return;
-      setAuction((previous) => previous ? { ...previous, status: 3, current_price: toAmount(data?.final_price, toAmount(previous.current_price)) } : previous);
+      setAuction((previous) => previous ? {
+        ...previous,
+        status: 3,
+        current_price: toAmount(data?.final_price, toAmount(previous.current_price)),
+        winner_id: Number(data?.winner_id || 0),
+      } : previous);
 
       // If there is no winner, it means the auction is unsold
       if (!data.winner_id) {
@@ -1109,7 +1117,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           <span className={styles.endedEyebrow}>AUCTION CLOSED</span>
           <h1>本场竞拍已结束</h1>
           <p>{productName}</p>
-          <strong>成交价 ¥{formatMoney(currentPrice || startPrice)}</strong>
+          <strong>{isConfirmedUnsold ? '流拍' : `成交价 ¥${formatMoney(currentPrice || startPrice)}`}</strong>
           <Link className={styles.endedResultButton} to={`/result?id=${auctionId}`}>
             查看竞拍结果
           </Link>

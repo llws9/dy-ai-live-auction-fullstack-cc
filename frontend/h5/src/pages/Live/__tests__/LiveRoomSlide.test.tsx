@@ -926,6 +926,8 @@ describe('LiveRoomSlide', () => {
     const unsoldAnim = await screen.findByTestId('unsold-animation');
     expect(unsoldAnim).toBeInTheDocument();
     expect(within(unsoldAnim).getByText('遗憾流拍')).toBeInTheDocument();
+    expect(screen.getByText('流拍')).toBeInTheDocument();
+    expect(screen.queryByText(/成交价/)).not.toBeInTheDocument();
   });
 
   it('repairs mojibake product and room copy in collapsed and expanded states', async () => {
