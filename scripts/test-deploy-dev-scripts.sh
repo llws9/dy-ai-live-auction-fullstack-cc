@@ -257,6 +257,12 @@ assert_compose_dependency_condition \
   service_healthy \
   "docker-compose.yml auction must wait for RabbitMQ health before starting"
 
+assert_compose_dependency_condition \
+  test-service \
+  mysql \
+  service_healthy \
+  "docker-compose.yml test-service must wait for MySQL health before enabling /api/test routes"
+
 test -f "$ROOT/frontend/h5/Dockerfile" || fail "frontend-h5 compose service must have a Dockerfile"
 test -f "$ROOT/frontend/admin/Dockerfile" || fail "frontend-admin compose service must have a Dockerfile"
 test -f "$ROOT/frontend/h5/.dockerignore" || fail "frontend-h5 Docker build must ignore local dependency artifacts"

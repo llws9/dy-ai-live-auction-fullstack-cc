@@ -281,7 +281,8 @@ services:
       - TEST_RETENTION_DAYS=7
       - LOG_LEVEL=info
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     networks:
       - auction-network
     restart: unless-stopped
