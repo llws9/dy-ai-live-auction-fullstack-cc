@@ -51,6 +51,7 @@ func TestAuctionAdminRoutesRequireInternalToken(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 
 	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/admin/auctions", nil,
