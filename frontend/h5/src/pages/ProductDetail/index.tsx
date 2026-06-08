@@ -92,6 +92,14 @@ const getStatusInfo = (status?: number, endTime?: string) => {
 
 const formatPrice = (value?: number) => `¥${Number(value ?? 0).toLocaleString()}`;
 
+const getEffectiveAuctionPrice = (currentPrice?: number, startPrice?: number) => {
+  const normalizedCurrentPrice = Number(currentPrice ?? 0);
+  if (Number.isFinite(normalizedCurrentPrice) && normalizedCurrentPrice > 0) {
+    return normalizedCurrentPrice;
+  }
+  return Number(startPrice ?? 0);
+};
+
 const formatDateTime = (value?: string) => {
   if (!value) return '';
   const parsed = new Date(value);
@@ -136,7 +144,9 @@ const ProductDetail: React.FC = () => {
   }, [auction, product]);
 
   const statusInfo = getStatusInfo(auction?.status, auction?.end_time);
-  const displayPrice = statusInfo.upcoming ? rules.start_price ?? 0 : auction?.current_price ?? rules.start_price ?? 0;
+  const displayPrice = statusInfo.upcoming
+    ? rules.start_price ?? 0
+    : getEffectiveAuctionPrice(auction?.current_price, rules.start_price);
   const priceLabel = statusInfo.upcoming ? '起拍价' : statusInfo.ended ? '成交价' : '当前出价';
   const timelineLabel = statusInfo.upcoming
     ? '开拍'

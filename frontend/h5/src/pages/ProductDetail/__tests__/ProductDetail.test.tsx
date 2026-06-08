@@ -97,6 +97,39 @@ describe('ProductDetail migration', () => {
     expect(participate.closest('footer')).toBeNull();
   });
 
+  it('进行中竞拍当前价为 0 时按起拍价展示，保持与直播间价格一致', async () => {
+    mockedAuctionApi.get.mockResolvedValueOnce({
+      id: 12,
+      product_id: 34,
+      live_stream_id: 5,
+      status: 1,
+      current_price: 0,
+      start_price: 1000,
+      end_time: new Date(Date.now() + 60_000).toISOString(),
+    });
+    mockedAuctionApi.getBids.mockResolvedValueOnce([]);
+
+    render(
+      <ThemeProvider>
+        <MemoryRouter
+          initialEntries={[
+            '/live?id=5&auction_id=12',
+            { pathname: '/detail', search: '?id=12', state: { from: 'live' } },
+          ]}
+          initialIndex={1}
+          future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+        >
+          <ProductDetail />
+        </MemoryRouter>
+      </ThemeProvider>
+    );
+
+    expect(await screen.findByText('清代青花瓷瓶')).toBeInTheDocument();
+    expect(screen.getByText('当前出价')).toBeInTheDocument();
+    expect(screen.getAllByText('¥1,000').length).toBeGreaterThan(0);
+    expect(screen.queryByText('¥0')).not.toBeInTheDocument();
+  });
+
   it('从直播间进入商品详情时，顶部返回回到上一页直播间', async () => {
     render(
       <ThemeProvider>
