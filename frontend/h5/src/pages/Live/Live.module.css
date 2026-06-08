@@ -643,6 +643,40 @@
   backdrop-filter: blur(18px);
 }
 
+.myBidCapsule {
+  position: absolute;
+  top: -12px;
+  left: 24px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+  white-space: nowrap;
+  animation: myBidCapsuleFloat 2s ease-in-out infinite;
+}
+
+.myBidCapsuleLeading {
+  background: linear-gradient(135deg, #d4af37, #e8c873);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.myBidCapsuleOutbid {
+  background: linear-gradient(135deg, #ff4e50, #f9d423);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+@keyframes myBidCapsuleFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
 .dockSkyLampActive {
   border-color: rgba(255, 211, 118, 0.52);
   box-shadow:
@@ -831,6 +865,33 @@
 
 .countdownUrgent strong {
   color: #ff6b6b;
+}
+
+.countdownUrgentText {
+  color: var(--color-coral-6);
+  font-weight: 800;
+}
+
+.heatMarqueeContainer {
+  width: 100%;
+  overflow: hidden;
+  background: rgba(0,0,0,0.4);
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-top: 8px;
+  display: flex;
+}
+
+.heatMarqueeText {
+  font-size: 11px;
+  color: #fff;
+  white-space: nowrap;
+  animation: marquee 10s linear infinite;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
 }
 
 .bidBox,
@@ -1535,72 +1596,6 @@
   white-space: nowrap;
 }
 
-.bidSuccessFlair {
-  position: absolute;
-  top: 42%;
-  left: 50%;
-  z-index: 7;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  max-width: calc(100% - 48px);
-  padding: 8px 18px 8px 8px;
-  border: 1px solid rgba(212, 175, 55, 0.48);
-  border-radius: var(--radius-full);
-  background:
-    linear-gradient(90deg, rgba(17, 17, 17, 0.9), rgba(34, 30, 22, 0.78)),
-    radial-gradient(circle at 16px 16px, rgba(212, 175, 55, 0.34), transparent 58%);
-  box-shadow:
-    0 16px 36px rgba(0, 0, 0, 0.38),
-    0 0 24px rgba(212, 175, 55, 0.18),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  color: #fff;
-  pointer-events: none;
-  transform: translateX(-50%);
-  animation: bidSuccessFlairFly 2.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  backdrop-filter: blur(16px);
-}
-
-.bidSuccessAvatar {
-  display: inline-flex;
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(255, 238, 190, 0.82);
-  border-radius: var(--radius-full);
-  background: linear-gradient(145deg, #f7dc8d, #9b6d20);
-  box-shadow: 0 6px 16px rgba(212, 175, 55, 0.28);
-  color: #211507;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-bold);
-}
-
-.bidSuccessCopy {
-  display: inline-flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.bidSuccessCopy span {
-  overflow: hidden;
-  max-width: 168px;
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 11px;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.bidSuccessCopy strong {
-  color: #f7dc8d;
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-  line-height: 1.1;
-  text-shadow: 0 2px 10px rgba(212, 175, 55, 0.3);
-}
 
 .skyLampNoticeIcon {
   position: relative;
@@ -1687,125 +1682,5 @@
   }
 }
 
-@keyframes bidSuccessFlairFly {
-  0% {
-    opacity: 0;
-    transform: translate3d(-50%, 50px, 0) scale(0.86);
-  }
-
-  14% {
-    opacity: 1;
-    transform: translate3d(-50%, 0, 0) scale(1.04);
-  }
-
-  22% {
-    transform: translate3d(-50%, 0, 0) scale(1);
-  }
-
-  76% {
-    opacity: 1;
-    transform: translate3d(-50%, -10px, 0) scale(1);
-    filter: blur(0);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translate3d(-50%, -46px, 0) scale(0.94);
-    filter: blur(2px);
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
-  .bidSuccessFlair {
-    animation: none;
-  }
-}
-
-.bidButton:disabled,
-.skyLampButton:disabled,
-.skyLampCancelButton:disabled,
-.skyLampConfirmButton:disabled,
-.quickBids button:disabled {
-  cursor: not-allowed;
-  opacity: 0.52;
-}
-
-.authHint {
-  margin-top: var(--spacing-2);
-  text-align: center;
-}
-
-.toast {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  z-index: 20;
-  min-width: 160px;
-  padding: var(--spacing-3) var(--spacing-5);
-  border: 1px solid rgba(201, 169, 110, 0.38);
-  border-radius: var(--radius-lg);
-  background: rgba(0, 0, 0, 0.88);
-  color: #fff;
-  text-align: center;
-  transform: translate(-50%, -50%);
-}
-
-.statePage {
-  display: flex;
-  min-height: 100vh;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-6);
-  background: var(--bg-page);
-  color: var(--text-primary);
-  text-align: center;
-}
-
-.statePage h1 {
-  margin: 0;
-  color: var(--text-brand);
-  font-size: var(--font-size-xl);
-}
-
-.statePage p {
-  margin: var(--spacing-3) 0 0;
-  color: var(--text-secondary);
-}
-
-.stateButton {
-  max-width: 180px;
-}
-
-.spinner {
-  width: 28px;
-  height: 28px;
-  border: 2px solid rgba(201, 169, 110, 0.22);
-  border-top-color: #c9a96e;
-  border-radius: var(--radius-full);
-  animation: spin 0.9s linear infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.4;
-  }
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (min-width: 431px) {
-  .page {
-    height: calc(min(100vh, 812px) - var(--live-bottom-nav-height));
-    min-height: calc(min(100vh, 812px) - var(--live-bottom-nav-height));
-  }
-}

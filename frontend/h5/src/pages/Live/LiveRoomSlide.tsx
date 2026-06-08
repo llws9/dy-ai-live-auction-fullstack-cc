@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchMyPurchase, type FixedPriceItem } from '@/api/fixedPrice';
 import { BidSuccessAnimation } from '@/components/auction/BidSuccessAnimation';
+import { BidFlairOverlay, type BidEvent } from '../../components/LiveRoom/BidFlairOverlay';
 import FixedPriceCard from '@/components/FixedPriceCard';
 import FixedPriceFlair from '@/components/FixedPriceFlair';
 import FixedPricePurchaseModal from '@/components/FixedPricePurchaseModal';
@@ -97,6 +98,8 @@ interface SkyLampNoticeState {
   id: number;
   message: string;
 }
+
+import { TapBurstHearts } from '../../components/LiveRoom/TapBurstHearts';
 
 export interface LiveRoomSlideProps {
   liveStreamId: number;
@@ -239,7 +242,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const [connected, setConnected] = useState(false);
   const [toast, setToast] = useState('');
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
-  const [bidSuccessFlair, setBidSuccessFlair] = useState<BidSuccessFlair | null>(null);
+  const [latestBid, setLatestBid] = useState<BidEvent | null>(null);
   const [wonAnimation, setWonAnimation] = useState<WonAnimationState | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const { showToast: showGlobalToast } = useToast();
@@ -385,29 +388,17 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     }
   }, [hapticsEnabled]);
 
-  const showBidSuccessFlair = useCallback((amount: number, userName: string) => {
+  const showBidSuccessFlair = useCallback((amount: number, userName: string, userId: number, avatar?: string) => {
     triggerHaptic();
-    
-    if (bidFlairDelayTimerRef.current !== null) {
-      window.clearTimeout(bidFlairDelayTimerRef.current);
-    }
-    if (bidFlairHideTimerRef.current !== null) {
-      window.clearTimeout(bidFlairHideTimerRef.current);
-    }
-
-    bidFlairDelayTimerRef.current = window.setTimeout(() => {
-      setBidSuccessFlair({
-        id: Date.now(),
-        amount,
-        userName,
-      });
-      bidFlairHideTimerRef.current = window.setTimeout(() => {
-        setBidSuccessFlair(null);
-        bidFlairHideTimerRef.current = null;
-      }, BID_SUCCESS_FLAIR_VISIBLE_MS);
-      bidFlairDelayTimerRef.current = null;
-    }, BID_SUCCESS_FLAIR_DELAY_MS);
-  }, [triggerHaptic]);
+    setLatestBid({
+      id: Date.now().toString() + Math.random().toString(),
+      userId: userName, // Using userName as userId string since we want to display it or initial
+      avatar: avatar || '',
+      price: formatMoney(amount),
+      combo: 1, // Defaulting to 1 for now, or 3 for testing
+      isSelf: userId === user?.id,
+    });
+  }, [triggerHaptic, user?.id]);
 
   useEffect(() => {
     return () => {
@@ -493,7 +484,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     if (lastBidFlairKeyRef.current === flairKey) return;
 
     lastBidFlairKeyRef.current = flairKey;
-    showBidSuccessFlair(amount, displayName);
+    showBidSuccessFlair(amount, displayName, userID);
   }, [showBidSuccessFlair, user?.id]);
 
   const applyRealtimeRanking = useCallback((data: any) => {
@@ -828,7 +819,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       setBidAmount(String(nextPrice + increment));
       showToast('出价成功');
       closeSheet();
-      showBidSuccessFlair(nextPrice, currentUserDisplayName);
+      showBidSuccessFlair(nextPrice, currentUserDisplayName, user?.id || 0);
     } catch (error: any) {
       showToast(error?.message || '出价失败，请稍后重试');
     } finally {
@@ -974,6 +965,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           <div className={styles.videoFallback}>暂无直播画面</div>
         )}
         <div className={styles.videoGradient} />
+        <TapBurstHearts />
         <header className={styles.topBar}>
           <div className={styles.hostPill}>
             <Link className={styles.backLink} to="/">‹</Link>
@@ -1083,6 +1075,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           bidDisabled={!isActive}
           bidDisabledText="不可出价"
           skyLampActive={skyLampActive}
+          myBidStatus={isAuthenticated ? (ranking.findIndex(r => r.user_id === user?.id) === 0 ? 'leading' : (ranking.findIndex(r => r.user_id === user?.id) > 0 ? 'outbid' : null)) : null}
           onOpen={openSheet}
           onClose={closeSheet}
           onRequireLogin={() => showToast('请先登录后出价')}
@@ -1096,9 +1089,15 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           </div>
         </div>
 
+        <div className={styles.heatMarqueeContainer}>
+          <div className={styles.heatMarqueeText}>
+            🔥 已有 {ranking.length} 人出价 · {viewerCount} 人围观
+          </div>
+        </div>
+
         <div className={`${styles.countdown} ${timeLeft < 10 && timeLeft > 0 ? styles.countdownUrgent : ''}`}>
           <span>距离结拍</span>
-          <strong>{formatTimeLeft(timeLeft)}</strong>
+          <strong className={timeLeft < 10 && timeLeft > 0 ? styles.countdownUrgentText : ''}>{formatTimeLeft(timeLeft)}</strong>
           <em>{connected ? '实时同步中' : '实时连接中'}</em>
         </div>
 
@@ -1251,23 +1250,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           <strong>{skyLampNotice.message}</strong>
         </div>
       )}
-      {bidSuccessFlair && (
-        <div
-          className={styles.bidSuccessFlair}
-          data-testid="bid-success-flair"
-          key={bidSuccessFlair.id}
-          role="status"
-          aria-live="polite"
-        >
-          <span className={styles.bidSuccessAvatar} aria-hidden="true">
-            {bidSuccessFlair.userName.slice(0, 1)}
-          </span>
-          <span className={styles.bidSuccessCopy}>
-            <span>{bidSuccessFlair.userName} 刚刚出价</span>
-            <strong>¥{formatMoney(bidSuccessFlair.amount)}</strong>
-          </span>
-        </div>
-      )}
+      <BidFlairOverlay latestBid={latestBid} />
       {wonAnimation && (
         <BidSuccessAnimation
           productName={wonAnimation.productName}

@@ -657,8 +657,8 @@ describe('LiveRoomSlide', () => {
       jest.advanceTimersByTime(240);
     });
 
-    expect(screen.getByTestId('bid-success-flair')).toHaveTextContent('演示买家B 刚刚出价');
-    expect(screen.getByTestId('bid-success-flair')).toHaveTextContent('¥1,300');
+    expect(screen.getByTestId('bid-flair-overlay')).toHaveTextContent('出价');
+    expect(screen.getByTestId('bid-flair-overlay')).toHaveTextContent('¥1,300');
 
     jest.useRealTimers();
   });
@@ -980,5 +980,49 @@ describe('LiveRoomSlide', () => {
     await waitFor(() => {
       expect(mockVibrate).not.toHaveBeenCalled();
     });
+  });
+
+  it('renders TapBurstHearts and triggers hearts on double click', async () => {
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+
+    const tapContainer = document.querySelector('[data-testid="tap-burst-hearts"]');
+    expect(tapContainer).toBeInTheDocument();
+    expect(tapContainer?.children.length).toBe(0);
+
+    fireEvent.doubleClick(document.body);
+
+    await waitFor(() => {
+      expect(tapContainer?.children.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('applies urgent color to countdown when time left is less than 10s and shows marquee heat', async () => {
+    const baseNow = new Date('2026-06-06T00:00:00.000Z').getTime();
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(baseNow);
+    mockedAuctionApi.get.mockResolvedValue({
+      id: 5,
+      product_id: 7,
+      live_stream_id: 3,
+      status: 1,
+      current_price: 1200,
+      end_time: new Date(baseNow + 9_000).toISOString(),
+    });
+    mockedBidApi.getRanking.mockResolvedValue([
+      { rank: 1, user_id: 1, user_name: '张三', amount: 1200 },
+      { rank: 2, user_id: 2, user_name: '李四', amount: 1100 },
+    ]);
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    fireEvent.click(await screen.findByTestId('bid-dock'));
+
+    const countdownEl = await screen.findByText('00:09');
+    expect(countdownEl).toHaveClass('countdownUrgentText');
+
+    expect(screen.getByText(/🔥 已有 2 人出价 · 128 人围观/)).toBeInTheDocument();
+
+    dateNowSpy.mockRestore();
   });
 });
