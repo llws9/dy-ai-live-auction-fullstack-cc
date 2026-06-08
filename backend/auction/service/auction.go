@@ -19,7 +19,7 @@ var (
 	ErrProductNotSchedulable          = errors.New("商品未进入竞拍池")
 	ErrAuctionRuleNotBound            = errors.New("规则模板不存在或不属于当前商家")
 	ErrActiveAuctionExists            = errors.New("该商品已有待开始或进行中的竞拍场次")
-	ErrActiveLiveStreamAuctionExists  = errors.New("当前直播间已有待开始或进行中的竞拍场次")
+	ErrPendingLiveStreamAuctionExists = errors.New("当前直播间已有即将开始的竞拍场次")
 	ErrSoldProductCannotBeReauctioned = errors.New("已成交商品不能再次创建竞拍")
 )
 
@@ -119,12 +119,12 @@ func (s *AuctionService) CreateAuction(ctx context.Context, req *CreateAuctionRe
 	if active != nil {
 		return nil, ErrActiveAuctionExists
 	}
-	activeInLiveStream, err := s.auctionDAO.GetActiveByLiveStreamID(ctx, req.LiveStreamID)
+	pendingInLiveStream, err := s.auctionDAO.GetPendingByLiveStreamID(ctx, req.LiveStreamID)
 	if err != nil {
 		return nil, err
 	}
-	if activeInLiveStream != nil {
-		return nil, ErrActiveLiveStreamAuctionExists
+	if pendingInLiveStream != nil {
+		return nil, ErrPendingLiveStreamAuctionExists
 	}
 
 	latest, err := s.auctionDAO.GetLatestTerminalByProductID(ctx, req.ProductID)
@@ -152,8 +152,8 @@ func (s *AuctionService) CreateAuction(ctx context.Context, req *CreateAuctionRe
 	}
 
 	if err := s.auctionDAO.Create(ctx, auction); err != nil {
-		if isActiveLiveStreamUniqueConflict(err) {
-			return nil, ErrActiveLiveStreamAuctionExists
+		if isPendingLiveStreamUniqueConflict(err) {
+			return nil, ErrPendingLiveStreamAuctionExists
 		}
 		if isActiveAuctionUniqueConflict(err) {
 			return nil, ErrActiveAuctionExists
@@ -171,11 +171,13 @@ func isActiveAuctionUniqueConflict(err error) bool {
 	return strings.Contains(err.Error(), "uk_active_product")
 }
 
-func isActiveLiveStreamUniqueConflict(err error) bool {
+func isPendingLiveStreamUniqueConflict(err error) bool {
 	if err == nil {
 		return false
 	}
-	return strings.Contains(err.Error(), "uk_active_live_stream")
+	msg := err.Error()
+	return strings.Contains(msg, "uk_pending_live_stream") ||
+		strings.Contains(msg, "pending_live_stream_key")
 }
 
 // GetAuction 获取竞拍详情
@@ -218,9 +220,26 @@ func (s *AuctionService) StartAuction(ctx context.Context, id int64) error {
 		return errors.New("当前状态无法开始")
 	}
 
+	if auction.LiveStreamID != nil {
+		running, err := s.auctionDAO.GetRunningByLiveStreamID(ctx, *auction.LiveStreamID)
+		if err != nil {
+			return err
+		}
+		if running != nil && running.ID != auction.ID {
+			return nil
+		}
+	}
+
+	duration := auction.EndTime.Sub(auction.StartTime)
+	if duration <= 0 {
+		return errors.New("竞拍时长必须大于0")
+	}
+	now := auctionBusinessNow()
 	if err := sm.Transition(model.AuctionStatusOngoing); err != nil {
 		return err
 	}
+	auction.StartTime = now
+	auction.EndTime = now.Add(duration)
 
 	if err := s.auctionDAO.Update(ctx, auction); err != nil {
 		return err

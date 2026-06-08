@@ -383,7 +383,7 @@ func TestAuctionService_Creation(t *testing.T) {
 	assert.Equal(t, int64(1), req.LiveStreamID)
 }
 
-func TestAuctionService_CreateAuctionRejectsActiveAuctionInSameLiveStream(t *testing.T) {
+func TestAuctionService_CreateAuctionAllowsPendingWhenLiveStreamHasRunningAuction(t *testing.T) {
 	db := newAuctionServiceTestDB(t)
 	creatorID := int64(1001)
 	liveStreamID := int64(77)
@@ -393,6 +393,35 @@ func TestAuctionService_CreateAuctionRejectsActiveAuctionInSameLiveStream(t *tes
 		CreatorID:    &creatorID,
 		Status:       model.AuctionStatusOngoing,
 		StartTime:    time.Now().Add(-time.Minute),
+		EndTime:      time.Now().Add(time.Hour),
+	}).Error)
+
+	svc := NewAuctionService(dao.NewAuctionDAO(db))
+	auction, err := svc.CreateAuction(context.Background(), &CreateAuctionRequest{
+		ProductID:      12,
+		CreatorID:      &creatorID,
+		Duration:       3600,
+		ProductOwnerID: creatorID,
+		ProductStatus:  productStatusPublished,
+		RuleBound:      true,
+		LiveStreamID:   liveStreamID,
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, auction)
+	assert.Equal(t, model.AuctionStatusPending, auction.Status)
+}
+
+func TestAuctionService_CreateAuctionRejectsSecondPendingAuctionInSameLiveStream(t *testing.T) {
+	db := newAuctionServiceTestDB(t)
+	creatorID := int64(1001)
+	liveStreamID := int64(77)
+	require.NoError(t, db.Create(&model.Auction{
+		ProductID:    11,
+		LiveStreamID: &liveStreamID,
+		CreatorID:    &creatorID,
+		Status:       model.AuctionStatusPending,
+		StartTime:    time.Now().Add(time.Minute),
 		EndTime:      time.Now().Add(time.Hour),
 	}).Error)
 
@@ -407,7 +436,70 @@ func TestAuctionService_CreateAuctionRejectsActiveAuctionInSameLiveStream(t *tes
 		LiveStreamID:   liveStreamID,
 	})
 
-	require.ErrorIs(t, err, ErrActiveLiveStreamAuctionExists)
+	require.ErrorIs(t, err, ErrPendingLiveStreamAuctionExists)
+}
+
+func TestAuctionService_StartAuctionSkipsWhenLiveStreamAlreadyRunning(t *testing.T) {
+	db := newAuctionServiceTestDB(t)
+	creatorID := int64(1001)
+	liveStreamID := int64(77)
+	now := time.Now()
+	require.NoError(t, db.Create(&model.Auction{
+		ID:           101,
+		ProductID:    11,
+		LiveStreamID: &liveStreamID,
+		CreatorID:    &creatorID,
+		Status:       model.AuctionStatusOngoing,
+		StartTime:    now.Add(-time.Minute),
+		EndTime:      now.Add(time.Hour),
+	}).Error)
+	require.NoError(t, db.Create(&model.Auction{
+		ID:           102,
+		ProductID:    12,
+		LiveStreamID: &liveStreamID,
+		CreatorID:    &creatorID,
+		Status:       model.AuctionStatusPending,
+		StartTime:    now.Add(-time.Minute),
+		EndTime:      now.Add(time.Hour),
+	}).Error)
+
+	svc := NewAuctionService(dao.NewAuctionDAO(db))
+	err := svc.StartAuction(context.Background(), 102)
+
+	require.NoError(t, err)
+	var pending model.Auction
+	require.NoError(t, db.First(&pending, 102).Error)
+	assert.Equal(t, model.AuctionStatusPending, pending.Status)
+}
+
+func TestAuctionService_StartAuctionRecalculatesTimesFromOriginalDuration(t *testing.T) {
+	db := newAuctionServiceTestDB(t)
+	creatorID := int64(1001)
+	liveStreamID := int64(77)
+	originalStart := time.Now().Add(-2 * time.Hour)
+	originalEnd := originalStart.Add(15 * time.Minute)
+	require.NoError(t, db.Create(&model.Auction{
+		ID:           103,
+		ProductID:    12,
+		LiveStreamID: &liveStreamID,
+		CreatorID:    &creatorID,
+		Status:       model.AuctionStatusPending,
+		StartTime:    originalStart,
+		EndTime:      originalEnd,
+	}).Error)
+
+	svc := NewAuctionService(dao.NewAuctionDAO(db))
+	beforeStart := time.Now()
+	err := svc.StartAuction(context.Background(), 103)
+	afterStart := time.Now()
+
+	require.NoError(t, err)
+	var started model.Auction
+	require.NoError(t, db.First(&started, 103).Error)
+	assert.Equal(t, model.AuctionStatusOngoing, started.Status)
+	assert.False(t, started.EndTime.Before(afterStart), "延迟启动后的结束时间不能早于当前时间")
+	assert.True(t, started.StartTime.After(beforeStart.Add(-time.Second)) || started.StartTime.Equal(beforeStart))
+	assert.InDelta(t, 15*time.Minute, started.EndTime.Sub(started.StartTime), float64(time.Second))
 }
 
 // TestNotificationType_Constants 测试通知类型常量

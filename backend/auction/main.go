@@ -88,8 +88,8 @@ func main() {
 	if err := dao.EnsureAuctionActiveProductUniqueIndex(db); err != nil {
 		log.Printf("Warning: ensure active product unique index failed: %v", err)
 	}
-	if err := dao.EnsureAuctionActiveLiveStreamUniqueIndex(db); err != nil {
-		log.Printf("Warning: ensure active live stream unique index failed: %v", err)
+	if err := dao.EnsureAuctionLiveStreamUniqueIndexes(db); err != nil {
+		log.Printf("Warning: ensure live stream unique indexes failed: %v", err)
 	}
 
 	// 初始化 DAO 层
