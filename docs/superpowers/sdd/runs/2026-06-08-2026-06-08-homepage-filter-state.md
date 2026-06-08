@@ -38,11 +38,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `7` |
-| Done | `3` |
+| Done | `4` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `3` |
-| Last Updated | `2026-06-09 00:40` |
+| Last Updated | `2026-06-09 00:59` |
 
 ## Status Legend
 
@@ -72,7 +72,7 @@
 | `T001` | `后端 Auction 模型增加只读 BidCount 字段` | `done` | `subagent-t001` | `W1` | `-` | `model field only` | `backend/auction/model/auction.go` | `AGENTS.md; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go build ./...` | `none` |
 | `T002` | `后端 AuctionFilters 与 ListWithFilters 实现价格过滤与热度排序` | `done` | `subagent-t002` | `W2` | `T001` | `DAO filters, SQL, DAO tests` | `backend/auction/dao/auction.go; backend/auction/dao/auction_filter_test.go` | `backend/auction/model/auction.go; backend/auction/dao/auction_current_test.go; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go test ./dao/ -run 'TestListWithFiltersPriceRange|TestListWithFiltersSortByHot' -v` | `none` |
 | `T003` | `后端 handler 解析筛选参数并透传` | `done` | `subagent-t003` | `W3` | `T002` | `GET /auctions query parsing and filter propagation` | `backend/auction/handler/auction.go; backend/auction/handler/auction_list.go` | `backend/auction/dao/auction.go; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go build ./... && go test ./handler/ -v` | `none` |
-| `T004` | `前端 auctionApi.list 扩展查询参数` | `assigned` | `subagent-t004` | `W4` | `T003` | `H5 API client params` | `frontend/h5/src/services/api.ts` | `docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
+| `T004` | `前端 auctionApi.list 扩展查询参数` | `done` | `subagent-t004` | `W4` | `T003` | `H5 API client params` | `frontend/h5/src/services/api.ts` | `docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
 | `T005` | `前端价格底部抽屉组件 PriceFilterSheet` | `pending` | `unassigned` | `W5` | `T004` | `bottom sheet component and styles` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css` | `frontend/h5/src/pages/Home/index.tsx; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
 | `T006` | `前端 Home 集成筛选胶囊、状态与参数组装` | `pending` | `unassigned` | `W6` | `T005` | `Home UI integration and interaction test` | `frontend/h5/src/pages/Home/index.tsx; frontend/h5/src/pages/Home/__tests__/Home.test.tsx` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css; frontend/h5/src/services/api.ts; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx -t '点击最热胶囊'` | `none` |
 | `T007` | `端到端验收与全量回归` | `pending` | `unassigned` | `W7` | `T006` | `verification only` | `docs/superpowers/sdd/runs/2026-06-08-2026-06-08-homepage-filter-state.md` | `STARTUP_GUIDE.md; frontend/h5/src/pages/Home/index.tsx; backend/auction` | `cd backend/auction && go test ./... && cd ../../frontend/h5 && npx jest` | `gateway-service; auction-service; h5 if browser verification runs` |
@@ -335,10 +335,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `assigned` |
+| Status | `done` |
 | Owner | `subagent-t004` |
 | Started At | `2026-06-09 00:45` |
-| Completed At | `-` |
+| Completed At | `2026-06-09 00:59` |
 | Branch | `feat/homepage-filter-sdd` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-homepage-filter-sdd` |
 | Base Commit | `351a147089502bac70ae6d7ed5fafa4a303ab584` |
@@ -348,9 +348,9 @@
 
 **TDD Plan**
 
-- Red: TypeScript rejects `sort/price_min/price_max` at call sites before API type extension.
+- Red/baseline: write set does not include call-site tests; ran `cd frontend/h5 && npx tsc --noEmit` before implementation and confirmed the known unrelated LiveChat/zustand baseline only, with no `api.ts` errors.
 - Green: extend `auctionApi.list` parameter type and query serialization.
-- Verify: `cd frontend/h5 && npx tsc --noEmit`.
+- Verify: rerun `cd frontend/h5 && npx tsc --noEmit`; confirm failure set is unchanged and no `api.ts` errors. Use `rg`/`git diff` as deterministic sentinel that `sort`, `price_min`, and `price_max` are serialized.
 
 **Write Set**
 
@@ -370,19 +370,33 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `typecheck pass` | `not_run` | `pending` |
+| `cd frontend/h5 && npx tsc --noEmit` | Baseline before implementation; known unrelated failures only | Exit `2`; errors only in `src/components/LiveChat/ChatPanel.tsx` implicit any and `src/store/liveChatStore.ts` missing `zustand`/implicit any; no `src/services/api.ts` errors | `baseline_known_fail` |
+| `cd frontend/h5 && npx tsc --noEmit` | After implementation; no new task-related errors | Exit `2`; same known unrelated LiveChat/zustand failures; no `src/services/api.ts` errors | `known_fail_no_new_api_errors` |
+| `rg -n "sort\?: string|price_min\?: number|price_max\?: number|query\.set\('sort'|query\.set\('price_min'|query\.set\('price_max'" frontend/h5/src/services/api.ts` | API client type and serialization include all three keys | Matches line `352` type extension and lines `359-361` query serialization for `sort`, `price_min`, `price_max` | `pass` |
 
 **Modified Files**
 
-- `-`
+- `frontend/h5/src/services/api.ts`
+- `docs/superpowers/sdd/runs/2026-06-08-2026-06-08-homepage-filter-state.md`
+
+**Runtime Source Evidence**
+
+| Service | Branch | Worktree | Commit | Dirty | Command | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` | `-` | `-` | `not_used` |
+
+**Commits**
+
+- `4d4140d42b9031de3a54a0e0cdda91958f194d9f` - `feat(h5): extend auctionApi.list with sort and price params`
 
 **Risks / Blockers**
 
-- Existing API client tests are not present; typecheck is the sentinel for this narrow change.
+- Existing H5 typecheck baseline remains red because of unrelated `LiveChat/ChatPanel.tsx` implicit any and `liveChatStore.ts` missing `zustand`/implicit any; task scope forbids fixing those files.
+- Existing API client tests are not present; typecheck plus deterministic `rg`/diff evidence is the sentinel for this narrow change.
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `yes`
 
 ### T005 - `前端价格底部抽屉组件 PriceFilterSheet`
 
