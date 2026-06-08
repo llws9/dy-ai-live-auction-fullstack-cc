@@ -1,0 +1,66 @@
+frontend/h5/src/pages/Live/Live.module.css
+  s_b3ce652601b19e::t_993fce845004c3 1687-1692 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2706bb0bfcee1b04fb6a54","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1687,1692]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "0317f2e12351c8baeb4b9341cc7198a809fa7bcc",
+  "prompts": {},
+  "sessions": {
+    "s_b3ce652601b19e": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a26f0ae0bfcee1b04fb4e40",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {
+    "frontend/h5/src/pages/Live/Live.module.css": [
+      {
+        "hash": "s_b3ce652601b19e::t_993fce845004c3",
+        "line_ranges": [
+          {
+            "Range": [
+              1687,
+              1692
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2706bb0bfcee1b04fb6a54",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1687,
+                  1692
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "s_b3ce652601b19e": {
+      "tool": "trae",
+      "conversation_id": "6a26f0ae0bfcee1b04fb4e40",
+      "session_id": "6a26f0ae0bfcee1b04fb4e40",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_b3ce652601b19e::t_993fce845004c3": {
+      "tool": "trae",
+      "conversation_id": "6a26f0ae0bfcee1b04fb4e40",
+      "session_id": "6a26f0ae0bfcee1b04fb4e40",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
