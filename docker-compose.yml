@@ -40,8 +40,8 @@ services:
   # Product Service
   product:
     build:
-      context: ./backend/product
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: product/Dockerfile
     ports:
       - "8081:8081"
     environment:

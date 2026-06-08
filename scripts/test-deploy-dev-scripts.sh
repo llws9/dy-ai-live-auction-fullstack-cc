@@ -129,6 +129,16 @@ assert_contains \
   'gateway product auction mysql redis rabbitmq nacos nacos-mysql frontend-h5 frontend-admin test-service test-dashboard loki promtail prometheus grafana growthbook growthbook-db' \
   "deploy-dev.sh must include all mature-project local services in the full deployment set"
 
+assert_contains \
+  "$ROOT/docker-compose.yml" \
+  'context: \./backend' \
+  "docker-compose.yml product build must use backend as context so shared/llm is available"
+
+assert_contains \
+  "$ROOT/docker-compose.yml" \
+  'dockerfile: product/Dockerfile' \
+  "docker-compose.yml product build must point to product/Dockerfile from backend context"
+
 test -f "$ROOT/frontend/h5/Dockerfile" || fail "frontend-h5 compose service must have a Dockerfile"
 test -f "$ROOT/frontend/admin/Dockerfile" || fail "frontend-admin compose service must have a Dockerfile"
 test -f "$ROOT/frontend/h5/.dockerignore" || fail "frontend-h5 Docker build must ignore local dependency artifacts"
