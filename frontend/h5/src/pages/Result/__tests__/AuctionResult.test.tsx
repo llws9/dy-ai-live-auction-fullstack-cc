@@ -237,4 +237,39 @@ describe('AuctionResult migration', () => {
     expect(homeLinks[0]).toHaveAttribute('href', '/');
     expect(homeLinks[0]).toHaveClass('primaryLink');
   });
+
+  it('shows unsold state when ended auction has no winner and no final price', async () => {
+    mockedAuctionApi.getResult.mockResolvedValueOnce({
+      auction_id: 993566,
+      id: 993566,
+      product_id: 993510,
+      status: 3,
+      final_price: 0,
+      winner_id: null,
+      ended_at: '2026-06-08T22:45:39+08:00',
+      product: {
+        id: 993510,
+        name: '无人出价拍品',
+        images: ['/unsold.jpg'],
+      },
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={['/result?id=993566']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <ResultPage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('无人出价拍品')).toBeInTheDocument();
+    expect(screen.getAllByText('流拍').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('未成交')).toBeInTheDocument();
+    expect(screen.queryByText('已成交')).not.toBeInTheDocument();
+    expect(screen.queryByText('最终成交价')).not.toBeInTheDocument();
+    expect(screen.queryByText('¥0')).not.toBeInTheDocument();
+    expect(screen.queryByText('中标人')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '返回首页' })).toHaveAttribute('href', '/');
+  });
 });

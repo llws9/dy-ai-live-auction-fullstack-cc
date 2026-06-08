@@ -32,9 +32,9 @@ interface AuctionResult {
   product_id?: number;
   product?: ProductInfo;
   status?: number;
-  final_price?: number;
-  current_price?: number;
-  winner_id?: number;
+  final_price?: number | string;
+  current_price?: number | string;
+  winner_id?: number | string | null;
   order_id?: number;
   order?: OrderInfo;
   won_bid?: BidRecord;
@@ -43,7 +43,12 @@ interface AuctionResult {
   delay_used?: number;
 }
 
-const formatPrice = (value?: number) => `¥${Number(value ?? 0).toLocaleString()}`;
+const toPositiveAmount = (value?: number | string) => {
+  const amount = Number(value ?? 0);
+  return Number.isFinite(amount) && amount > 0 ? amount : undefined;
+};
+
+const formatPrice = (value?: number | string) => `¥${Number(value ?? 0).toLocaleString()}`;
 
 const getFirstImage = (product?: ProductInfo | null) => {
   if (!product?.images) return '';
@@ -116,12 +121,16 @@ const ResultPage: React.FC = () => {
   const orderId = order?.id ?? result?.order_id;
   const wonBid = result?.won_bid;
   const auctionNo = result?.auction_id ?? result?.id ?? auctionId;
-  const finalPrice = result?.final_price ?? result?.current_price ?? wonBid?.amount ?? 0;
-  const isWinner = Boolean(user?.id && result?.winner_id === user.id);
+  const finalPrice = toPositiveAmount(result?.final_price)
+    ?? toPositiveAmount(result?.current_price)
+    ?? toPositiveAmount(wonBid?.amount);
+  const winnerId = Number(result?.winner_id ?? 0);
+  const sold = Boolean(winnerId > 0 || wonBid || finalPrice !== undefined);
+  const isWinner = Boolean(user?.id && winnerId === user.id);
   const productImage = getFirstImage(product);
   const productName = repairUtf8Mojibake(product?.name) || (auctionNo ? `竞拍场次 #${auctionNo}` : '竞拍结果');
-  const winnerName = repairUtf8Mojibake(wonBid?.user_name) || (result?.winner_id ? `用户${result.winner_id}` : '暂无中标者');
-  const statusText = result?.status === 3 ? '已结束' : '结果已生成';
+  const winnerName = sold ? repairUtf8Mojibake(wonBid?.user_name) || (winnerId > 0 ? `用户${winnerId}` : '暂无中标者') : '';
+  const statusText = sold ? (result?.status === 3 ? '已结束' : '结果已生成') : '流拍';
   const orderStatusText = getOrderStatusText(order?.status);
 
   if (loading) {
@@ -166,7 +175,7 @@ const ResultPage: React.FC = () => {
       <main className={styles.content}>
         <section className={styles.hero}>
           <div className={`${styles.resultBadge} ${isWinner ? styles.resultBadgeWinner : ''}`}>
-            <span>{isWinner ? '恭喜中标' : '竞拍已结束'}</span>
+            <span>{!sold ? '流拍' : isWinner ? '恭喜中标' : '竞拍已结束'}</span>
           </div>
 
           <div className={`${styles.productFrame} ${isWinner ? styles.productFrameWinner : ''}`}>
@@ -175,7 +184,7 @@ const ResultPage: React.FC = () => {
             ) : (
               <div className={styles.productFallback}>暂无商品图片</div>
             )}
-            <span className={styles.closedTag}>已成交</span>
+            <span className={styles.closedTag}>{sold ? '已成交' : '流拍'}</span>
           </div>
 
           <p className={styles.lotNo}>LOT {auctionNo}</p>
@@ -183,21 +192,23 @@ const ResultPage: React.FC = () => {
         </section>
 
         <section className={styles.priceCard}>
-          <p className={styles.label}>最终成交价</p>
-          <strong className={styles.finalPrice}>{formatPrice(finalPrice)}</strong>
-          <div className={styles.winnerRow}>
-            <div>
-              <span className={styles.avatar}>{winnerName.slice(0, 1)}</span>
+          <p className={styles.label}>{sold ? '最终成交价' : '未成交'}</p>
+          <strong className={styles.finalPrice}>{sold ? formatPrice(finalPrice) : '流拍'}</strong>
+          {sold && (
+            <div className={styles.winnerRow}>
+              <div>
+                <span className={styles.avatar}>{winnerName.slice(0, 1)}</span>
+              </div>
+              <div className={styles.winnerInfo}>
+                <strong>{winnerName}</strong>
+                <span>中标人</span>
+              </div>
+              <div className={styles.bidTime}>
+                <strong>{wonBid?.created_at ? new Date(wonBid.created_at).toLocaleString() : '---'}</strong>
+                <span>出价时间</span>
+              </div>
             </div>
-            <div className={styles.winnerInfo}>
-              <strong>{winnerName}</strong>
-              <span>中标人</span>
-            </div>
-            <div className={styles.bidTime}>
-              <strong>{wonBid?.created_at ? new Date(wonBid.created_at).toLocaleString() : '---'}</strong>
-              <span>出价时间</span>
-            </div>
-          </div>
+          )}
         </section>
 
         <section className={styles.metaCard}>

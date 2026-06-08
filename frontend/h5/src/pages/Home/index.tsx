@@ -39,6 +39,7 @@ interface RawAuction {
   live_stream_id?: number | null;
   status?: number;
   current_price?: number | string;
+  winner_id?: number | string | null;
   start_price?: number | string;
   rules?: {
     start_price?: number | string;
@@ -62,6 +63,7 @@ interface HomeAuction {
   status: number;
   currentPrice: number;
   bidCount: number;
+  sold: boolean;
   startTime?: string;
   endTime?: string;
   product?: ProductSummary;
@@ -202,8 +204,11 @@ const getAuctionMetaText = (auction: HomeAuction, statusInfo: ReturnType<typeof 
   }
 
   if (statusInfo.ended) {
-    const dealTime = formatDateTime(auction.endTime);
-    return dealTime ? `成交时间 ${dealTime}` : '已结束';
+    const endTime = formatDateTime(auction.endTime);
+    if (auction.sold) {
+      return endTime ? `成交时间 ${endTime}` : '已结束';
+    }
+    return endTime ? `结束时间 ${endTime}` : '已结束';
   }
 
   if (auction.bidCount > 0) {
@@ -233,6 +238,10 @@ const getAuctionStartPrice = (auction: RawAuction, product?: ProductSummary) =>
 const normalizeAuction = (auction: RawAuction, product?: ProductSummary): HomeAuction => {
   const currentPrice = toNumber(auction.current_price);
   const startPrice = getAuctionStartPrice(auction, product);
+  const winnerId = auction.winner_id;
+  const sold = winnerId !== undefined && winnerId !== null
+    ? Number(winnerId) > 0
+    : currentPrice > 0;
 
   return {
     id: auction.id,
@@ -241,6 +250,7 @@ const normalizeAuction = (auction: RawAuction, product?: ProductSummary): HomeAu
     status: auction.status ?? 0,
     currentPrice: currentPrice > 0 ? currentPrice : startPrice,
     bidCount: auction.bid_count ?? auction.bidder_count ?? 0,
+    sold,
     startTime: auction.start_time,
     endTime: auction.end_time,
     product: auction.product ?? product,
@@ -607,7 +617,7 @@ const HomePage: React.FC = () => {
                     <h2 className={styles.productName}>{productName}</h2>
                     <div className={styles.metaRow}>
                       <span>{metaText}</span>
-                      {statusInfo.ended && <span className={styles.dealText}>成交</span>}
+                      {statusInfo.ended && <span className={styles.dealText}>{auction.sold ? '成交' : '流拍'}</span>}
                     </div>
                     <div className={styles.price}>¥{auction.currentPrice.toLocaleString()}</div>
                     <div className={styles.actions}>

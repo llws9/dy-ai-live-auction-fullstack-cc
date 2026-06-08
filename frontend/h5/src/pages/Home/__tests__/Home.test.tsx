@@ -431,6 +431,31 @@ describe('HomePage 分类联动 (T2.10)', () => {
     expect(screen.queryByText('0次成交')).not.toBeInTheDocument();
   });
 
+  it('已结束且无人中标的竞拍在首页展示流拍而不是成交', async () => {
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [
+        {
+          id: 993566,
+          status: 3,
+          current_price: '0',
+          winner_id: null,
+          end_time: '2026-06-08T22:45:39+08:00',
+          rules: { start_price: '100' },
+          product: { id: 993510, name: '无人出价拍品' },
+        },
+      ],
+      total: 1,
+    });
+
+    renderHome();
+
+    await screen.findByRole('heading', { name: '无人出价拍品' });
+    expect(screen.getByText(/结束时间/)).toBeInTheDocument();
+    expect(screen.getByText('流拍')).toBeInTheDocument();
+    expect(screen.queryByText('成交')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '查看结果' })).toHaveAttribute('href', '/result?id=993566');
+  });
+
   it('点击收藏 tab 时复用我的收藏接口渲染收藏直播间', async () => {
     mockedFollowApi.getFollowedLiveStreams.mockResolvedValue({
       list: [
