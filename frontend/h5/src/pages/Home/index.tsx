@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auctionApi, followApi, productApi, productReminderApi } from '@/services/api';
 import { notificationApi } from '@/services/notification';
@@ -310,6 +310,7 @@ const HomePage: React.FC = () => {
   const [auctions, setAuctions] = useState<HomeAuction[]>([]);
   const [favoriteLiveStreams, setFavoriteLiveStreams] = useState<LiveStream[]>([]);
   const [loading, setLoading] = useState(true);
+  const auctionRequestSeqRef = useRef(0);
   const [subscribedProductIds, setSubscribedProductIds] = useState<Set<number>>(() => new Set());
   const [reminderPendingProductId, setReminderPendingProductId] = useState<number | null>(null);
   const { isAuthenticated } = useAuth();
@@ -388,18 +389,26 @@ const HomePage: React.FC = () => {
   }, []);
 
   const fetchAuctions = useCallback(async () => {
+    const requestSeq = auctionRequestSeqRef.current + 1;
+    auctionRequestSeqRef.current = requestSeq;
+    const isLatestRequest = () => requestSeq === auctionRequestSeqRef.current;
+
     setLoading(true);
 
     if (activeTab === '收藏') {
       try {
         const response = await followApi.getFollowedLiveStreams(1, 20);
+        if (!isLatestRequest()) return;
         setFavoriteLiveStreams(extractList<LiveStream>(response));
         setAuctions([]);
       } catch (error) {
         console.error('获取收藏直播间失败:', error);
+        if (!isLatestRequest()) return;
         setFavoriteLiveStreams([]);
       } finally {
-        setLoading(false);
+        if (isLatestRequest()) {
+          setLoading(false);
+        }
       }
       return;
     }
@@ -424,6 +433,7 @@ const HomePage: React.FC = () => {
       if (filterPrice.max !== undefined) params.price_max = filterPrice.max;
 
       const response = await auctionApi.list(params);
+      if (!isLatestRequest()) return;
       const rawAuctions = extractList<RawAuction>(response);
       const normalized = rawAuctions.map((auction) => normalizeAuction(auction));
 
@@ -432,21 +442,19 @@ const HomePage: React.FC = () => {
       setAuctions(filterSort === 'hot' ? normalized : sortAuctionsForHome(normalized));
     } catch (error) {
       console.error('获取竞拍列表失败:', error);
+      if (!isLatestRequest()) return;
       setAuctions([]);
     } finally {
-      setLoading(false);
+      if (isLatestRequest()) {
+        setLoading(false);
+      }
     }
   }, [activeTab, activeCategoryId, filterSort, filterPrice.min, filterPrice.max]);
 
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      await fetchAuctions();
-      if (cancelled) return;
-    };
-    load();
+    fetchAuctions();
     return () => {
-      cancelled = true;
+      auctionRequestSeqRef.current += 1;
     };
   }, [fetchAuctions]);
 
