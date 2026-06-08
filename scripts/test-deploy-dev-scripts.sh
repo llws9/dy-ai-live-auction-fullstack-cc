@@ -129,6 +129,31 @@ assert_contains \
   'gateway product auction mysql redis rabbitmq nacos nacos-mysql frontend-h5 frontend-admin test-service test-dashboard loki promtail prometheus grafana growthbook growthbook-db' \
   "deploy-dev.sh must include all mature-project local services in the full deployment set"
 
+test -f "$ROOT/frontend/h5/Dockerfile" || fail "frontend-h5 compose service must have a Dockerfile"
+test -f "$ROOT/frontend/admin/Dockerfile" || fail "frontend-admin compose service must have a Dockerfile"
+test -f "$ROOT/frontend/h5/.dockerignore" || fail "frontend-h5 Docker build must ignore local dependency artifacts"
+test -f "$ROOT/frontend/admin/.dockerignore" || fail "frontend-admin Docker build must ignore local dependency artifacts"
+
+assert_contains \
+  "$ROOT/frontend/h5/Dockerfile" \
+  'nginx:1\.27-alpine' \
+  "frontend-h5 Dockerfile must serve built assets through nginx"
+
+assert_contains \
+  "$ROOT/frontend/admin/Dockerfile" \
+  'nginx:1\.27-alpine' \
+  "frontend-admin Dockerfile must serve built assets through nginx"
+
+assert_contains \
+  "$ROOT/frontend/h5/.dockerignore" \
+  '^node_modules$' \
+  "frontend-h5 Docker build context must exclude node_modules"
+
+assert_contains \
+  "$ROOT/frontend/admin/.dockerignore" \
+  '^node_modules$' \
+  "frontend-admin Docker build context must exclude node_modules"
+
 assert_contains \
   "$ROOT/scripts/deploy-dev.sh" \
   'stop_non_docker_infra_ports' \
