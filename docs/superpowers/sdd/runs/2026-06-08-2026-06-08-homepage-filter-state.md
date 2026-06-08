@@ -242,7 +242,7 @@
 
 **Commits**
 
-- `17e4f4b6f879d6c8bfa0e9715e3dfd616ca69f80` - `feat(auction): add price-range filter and hot-sort to ListWithFilters`
+- `17e4f4b6dc4cdf98efb06cdeeef535eee6806073` - `feat(auction): add price-range filter and hot-sort to ListWithFilters`
 
 **Risks / Blockers**
 
