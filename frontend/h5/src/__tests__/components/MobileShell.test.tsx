@@ -356,6 +356,35 @@ describe('MobileShell', () => {
     );
   });
 
+  it('does not open live reminder when already viewing the reminded live room', async () => {
+    mockGetPendingLiveReminder.mockResolvedValue({
+      hasReminder: true,
+      stream: {
+        id: 1,
+        name: '云端珍藏直播间',
+        avatarUrl: '',
+        statusText: '正在直播',
+        liveRoomId: 1,
+        startedAt: 1717000000000,
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/live?id=1&auction_id=5']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <ThemeProvider>
+          <MobileContainer>
+            <main>直播间内容</main>
+          </MobileContainer>
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(mockGetPendingLiveReminder).toHaveBeenCalledTimes(1));
+    expect(screen.getByText('直播间内容')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mockTrackEvent).not.toHaveBeenCalledWith('live_reminder_exposed', expect.anything());
+  });
+
   it('does not open live reminder when popup visibility experiment is off', async () => {
     mockUseFeatureVal.mockReturnValue(false);
     mockGetPendingLiveReminder.mockResolvedValue({

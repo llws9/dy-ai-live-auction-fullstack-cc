@@ -34,8 +34,19 @@ function getPendingLiveReminderOnce(key: string) {
   return promise;
 }
 
+function isCurrentLiveReminderRoute(pathname: string, search: string, stream: StreamInfo): boolean {
+  if (!pathname.startsWith('/live')) {
+    return false;
+  }
+  const currentLiveId = new URLSearchParams(search).get('id');
+  if (!currentLiveId) {
+    return false;
+  }
+  return String(stream.id) === currentLiveId;
+}
+
 function MobileContainer({ children }: MobileContainerProps) {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [reminderStream, setReminderStream] = useState<StreamInfo | null>(null);
   const { isAuthenticated, loading: authLoading, token, user } = useAuth();
@@ -74,6 +85,9 @@ function MobileContainer({ children }: MobileContainerProps) {
         if (!isCurrentIdentity() || !result.hasReminder || !result.stream) {
           return;
         }
+        if (isCurrentLiveReminderRoute(pathname, search, result.stream)) {
+          return;
+        }
         setReminderStream(result.stream);
         setIsReminderOpen(true);
         trackEvent('live_reminder_exposed', {
@@ -89,7 +103,7 @@ function MobileContainer({ children }: MobileContainerProps) {
       });
 
     return undefined;
-  }, [authLoading, isAuthenticated, token, userId, pathname, isLiveStartPopupVisible, isLoginRoute]);
+  }, [authLoading, isAuthenticated, token, userId, pathname, search, isLiveStartPopupVisible, isLoginRoute]);
 
   return (
     <div className={styles.shell} data-testid="mobile-shell">
