@@ -38,11 +38,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `7` |
-| Done | `5` |
+| Done | `6` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `1` |
-| Last Updated | `2026-06-09 01:09` |
+| Last Updated | `2026-06-09 03:44` |
 
 ## Status Legend
 
@@ -74,7 +74,7 @@
 | `T003` | `后端 handler 解析筛选参数并透传` | `done` | `subagent-t003` | `W3` | `T002` | `GET /auctions query parsing and filter propagation` | `backend/auction/handler/auction.go; backend/auction/handler/auction_list.go` | `backend/auction/dao/auction.go; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go build ./... && go test ./handler/ -v` | `none` |
 | `T004` | `前端 auctionApi.list 扩展查询参数` | `done` | `subagent-t004` | `W4` | `T003` | `H5 API client params` | `frontend/h5/src/services/api.ts` | `docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
 | `T005` | `前端价格底部抽屉组件 PriceFilterSheet` | `done` | `subagent-t005` | `W5` | `T004` | `bottom sheet component and styles` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css` | `frontend/h5/src/pages/Home/index.tsx; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
-| `T006` | `前端 Home 集成筛选胶囊、状态与参数组装` | `assigned` | `subagent-t006` | `W6` | `T005` | `Home UI integration and interaction test` | `frontend/h5/src/pages/Home/index.tsx; frontend/h5/src/pages/Home/__tests__/Home.test.tsx` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css; frontend/h5/src/services/api.ts; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx -t '点击最热胶囊'` | `none` |
+| `T006` | `前端 Home 集成筛选胶囊、状态与参数组装` | `done` | `subagent-t006` | `W6` | `T005` | `Home UI integration and interaction test` | `frontend/h5/src/pages/Home/index.tsx; frontend/h5/src/pages/Home/__tests__/Home.test.tsx` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css; frontend/h5/src/services/api.ts; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx -t '点击最热胶囊'` | `none` |
 | `T007` | `端到端验收与全量回归` | `pending` | `unassigned` | `W7` | `T006` | `verification only` | `docs/superpowers/sdd/runs/2026-06-08-2026-06-08-homepage-filter-state.md` | `STARTUP_GUIDE.md; frontend/h5/src/pages/Home/index.tsx; backend/auction` | `cd backend/auction && go test ./... && cd ../../frontend/h5 && npx jest` | `gateway-service; auction-service; h5 if browser verification runs` |
 
 ## Wave Plan
@@ -487,10 +487,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `assigned` |
+| Status | `done` |
 | Owner | `subagent-t006` |
 | Started At | `2026-06-09 01:40` |
-| Completed At | `-` |
+| Completed At | `2026-06-09 03:44` |
 | Branch | `feat/homepage-filter-sdd` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-homepage-filter-sdd` |
 | Base Commit | `351a147089502bac70ae6d7ed5fafa4a303ab584` |
@@ -526,19 +526,36 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `red then green Home sentinel` | `not_run` | `pending` |
+| `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx -t '点击最热胶囊'` | Red: fails before implementation because `最热` button does not exist | `FAIL`; `Unable to find an accessible element with the role "button" and name "最热"`; exit `1` | `red_confirmed` |
+| `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx -t '点击最热胶囊'` | Green: clicking hot pill calls `auctionApi.list` with `sort: 'hot'` | `PASS`; `1 passed, 26 skipped`; exit `0` | `pass` |
+| `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx` | Full Home regression passes | `PASS`; `27 passed`; exit `0` | `pass` |
+| `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx -t '已结束且无人中标|点击最热胶囊|点击分类 tab'` | Focused regression after dependency narrowing passes | `PASS`; `3 passed, 24 skipped`; exit `0` | `pass` |
 
 **Modified Files**
 
-- `-`
+- `frontend/h5/src/pages/Home/index.tsx`
+- `frontend/h5/src/pages/Home/__tests__/Home.test.tsx`
+- `docs/superpowers/sdd/runs/2026-06-08-2026-06-08-homepage-filter-state.md`
+
+**Commits**
+
+- `2bb05b10b7d06dbac3f54f0318af14de83334f89` - `feat(h5): integrate filter pills and price sheet into Home`
+
+**Review Notes**
+
+- Implemented filter pills after category tabs and before main content; hidden for `收藏`.
+- `sort=hot` keeps backend ordering by skipping client feed reorder.
+- Price range confirmation updates parent state only; `PriceFilterSheet` remains responsible for closing itself.
+- Narrowed `fetchAuctions` dependency from the whole `categories` array to primitive `activeCategoryId`; this removed a default-tab refetch/loading race exposed by full Home regression.
 
 **Risks / Blockers**
 
-- Existing Home tests may need mock cleanup due extra initial list calls.
+- H5 typecheck was not rerun because current branch has known task-external baseline failures (`LiveChat` implicit any and missing `zustand`); no changes were made to those files.
+- Runtime/browser verification not performed in T006; covered by T007 if local services are started.
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `yes`
 
 ### T007 - `端到端验收与全量回归`
 
