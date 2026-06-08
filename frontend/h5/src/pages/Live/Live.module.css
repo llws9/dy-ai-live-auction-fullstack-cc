@@ -1684,3 +1684,9 @@
 
 
 @media (prefers-reduced-motion: reduce) {
+  .skyLampNotice,
+  .skyLampActive .dockSkyLampIcon,
+  .dockSkyLampIcon {
+    animation: none;
+  }
+}
