@@ -1130,6 +1130,7 @@ describe('LiveRoomSlide', () => {
 
     // The animation component should render the badge
     expect(await screen.findByText('新上架 一口价')).toBeInTheDocument();
+    expect(screen.queryByLabelText('一口价翡翠 一口价商品')).not.toBeInTheDocument();
     
     // Simulate animation end
     const animationCard = screen.getByText('新上架 一口价').parentElement;
@@ -1143,6 +1144,7 @@ describe('LiveRoomSlide', () => {
     await waitFor(() => {
       expect(screen.queryByText('新上架 一口价')).not.toBeInTheDocument();
     });
+    expect(screen.getByLabelText('一口价翡翠 一口价商品')).toBeInTheDocument();
   });
 
 });

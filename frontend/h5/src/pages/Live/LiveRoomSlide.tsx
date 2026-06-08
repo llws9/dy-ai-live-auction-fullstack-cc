@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchMyPurchase, type FixedPriceItem } from '@/api/fixedPrice';
 import { BidSuccessAnimation } from '@/components/auction/BidSuccessAnimation';
@@ -290,6 +290,14 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const presenceViewers = useMemo(() => (presence?.viewers ?? []).slice(0, 3), [presence?.viewers]);
   const hasEnded = auction?.status === 3 || hasReachedEndTime;
   const fixedPriceItemIds = useMemo(() => fixedPriceItems.map((item) => item.id), [fixedPriceItems]);
+  const animatingFixedPriceItemIds = useMemo(
+    () => new Set(animatingFixedPriceItems.map((item) => item.id)),
+    [animatingFixedPriceItems],
+  );
+  const visibleFixedPriceItems = useMemo(
+    () => fixedPriceItems.filter((item) => !animatingFixedPriceItemIds.has(item.id)),
+    [animatingFixedPriceItemIds, fixedPriceItems],
+  );
   const currentUserDisplayName = useMemo(() => repairUtf8Mojibake(user?.name) || '当前用户', [user?.name]);
   const showSkyLampNotice = useCallback((message: string) => {
     setSkyLampNotice((previous) => ({
@@ -316,7 +324,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     setPulsingItemId(null);
   }, [effectiveLiveStreamId]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!latestListedItem || hasEnded) {
       return;
     }
@@ -1077,12 +1085,12 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         />
       </div>
 
-      {!hasEnded && fixedPriceItems.length > 0 && (
+      {!hasEnded && visibleFixedPriceItems.length > 0 && (
         <div
           className={`${styles.fixedPriceList} ${sheet !== null ? styles.fixedPriceListHidden : ''}`}
           aria-label="一口价商品列表"
         >
-          {fixedPriceItems.map((item) => (
+          {visibleFixedPriceItems.map((item) => (
             <FixedPriceCard
               key={item.id}
               item={item}
