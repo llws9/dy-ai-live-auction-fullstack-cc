@@ -139,7 +139,15 @@ func TestMerchantDemoValidateAuctionMode(t *testing.T) {
 func TestMerchantDemoAuctionReusesMerchantLiveStreamForRepeatedOngoingClicks(t *testing.T) {
 	const secret = "demo-secret"
 	fake := &fakeDemoAuctionClient{}
-	internal := &fakeDemoInternalAuctionClient{}
+	internal := &fakeDemoInternalAuctionClient{
+		currentAuctionAfterCalls: 2,
+		currentAuction: auctioncli.CurrentAuctionItem{
+			LiveStreamID: 2001,
+			AuctionID:    3001,
+			ProductID:    1001,
+			Status:       1,
+		},
+	}
 	h := NewDemoHandler(fake, internal, secret)
 
 	for i := 0; i < 2; i++ {
@@ -150,11 +158,11 @@ func TestMerchantDemoAuctionReusesMerchantLiveStreamForRepeatedOngoingClicks(t *
 		}
 	}
 
-	if len(fake.productReqs) != 2 || len(fake.auctionReqs) != 2 {
-		t.Fatalf("expected two products and auctions, got products=%d auctions=%d", len(fake.productReqs), len(fake.auctionReqs))
+	if len(fake.productReqs) != 1 || len(fake.auctionReqs) != 1 {
+		t.Fatalf("expected one product and auction, got products=%d auctions=%d", len(fake.productReqs), len(fake.auctionReqs))
 	}
-	if len(fake.publishedProductIDs) != 2 {
-		t.Fatalf("expected two published products, got %d", len(fake.publishedProductIDs))
+	if len(fake.publishedProductIDs) != 1 {
+		t.Fatalf("expected one published product, got %d", len(fake.publishedProductIDs))
 	}
 	for _, req := range fake.productReqs {
 		if req.Status != 0 {
@@ -164,14 +172,11 @@ func TestMerchantDemoAuctionReusesMerchantLiveStreamForRepeatedOngoingClicks(t *
 			t.Fatalf("merchant auction demo category_id: want %d, got %v", demoCategoryArtID, req.CategoryID)
 		}
 	}
-	if fake.auctionReqs[0].ProductID == fake.auctionReqs[1].ProductID {
-		t.Fatalf("repeated clicks must create different demo products, got product_id=%d", fake.auctionReqs[0].ProductID)
-	}
-	if fake.publishedProductIDs[0] != fake.auctionReqs[0].ProductID || fake.publishedProductIDs[1] != fake.auctionReqs[1].ProductID {
+	if fake.publishedProductIDs[0] != fake.auctionReqs[0].ProductID {
 		t.Fatalf("auction demo products must be published before auction creation, published=%v auctionReqs=%v", fake.publishedProductIDs, fake.auctionReqs)
 	}
-	if fake.waitStartedCalls != 2 {
-		t.Fatalf("ongoing mode should wait for auction started twice, got %d", fake.waitStartedCalls)
+	if fake.waitStartedCalls != 1 {
+		t.Fatalf("ongoing mode should wait only for the newly-created auction, got %d", fake.waitStartedCalls)
 	}
 	if len(fake.liveStreamReqs) != 2 {
 		t.Fatalf("expected two get-or-create live stream requests, got %d", len(fake.liveStreamReqs))
@@ -181,19 +186,16 @@ func TestMerchantDemoAuctionReusesMerchantLiveStreamForRepeatedOngoingClicks(t *
 			t.Fatalf("merchant auction demo must target a stable merchant live stream, req=%+v", req)
 		}
 	}
-	if fake.auctionReqs[0].LiveStreamID != fake.auctionReqs[1].LiveStreamID {
-		t.Fatalf("repeated clicks must reuse merchant live stream, got live_stream_ids=%d,%d", fake.auctionReqs[0].LiveStreamID, fake.auctionReqs[1].LiveStreamID)
+	if len(fake.startedLiveStreamIDs) != 1 {
+		t.Fatalf("ongoing mode should start only the newly-created auction live stream, got %d", len(fake.startedLiveStreamIDs))
 	}
-	if len(fake.startedLiveStreamIDs) != 2 {
-		t.Fatalf("ongoing mode should start live streams twice, got %d", len(fake.startedLiveStreamIDs))
-	}
-	if fake.startedLiveStreamIDs[0] != fake.auctionReqs[0].LiveStreamID || fake.startedLiveStreamIDs[1] != fake.auctionReqs[1].LiveStreamID {
+	if fake.startedLiveStreamIDs[0] != fake.auctionReqs[0].LiveStreamID {
 		t.Fatalf("ongoing demo must start the auction live streams, started=%v auctionReqs=%v", fake.startedLiveStreamIDs, fake.auctionReqs)
 	}
 	if len(internal.restartedLiveStreamIDs) != 2 {
 		t.Fatalf("ongoing demo must restart live session for fresh reminder receipts, got %d", len(internal.restartedLiveStreamIDs))
 	}
-	if internal.restartedLiveStreamIDs[0] != fake.auctionReqs[0].LiveStreamID || internal.restartedLiveStreamIDs[1] != fake.auctionReqs[1].LiveStreamID {
+	if internal.restartedLiveStreamIDs[0] != fake.auctionReqs[0].LiveStreamID || internal.restartedLiveStreamIDs[1] != fake.auctionReqs[0].LiveStreamID {
 		t.Fatalf("ongoing demo must restart the auction live streams, restarted=%v auctionReqs=%v", internal.restartedLiveStreamIDs, fake.auctionReqs)
 	}
 	wantFollowedUsers := []int64{buyerAUserID, buyerBUserID, buyerAUserID, buyerBUserID}
@@ -204,12 +206,12 @@ func TestMerchantDemoAuctionReusesMerchantLiveStreamForRepeatedOngoingClicks(t *
 		if fake.followCalls[i].userID != wantUserID {
 			t.Fatalf("follow call %d user_id=%d want %d", i, fake.followCalls[i].userID, wantUserID)
 		}
-		if fake.followCalls[i].liveStreamID != fake.auctionReqs[i/2].LiveStreamID {
-			t.Fatalf("follow call %d live_stream_id=%d want %d", i, fake.followCalls[i].liveStreamID, fake.auctionReqs[i/2].LiveStreamID)
+		if fake.followCalls[i].liveStreamID != fake.auctionReqs[0].LiveStreamID {
+			t.Fatalf("follow call %d live_stream_id=%d want %d", i, fake.followCalls[i].liveStreamID, fake.auctionReqs[0].LiveStreamID)
 		}
 	}
-	if len(fake.ruleReqs) != 2 {
-		t.Fatalf("expected two auction rule requests, got %d", len(fake.ruleReqs))
+	if len(fake.ruleReqs) != 1 {
+		t.Fatalf("expected one auction rule request, got %d", len(fake.ruleReqs))
 	}
 	for _, req := range fake.ruleReqs {
 		if req.TriggerDelayBefore != 10 {
@@ -504,9 +506,12 @@ func (f *fakeDemoAuctionClient) SubscribeSkyLamp(_ context.Context, userID, auct
 }
 
 type fakeDemoInternalAuctionClient struct {
-	shortenAuctionID        int64
-	shortenRemainingSeconds int
-	restartedLiveStreamIDs  []int64
+	shortenAuctionID         int64
+	shortenRemainingSeconds  int
+	restartedLiveStreamIDs   []int64
+	currentAuctionCalls      int
+	currentAuctionAfterCalls int
+	currentAuction           auctioncli.CurrentAuctionItem
 }
 
 func (f *fakeDemoInternalAuctionClient) TopUpUserBalance(_ context.Context, userID int64, amount string) (string, auctioncli.StepResult) {
@@ -522,4 +527,16 @@ func (f *fakeDemoInternalAuctionClient) ShortenAuction(_ context.Context, auctio
 func (f *fakeDemoInternalAuctionClient) RestartLiveSession(_ context.Context, liveStreamID int64) auctioncli.StepResult {
 	f.restartedLiveStreamIDs = append(f.restartedLiveStreamIDs, liveStreamID)
 	return auctioncli.StepResult{Step: "restart_live_session", OK: true, RefID: liveStreamID, StatusCode: 200}
+}
+
+func (f *fakeDemoInternalAuctionClient) CurrentAuctionByLiveStream(_ context.Context, liveStreamID int64) (auctioncli.CurrentAuctionItem, auctioncli.StepResult) {
+	f.currentAuctionCalls++
+	if f.currentAuctionAfterCalls > 0 && f.currentAuctionCalls >= f.currentAuctionAfterCalls {
+		item := f.currentAuction
+		if item.LiveStreamID == 0 {
+			item.LiveStreamID = liveStreamID
+		}
+		return item, auctioncli.StepResult{Step: "current_auction_by_live_stream", OK: true, RefID: item.AuctionID, StatusCode: 200}
+	}
+	return auctioncli.CurrentAuctionItem{}, auctioncli.StepResult{Step: "current_auction_by_live_stream", OK: true, StatusCode: 200}
 }

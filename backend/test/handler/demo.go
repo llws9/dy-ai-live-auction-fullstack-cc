@@ -48,6 +48,7 @@ type demoInternalAuctionClient interface {
 	TopUpUserBalance(ctx context.Context, userID int64, amount string) (string, auctioncli.StepResult)
 	ShortenAuction(ctx context.Context, auctionID int64, remainingSeconds int) auctioncli.StepResult
 	RestartLiveSession(ctx context.Context, liveStreamID int64) auctioncli.StepResult
+	CurrentAuctionByLiveStream(ctx context.Context, liveStreamID int64) (auctioncli.CurrentAuctionItem, auctioncli.StepResult)
 }
 
 // DemoHandler 处理演示控制面板触发的同步业务动作。
@@ -321,6 +322,19 @@ func (h *DemoHandler) restartDemoLiveSession(ctx context.Context, c *app.Request
 	return true
 }
 
+func (h *DemoHandler) currentDemoAuction(ctx context.Context, c *app.RequestContext, liveStreamID int64) (auctioncli.CurrentAuctionItem, bool) {
+	if h.internalCli == nil {
+		c.JSON(500, map[string]any{"error": "demo internal auction client is not configured"})
+		return auctioncli.CurrentAuctionItem{}, false
+	}
+	current, step := h.internalCli.CurrentAuctionByLiveStream(ctx, liveStreamID)
+	if !step.OK {
+		writeDemoStepError(c, step)
+		return auctioncli.CurrentAuctionItem{}, false
+	}
+	return current, true
+}
+
 // PostFollowBid 以统一 seed 的买家B身份对指定拍卖发起一次跟价出价。
 func (h *DemoHandler) PostFollowBid(ctx context.Context, c *app.RequestContext) {
 	if !h.authorizeDemoRequest(c) {
@@ -500,17 +514,6 @@ func (h *DemoHandler) PostMerchantAuction(ctx context.Context, c *app.RequestCon
 	}
 
 	actor := demoMerchantActor()
-	product := h.bizCli.CreateProductAs(ctx, actor, auctioncli.CreateProductReq{
-		Name:        nextDemoProductName(req.Mode),
-		Description: "Demo Console merchant auction fixture",
-		CategoryID:  demoCategoryID(demoCategoryArtID),
-		Status:      0,
-	})
-	if !product.OK || product.RefID <= 0 {
-		writeDemoStepError(c, product)
-		return
-	}
-
 	live := h.bizCli.CreateLiveStream(ctx, actor, auctioncli.CreateLiveStreamReq{
 		Name:        "Demo 商家直播间",
 		Description: "Demo Console merchant auction fixture",
@@ -525,6 +528,38 @@ func (h *DemoHandler) PostMerchantAuction(ctx context.Context, c *app.RequestCon
 			writeDemoStepError(c, follow)
 			return
 		}
+	}
+	if req.Mode == "ongoing" {
+		current, ok := h.currentDemoAuction(ctx, c, live.RefID)
+		if !ok {
+			return
+		}
+		if current.AuctionID > 0 {
+			if !h.restartDemoLiveSession(ctx, c, live.RefID) {
+				return
+			}
+			c.JSON(200, map[string]any{
+				"ok":             true,
+				"mode":           req.Mode,
+				"product_id":     current.ProductID,
+				"live_stream_id": live.RefID,
+				"auction_id":     current.AuctionID,
+				"reused":         true,
+				"message":        "当前直播间已有进行中的竞拍，已刷新开播提醒",
+			})
+			return
+		}
+	}
+
+	product := h.bizCli.CreateProductAs(ctx, actor, auctioncli.CreateProductReq{
+		Name:        nextDemoProductName(req.Mode),
+		Description: "Demo Console merchant auction fixture",
+		CategoryID:  demoCategoryID(demoCategoryArtID),
+		Status:      0,
+	})
+	if !product.OK || product.RefID <= 0 {
+		writeDemoStepError(c, product)
+		return
 	}
 
 	const durationSec = 180

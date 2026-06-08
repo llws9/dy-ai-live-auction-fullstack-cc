@@ -26,7 +26,7 @@ func TestDefaultConfigsDoNotContainUsablePlaintextInternalToken(t *testing.T) {
 	dockerCompose := string(dockerComposeBytes)
 	require.NotContains(t, dockerCompose, forbiddenToken)
 	require.Contains(t, dockerCompose, "INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}")
-	require.GreaterOrEqual(t, strings.Count(dockerCompose, "INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}"), 3)
+	require.GreaterOrEqual(t, strings.Count(dockerCompose, "INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}"), 4)
 }
 
 func TestInjectRuntimeSecretsLoadsInternalTokenFromEnvironment(t *testing.T) {

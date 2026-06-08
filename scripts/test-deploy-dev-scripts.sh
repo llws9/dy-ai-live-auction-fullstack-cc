@@ -176,6 +176,16 @@ assert_contains \
 
 assert_contains \
   "$ROOT/docker-compose.yml" \
+  'JWT_SECRET=dev-secret' \
+  "docker-compose.yml gateway, auction, and test-service must share the same local JWT secret"
+
+assert_contains \
+  "$ROOT/docker-compose.yml" \
+  'INTERNAL_API_TOKEN=\$\{INTERNAL_API_TOKEN:\?set INTERNAL_API_TOKEN\}' \
+  "docker-compose.yml services that perform internal calls must receive INTERNAL_API_TOKEN at runtime"
+
+assert_contains \
+  "$ROOT/docker-compose.yml" \
   'MYSQL_DATABASE_NUM=1' \
   "docker-compose.yml Nacos service must declare the MySQL database count for external datasource initialization"
 

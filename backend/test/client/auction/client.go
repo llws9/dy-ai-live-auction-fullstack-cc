@@ -135,6 +135,14 @@ type LiveStream struct {
 	Status any   `json:"status"`
 }
 
+type CurrentAuctionItem struct {
+	LiveStreamID int64  `json:"live_stream_id"`
+	AuctionID    int64  `json:"auction_id"`
+	ProductID    int64  `json:"product_id"`
+	CurrentPrice string `json:"current_price"`
+	Status       int    `json:"status"`
+}
+
 type FixedPriceItem struct {
 	ID             int64 `json:"id"`
 	AuctionID      int64 `json:"auction_id"`
@@ -534,6 +542,27 @@ func (c *Client) RestartLiveSession(ctx context.Context, liveStreamID int64) Ste
 	}, nil)
 	step.RefID = liveStreamID
 	return step
+}
+
+func (c *Client) CurrentAuctionByLiveStream(ctx context.Context, liveStreamID int64) (CurrentAuctionItem, StepResult) {
+	var resp struct {
+		Data struct {
+			Items []CurrentAuctionItem `json:"items"`
+		} `json:"data"`
+	}
+	step := c.doAs(ctx, "current_auction_by_live_stream", http.MethodPost, "/internal/auctions/current-by-live-streams", Actor{}, map[string]any{
+		"live_stream_ids": []int64{liveStreamID},
+	}, map[string]string{"X-Internal-Token": c.internalToken}, &resp)
+	if !step.OK {
+		return CurrentAuctionItem{}, step
+	}
+	for _, item := range resp.Data.Items {
+		if item.LiveStreamID == liveStreamID {
+			step.RefID = item.AuctionID
+			return item, step
+		}
+	}
+	return CurrentAuctionItem{}, step
 }
 
 func (c *Client) PurchaseFixedPriceItem(ctx context.Context, actor Actor, itemID int64, idemKey string) (int64, StepResult) {

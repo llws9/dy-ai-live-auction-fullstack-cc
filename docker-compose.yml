@@ -263,6 +263,8 @@ services:
       - TEST_MOCK_PARTNER_PORT=:18091
       - TEST_GATEWAY_URL=http://gateway:8080
       - TEST_AUCTION_URL=http://auction:8082
+      - JWT_SECRET=dev-secret
+      - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_USER=root
