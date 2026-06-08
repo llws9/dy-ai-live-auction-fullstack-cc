@@ -39,10 +39,10 @@
 | --- | --- |
 | Total Tasks | `7` |
 | Done | `6` |
-| Blocked | `0` |
-| In Progress | `1` |
+| Blocked | `1` |
+| In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-09 03:55` |
+| Last Updated | `2026-06-09 04:12` |
 
 ## Status Legend
 
@@ -75,7 +75,7 @@
 | `T004` | `前端 auctionApi.list 扩展查询参数` | `done` | `subagent-t004` | `W4` | `T003` | `H5 API client params` | `frontend/h5/src/services/api.ts` | `docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
 | `T005` | `前端价格底部抽屉组件 PriceFilterSheet` | `done` | `subagent-t005` | `W5` | `T004` | `bottom sheet component and styles` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css` | `frontend/h5/src/pages/Home/index.tsx; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
 | `T006` | `前端 Home 集成筛选胶囊、状态与参数组装` | `done` | `subagent-t006` | `W6` | `T005` | `Home UI integration and interaction test` | `frontend/h5/src/pages/Home/index.tsx; frontend/h5/src/pages/Home/__tests__/Home.test.tsx` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css; frontend/h5/src/services/api.ts; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx -t '点击最热胶囊'` | `none` |
-| `T007` | `端到端验收与全量回归` | `verifying` | `main-agent` | `W7` | `T006` | `verification only` | `docs/superpowers/sdd/runs/2026-06-08-2026-06-08-homepage-filter-state.md` | `STARTUP_GUIDE.md; frontend/h5/src/pages/Home/index.tsx; backend/auction` | `cd backend/auction && go test ./... && cd ../../frontend/h5 && npx jest` | `gateway-service; auction-service; h5 if browser verification runs` |
+| `T007` | `端到端验收与全量回归` | `blocked` | `main-agent` | `W7` | `T006` | `verification only` | `docs/superpowers/sdd/runs/2026-06-08-2026-06-08-homepage-filter-state.md` | `STARTUP_GUIDE.md; frontend/h5/src/pages/Home/index.tsx; backend/auction` | `cd backend/auction && go test ./... && cd ../../frontend/h5 && npx jest` | `gateway-service; auction-service; h5 if browser verification runs` |
 
 ## Wave Plan
 
@@ -575,10 +575,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `verifying` |
+| Status | `blocked` |
 | Owner | `main-agent` |
 | Started At | `2026-06-09 04:08` |
-| Completed At | `-` |
+| Completed At | `2026-06-09 04:12` |
 | Branch | `feat/homepage-filter-sdd` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-homepage-filter-sdd` |
 | Base Commit | `351a147089502bac70ae6d7ed5fafa4a303ab584` |
@@ -612,7 +612,11 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `full regression pass or documented blocker` | `not_run` | `pending` |
+| `cd backend/auction && go test ./... && cd ../../frontend/h5 && npx jest` | Full regression pass | Backend failed before frontend because local Redis was not running: `auction-service/service` StartLive tests could not connect to `[::1]:6379`; frontend part did not execute in this combined run | `blocked_env` |
+| `redis-server --port 6379 --save "" --appendonly no` then `cd backend/auction && go test ./...` | Backend full pass with required local Redis | `PASS`; all auction-service packages passed, including `auction-service/service`; Redis process stopped after verification | `pass` |
+| `cd frontend/h5 && npx jest` | Frontend full Jest pass | `FAIL`; 59 suites passed, 2 failed. Failures are `src/pages/Live/__tests__/LiveRoom.test.tsx` missing `data-testid="bid-success-flair"` and `src/components/auction/__tests__/BidSuccessAnimation.test.tsx` expected latestEnd called once. These files are LiveRoom/BidSuccessAnimation, outside homepage filter write set. | `blocked_unrelated` |
+| `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx --runInBand` | Homepage regression pass | `PASS`; 28 tests passed, including `点击最热胶囊` and `忽略过期的筛选请求` | `pass` |
+| `cd frontend/h5 && npx jest src/pages/Live/__tests__/LiveRoom.test.tsx src/components/auction/__tests__/BidSuccessAnimation.test.tsx --runInBand` | Reproduce frontend blockers | `FAIL`; reproduced the same 2 unrelated LiveRoom/BidSuccessAnimation failures | `blocked_unrelated_reproduced` |
 
 **Modified Files**
 
@@ -620,7 +624,9 @@
 
 **Risks / Blockers**
 
-- Full frontend jest may be slow or have unrelated baseline failures; record exact failures before deciding.
+- T007 is blocked by out-of-scope frontend full Jest failures in LiveRoom/BidSuccessAnimation. Homepage filter targeted regression passes.
+- Full backend requires local Redis on port 6379; after starting temporary Redis, `cd backend/auction && go test ./...` passes.
+- No runtime browser verification was performed because automated full frontend regression is blocked by unrelated failures.
 
 **Handoff**
 
