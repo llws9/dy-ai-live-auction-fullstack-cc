@@ -214,9 +214,13 @@ func setupFixedPriceServiceWithStream(t *testing.T, liveStreamID, ownerUserID in
 
 // setupItem 上架一件商品供测试用，CreatorID 固定 100、LiveStreamID 固定 1001。
 func setupItem(t *testing.T, svc *FixedPriceService, stock int, price decimal.Decimal) *model.FixedPriceItem {
+	return setupItemForAuction(t, svc, 7001, 5001, stock, price)
+}
+
+func setupItemForAuction(t *testing.T, svc *FixedPriceService, auctionID, productID int64, stock int, price decimal.Decimal) *model.FixedPriceItem {
 	t.Helper()
 	item, err := svc.ListItem(context.Background(), ListItemReq{
-		AuctionID: 7001, LiveStreamID: 1001, ProductID: 5001, CreatorID: 100,
+		AuctionID: auctionID, LiveStreamID: 1001, ProductID: productID, CreatorID: 100,
 		Price: price, TotalStock: stock, MaxPerUser: 1,
 	})
 	require.NoError(t, err)

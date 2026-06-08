@@ -58,16 +58,15 @@ function itemFromListedPayload(payload: unknown): FixedPriceItem | null {
 export function reduceItems(state: FixedPriceItem[], action: FixedPriceAction): FixedPriceItem[] {
   switch (action.type) {
     case 'init':
-      return (action.payload as { items: FixedPriceItem[] }).items;
+      return (action.payload as { items: FixedPriceItem[] }).items.slice(0, 1);
 
     case 'fixed_price_listed': {
       const item = itemFromListedPayload(action.payload);
       if (!item) {
         return state;
       }
-      return state.some((current) => current.id === item.id)
-        ? state.map((current) => (current.id === item.id ? { ...current, ...item } : current))
-        : [...state, item];
+      const current = state.find((existing) => existing.id === item.id);
+      return [{ ...(current ?? {}), ...item }];
     }
 
     case 'fixed_price_stock': {

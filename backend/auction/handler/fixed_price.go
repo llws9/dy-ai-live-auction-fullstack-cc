@@ -236,6 +236,8 @@ func (h *FixedPriceHandler) List(ctx context.Context, c *app.RequestContext) {
 		writeFPErr(c, 404, "FP_PRODUCT_NOT_FOUND", "商品不存在", nil)
 	case errors.Is(err, service.ErrAuctionNotAvailable):
 		writeFPErr(c, 400, "FP_AUCTION_NOT_AVAILABLE", "竞拍场次不可用于一口价", nil)
+	case errors.Is(err, service.ErrAuctionFixedPriceExists):
+		writeFPErr(c, 409, "FP_AUCTION_FIXED_PRICE_EXISTS", "当前竞拍已有一口价商品", nil)
 	case errors.Is(err, service.ErrProductInAuction):
 		writeFPErr(c, 409, "FP_PRODUCT_IN_AUCTION", "该商品正在参与竞拍，无法用于一口价", nil)
 	default:

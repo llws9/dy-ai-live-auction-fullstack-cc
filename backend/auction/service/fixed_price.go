@@ -15,15 +15,16 @@ import (
 
 // 一口价业务错误。handler 层负责映射为对外错误码与 HTTP 状态。
 var (
-	ErrInvalidParam        = errors.New("invalid param")
-	ErrNotStreamOwner      = errors.New("not stream owner")
-	ErrProductNotFound     = errors.New("product not found")
-	ErrAuctionNotAvailable = errors.New("auction not available for fixed price item")
-	ErrProductInAuction    = errors.New("product is in active auction")
-	ErrNotOnSale           = errors.New("fixed price item not on sale")
-	ErrSoldOut             = errors.New("fixed price item sold out")
-	ErrAlreadyBought       = errors.New("user already bought this fixed price item")
-	ErrInsufficient        = errors.New("insufficient balance")
+	ErrInvalidParam            = errors.New("invalid param")
+	ErrNotStreamOwner          = errors.New("not stream owner")
+	ErrProductNotFound         = errors.New("product not found")
+	ErrAuctionNotAvailable     = errors.New("auction not available for fixed price item")
+	ErrAuctionFixedPriceExists = errors.New("auction already has fixed price item")
+	ErrProductInAuction        = errors.New("product is in active auction")
+	ErrNotOnSale               = errors.New("fixed price item not on sale")
+	ErrSoldOut                 = errors.New("fixed price item sold out")
+	ErrAlreadyBought           = errors.New("user already bought this fixed price item")
+	ErrInsufficient            = errors.New("insufficient balance")
 )
 
 const (
@@ -149,6 +150,13 @@ func (s *FixedPriceService) ListItem(ctx context.Context, r ListItemReq) (*model
 	}
 	if err := s.validateAuctionBinding(ctx, r); err != nil {
 		return nil, err
+	}
+	existing, err := s.items.ListByAuctionID(ctx, r.AuctionID, nil)
+	if err != nil {
+		return nil, err
+	}
+	if len(existing) > 0 {
+		return nil, ErrAuctionFixedPriceExists
 	}
 	exists, err := s.products.Exists(ctx, r.ProductID)
 	if err != nil {

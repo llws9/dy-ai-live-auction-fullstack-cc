@@ -30,6 +30,23 @@ func TestFixedPriceService_List_ValidatesAndCreates(t *testing.T) {
 	assert.Equal(t, 50, remain)
 }
 
+func TestFixedPriceService_List_RejectsDuplicateAuctionFixedPriceItem(t *testing.T) {
+	svc := setupFixedPriceService(t)
+	ctx := context.Background()
+	_, err := svc.ListItem(ctx, ListItemReq{
+		AuctionID: 7001, LiveStreamID: 1001, ProductID: 5001, CreatorID: 100,
+		Price: decimal.NewFromFloat(99), TotalStock: 50, MaxPerUser: 1,
+	})
+	require.NoError(t, err)
+
+	_, err = svc.ListItem(ctx, ListItemReq{
+		AuctionID: 7001, LiveStreamID: 1001, ProductID: 5002, CreatorID: 100,
+		Price: decimal.NewFromFloat(88), TotalStock: 20, MaxPerUser: 1,
+	})
+
+	assert.ErrorIs(t, err, ErrAuctionFixedPriceExists)
+}
+
 func TestFixedPriceService_List_RejectsInvalidPrice(t *testing.T) {
 	svc := setupFixedPriceService(t)
 	_, err := svc.ListItem(context.Background(), ListItemReq{
@@ -217,9 +234,9 @@ func TestFixedPriceService_ListByAuctionDoesNotLeakAcrossLiveStreamReusedSession
 func TestFixedPriceService_ListAllByLiveStream_ReturnsAllStatusesForAdmin(t *testing.T) {
 	svc := setupFixedPriceService(t)
 	ctx := context.Background()
-	onSale := setupItem(t, svc, 5, decimal.NewFromInt(99))
-	soldOut := setupItem(t, svc, 3, decimal.NewFromInt(88))
-	offline := setupItem(t, svc, 2, decimal.NewFromInt(77))
+	onSale := setupItemForAuction(t, svc, 7001, 5001, 5, decimal.NewFromInt(99))
+	soldOut := setupItemForAuction(t, svc, 7002, 5002, 3, decimal.NewFromInt(88))
+	offline := setupItemForAuction(t, svc, 7003, 5003, 2, decimal.NewFromInt(77))
 	require.NoError(t, svc.items.UpdateStatus(ctx, soldOut.ID, model.FixedPriceStatusSoldOut))
 	require.NoError(t, svc.items.UpdateStatus(ctx, offline.ID, model.FixedPriceStatusOffline))
 

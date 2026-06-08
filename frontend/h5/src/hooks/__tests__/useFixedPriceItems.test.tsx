@@ -63,6 +63,16 @@ const baseItem: FixedPriceItem = {
 };
 
 describe('reduceItems', () => {
+  it('keeps only the newest item from initial REST data', () => {
+    const olderItem = { ...baseItem, id: 7000, product_brief: { id: 5000, title: '旧一口价' } };
+    const next = reduceItems([], {
+      type: 'init',
+      payload: { items: [baseItem, olderItem] },
+    });
+
+    expect(next).toEqual([baseItem]);
+  });
+
   it('adds a newly listed item from websocket payload', () => {
     const next = reduceItems([], {
       type: 'fixed_price_listed',
@@ -70,6 +80,16 @@ describe('reduceItems', () => {
     });
 
     expect(next).toEqual([baseItem]);
+  });
+
+  it('replaces the visible item when a different fixed-price item is listed', () => {
+    const listedItem = { ...baseItem, id: 7002, product_brief: { id: 5002, title: '新一口价' } };
+    const next = reduceItems([baseItem], {
+      type: 'fixed_price_listed',
+      payload: { item: listedItem },
+    });
+
+    expect(next).toEqual([listedItem]);
   });
 
   it('updates remaining_stock for fixed_price_stock', () => {
