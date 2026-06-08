@@ -269,7 +269,7 @@
 **Commits**
 
 - Planned message: `feat(treasure): add TreasureDAO with watch-accumulate and idempotent claim`
-- Actual commit: `feat(treasure): add TreasureDAO with watch-accumulate and idempotent claim`
+- Actual commit: `a40a1fd9 feat(treasure): add TreasureDAO with watch-accumulate and idempotent claim`
 
 **Review Notes**
 
