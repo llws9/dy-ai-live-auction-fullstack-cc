@@ -532,6 +532,20 @@ describe('HomePage 分类联动 (T2.10)', () => {
     expect(await screen.findByRole('heading', { name: '沉香手串专场' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '进入直播' })).toHaveAttribute('href', '/live?id=89');
   });
+
+  it('点击最热胶囊后以 sort=hot 调用列表接口', async () => {
+    renderHome();
+
+    await waitFor(() => expect(mockedAuctionApi.list).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: '最热' }));
+
+    await waitFor(() =>
+      expect(mockedAuctionApi.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: 'hot' })
+      )
+    );
+  });
 });
 
 describe('HomePage 未读消息红点 (T3.6 / F-D2)', () => {
