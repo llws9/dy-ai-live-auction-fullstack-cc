@@ -38,11 +38,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `7` |
-| Done | `0` |
+| Done | `1` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `7` |
-| Last Updated | `2026-06-09 01:39` |
+| Pending | `6` |
+| Last Updated | `2026-06-09 01:43` |
 
 ## Status Legend
 
@@ -69,7 +69,7 @@
 
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Write Set | Read Set | Regression Sentinels | Runtime Services |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `T001` | `数据模型与建表 DDL` | `pending` | `unassigned` | `W1` | `-` | `model + migration` | `backend/auction/model/treasure.go; backend/auction/migration/003_create_treasure_tables.sql` | `docs/superpowers/specs/2026-06-09-watch-treasure-coin-design.md; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md; backend/auction/model/user_balance.go` | `cd backend/auction && go build ./model/...` | `none` |
+| `T001` | `数据模型与建表 DDL` | `done` | `subagent` | `W1` | `-` | `model + migration` | `backend/auction/model/treasure.go; backend/auction/migration/003_create_treasure_tables.sql` | `docs/superpowers/specs/2026-06-09-watch-treasure-coin-design.md; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md; backend/auction/model/user_balance.go` | `cd backend/auction && go build ./model/...` | `none` |
 | `T002` | `DAO：时长累加 + 金币读取 + 幂等领取` | `pending` | `unassigned` | `W2` | `T001` | `dao + dao tests` | `backend/auction/dao/treasure.go; backend/auction/dao/treasure_test.go; backend/auction/dao/testutil_test.go` | `backend/auction/model/treasure.go; backend/auction/dao/user_balance.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./dao/ -run TestTreasureDAO -v` | `none` |
 | `T003` | `Service：档位常量 + 心跳封顶 + 状态编排 + 领取编排` | `pending` | `unassigned` | `W3` | `T002` | `service + service tests` | `backend/auction/service/treasure.go; backend/auction/service/treasure_test.go` | `backend/auction/dao/treasure.go; backend/auction/service/clock.go; backend/auction/service/testutil_test.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./service/ -run TestTreasureService -v` | `none` |
 | `T004` | `Handler：3 个 HTTP 端点` | `pending` | `unassigned` | `W4` | `T003` | `handler + handler tests` | `backend/auction/handler/treasure.go; backend/auction/handler/treasure_test.go` | `backend/auction/service/treasure.go; backend/auction/handler/user_balance_http.go; frontend/h5/src/services/api.ts; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./handler/ -run TestTreasureHandler -v` | `none` |
@@ -95,10 +95,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
-| Completed At | `-` |
+| Status | `done` |
+| Owner | `subagent` |
+| Started At | `2026-06-09 01:43` |
+| Completed At | `2026-06-09 01:43` |
 | Branch | `feat/watch-treasure-coin-backend` |
 | Worktree | `/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-watch-treasure-coin-backend` |
 | Base Commit | `351a147089502bac70ae6d7ed5fafa4a303ab584` |
@@ -144,6 +144,9 @@
 | --- | --- | --- | --- |
 | `cd backend/auction && go test ./dao/ ./service/ ./handler/` | `baseline PASS before implementation` | `ok auction-service/dao; ok auction-service/service; ok auction-service/handler` | `pass` |
 | `cd backend/gateway && go test ./...` | `baseline PASS before implementation` | `all packages ok/no test files` | `pass` |
+| `test -f backend/auction/model/treasure.go && test -f backend/auction/migration/003_create_treasure_tables.sql && rg 'type UserCoin\|type UserWatchDuration\|type TreasureClaim\|func \(UserCoin\) TableName\(\) string \{ return "user_coins" \}\|func \(UserWatchDuration\) TableName\(\) string \{ return "user_watch_duration" \}\|func \(TreasureClaim\) TableName\(\) string \{ return "treasure_claims" \}\|balance\s+BIGINT\|PRIMARY KEY \(user_id, stat_date\)\|PRIMARY KEY \(user_id, stat_date, tier\)' backend/auction/model/treasure.go backend/auction/migration/003_create_treasure_tables.sql` | `RED fails before implementation because model/DDL files are missing` | `exit 1` | `expected_fail` |
+| `test -f backend/auction/model/treasure.go && test -f backend/auction/migration/003_create_treasure_tables.sql && rg 'type UserCoin\|type UserWatchDuration\|type TreasureClaim\|func \(UserCoin\) TableName\(\) string \{ return "user_coins" \}\|func \(UserWatchDuration\) TableName\(\) string \{ return "user_watch_duration" \}\|func \(TreasureClaim\) TableName\(\) string \{ return "treasure_claims" \}\|balance\s+BIGINT\|PRIMARY KEY \(user_id, stat_date\)\|PRIMARY KEY \(user_id, stat_date, tier\)' backend/auction/model/treasure.go backend/auction/migration/003_create_treasure_tables.sql` | `contract check passes after implementation` | `matched UserCoin/UserWatchDuration/TreasureClaim, TableName mappings, BIGINT balance, composite primary keys` | `pass` |
+| `cd backend/auction && go build ./model/...` | `model package builds` | `exit 0, no output` | `pass` |
 
 **Runtime Source Evidence**
 
@@ -153,30 +156,32 @@
 
 **Modified Files**
 
-- `-`
+- `backend/auction/model/treasure.go`
+- `backend/auction/migration/003_create_treasure_tables.sql`
+- `docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md`
 
 **Integration Check**
 
 - Target branch: `main`
-- Branch relationship: `TBD before integration`
-- Diff reviewed: `TBD before integration`
-- Overlapping write-set tasks serialized: `TBD`
+- Branch relationship: `task branch only; no integration performed by T001`
+- Diff reviewed: `git diff -- backend/auction/model/treasure.go backend/auction/migration/003_create_treasure_tables.sql docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md`
+- Overlapping write-set tasks serialized: `yes; T001 owns only model/DDL/state`
 
 **Commits**
 
-- `not_committed`
+- Planned message: `feat(treasure): add coin/watch-duration/claim models and DDL`
 
 **Review Notes**
 
-- `-`
+- `UserBalance/user_balances not referenced or modified; coin balance is int64/BIGINT and isolated from cash balance.`
 
 **Risks / Blockers**
 
-- `-`
+- `go build ./model/... alone does not fail when the new model file is absent because no downstream package imports the new types yet; supplemented with a file/contract sentinel check during TDD.`
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `pending final response`
 
 
 ## Cross-Task Decisions
