@@ -4,6 +4,7 @@ import styles from './index.module.css';
 interface FixedPriceCardProps {
   item: FixedPriceItem;
   purchased?: boolean;
+  isPulsing?: boolean;
   onPurchase: (itemId: number) => void;
 }
 
@@ -30,13 +31,13 @@ function getButtonState(item: FixedPriceItem, purchased: boolean): { disabled: b
   return { disabled: false, label: '立即抢' };
 }
 
-export default function FixedPriceCard({ item, purchased = false, onPurchase }: FixedPriceCardProps) {
+export default function FixedPriceCard({ item, purchased = false, isPulsing = false, onPurchase }: FixedPriceCardProps) {
   const product = getProductBrief(item);
   const button = getButtonState(item, purchased);
   const stockText = `剩 ${item.remaining_stock} / ${item.total_stock}`;
 
   return (
-    <article className={styles.card} aria-label={`${product.title} 一口价商品`}>
+    <article className={`${styles.card} ${isPulsing ? styles.pulsing : ''}`} aria-label={`${product.title} 一口价商品`}>
       <div className={styles.badge}>限时一口价</div>
 
       {product.cover_image ? (

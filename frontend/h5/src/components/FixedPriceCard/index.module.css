@@ -136,3 +136,19 @@
   box-shadow: none;
   cursor: not-allowed;
 }
+
+.pulsing {
+  animation: cardPulse 0.5s ease-in-out;
+}
+
+@keyframes cardPulse {
+  0% { transform: scale(1); box-shadow: var(--shadow-key); }
+  50% { transform: scale(1.05); box-shadow: 0 0 15px var(--text-brand); }
+  100% { transform: scale(1); box-shadow: var(--shadow-key); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulsing {
+    animation: none;
+  }
+}

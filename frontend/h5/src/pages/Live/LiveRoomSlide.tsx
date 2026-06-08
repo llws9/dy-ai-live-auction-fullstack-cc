@@ -6,6 +6,7 @@ import { BidFlairOverlay, type BidEvent } from '../../components/LiveRoom/BidFla
 import FixedPriceCard from '@/components/FixedPriceCard';
 import FixedPriceFlair from '@/components/FixedPriceFlair';
 import FixedPricePurchaseModal from '@/components/FixedPricePurchaseModal';
+import { FixedPriceIntroAnimation } from '@/components/auction/FixedPriceIntroAnimation';
 import { useFixedPriceItems } from '@/hooks/useFixedPriceItems';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi, skyLampApi } from '@/services/api';
 import WebSocketService from '@/services/websocket';
@@ -253,6 +254,9 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   });
   const [fixedPriceModalItem, setFixedPriceModalItem] = useState<FixedPriceItem | null>(null);
   const [purchasedFixedPriceItemIds, setPurchasedFixedPriceItemIds] = useState<Set<number>>(() => new Set());
+  const [animatingFixedPriceItems, setAnimatingFixedPriceItems] = useState<FixedPriceItem[]>([]);
+  const [pulsingItemId, setPulsingItemId] = useState<number | null>(null);
+  const fixedPricePulseTimerRef = useRef<number | null>(null);
 
   const auctionRules = auction?.rules ?? auction?.rule ?? auction?.auction_rule;
   const currentPrice = toAmount(auction?.current_price);
@@ -267,7 +271,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const isActive = (auction?.status === 1 || auction?.status === 2) && !hasReachedEndTime;
   const effectiveLiveStreamId = liveStreamId || auction?.live_stream_id || liveStream?.id || 0;
   const effectiveAuctionId = currentAuctionId || auction?.id || urlAuctionId || 0;
-  const { items: fixedPriceItems, socket: fixedPriceSocket } = useFixedPriceItems(effectiveAuctionId, effectiveLiveStreamId);
+  const { items: fixedPriceItems, socket: fixedPriceSocket, latestListedItem } = useFixedPriceItems(effectiveAuctionId, effectiveLiveStreamId);
   const productImage = getFirstImage(product || auction?.product);
   const hostName = liveStream?.host_name || liveStream?.creator_name || '拍卖师';
   const roomName = repairUtf8Mojibake(liveStream?.name) || '竞拍直播间';
@@ -300,7 +304,40 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
 
   useEffect(() => {
     setPurchasedFixedPriceItemIds(new Set());
+    setAnimatingFixedPriceItems([]);
+    setPulsingItemId(null);
   }, [effectiveLiveStreamId]);
+
+  useEffect(() => {
+    if (!latestListedItem || hasEnded) {
+      return;
+    }
+
+    setAnimatingFixedPriceItems((previous) => [
+      ...previous.filter((item) => item.id !== latestListedItem.item.id),
+      latestListedItem.item,
+    ]);
+  }, [hasEnded, latestListedItem]);
+
+  const handleIntroAnimationComplete = useCallback((itemId: number) => {
+    setAnimatingFixedPriceItems(prev => prev.filter(i => i.id !== itemId));
+    setPulsingItemId(itemId);
+    if (fixedPricePulseTimerRef.current !== null) {
+      window.clearTimeout(fixedPricePulseTimerRef.current);
+    }
+    fixedPricePulseTimerRef.current = window.setTimeout(() => {
+      setPulsingItemId(current => current === itemId ? null : current);
+      fixedPricePulseTimerRef.current = null;
+    }, 500);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (fixedPricePulseTimerRef.current !== null) {
+        window.clearTimeout(fixedPricePulseTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setCurrentAuctionId(active && auctionId > 0 ? auctionId : null);
@@ -1031,6 +1068,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
               key={item.id}
               item={item}
               purchased={purchasedFixedPriceItemIds.has(item.id)}
+              isPulsing={pulsingItemId === item.id}
               onPurchase={() => {
                 trackBusinessEvent('fixed_price_click', {
                   source: 'fixed_price_card',
@@ -1286,6 +1324,13 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           }}
         />
       )}
+      {animatingFixedPriceItems.map(item => (
+        <FixedPriceIntroAnimation 
+          key={`anim-${item.id}`} 
+          item={item} 
+          onComplete={handleIntroAnimationComplete} 
+        />
+      ))}
       <FixedPriceFlair socket={fixedPriceSocket} />
     </section>
   );

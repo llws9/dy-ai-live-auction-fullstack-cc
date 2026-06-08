@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useState } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { fetchItems, type FixedPriceItem } from '../api/fixedPrice';
 import WebSocketService from '../services/websocket';
 
@@ -19,7 +19,12 @@ type FixedPriceAction =
   | { type: 'fixed_price_offline'; payload: { item_id: number } }
   | { type: string; payload: unknown };
 
-function itemFromListedPayload(payload: FixedPriceAction['payload']): FixedPriceItem | null {
+export interface FixedPriceListedItemEvent {
+  item: FixedPriceItem;
+  sequence: number;
+}
+
+function itemFromListedPayload(payload: unknown): FixedPriceItem | null {
   if (!payload || typeof payload !== 'object') {
     return null;
   }
@@ -91,14 +96,18 @@ export function reduceItems(state: FixedPriceItem[], action: FixedPriceAction): 
 export function useFixedPriceItems(auctionId: number, liveStreamId: number) {
   const [items, dispatch] = useReducer(reduceItems, [] as FixedPriceItem[]);
   const [socket, setSocket] = useState<WebSocketService | null>(null);
+  const [latestListedItem, setLatestListedItem] = useState<FixedPriceListedItemEvent | null>(null);
+  const listedSequenceRef = useRef(0);
 
   useEffect(() => {
     if (auctionId <= 0) {
       dispatch({ type: 'init', payload: { items: [] } });
+      setLatestListedItem(null);
       return undefined;
     }
 
     let active = true;
+    setLatestListedItem(null);
 
     fetchItems(auctionId)
       .then((response) => {
@@ -120,6 +129,7 @@ export function useFixedPriceItems(auctionId: number, liveStreamId: number) {
   useEffect(() => {
     if (liveStreamId <= 0) {
       setSocket(null);
+      setLatestListedItem(null);
       return undefined;
     }
 
@@ -127,7 +137,16 @@ export function useFixedPriceItems(auctionId: number, liveStreamId: number) {
     const socket = new WebSocketService(liveStreamId, token);
     setSocket(socket);
     const handlers = FIXED_PRICE_MESSAGE_TYPES.map((type: FixedPriceMessageType) => {
-      const handler = (payload: unknown) => dispatch({ type, payload });
+      const handler = (payload: unknown) => {
+        if (type === 'fixed_price_listed') {
+          const item = itemFromListedPayload(payload);
+          if (item) {
+            listedSequenceRef.current += 1;
+            setLatestListedItem({ item, sequence: listedSequenceRef.current });
+          }
+        }
+        dispatch({ type, payload });
+      };
       socket.on(type, handler);
       return { type, handler };
     });
@@ -150,5 +169,5 @@ export function useFixedPriceItems(auctionId: number, liveStreamId: number) {
     }, {});
   }, [items]);
 
-  return { items, byId, socket };
+  return { items, byId, socket, latestListedItem };
 }
