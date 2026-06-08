@@ -250,6 +250,8 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const bidFlairHideTimerRef = useRef<number | null>(null);
   const currentPriceRef = useRef(0);
   const lastBidFlairKeyRef = useRef('');
+  const previousEndTimeStateRef = useRef({ auctionId: 0, reached: false });
+  const localUnsoldAnimationAuctionIdRef = useRef<number | null>(null);
   const wonAnimationDataRef = useRef<WonAnimationState>({
     productName: '竞拍商品',
     price: 0,
@@ -263,7 +265,6 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const auctionRules = auction?.rules ?? auction?.rule ?? auction?.auction_rule;
   const currentPrice = toAmount(auction?.current_price);
   const winnerId = Number(auction?.winner_id ?? 0);
-  const isConfirmedUnsold = auction?.status === 3 && winnerId <= 0;
   const increment = toAmount(auctionRules?.increment ?? product?.rules?.increment, 100);
   const startPrice = toAmount(auctionRules?.start_price ?? product?.rules?.start_price ?? auction?.start_price);
   const minBid = Math.max(currentPrice, startPrice) + increment;
@@ -272,6 +273,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     return Math.max(0, Math.floor((new Date(auction.end_time).getTime() - now) / 1000));
   }, [auction?.end_time, now]);
   const hasReachedEndTime = Boolean(auction?.end_time && timeLeft <= 0);
+  const isConfirmedUnsold = (auction?.status === 3 || hasReachedEndTime) && winnerId <= 0;
   const isActive = (auction?.status === 1 || auction?.status === 2) && !hasReachedEndTime;
   const effectiveLiveStreamId = liveStreamId || auction?.live_stream_id || liveStream?.id || 0;
   const effectiveAuctionId = currentAuctionId || auction?.id || urlAuctionId || 0;
@@ -665,6 +667,26 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    const auctionId = Number(auction?.id || 0);
+    const previousEndTimeState = previousEndTimeStateRef.current;
+    const crossedEndTime =
+      auctionId > 0 &&
+      hasReachedEndTime &&
+      previousEndTimeState.auctionId === auctionId &&
+      !previousEndTimeState.reached;
+
+    previousEndTimeStateRef.current = { auctionId, reached: hasReachedEndTime };
+
+    if (!crossedEndTime) return;
+    if (auction?.status === 3 || winnerId > 0) return;
+    if (ranking.length > 0 || currentPrice > startPrice) return;
+    if (localUnsoldAnimationAuctionIdRef.current === auctionId) return;
+
+    localUnsoldAnimationAuctionIdRef.current = auctionId;
+    setShowUnsoldAnimation(true);
+  }, [auction?.id, auction?.status, currentPrice, hasReachedEndTime, ranking.length, startPrice, winnerId]);
 
   useEffect(() => {
     if (!active) return;

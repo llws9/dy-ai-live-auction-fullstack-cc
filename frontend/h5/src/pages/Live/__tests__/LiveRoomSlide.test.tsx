@@ -856,8 +856,10 @@ describe('LiveRoomSlide', () => {
 
     renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
 
-    expect((await screen.findAllByText('已结束')).length).toBeGreaterThan(0);
-    expect(screen.getByText('本场竞拍已结束')).toBeInTheDocument();
+    expect(await screen.findByText('本场竞拍已结束')).toBeInTheDocument();
+    expect(screen.getByText('流拍')).toBeInTheDocument();
+    expect(screen.queryByText(/成交价/)).not.toBeInTheDocument();
+    expect(screen.queryByText('已结束')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: '查看竞拍结果' })).toHaveAttribute('href', '/result?id=5');
     expect(screen.queryByTestId('bid-dock')).not.toBeInTheDocument();
     expect(screen.queryByTestId('chat-panel')).not.toBeInTheDocument();
@@ -928,6 +930,42 @@ describe('LiveRoomSlide', () => {
     expect(within(unsoldAnim).getByText('遗憾流拍')).toBeInTheDocument();
     expect(screen.getByText('流拍')).toBeInTheDocument();
     expect(screen.queryByText(/成交价/)).not.toBeInTheDocument();
+  });
+
+  it('renders UnsoldAnimation as soon as the local countdown reaches zero without waiting for backend end event', async () => {
+    jest.useFakeTimers();
+    const baseNow = new Date('2026-06-06T00:00:00.000Z').getTime();
+    let nowMs = baseNow;
+    const dateNowSpy = jest.spyOn(Date, 'now').mockImplementation(() => nowMs);
+    mockedAuctionApi.get.mockResolvedValue({
+      id: 5,
+      product_id: 7,
+      live_stream_id: 3,
+      status: 1,
+      current_price: 800,
+      winner_id: 0,
+      end_time: new Date(baseNow + 1000).toISOString(),
+    });
+    mockedBidApi.getRanking.mockResolvedValue([]);
+    mockedAuctionApi.getBids.mockResolvedValue([]);
+
+    try {
+      renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+      expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+      expect(screen.queryByTestId('unsold-animation')).not.toBeInTheDocument();
+
+      await act(async () => {
+        nowMs = baseNow + 1000;
+        jest.advanceTimersByTime(1000);
+      });
+
+      expect(await screen.findByTestId('unsold-animation')).toBeInTheDocument();
+      expect(screen.getByText('流拍')).toBeInTheDocument();
+    } finally {
+      dateNowSpy.mockRestore();
+      jest.useRealTimers();
+    }
   });
 
   it('repairs mojibake product and room copy in collapsed and expanded states', async () => {
