@@ -89,13 +89,54 @@ func (s *Scheduler) checkAuctions() {
 	}
 
 	// 检查应该结束的竞拍
-	if err := s.auctionService.CheckAndEndAuctions(ctx); err != nil {
+	if err := s.checkAndEndAuctions(ctx); err != nil {
 		log.Printf("Error checking auctions to end: %v", err)
 	}
 
 	if err := s.auctionService.RetryUnfinishedSettlements(ctx, 100); err != nil {
 		log.Printf("Error retrying unfinished auction settlements: %v", err)
 	}
+}
+
+func (s *Scheduler) checkAndEndAuctions(ctx context.Context) error {
+	now := auctionBusinessNow()
+	auctions, err := s.auctionService.auctionDAO.GetExpiredAuctions(ctx, now)
+	if err != nil {
+		return err
+	}
+
+	for _, auction := range auctions {
+		if err := s.auctionService.EndAuction(ctx, auction.ID); err != nil {
+			// 记录错误但继续处理其他竞拍
+			continue
+		}
+		s.broadcastAuctionEnded(ctx, auction.ID)
+	}
+
+	return nil
+}
+
+func (s *Scheduler) broadcastAuctionEnded(ctx context.Context, auctionID int64) {
+	if s.hub == nil {
+		return
+	}
+
+	auction, err := s.auctionService.GetAuction(ctx, auctionID)
+	if err != nil || auction == nil {
+		return
+	}
+
+	winnerID := int64(0)
+	if auction.WinnerID != nil {
+		winnerID = *auction.WinnerID
+	}
+
+	s.hub.BroadcastToRoom(auction.ID, websocket.NewAuctionEndedMessage(&websocket.AuctionEndedData{
+		AuctionID:  auction.ID,
+		WinnerID:   winnerID,
+		FinalPrice: auction.CurrentPrice,
+		EndTime:    auction.EndTime.UnixMilli(),
+	}))
 }
 
 // broadcastTimeSync 广播时间同步消息（覆盖进行中 + 延时中的竞拍）
