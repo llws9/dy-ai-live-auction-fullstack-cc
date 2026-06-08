@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { auctionApi, productApi, productReminderApi } from '@/services/api';
 import { useAuth } from '@/store/authContext';
-import PageHeader from '@/components/shared/PageHeader';
+import PageHeader, { type BackConfig } from '@/components/shared/PageHeader';
 import { repairUtf8Mojibake } from '@/utils/textEncoding';
 import styles from './ProductDetail.module.css';
 
@@ -104,11 +104,18 @@ const isProductReminderSubscribed = (response: any, productId: number) =>
     .map((item: any) => item.product_id ?? item.productId)
     .some((id) => id === productId);
 
+interface ProductDetailLocationState {
+  from?: 'live';
+}
+
 const ProductDetail: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const auctionId = Number(searchParams.get('id') || searchParams.get('auction_id'));
+  const locationState = location.state as ProductDetailLocationState | null;
+  const cameFromLive = locationState?.from === 'live';
 
   const [auction, setAuction] = useState<AuctionDetail | null>(null);
   const [product, setProduct] = useState<ProductDetailData | null>(null);
@@ -141,6 +148,9 @@ const ProductDetail: React.FC = () => {
   const productName = repairUtf8Mojibake(product?.name) || (auction ? `竞拍场次 #${auction.id}` : '商品详情');
   const productDescription = repairUtf8Mojibake(product?.description) || '暂无描述';
   const livePath = auction ? `/live?id=${auction.live_stream_id ?? ''}&auction_id=${auction.id}` : '/';
+  const backConfig: BackConfig = cameFromLive
+    ? { onClick: () => navigate(-1) }
+    : { to: '/' };
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -245,7 +255,7 @@ const ProductDetail: React.FC = () => {
           backButton: styles.backButton,
           title: styles.headerTitle,
         }}
-        back={{ to: '/' }}
+        back={backConfig}
         title="商品详情"
         actions={
           <span className={styles.sharePlaceholder} aria-label="分享暂未开放" title="分享暂未开放">享</span>

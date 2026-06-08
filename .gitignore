@@ -4,6 +4,7 @@
 
 # Local workspace/runtime artifacts
 .tmp/
+tmp/
 .vscode/
 *.log
 
@@ -17,3 +18,5 @@ dist/
 
 # Exported local documents
 specs/doc_export/
+docs/references/douyin-618-individual-merchant-guide.html
+docs/references/douyin-618-individual-merchant-guide.md

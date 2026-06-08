@@ -203,7 +203,7 @@ html[data-theme="light"] .codeblk{background:#1a1c22}
     <a class="navlink" href="#hotcold"><span class="ix">07</span>热拉冷推分层</a>
     <a class="navlink" href="#theme"><span class="ix">08</span>主题系统</a>
     <div class="nav-group">工程难点</div>
-    <a class="navlink" href="#difficulties"><span class="ix">09</span>四大难点</a>
+    <a class="navlink" href="#difficulties"><span class="ix">09</span>五大难点</a>
     <div class="nav-group">能力与质量</div>
     <a class="navlink" href="#ai"><span class="ix">10</span>AI 能力落地</a>
     <a class="navlink" href="#observe"><span class="ix">11</span>可观测性</a>
@@ -372,8 +372,8 @@ html[data-theme="light"] .codeblk{background:#1a1c22}
     <section id="difficulties">
       <div class="sec-head">
         <div class="sec-num">09 / 关键工程难点</div>
-        <h2>四大难点与解决方案</h2>
-        <p class="sec-desc">竞拍系统的复杂度集中在状态正确性、防狙击吞吐、外部依赖降级与自动代理出价的边界控制。</p>
+        <h2>五大难点与解决方案</h2>
+        <p class="sec-desc">竞拍系统的复杂度集中在状态正确性、防狙击吞吐、外部依赖降级、自动代理出价，以及直播间真实在线 Presence 的可信表达。</p>
       </div>
 
       <div class="fcard" style="margin-top:18px"><h4 style="font-size:16px;color:var(--coral-soft)">难点一 · 竞拍规则复杂且状态转换必须可验证</h4>
@@ -400,6 +400,22 @@ html[data-theme="light"] .codeblk{background:#1a1c22}
           <div class="fcell"><div class="fk">并发粒度细化</div><div class="fd">锁粒度从 per-auction 拆到 per-subscription，配合容量信号量限制并发，防止热点竞拍下自动出价互相阻塞。</div></div>
           <div class="farr">+</div>
           <div class="fcell"><div class="fk">递归显式阻断</div><div class="fd">通过 <code>SkipSkyLampTrigger</code> 等标记避免自动出价再次触发自身，防止陷入自激循环。</div></div>
+        </div>
+      </div>
+
+      <div class="fcard" style="margin-top:14px"><h4 style="font-size:16px;color:var(--teal)">难点五 · 真实在线 Presence：人数可信、头像可信、消息不污染历史</h4>
+        <p style="margin-top:6px">右上角头像和在线人数不能继续用前端假数据，也不能简单按 WebSocket 连接数计数。真实难点在于把“连接生命周期”转成“用户在线事实”：同一用户多 Tab 只算 1 人，断开最后一个连接才离线，且只有服务端鉴权身份才能进入头像列表。</p>
+        <div class="flow" style="margin-top:14px">
+          <div class="fcell"><div class="fk">连接注册</div><div class="ft">JWT 身份入场</div><div class="fd">WebSocket client 只在 <code>Authenticated=true</code> 且 <code>LiveStreamID</code> 匹配时进入实名 presence。</div></div>
+          <div class="farr">→</div>
+          <div class="fcell"><div class="fk">用户去重</div><div class="ft">user_id → refcount</div><div class="fd">房间内维护 <code>presenceByUserID</code>，多连接共享一个在线用户；最后一个 client 断开才移除。</div></div>
+          <div class="farr">→</div>
+          <div class="fcell"><div class="fk">瞬时广播</div><div class="ft">live_presence_update</div><div class="fd">进入房间立即推 snapshot；注册/注销广播更新，但不写入弹幕 history，避免新用户回放过期在线状态。</div></div>
+        </div>
+        <div class="psv" style="margin-top:14px">
+          <div class="pc p"><div class="pl">Problem</div><div class="pt">连接数、用户数、头像展示是三个不同问题；若按连接数展示，会被多 Tab/重连放大；若信任 query user_id，会产生伪造在线和隐私风险。</div></div>
+          <div class="pc s"><div class="pl">Solution</div><div class="pt">在线人数以 WebSocket Hub 内的 presence 为权威，HTTP <code>viewer_count</code> 只做首屏兜底；头像仅展示已鉴权用户，最多返回 3 个展示字段。</div></div>
+          <div class="pc v"><div class="pl">Value</div><div class="pt">把一个 UI 小组件升级成可讲清楚的实时状态系统：可信人数、隐私最小化、断线清理、历史隔离和前端增量覆盖形成闭环。</div></div>
         </div>
       </div>
     </section>

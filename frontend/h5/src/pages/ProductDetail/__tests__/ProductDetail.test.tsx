@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import ProductDetail from '../index';
 import { auctionApi, productApi, productReminderApi } from '../../../services/api';
 import { ThemeProvider } from '../../../store/themeContext';
@@ -31,6 +31,11 @@ jest.mock('../../../store/authContext', () => ({
 const mockedAuctionApi = auctionApi as jest.Mocked<typeof auctionApi>;
 const mockedProductApi = productApi as jest.Mocked<typeof productApi>;
 const mockedProductReminderApi = productReminderApi as jest.Mocked<typeof productReminderApi>;
+
+const LocationProbe = () => {
+  const location = useLocation();
+  return <div data-testid="location">{location.pathname}{location.search}</div>;
+};
 
 describe('ProductDetail migration', () => {
   beforeEach(() => {
@@ -90,6 +95,32 @@ describe('ProductDetail migration', () => {
     const participate = screen.getByRole('link', { name: '参与竞拍' });
     expect(participate).toHaveAttribute('href', '/live?id=5&auction_id=12');
     expect(participate.closest('footer')).toBeNull();
+  });
+
+  it('从直播间进入商品详情时，顶部返回回到上一页直播间', async () => {
+    render(
+      <ThemeProvider>
+        <MemoryRouter
+          initialEntries={[
+            '/live?id=5&auction_id=12',
+            { pathname: '/detail', search: '?id=12', state: { from: 'live' } },
+          ]}
+          initialIndex={1}
+          future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+        >
+          <Routes>
+            <Route path="/live" element={<LocationProbe />} />
+            <Route path="/detail" element={<ProductDetail />} />
+            <Route path="/" element={<LocationProbe />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>
+    );
+
+    expect(await screen.findByText('清代青花瓷瓶')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('返回'));
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/live?id=5&auction_id=12'));
   });
 
   it('repairs mojibake product copy on detail page', async () => {
