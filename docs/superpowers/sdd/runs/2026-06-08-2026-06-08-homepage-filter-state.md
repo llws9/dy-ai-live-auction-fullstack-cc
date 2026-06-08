@@ -527,6 +527,8 @@
 | Frontend Admin Build | `cd frontend/admin && npm run build` | no | `not_run` | `-` |
 | Frontend H5 | `cd frontend/h5 && npm test -- --runInBand` | no | `not_run` | `-` |
 | Frontend H5 Build | `cd frontend/h5 && npm run build` | no | `not_run` | `-` |
+| Backend Auction Compile Baseline | `cd backend/auction && go build ./...` | yes | `pass` | `2026-06-08 before dispatch, no output` |
+| Frontend H5 Typecheck Baseline | `cd frontend/h5 && npx tsc --noEmit` | yes | `fail` | `pre-existing errors in src/components/LiveChat/ChatPanel.tsx implicit any and missing zustand types in src/store/liveChatStore.ts; unrelated to homepage filter write set` |
 
 ## Final Review Checklist
 
