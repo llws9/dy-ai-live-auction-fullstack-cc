@@ -38,11 +38,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `7` |
-| Done | `6` |
-| Blocked | `1` |
+| Done | `7` |
+| Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-09 04:12` |
+| Last Updated | `2026-06-09 04:23` |
 
 ## Status Legend
 
@@ -75,7 +75,7 @@
 | `T004` | `前端 auctionApi.list 扩展查询参数` | `done` | `subagent-t004` | `W4` | `T003` | `H5 API client params` | `frontend/h5/src/services/api.ts` | `docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
 | `T005` | `前端价格底部抽屉组件 PriceFilterSheet` | `done` | `subagent-t005` | `W5` | `T004` | `bottom sheet component and styles` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css` | `frontend/h5/src/pages/Home/index.tsx; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
 | `T006` | `前端 Home 集成筛选胶囊、状态与参数组装` | `done` | `subagent-t006` | `W6` | `T005` | `Home UI integration and interaction test` | `frontend/h5/src/pages/Home/index.tsx; frontend/h5/src/pages/Home/__tests__/Home.test.tsx` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css; frontend/h5/src/services/api.ts; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx -t '点击最热胶囊'` | `none` |
-| `T007` | `端到端验收与全量回归` | `blocked` | `main-agent` | `W7` | `T006` | `verification only` | `docs/superpowers/sdd/runs/2026-06-08-2026-06-08-homepage-filter-state.md` | `STARTUP_GUIDE.md; frontend/h5/src/pages/Home/index.tsx; backend/auction` | `cd backend/auction && go test ./... && cd ../../frontend/h5 && npx jest` | `gateway-service; auction-service; h5 if browser verification runs` |
+| `T007` | `端到端验收与全量回归` | `done` | `main-agent` | `W7` | `T006` | `verification plus unrelated blocker fix` | `docs/superpowers/sdd/runs/2026-06-08-2026-06-08-homepage-filter-state.md; frontend/h5/src/components/LiveRoom/BidFlairOverlay.tsx; frontend/h5/src/components/auction/BidSuccessAnimation.tsx` | `STARTUP_GUIDE.md; frontend/h5/src/pages/Home/index.tsx; backend/auction` | `cd backend/auction && go test ./... && cd ../../frontend/h5 && npx jest` | `gateway-service; auction-service; h5 if browser verification runs` |
 
 ## Wave Plan
 
@@ -575,10 +575,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `blocked` |
+| Status | `done` |
 | Owner | `main-agent` |
 | Started At | `2026-06-09 04:08` |
-| Completed At | `2026-06-09 04:12` |
+| Completed At | `2026-06-09 04:23` |
 | Branch | `feat/homepage-filter-sdd` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-homepage-filter-sdd` |
 | Base Commit | `351a147089502bac70ae6d7ed5fafa4a303ab584` |
@@ -595,6 +595,8 @@
 **Write Set**
 
 - `docs/superpowers/sdd/runs/2026-06-08-2026-06-08-homepage-filter-state.md`
+- `frontend/h5/src/components/LiveRoom/BidFlairOverlay.tsx`
+- `frontend/h5/src/components/auction/BidSuccessAnimation.tsx`
 
 **Read Set**
 
@@ -617,20 +619,24 @@
 | `cd frontend/h5 && npx jest` | Frontend full Jest pass | `FAIL`; 59 suites passed, 2 failed. Failures are `src/pages/Live/__tests__/LiveRoom.test.tsx` missing `data-testid="bid-success-flair"` and `src/components/auction/__tests__/BidSuccessAnimation.test.tsx` expected latestEnd called once. These files are LiveRoom/BidSuccessAnimation, outside homepage filter write set. | `blocked_unrelated` |
 | `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx --runInBand` | Homepage regression pass | `PASS`; 28 tests passed, including `点击最热胶囊` and `忽略过期的筛选请求` | `pass` |
 | `cd frontend/h5 && npx jest src/pages/Live/__tests__/LiveRoom.test.tsx src/components/auction/__tests__/BidSuccessAnimation.test.tsx --runInBand` | Reproduce frontend blockers | `FAIL`; reproduced the same 2 unrelated LiveRoom/BidSuccessAnimation failures | `blocked_unrelated_reproduced` |
+| `cd frontend/h5 && npx jest src/components/auction/__tests__/BidSuccessAnimation.test.tsx src/pages/Live/__tests__/LiveRoom.test.tsx -t '动画展示完成|shows a bid success flair' --runInBand` | Previously blocking tests pass after fix | `PASS`; 2 tests passed, 10 skipped | `pass` |
+| `cd frontend/h5 && npx jest src/components/auction/__tests__/BidSuccessAnimation.test.tsx src/pages/Live/__tests__/LiveRoom.test.tsx src/pages/Live/__tests__/LiveRoomSlide.test.tsx --runInBand` | Related LiveRoom/animation regression pass | `PASS`; 47 tests passed | `pass` |
+| `cd frontend/h5 && npx jest` | Frontend full Jest pass after blocker fix | `PASS`; 61 suites passed, 455 tests passed | `pass` |
 
 **Modified Files**
 
-- `-`
+- `frontend/h5/src/components/LiveRoom/BidFlairOverlay.tsx`
+- `frontend/h5/src/components/auction/BidSuccessAnimation.tsx`
 
 **Risks / Blockers**
 
-- T007 is blocked by out-of-scope frontend full Jest failures in LiveRoom/BidSuccessAnimation. Homepage filter targeted regression passes.
-- Full backend requires local Redis on port 6379; after starting temporary Redis, `cd backend/auction && go test ./...` passes.
-- No runtime browser verification was performed because automated full frontend regression is blocked by unrelated failures.
+- Previous frontend blocker fixed in commit `cf451517`: restored ordinary self-bid flair contract and BidSuccessAnimation 3s close callback contract.
+- Full backend requires Redis on port 6379; with Redis available, `cd backend/auction && go test ./...` passes.
+- No browser manual verification was performed in this turn; automated backend/frontend regressions pass.
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `current final response will report branch/worktree`
 
 
 ## Cross-Task Decisions
@@ -651,10 +657,10 @@
 | --- | --- | --- | --- | --- |
 | Backend Gateway | `cd backend/gateway && go test ./...` | no | `not_run` | `-` |
 | Backend Product | `cd backend/product && go test ./...` | no | `not_run` | `-` |
-| Backend Auction | `cd backend/auction && go test ./...` | no | `not_run` | `-` |
+| Backend Auction | `cd backend/auction && go test ./...` | no | `pass` | `passed with Redis available on 6379 during T007 verification` |
 | Frontend Admin | `cd frontend/admin && npm test -- --runInBand` | no | `not_run` | `-` |
 | Frontend Admin Build | `cd frontend/admin && npm run build` | no | `not_run` | `-` |
-| Frontend H5 | `cd frontend/h5 && npm test -- --runInBand` | no | `not_run` | `-` |
+| Frontend H5 | `cd frontend/h5 && npx jest` | no | `pass` | `61 suites passed, 455 tests passed after cf451517` |
 | Frontend H5 Build | `cd frontend/h5 && npm run build` | no | `not_run` | `-` |
 | Backend Auction Compile Baseline | `cd backend/auction && go build ./...` | yes | `pass` | `2026-06-08 before dispatch, no output` |
 | Frontend H5 Typecheck Baseline | `cd frontend/h5 && npx tsc --noEmit` | yes | `fail` | `pre-existing errors in src/components/LiveChat/ChatPanel.tsx implicit any and missing zustand types in src/store/liveChatStore.ts; unchanged after T005 and unrelated to homepage filter write set` |
