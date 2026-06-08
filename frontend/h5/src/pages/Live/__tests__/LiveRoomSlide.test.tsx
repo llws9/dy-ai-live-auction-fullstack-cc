@@ -905,6 +905,27 @@ describe('LiveRoomSlide', () => {
     expect(screen.getByText('成交价 ¥1,300')).toBeInTheDocument();
   });
 
+  it('renders UnsoldAnimation when auction_end event arrives without a winner', async () => {
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+
+    const auctionEndHandler = getWebSocketHandler('auction_end');
+    expect(auctionEndHandler).toBeDefined();
+
+    act(() => {
+      auctionEndHandler!({
+        auction_id: 5,
+        winner_id: 0,
+        final_price: '800.00',
+      });
+    });
+
+    const unsoldAnim = await screen.findByTestId('unsold-animation');
+    expect(unsoldAnim).toBeInTheDocument();
+    expect(within(unsoldAnim).getByText('遗憾流拍')).toBeInTheDocument();
+  });
+
   it('repairs mojibake product and room copy in collapsed and expanded states', async () => {
     mockedProductApi.get.mockResolvedValue({
       id: 7,
@@ -1022,6 +1043,36 @@ describe('LiveRoomSlide', () => {
     expect(countdownEl).toHaveClass('countdownUrgentText');
 
     expect(screen.getByText(/🔥 已有 2 人出价 · 128 人围观/)).toBeInTheDocument();
+
+    dateNowSpy.mockRestore();
+  });
+
+  it('renders glitch countdown when time left is <= 5s and drawer is closed, but hides it when drawer is open', async () => {
+    const baseNow = new Date('2026-06-06T00:00:00.000Z').getTime();
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(baseNow);
+    mockedAuctionApi.get.mockResolvedValue({
+      id: 5,
+      product_id: 7,
+      live_stream_id: 3,
+      status: 1,
+      current_price: 1200,
+      end_time: new Date(baseNow + 5_000).toISOString(),
+    });
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    
+    // Default sheet is null, countdown should be visible
+    const glitchEl = await screen.findByTestId('glitch-countdown');
+    expect(glitchEl).toBeInTheDocument();
+    expect(glitchEl).toHaveTextContent('5');
+
+    // Open drawer
+    fireEvent.click(screen.getByTestId('bid-dock'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('glitch-countdown')).not.toBeInTheDocument();
+    });
 
     dateNowSpy.mockRestore();
   });

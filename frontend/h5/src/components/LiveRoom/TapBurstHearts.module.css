@@ -1,0 +1,21 @@
+.container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+  overflow: hidden;
+}
+
+.heart {
+  position: absolute;
+  font-size: 24px;
+  user-select: none;
+  filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.5));
+  animation: floatUp 1s ease-out forwards;
+}
+
+@keyframes floatUp {
+  0% { transform: translate(-50%, -50%) scale(0.5) rotate(0deg); opacity: 1; }
+  50% { transform: translate(var(--tx), var(--ty)) scale(1.2) rotate(var(--rot)); opacity: 1; }
+  100% { transform: translate(var(--tx2), var(--ty2)) scale(0.8) rotate(var(--rot2)); opacity: 0; }
+}

@@ -14,6 +14,7 @@ interface BidDockProps {
   bidDisabled?: boolean;
   bidDisabledText?: string;
   skyLampActive?: boolean;
+  myBidStatus?: 'leading' | 'outbid' | null;
   onOpen: (sheet: 'bid' | 'info') => void;
   onClose: () => void;
   onRequireLogin: () => void;
@@ -35,6 +36,7 @@ const BidDock = ({
   bidDisabled = false,
   bidDisabledText = '已结束',
   skyLampActive = false,
+  myBidStatus = null,
   onOpen,
   onClose,
   onRequireLogin,
@@ -98,6 +100,11 @@ const BidDock = ({
         data-sky-lamp-active={skyLampActive ? 'true' : 'false'}
         onClick={() => onOpen('info')}
       >
+        {myBidStatus && (
+          <div className={`${styles.myBidCapsule} ${myBidStatus === 'leading' ? styles.myBidCapsuleLeading : styles.myBidCapsuleOutbid}`}>
+            {myBidStatus === 'leading' ? '当前领先' : '被超越'}
+          </div>
+        )}
         <div className={styles.dockProduct}>
           {productImage ? (
             <span className={styles.dockImageWrap}>

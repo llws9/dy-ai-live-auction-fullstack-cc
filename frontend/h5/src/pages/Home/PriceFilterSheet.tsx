@@ -75,12 +75,14 @@ const PriceFilterSheet = ({ open, value, onClose, onConfirm }: PriceFilterSheetP
   const errorText = validation.error;
 
   const handlePresetClick = (preset: PricePreset) => {
-    setDraft(rangeToDraft(preset.value));
+    onConfirm(preset.value);
+    onClose();
   };
 
   const handleConfirm = () => {
     if (!selectedRange) return;
     onConfirm(selectedRange);
+    onClose();
   };
 
   return (

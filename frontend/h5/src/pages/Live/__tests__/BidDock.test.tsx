@@ -19,6 +19,14 @@ describe('BidDock', () => {
     jest.clearAllMocks();
   });
 
+  it('渲染 myBidStatus 状态胶囊', () => {
+    const { rerender } = render(<BidDock {...baseProps} myBidStatus="leading" />);
+    expect(screen.getByText('当前领先')).toBeInTheDocument();
+
+    rerender(<BidDock {...baseProps} myBidStatus="outbid" />);
+    expect(screen.getByText('被超越')).toBeInTheDocument();
+  });
+
   it('默认态不显示放大价格，点击出价打开出价态', () => {
     const onOpen = jest.fn();
     render(<BidDock {...baseProps} onOpen={onOpen} />);

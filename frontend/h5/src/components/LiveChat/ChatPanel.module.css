@@ -52,6 +52,45 @@
   margin-right: 6px;
 }
 
+.quickChatBar {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  pointer-events: auto;
+  padding: 2px 0;
+  mask-image: linear-gradient(90deg, #000 90%, transparent 100%);
+}
+
+.quickChatBar::-webkit-scrollbar {
+  display: none;
+}
+
+.quickChatBubble {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  background: rgba(18, 18, 18, 0.4);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.quickChatBubble:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.quickChatBubble:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .inputBar {
   display: flex;
   align-items: center;

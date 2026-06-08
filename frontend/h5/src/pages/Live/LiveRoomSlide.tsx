@@ -82,12 +82,6 @@ interface RankingItem {
   created_at?: string;
 }
 
-interface BidSuccessFlair {
-  id: number;
-  amount: number;
-  userName: string;
-}
-
 interface WonAnimationState {
   productName: string;
   price: number;
@@ -100,6 +94,8 @@ interface SkyLampNoticeState {
 }
 
 import { TapBurstHearts } from '../../components/LiveRoom/TapBurstHearts';
+import { GlitchCountdown } from '../../components/LiveRoom/GlitchCountdown';
+import { UnsoldAnimation } from '../../components/LiveRoom/UnsoldAnimation';
 
 export interface LiveRoomSlideProps {
   liveStreamId: number;
@@ -133,8 +129,6 @@ const formatMoney = (amount: number) => amount.toLocaleString('zh-CN', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 2,
 });
-const BID_SUCCESS_FLAIR_DELAY_MS = 240;
-const BID_SUCCESS_FLAIR_VISIBLE_MS = 2800;
 
 const toAmount = (value: unknown, fallback = 0) => {
   const amount = Number(value);
@@ -244,6 +238,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
   const [latestBid, setLatestBid] = useState<BidEvent | null>(null);
   const [wonAnimation, setWonAnimation] = useState<WonAnimationState | null>(null);
+  const [showUnsoldAnimation, setShowUnsoldAnimation] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const { showToast: showGlobalToast } = useToast();
   const wsRef = useRef<WebSocketService | null>(null);
@@ -728,6 +723,11 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     const onAuctionEnded = (data: any) => {
       if (!belongsToThisRoom(data)) return;
       setAuction((previous) => previous ? { ...previous, status: 3, current_price: toAmount(data?.final_price, toAmount(previous.current_price)) } : previous);
+      
+      // If there is no winner, it means the auction is unsold
+      if (!data.winner_id) {
+        setShowUnsoldAnimation(true);
+      }
     };
 
     ws.on('auction_ended', onAuctionEnded);
@@ -966,6 +966,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         )}
         <div className={styles.videoGradient} />
         <TapBurstHearts />
+        {sheet === null && <GlitchCountdown timeLeft={timeLeft} />}
         <header className={styles.topBar}>
           <div className={styles.hostPill}>
             <Link className={styles.backLink} to="/">‹</Link>
@@ -1251,14 +1252,16 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         </div>
       )}
       <BidFlairOverlay latestBid={latestBid} />
-      {wonAnimation && (
+      {showUnsoldAnimation ? (
+        <UnsoldAnimation onAnimationEnd={() => setShowUnsoldAnimation(false)} />
+      ) : wonAnimation ? (
         <BidSuccessAnimation
           productName={wonAnimation.productName}
           price={wonAnimation.price}
           imageUrl={wonAnimation.imageUrl}
           onAnimationEnd={() => setWonAnimation(null)}
         />
-      )}
+      ) : null}
       {toast && <div className={styles.toast} role="status">{toast}</div>}
       {fixedPriceModalItem && (
         <FixedPricePurchaseModal
