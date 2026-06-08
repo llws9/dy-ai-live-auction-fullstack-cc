@@ -6,6 +6,12 @@ import (
 )
 
 const chatHistorySize = 100
+const presenceViewerLimit = 3
+
+type presenceViewerState struct {
+	viewer  LivePresenceViewer
+	clients map[string]struct{}
+}
 
 // LiveStreamRoom 直播间级 WebSocket 房间
 type LiveStreamRoom struct {
@@ -13,6 +19,9 @@ type LiveStreamRoom struct {
 
 	clients     map[string]*Client
 	clientsLock sync.RWMutex
+
+	presenceByUserID map[int64]*presenceViewerState
+	presenceLock     sync.RWMutex
 
 	history     [chatHistorySize]*Message
 	historyHead int
@@ -29,12 +38,13 @@ type LiveStreamRoom struct {
 // NewLiveStreamRoom 创建直播间房间
 func NewLiveStreamRoom(liveStreamID int64) *LiveStreamRoom {
 	return &LiveStreamRoom{
-		LiveStreamID: liveStreamID,
-		clients:      make(map[string]*Client),
-		Register:     make(chan *Client, 64),
-		Unregister:   make(chan *Client, 64),
-		Broadcast:    make(chan *Message, 256),
-		done:         make(chan struct{}),
+		LiveStreamID:     liveStreamID,
+		clients:          make(map[string]*Client),
+		presenceByUserID: make(map[int64]*presenceViewerState),
+		Register:         make(chan *Client, 64),
+		Unregister:       make(chan *Client, 64),
+		Broadcast:        make(chan *Message, 256),
+		done:             make(chan struct{}),
 	}
 }
 
@@ -61,6 +71,9 @@ func (r *LiveStreamRoom) Close() {
 	r.clientsLock.Lock()
 	r.clients = make(map[string]*Client)
 	r.clientsLock.Unlock()
+	r.presenceLock.Lock()
+	r.presenceByUserID = make(map[int64]*presenceViewerState)
+	r.presenceLock.Unlock()
 }
 
 func (r *LiveStreamRoom) registerClient(c *Client) {
@@ -83,12 +96,20 @@ func (r *LiveStreamRoom) registerClient(c *Client) {
 		}
 	}
 	r.historyLock.RUnlock()
+
+	if r.addPresenceClient(c) {
+		r.broadcastPresenceSnapshot()
+	}
 }
 
 func (r *LiveStreamRoom) unregisterClient(c *Client) {
 	r.clientsLock.Lock()
 	delete(r.clients, c.ID)
 	r.clientsLock.Unlock()
+
+	if r.removePresenceClient(c) {
+		r.broadcastPresenceSnapshot()
+	}
 }
 
 func (r *LiveStreamRoom) pushHistory(msg *Message) {
@@ -130,4 +151,91 @@ func (r *LiveStreamRoom) GetHistory() []*Message {
 		out = append(out, r.history[idx])
 	}
 	return out
+}
+
+func (r *LiveStreamRoom) addPresenceClient(c *Client) bool {
+	if c == nil || !c.Authenticated || c.UserID <= 0 {
+		return false
+	}
+	r.presenceLock.Lock()
+	defer r.presenceLock.Unlock()
+
+	state, ok := r.presenceByUserID[c.UserID]
+	if !ok {
+		name := c.UserName
+		if name == "" {
+			name = "用户"
+		}
+		state = &presenceViewerState{
+			viewer: LivePresenceViewer{
+				UserID:    c.UserID,
+				Name:      name,
+				AvatarURL: c.AvatarURL,
+			},
+			clients: make(map[string]struct{}),
+		}
+		r.presenceByUserID[c.UserID] = state
+	}
+	if _, exists := state.clients[c.ID]; exists {
+		return false
+	}
+	state.clients[c.ID] = struct{}{}
+	return true
+}
+
+func (r *LiveStreamRoom) removePresenceClient(c *Client) bool {
+	if c == nil || !c.Authenticated || c.UserID <= 0 {
+		return false
+	}
+	r.presenceLock.Lock()
+	defer r.presenceLock.Unlock()
+
+	state, ok := r.presenceByUserID[c.UserID]
+	if !ok {
+		return false
+	}
+	if _, exists := state.clients[c.ID]; !exists {
+		return false
+	}
+	delete(state.clients, c.ID)
+	if len(state.clients) == 0 {
+		delete(r.presenceByUserID, c.UserID)
+	}
+	return true
+}
+
+// GetPresenceSnapshot 返回当前直播间在线状态快照。
+func (r *LiveStreamRoom) GetPresenceSnapshot() *LivePresenceUpdateData {
+	r.presenceLock.RLock()
+	defer r.presenceLock.RUnlock()
+
+	viewers := make([]LivePresenceViewer, 0, presenceViewerLimit)
+	for _, state := range r.presenceByUserID {
+		if len(viewers) >= presenceViewerLimit {
+			break
+		}
+		viewers = append(viewers, state.viewer)
+	}
+	return &LivePresenceUpdateData{
+		LiveStreamID: r.LiveStreamID,
+		ViewerCount:  len(r.presenceByUserID),
+		Viewers:      viewers,
+	}
+}
+
+func (r *LiveStreamRoom) broadcastPresenceSnapshot() {
+	msg := NewLivePresenceUpdateMessage(r.GetPresenceSnapshot())
+
+	r.clientsLock.RLock()
+	defer r.clientsLock.RUnlock()
+	for _, c := range r.clients {
+		if !c.Authenticated {
+			continue
+		}
+		select {
+		case c.Send <- msg:
+		default:
+			log.Printf("[livestream_room] client %s buffer full, dropping presence update", c.ID)
+		}
+	}
 }

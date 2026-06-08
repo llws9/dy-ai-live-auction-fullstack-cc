@@ -60,6 +60,18 @@ interface LiveStream {
   video_url?: string;
 }
 
+interface PresenceViewer {
+  user_id: number;
+  name: string;
+  avatar_url?: string;
+}
+
+interface LivePresence {
+  live_stream_id?: number;
+  viewer_count: number;
+  viewers: PresenceViewer[];
+}
+
 interface RankingItem {
   rank?: number;
   id?: number;
@@ -222,6 +234,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const [skyLampNotice, setSkyLampNotice] = useState<SkyLampNoticeState | null>(null);
   const [following, setFollowing] = useState(false);
   const [, setFollowersCount] = useState(0);
+  const [presence, setPresence] = useState<LivePresence | null>(null);
   const [followingPending, setFollowingPending] = useState(false);
   const [connected, setConnected] = useState(false);
   const [toast, setToast] = useState('');
@@ -262,6 +275,8 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const productName = repairUtf8Mojibake(product?.name || auction?.product?.name) || '竞拍商品';
   const liveCoverImage = productImage || liveStream?.cover_image || '';
   const hostAvatar = liveStream?.host_avatar || liveStream?.avatar || '';
+  const viewerCount = presence?.viewer_count ?? liveStream?.viewer_count ?? 0;
+  const presenceViewers = useMemo(() => (presence?.viewers ?? []).slice(0, 3), [presence?.viewers]);
   const hasEnded = auction?.status === 3 || hasReachedEndTime;
   const fixedPriceItemIds = useMemo(() => fixedPriceItems.map((item) => item.id), [fixedPriceItems]);
   const currentUserDisplayName = useMemo(() => repairUtf8Mojibake(user?.name) || '当前用户', [user?.name]);
@@ -550,6 +565,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
 
         setAuctionId(effectiveId);
         setAuction(auctionData);
+        setPresence(null);
         const resolvedProductId = auctionData.product_id ?? auctionData.product?.id;
         const resolvedLiveStreamId = liveStreamId || auctionData.live_stream_id;
 
@@ -640,9 +656,27 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       setAuction((previous) => previous ? { ...previous, end_time: nextEndTime } : previous);
     };
 
+    const onLivePresenceUpdate = (data: any) => {
+      if (!belongsToThisRoom(data)) return;
+      const viewerCount = Number(data?.viewer_count);
+      const viewers = Array.isArray(data?.viewers) ? data.viewers.slice(0, 3) : [];
+      setPresence({
+        live_stream_id: Number(data?.live_stream_id || liveStreamId || 0),
+        viewer_count: Number.isFinite(viewerCount) ? viewerCount : 0,
+        viewers: viewers
+          .map((viewer: any) => ({
+            user_id: Number(viewer?.user_id || 0),
+            name: repairUtf8Mojibake(viewer?.name) || '用户',
+            avatar_url: typeof viewer?.avatar_url === 'string' ? viewer.avatar_url : undefined,
+          }))
+          .filter((viewer: PresenceViewer) => viewer.user_id > 0),
+      });
+    };
+
     ws.on('chat_message', onChatMessage);
     ws.on('delay_triggered', onDelayTriggered);
     ws.on('time_sync', onTimeSync);
+    ws.on('live_presence_update', onLivePresenceUpdate);
     ws.on('rank_update', (data) => {
       if (!belongsToThisRoom(data)) return;
       applyRealtimeRanking(data);
@@ -743,6 +777,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       ws.off('chat_message', onChatMessage);
       ws.off('delay_triggered', onDelayTriggered);
       ws.off('time_sync', onTimeSync);
+      ws.off('live_presence_update', onLivePresenceUpdate);
       ws.off('sky_lamp_auto_bid', onSkyLampAutoBid);
       ws.off('auction_ended', onAuctionEnded);
       ws.off('auction_end', onAuctionEnded);
@@ -941,7 +976,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
             </div>
             <div>
               <p className={styles.hostName}>{hostName}</p>
-              <p className={styles.viewerCount}>{(liveStream?.viewer_count ?? 0).toLocaleString()} 在线</p>
+              <p className={styles.viewerCount}>{viewerCount.toLocaleString()} 在线</p>
             </div>
             <button
               className={styles.followBtn}
@@ -955,14 +990,22 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           <div className={styles.rightActions}>
             <div className={styles.viewersRow} aria-label="在线人数">
               <div className={styles.avatarsGroup} aria-hidden="true">
-                <span className={styles.viewerAvatar}>
-                  {hostAvatar ? <img src={hostAvatar} alt="" /> : hostName.slice(0, 1)}
-                </span>
+                {presenceViewers.length > 0 ? (
+                  presenceViewers.map((viewer) => (
+                    <span className={styles.viewerAvatar} key={viewer.user_id}>
+                      {viewer.avatar_url ? <img src={viewer.avatar_url} alt="" /> : viewer.name.slice(0, 1)}
+                    </span>
+                  ))
+                ) : (
+                  <span className={styles.viewerAvatar}>
+                    {hostAvatar ? <img src={hostAvatar} alt="" /> : hostName.slice(0, 1)}
+                  </span>
+                )}
               </div>
-              <span className={styles.viewerCountPill}>{(liveStream?.viewer_count ?? 0).toLocaleString()}</span>
+              <span className={styles.viewerCountPill}>{viewerCount.toLocaleString()}</span>
               <Link className={styles.closeBtn} to="/" aria-label="退出直播间">×</Link>
             </div>
-            <Link className={styles.productDetailBtn} to={`/detail?id=${auctionId}`}>
+            <Link className={styles.productDetailBtn} to={`/detail?id=${auctionId}`} state={{ from: 'live' }}>
               商品详情 ›
             </Link>
             <div className={styles.statusPill}>

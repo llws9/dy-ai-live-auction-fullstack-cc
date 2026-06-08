@@ -39,8 +39,9 @@ const (
 	MessageTypeFixedPriceFlair   MessageType = "fixed_price_flair"
 
 	// 弹幕相关消息类型（M2）
-	MessageTypeChatSend    MessageType = "chat_send"    // 客户端 -> 服务端
-	MessageTypeChatMessage MessageType = "chat_message" // 服务端 -> 客户端
+	MessageTypeChatSend           MessageType = "chat_send"            // 客户端 -> 服务端
+	MessageTypeChatMessage        MessageType = "chat_message"         // 服务端 -> 客户端
+	MessageTypeLivePresenceUpdate MessageType = "live_presence_update" // 服务端 -> 客户端
 )
 
 // 弹幕错误码
@@ -378,4 +379,23 @@ type ChatMessageData struct {
 // NewChatMessage 创建弹幕广播消息
 func NewChatMessage(data *ChatMessageData) *Message {
 	return NewMessage(MessageTypeChatMessage, data)
+}
+
+// LivePresenceViewer 是在线用户头像区域展示所需的最小用户信息。
+type LivePresenceViewer struct {
+	UserID    int64  `json:"user_id"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url,omitempty"`
+}
+
+// LivePresenceUpdateData 是直播间在线状态快照。
+type LivePresenceUpdateData struct {
+	LiveStreamID int64                `json:"live_stream_id"`
+	ViewerCount  int                  `json:"viewer_count"`
+	Viewers      []LivePresenceViewer `json:"viewers"`
+}
+
+// NewLivePresenceUpdateMessage 创建直播间在线状态更新消息。
+func NewLivePresenceUpdateMessage(data *LivePresenceUpdateData) *Message {
+	return NewMessage(MessageTypeLivePresenceUpdate, data)
 }

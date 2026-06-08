@@ -45,12 +45,14 @@ func newLiveStreamHandlerWithSeed(t *testing.T, seed func(db *gorm.DB)) *LiveStr
 func TestGetDetail_ResponseShape(t *testing.T) {
 	h := newLiveStreamHandlerWithSeed(t, func(db *gorm.DB) {
 		db.Create(&model.LiveStream{
-			ID:          101,
-			CreatorID:   9001,
-			Name:        "顶流主播·古玩专场",
-			Description: "古玩鉴赏直播",
-			CoverImage:  "https://cdn/.../cover.jpg",
-			Status:      model.LiveStreamStatusActive,
+			ID:             101,
+			CreatorID:      9001,
+			Name:           "顶流主播·古玩专场",
+			Description:    "古玩鉴赏直播",
+			CoverImage:     "https://cdn/.../cover.jpg",
+			Status:         model.LiveStreamStatusActive,
+			StreamerName:   "主播王老师",
+			StreamerAvatar: "https://cdn/.../avatar.jpg",
 		})
 	})
 
@@ -76,11 +78,11 @@ func TestGetDetail_ResponseShape(t *testing.T) {
 	// 新增字段（MVP 占位）
 	hostName, ok := data["host_name"]
 	require.True(t, ok, "host_name field must exist")
-	assert.Equal(t, "", hostName)
+	assert.Equal(t, "主播王老师", hostName)
 
 	hostAvatar, ok := data["host_avatar"]
 	require.True(t, ok, "host_avatar field must exist")
-	assert.Equal(t, "", hostAvatar)
+	assert.Equal(t, "https://cdn/.../avatar.jpg", hostAvatar)
 
 	viewerCount, ok := data["viewer_count"]
 	require.True(t, ok, "viewer_count field must exist")

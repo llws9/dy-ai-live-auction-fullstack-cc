@@ -276,6 +276,53 @@ describe('LiveRoomSlide', () => {
     expect(statusPill.previousElementSibling).toBe(productDetailLink);
   });
 
+  it('uses live presence updates as the authoritative online viewers state', async () => {
+    const { container } = renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    await waitFor(() => expect(getWebSocketHandler('live_presence_update')).toBeDefined());
+
+    act(() => {
+      getWebSocketHandler('live_presence_update')?.({
+        live_stream_id: 3,
+        viewer_count: 3,
+        viewers: [
+          { user_id: 1, name: '张三', avatar_url: '/u1.png' },
+          { user_id: 2, name: '李四', avatar_url: '/u2.png' },
+          { user_id: 3, name: '王五', avatar_url: '/u3.png' },
+          { user_id: 4, name: '赵六', avatar_url: '/u4.png' },
+        ],
+      });
+    });
+
+    const header = container.querySelector('header') as HTMLElement;
+    const viewersRow = within(header).getByLabelText('在线人数');
+    expect(viewersRow).toHaveTextContent('3');
+    expect(viewersRow.querySelectorAll('img')).toHaveLength(3);
+  });
+
+  it('ignores live presence updates from other live streams', async () => {
+    const { container } = renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    await waitFor(() => expect(getWebSocketHandler('live_presence_update')).toBeDefined());
+
+    act(() => {
+      getWebSocketHandler('live_presence_update')?.({
+        live_stream_id: 4,
+        viewer_count: 3,
+        viewers: [
+          { user_id: 1, name: '张三', avatar_url: '/u1.png' },
+        ],
+      });
+    });
+
+    const header = container.querySelector('header') as HTMLElement;
+    const viewersRow = within(header).getByLabelText('在线人数');
+    expect(viewersRow).toHaveTextContent('128');
+    expect(viewersRow.querySelectorAll('img')).toHaveLength(0);
+  });
+
   it('does not render the product card follow row in the bid drawer while keeping ranking visible', async () => {
     renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
 

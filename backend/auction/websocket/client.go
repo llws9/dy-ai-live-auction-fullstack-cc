@@ -33,6 +33,7 @@ type Client struct {
 	LiveStreamID  int64 // 直播间 ID（0 表示未订阅弹幕）
 	UserID        int64
 	UserName      string // 发弹幕时回填到广播
+	AvatarURL     string // presence 头像展示，缺失时前端用名称兜底
 	Authenticated bool   // true 表示身份来自服务端验证过的 JWT
 	ConnectedAt   time.Time
 

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -8,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"auction-service/model"
 	ws "auction-service/websocket"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
@@ -30,6 +32,11 @@ type WSHandler struct {
 	hub         *ws.Hub
 	jwtSecret   string
 	chatHandler *ws.ChatHandler
+	userFetcher presenceUserFetcher
+}
+
+type presenceUserFetcher interface {
+	GetByID(ctx context.Context, userID int64) (*model.User, error)
 }
 
 // NewWSHandler 创建 WebSocket Handler
@@ -52,11 +59,17 @@ func (h *WSHandler) SetChatHandler(ch *ws.ChatHandler) {
 	h.chatHandler = ch
 }
 
+// SetUserFetcher 注入用户资料读取器，用于 presence 头像回填。
+func (h *WSHandler) SetUserFetcher(fetcher presenceUserFetcher) {
+	h.userFetcher = fetcher
+}
+
 // HandleWebSocket 处理 WebSocket 连接
 func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.ResponseWriter, r *http.Request) {
 	// 获取用户ID（优先从token验证）
 	var userID int64
 	var userName string
+	var avatarURL string
 	authenticated := false
 
 	// 尝试从token参数验证
@@ -67,6 +80,7 @@ func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.Respons
 			userID = claims.UserID
 			userName = claims.Username
 			authenticated = true
+			userName, avatarURL = h.resolvePresenceProfile(r.Context(), userID, userName)
 		} else {
 			log.Printf("WebSocket auth failed: %v", err)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -103,6 +117,7 @@ func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.Respons
 	// 创建客户端并装配 Hub / ChatHandler
 	clientID := fmt.Sprintf("%d-%d-%d", auctionID, userID, time.Now().UnixNano())
 	client := ws.NewClient(clientID, auctionID, userID, liveStreamID, userName, authenticated, conn, activeHub)
+	client.AvatarURL = avatarURL
 	if h.chatHandler != nil {
 		client.SetChatHandler(h.chatHandler)
 	}
@@ -129,6 +144,21 @@ func (h *WSHandler) HandleWebSocket(hub *ws.Hub, auctionID int64, w http.Respons
 	// 启动标准读写泵：ReadPump 处理 ping/sync_request/chat_send，WritePump 统一写出
 	go client.ReadPump()
 	go client.WritePump()
+}
+
+func (h *WSHandler) resolvePresenceProfile(ctx context.Context, userID int64, fallbackName string) (string, string) {
+	if h.userFetcher == nil || userID <= 0 {
+		return fallbackName, ""
+	}
+	user, err := h.userFetcher.GetByID(ctx, userID)
+	if err != nil || user == nil {
+		return fallbackName, ""
+	}
+	name := fallbackName
+	if user.Name != "" {
+		name = user.Name
+	}
+	return name, user.Avatar
 }
 
 // BroadcastPriceUpdate 广播价格更新

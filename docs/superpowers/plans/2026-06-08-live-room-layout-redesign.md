@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 重构 H5 直播间 UI：将收藏按钮迁移至左上角主播信息区、移除底部抽屉内的商品大卡片让出价排行上移、在右上角新增独立的在线人数组件与跳转到商品详情页的入口，并保证日/夜双主题适配。
+**Goal:** 重构 H5 直播间 UI：将收藏按钮迁移至左上角主播信息区、移除底部抽屉内的商品大卡片让出价排行上移、在右上角新增独立的在线人数组件与跳转到商品详情页的入口，并将右上角头像和人数从前端占位升级为服务端真实在线用户 presence，同时保证日/夜双主题适配。
 
-**Architecture:** 仅改动前端 H5 两个文件——`LiveRoomSlide.tsx`（JSX 结构与跳转）与 `Live.module.css`（样式与双主题）。商品详情走现有 `/detail?id=<auctionId>` 路由，不新增组件、不新增后端契约、不改抽屉 URL 机制。收藏逻辑（`handleFollow` / `following` / `followersCount` / `followingPending`）保持不变，仅迁移其渲染位置。
+**Architecture:** 本计划分两层：UI 布局层继续修改 `LiveRoomSlide.tsx` 与 `Live.module.css`；真实在线用户层复用 `auction-service` 现有 WebSocket `LiveStreamRoom`，在连接注册/注销时维护 `user_id` 去重的 presence，并下发 `live_presence_update`。H5 首屏可用 `GET /api/v1/live-streams/:id.viewer_count` 兜底，WebSocket 建连后以 presence 消息为权威。商品详情走现有 `/detail?id=<auctionId>` 路由，不改抽屉 URL 机制。收藏逻辑（`handleFollow` / `following` / `followersCount` / `followingPending`）保持不变，仅迁移其渲染位置。
 
 **Tech Stack:** React 18 + TypeScript + Vite，CSS Modules（`Live.module.css`，CSS 变量 + `:global(:root[data-theme='dark'])` 双主题），react-router-dom（`Link`），Jest + React Testing Library（`MemoryRouter`）。
 
@@ -13,6 +13,9 @@
 - 顶部栏 `<header className={styles.topBar}>` 在 [LiveRoomSlide.tsx#L933-L952](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/src/pages/Live/LiveRoomSlide.tsx#L933-L952)，当前左侧 `hostPill`（含 `viewerCount` "X 在线"），右侧 `statusPill`。
 - `auctionId` 在组件内已有同名变量可用（见 [LiveRoomSlide.tsx#L408](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/src/pages/Live/LiveRoomSlide.tsx#L408) 上下文，组件早已使用 `auctionId`）。实施时确认其在 render 作用域内可见。
 - `hostAvatar`（[L265](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/src/pages/Live/LiveRoomSlide.tsx#L265)）可能为空字符串，头像区需做占位兜底。
+- 旧设计中的“头像区 MVP 仅展示主播/占位头像、不新增后端契约”已被真实在线用户 presence 取代。后续实施不得再用本地模拟头像补足观众。
+- `LiveStreamRoom` 当前已有 `clients map[string]*Client`、环形历史和 `Broadcast`；presence 消息必须是瞬时状态，不得写入弹幕历史。
+- WS 现有兼容 `user_id` query 参数；presence 头像只能信任 `Authenticated=true` 的 JWT 身份，不能用可伪造 query 身份展示头像。
 - 已确认的 CSS 变量：`--text-primary`、`--text-secondary`、`--text-brand`、`--bg-surface`、`--bg-page`、`--border-subtle`、`--radius-full`、`--radius-md`、`--spacing-2`、`--spacing-3`、`--spacing-4`、`--font-size-xs`、`--font-size-sm`、`--font-weight-bold`。**不存在 `--color-dy-pink`**。
 - 测试命令工作目录：`frontend/h5`。运行单测：`npm test -- <pattern>`。
 
@@ -22,9 +25,119 @@
 
 | 文件 | 责任 | 操作 |
 |---|---|---|
+| `backend/auction/websocket/message.go` | 新增 `live_presence_update` message type 与 payload 结构 | Modify |
+| `backend/auction/websocket/livestream_room.go` | 在 LiveStreamRoom 内维护按 `user_id` 去重的 presence；注册/注销时生成 snapshot；presence 消息不进历史 | Modify |
+| `backend/auction/websocket/livestream_room_test.go` | 覆盖 refcount、断线清理、snapshot、不进 history、未鉴权不出头像 | Modify |
+| `backend/auction/handler/ws.go` | 确保 only authenticated client 可进入实名 presence；兼容 `user_id` query 只可匿名计数或忽略 | Modify |
+| `backend/product/handler/live_stream.go` | 修正详情接口 `host_name` / `host_avatar`，与列表接口一致返回 `StreamerName` / `StreamerAvatar` | Modify |
+| `backend/product/handler/live_stream_test.go` | 更新详情接口测试，不再断言 host 字段为空 | Modify |
+| `frontend/h5/src/services/websocket.ts` | 支持订阅 `live_presence_update`，保持现有 handler 分发模式 | Modify |
 | `frontend/h5/src/pages/Live/LiveRoomSlide.tsx` | 直播间页面 JSX 结构：顶部栏重构、收藏按钮迁移、在线人数组件、详情入口、移除商品卡片 | Modify |
 | `frontend/h5/src/pages/Live/Live.module.css` | 新增 `.followBtn`/`.rightActions`/`.viewersRow`/`.avatarsGroup`/`.viewerCountPill`/`.closeBtn`/`.productDetailBtn` 等样式及日/夜双主题规则；移除/清理废弃的 `.productCard` 相关样式 | Modify |
-| `frontend/h5/src/pages/Live/__tests__/LiveRoomSlide.test.tsx` | 新增断言：收藏按钮在顶部、详情链接指向 `/detail?id=`、商品卡片已移除 | Modify |
+| `frontend/h5/src/pages/Live/__tests__/LiveRoomSlide.test.tsx` | 新增断言：收藏按钮在顶部、详情链接指向 `/detail?id=`、商品卡片已移除、presence 覆盖在线人数和头像 | Modify |
+
+---
+
+## Presence Task 0: 后端真实在线用户 presence 契约
+
+**Files:**
+- Modify: `backend/auction/websocket/message.go`
+- Modify: `backend/auction/websocket/livestream_room.go`
+- Modify: `backend/auction/websocket/livestream_room_test.go`
+- Modify: `backend/auction/handler/ws.go`
+
+- [ ] **Step 1: Write failing backend tests**
+
+新增或扩展 `LiveStreamRoom` 测试：
+- 同一 `user_id` 两个 client 注册后，snapshot 的 `viewer_count` 为 1。
+- 注销一个 client 后用户仍在线；注销最后一个 client 后用户消失。
+- 新 client 注册后立即收到 `live_presence_update` snapshot。
+- `live_presence_update` 不进入 `GetHistory()`。
+- `Authenticated=false` 的 client 不出现在 `viewers`。
+
+Run: `cd backend/auction && go test ./websocket -run 'TestLiveStreamRoom_.*Presence|TestHub_.*Presence' -v`
+Expected: RED，当前没有 presence 结构和消息类型。
+
+- [ ] **Step 2: Implement minimal presence model**
+
+在 `LiveStreamRoom` 内新增 `presenceByUserID map[int64]*PresenceViewer`，每个 `PresenceViewer` 维护 `Clients map[string]struct{}`。注册/注销时同步更新 presence，并生成 `LivePresenceUpdateData`：
+
+```go
+type LivePresenceViewer struct {
+    UserID    int64  `json:"user_id"`
+    Name      string `json:"name"`
+    AvatarURL string `json:"avatar_url,omitempty"`
+}
+
+type LivePresenceUpdateData struct {
+    LiveStreamID int64                `json:"live_stream_id"`
+    ViewerCount  int                  `json:"viewer_count"`
+    Viewers      []LivePresenceViewer `json:"viewers"`
+}
+```
+
+实现约束：
+- `viewer_count` 按 `user_id` 去重。
+- `viewers` 最多 3 个。
+- 只有 `Authenticated=true` 且 `UserID > 0` 的 client 可进入 `viewers`。
+- presence update 走独立发送路径，不调用会 `pushHistory` 的 `Broadcast`。
+- 注册成功后给当前 client 发送 snapshot，同时向房间其他 client 广播更新。
+
+- [ ] **Step 3: Verify backend**
+
+Run: `cd backend/auction && go test ./websocket ./handler -run 'Presence|WebSocket' -v`
+Expected: PASS。
+
+---
+
+## Presence Task 0.5: 修正直播详情 host 字段兜底
+
+**Files:**
+- Modify: `backend/product/handler/live_stream.go`
+- Modify: `backend/product/handler/live_stream_test.go`
+
+- [ ] **Step 1: Write failing product-service test**
+
+更新 `TestGetDetail_ResponseShape`：seed `StreamerName` / `StreamerAvatar`，断言 `host_name` / `host_avatar` 返回真实值，而不是空字符串。
+
+Run: `cd backend/product && go test ./handler -run TestGetDetail_ResponseShape -v`
+Expected: RED，当前详情接口仍返回空字符串。
+
+- [ ] **Step 2: Implement minimal mapping**
+
+`GET /api/v1/live-streams/:id` 的 `host_name` / `host_avatar` 分别返回 `detail.StreamerName` / `detail.StreamerAvatar`，与 `ListPublic` 保持一致。
+
+- [ ] **Step 3: Verify product-service**
+
+Run: `cd backend/product && go test ./handler -run 'TestGetDetail|TestListPublic' -v`
+Expected: PASS。
+
+---
+
+## Presence Task 0.8: H5 接入 live_presence_update
+
+**Files:**
+- Modify: `frontend/h5/src/pages/Live/LiveRoomSlide.tsx`
+- Modify: `frontend/h5/src/pages/Live/__tests__/LiveRoomSlide.test.tsx`
+
+- [ ] **Step 1: Write failing frontend tests**
+
+在 `LiveRoomSlide.test.tsx` 中新增：
+- 初始接口返回 `viewer_count=128`，模拟 WS `live_presence_update.viewer_count=3` 后，右上角数字显示 3。
+- `viewers` 返回 4 个时，只渲染 3 个头像。
+- `live_stream_id` 不匹配的 update 被忽略。
+
+Run: `cd frontend/h5 && npm test -- LiveRoomSlide`
+Expected: RED，当前组件不维护 presence 状态。
+
+- [ ] **Step 2: Implement frontend state**
+
+新增本地 `presence` state，注册 `socket.on('live_presence_update', handler)`，用 `live_stream_id` 校验归属。渲染时优先使用 `presence.viewer_count` 和 `presence.viewers`；没有 presence 时回退 `liveStream.viewer_count` 与主播头像。
+
+- [ ] **Step 3: Verify frontend**
+
+Run: `cd frontend/h5 && npm test -- LiveRoomSlide`
+Expected: PASS。
 
 ---
 
@@ -113,7 +226,7 @@ Expected: FAIL —— 找不到顶部的收藏按钮 / 找不到 `商品详情` 
 </header>
 ```
 
-> 说明：头像区 MVP 仅展示主播/占位头像（不伪造在线用户身份，符合 Spec §2.3）。`auctionId` 已是组件内现有变量；如作用域内不可见，使用 `auction?.id`。确认 `Link` 已从 `react-router-dom` 导入（文件顶部应已有 `import { Link } from 'react-router-dom'`，若无则补充）。
+> 说明：本段 JSX 是布局重构骨架；最终头像数据必须接入 Presence Task 0.8 的 `presence.viewers`，不得用本地模拟用户补足头像。`hostAvatar` 仅作为首屏/无 presence 时的主播头像兜底。`auctionId` 已是组件内现有变量；如作用域内不可见，使用 `auction?.id`。确认 `Link` 已从 `react-router-dom` 导入（文件顶部应已有 `import { Link } from 'react-router-dom'`，若无则补充）。
 
 - [ ] **Step 4: 新增样式（含日/夜双主题）**
 

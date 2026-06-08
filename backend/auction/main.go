@@ -250,6 +250,7 @@ func main() {
 	// 设置 WebSocket Hub 和 JWT 密钥到 Handler
 	wsHandler.SetHub(hub)
 	wsHandler.SetJWTSecret(cfg.JWT.Secret)
+	wsHandler.SetUserFetcher(userDAO)
 
 	// 装配弹幕处理链：黑词过滤 + Redis 双层频控（M2）
 	chatFilter := websocket.NewChatFilter(50, []string{
