@@ -41,7 +41,7 @@
 | Done | `1` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `6` |
+| Pending | `5` |
 | Last Updated | `2026-06-09 00:12` |
 
 ## Status Legend
@@ -70,7 +70,7 @@
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Write Set | Read Set | Regression Sentinels | Runtime Services |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `后端 Auction 模型增加只读 BidCount 字段` | `done` | `subagent-t001` | `W1` | `-` | `model field only` | `backend/auction/model/auction.go` | `AGENTS.md; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go build ./...` | `none` |
-| `T002` | `后端 AuctionFilters 与 ListWithFilters 实现价格过滤与热度排序` | `pending` | `unassigned` | `W2` | `T001` | `DAO filters, SQL, DAO tests` | `backend/auction/dao/auction.go; backend/auction/dao/auction_filter_test.go` | `backend/auction/model/auction.go; backend/auction/dao/auction_current_test.go; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go test ./dao/ -run 'TestListWithFiltersPriceRange|TestListWithFiltersSortByHot' -v` | `none` |
+| `T002` | `后端 AuctionFilters 与 ListWithFilters 实现价格过滤与热度排序` | `assigned` | `subagent-t002` | `W2` | `T001` | `DAO filters, SQL, DAO tests` | `backend/auction/dao/auction.go; backend/auction/dao/auction_filter_test.go` | `backend/auction/model/auction.go; backend/auction/dao/auction_current_test.go; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go test ./dao/ -run 'TestListWithFiltersPriceRange|TestListWithFiltersSortByHot' -v` | `none` |
 | `T003` | `后端 handler 解析筛选参数并透传` | `pending` | `unassigned` | `W3` | `T002` | `GET /auctions query parsing and filter propagation` | `backend/auction/handler/auction.go; backend/auction/handler/auction_list.go` | `backend/auction/dao/auction.go; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go build ./... && go test ./handler/ -v` | `none` |
 | `T004` | `前端 auctionApi.list 扩展查询参数` | `pending` | `unassigned` | `W4` | `T003` | `H5 API client params` | `frontend/h5/src/services/api.ts` | `docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
 | `T005` | `前端价格底部抽屉组件 PriceFilterSheet` | `pending` | `unassigned` | `W5` | `T004` | `bottom sheet component and styles` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css` | `frontend/h5/src/pages/Home/index.tsx; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
@@ -179,9 +179,9 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `pending` |
-| Owner | `unassigned` |
-| Started At | `-` |
+| Status | `assigned` |
+| Owner | `subagent-t002` |
+| Started At | `2026-06-09 00:16` |
 | Completed At | `-` |
 | Branch | `feat/homepage-filter-sdd` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-homepage-filter-sdd` |
