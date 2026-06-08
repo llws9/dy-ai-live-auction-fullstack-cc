@@ -375,6 +375,56 @@ describe('ProductDetail migration', () => {
     expect(mockedAuctionApi.getResult).toHaveBeenCalledWith(12);
   });
 
+  it('已结束且无人出价时展示流拍，并从竞拍规则读取起拍价', async () => {
+    mockedAuctionApi.get.mockResolvedValueOnce({
+      id: 993565,
+      product_id: 993510,
+      live_stream_id: 993112,
+      status: 3,
+      current_price: '0',
+      winner_id: null,
+      start_time: '2026-06-08T22:42:39.485+08:00',
+      end_time: '2026-06-08T22:45:39.485+08:00',
+      rules: {
+        start_price: '100',
+        increment: '10',
+        trigger_delay_before: 10,
+      },
+    });
+    mockedAuctionApi.getBids.mockResolvedValueOnce([]);
+    mockedAuctionApi.getResult.mockResolvedValueOnce({
+      auction_id: 993565,
+      product_id: 993510,
+      status: 3,
+      final_price: 0,
+      winner_id: null,
+    });
+    mockedProductApi.get.mockResolvedValueOnce({
+      id: 993510,
+      name: '无人出价商品',
+      description: '没有出价记录的已结束竞拍',
+      images: ['/unsold.jpg'],
+    });
+
+    render(
+      <ThemeProvider>
+        <MemoryRouter
+          initialEntries={['/detail?id=993565']}
+          future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+        >
+          <ProductDetail />
+        </MemoryRouter>
+      </ThemeProvider>
+    );
+
+    expect(await screen.findByText('无人出价商品')).toBeInTheDocument();
+    expect(screen.getByText('未成交')).toBeInTheDocument();
+    expect(screen.getByText('流拍')).toBeInTheDocument();
+    expect(screen.getByText('起拍价 ¥100')).toBeInTheDocument();
+    expect(screen.queryByText('成交价')).not.toBeInTheDocument();
+    expect(screen.queryByText('¥0')).not.toBeInTheDocument();
+  });
+
   it('过期的进行中竞拍在详情页按已结束展示', async () => {
     mockedAuctionApi.get.mockResolvedValueOnce({
       id: 12,

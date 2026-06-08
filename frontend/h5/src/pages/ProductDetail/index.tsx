@@ -12,24 +12,29 @@ interface AuctionDetail {
   product?: ProductDetailData;
   live_stream_id?: number | null;
   status?: number;
-  current_price?: number;
-  start_price?: number;
-  increment?: number;
-  cap_price?: number;
+  current_price?: number | string;
+  winner_id?: number | null;
+  start_price?: number | string;
+  increment?: number | string;
+  cap_price?: number | string | null;
   start_time?: string;
   end_time?: string;
+  rules?: AuctionRules;
+  rule?: AuctionRules;
+  auction_rule?: AuctionRules;
 }
 
 interface AuctionResult {
   final_price?: number | string;
   current_price?: number | string;
+  winner_id?: number | null;
   won_bid?: BidRecord;
 }
 
 interface AuctionRules {
-  start_price?: number;
-  increment?: number;
-  cap_price?: number;
+  start_price?: number | string | null;
+  increment?: number | string | null;
+  cap_price?: number | string | null;
   trigger_delay_before?: number;
 }
 
@@ -39,9 +44,9 @@ interface ProductDetailData {
   description?: string;
   images?: string[] | string;
   rules?: AuctionRules;
-  start_price?: number;
-  increment?: number;
-  cap_price?: number;
+  start_price?: number | string | null;
+  increment?: number | string | null;
+  cap_price?: number | string | null;
 }
 
 interface BidRecord {
@@ -96,7 +101,12 @@ const getStatusInfo = (status?: number, endTime?: string) => {
   }
 };
 
-const formatPrice = (value?: number) => `¥${Number(value ?? 0).toLocaleString()}`;
+const toAmount = (value?: number | string | null, fallback = 0) => {
+  const amount = Number(value ?? fallback);
+  return Number.isFinite(amount) ? amount : fallback;
+};
+
+const formatPrice = (value?: number | string | null) => `¥${toAmount(value).toLocaleString()}`;
 
 const toPositiveAmount = (value?: number | string) => {
   const amount = Number(value ?? 0);
@@ -115,29 +125,18 @@ const getResultPrice = (result?: AuctionResult | null) =>
   ?? toPositiveAmount(result?.current_price)
   ?? toPositiveAmount(result?.won_bid?.amount);
 
-const getEffectiveAuctionPrice = (
-  currentPrice?: number,
-  startPrice?: number,
+const getSalePrice = (
+  currentPrice?: number | string,
   bids: BidRecord[] = [],
   result?: AuctionResult | null,
-  ended = false,
 ) => {
-  const normalizedCurrentPrice = Number(currentPrice ?? 0);
-  if (Number.isFinite(normalizedCurrentPrice) && normalizedCurrentPrice > 0) {
-    return normalizedCurrentPrice;
-  }
+  const currentAmount = toPositiveAmount(currentPrice);
+  if (currentAmount !== undefined) return currentAmount;
   const resultPrice = getResultPrice(result);
-  if (ended && resultPrice !== undefined) {
-    return resultPrice;
-  }
+  if (resultPrice !== undefined) return resultPrice;
   const highestBidAmount = getHighestBidAmount(bids);
-  if (ended && highestBidAmount !== undefined) {
-    return highestBidAmount;
-  }
-  if (highestBidAmount !== undefined) {
-    return Math.max(highestBidAmount, Number(startPrice ?? 0));
-  }
-  return Number(startPrice ?? 0);
+  if (highestBidAmount !== undefined) return highestBidAmount;
+  return undefined;
 };
 
 const formatDateTime = (value?: string) => {
@@ -175,20 +174,26 @@ const ProductDetail: React.FC = () => {
   const [toastMessage, setToastMessage] = useState('');
 
   const rules = useMemo<AuctionRules>(() => {
+    const auctionRules = auction?.rules || auction?.rule || auction?.auction_rule || {};
     const productRules = product?.rules || {};
     return {
-      start_price: productRules.start_price ?? product?.start_price ?? auction?.start_price ?? 0,
-      increment: productRules.increment ?? product?.increment ?? auction?.increment ?? 100,
-      cap_price: productRules.cap_price ?? product?.cap_price ?? auction?.cap_price,
-      trigger_delay_before: productRules.trigger_delay_before ?? 30,
+      start_price: toAmount(auctionRules.start_price ?? productRules.start_price ?? product?.start_price ?? auction?.start_price, 0),
+      increment: toAmount(auctionRules.increment ?? productRules.increment ?? product?.increment ?? auction?.increment, 100),
+      cap_price: auctionRules.cap_price ?? productRules.cap_price ?? product?.cap_price ?? auction?.cap_price,
+      trigger_delay_before: auctionRules.trigger_delay_before ?? productRules.trigger_delay_before ?? 30,
     };
   }, [auction, product]);
 
   const statusInfo = getStatusInfo(auction?.status, auction?.end_time);
+  const salePrice = getSalePrice(auction?.current_price, bids, result);
+  const unsold = statusInfo.ended && salePrice === undefined;
   const displayPrice = statusInfo.upcoming
     ? rules.start_price ?? 0
-    : getEffectiveAuctionPrice(auction?.current_price, rules.start_price, bids, result, statusInfo.ended);
-  const priceLabel = statusInfo.upcoming ? '起拍价' : statusInfo.ended ? '成交价' : '当前出价';
+    : statusInfo.ended
+      ? salePrice ?? 0
+      : salePrice ?? toAmount(rules.start_price);
+  const priceLabel = statusInfo.upcoming ? '起拍价' : unsold ? '未成交' : statusInfo.ended ? '成交价' : '当前出价';
+  const priceText = unsold ? '流拍' : formatPrice(displayPrice);
   const timelineLabel = statusInfo.upcoming
     ? '开拍'
     : statusInfo.ended
@@ -337,7 +342,7 @@ const ProductDetail: React.FC = () => {
           <div className={styles.priceRow}>
             <div>
               <p className={styles.label}>{priceLabel}</p>
-              <strong className={styles.currentPrice}>{formatPrice(displayPrice)}</strong>
+              <strong className={styles.currentPrice}>{priceText}</strong>
             </div>
             <div className={styles.priceMeta}>
               <span>起拍价 {formatPrice(rules.start_price)}</span>
