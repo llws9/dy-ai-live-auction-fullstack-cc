@@ -1143,35 +1143,4 @@ describe('LiveRoomSlide', () => {
     });
   });
 
-  it('triggers intro animation from same-page demo fixed-price creation event', async () => {
-    const fixedPriceItem = {
-      id: 7003,
-      auction_id: 5,
-      product_id: 8003,
-      product_title: 'Demo 一口价商品',
-      price: '99.00',
-      total_stock: 10,
-      remaining_stock: 10,
-      status: 'on_sale' as const,
-    };
-
-    mockedUseFixedPriceItems.mockReturnValue({ items: [], byId: {}, socket: null, latestListedItem: null });
-    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
-
-    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
-
-    fireEvent(
-      window,
-      new CustomEvent('demo:fixed-price-listed', {
-        detail: {
-          auctionId: 5,
-          liveStreamId: 3,
-          item: fixedPriceItem,
-        },
-      }),
-    );
-
-    expect(await screen.findByText('新上架 一口价')).toBeInTheDocument();
-    expect(screen.getByText('Demo 一口价商品')).toBeInTheDocument();
-  });
 });

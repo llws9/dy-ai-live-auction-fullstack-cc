@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { fetchItems, type FixedPriceItem } from '../api/fixedPrice';
+import {
+  DEMO_FIXED_PRICE_LISTED_EVENT,
+  type DemoFixedPriceListedDetail,
+} from '../events/fixedPriceEvents';
 import WebSocketService from '../services/websocket';
 
 const FIXED_PRICE_MESSAGE_TYPES = [
@@ -160,6 +164,28 @@ export function useFixedPriceItems(auctionId: number, liveStreamId: number, auth
       setSocket(null);
     };
   }, [authToken, liveStreamId]);
+
+  useEffect(() => {
+    const handleDemoFixedPriceListed = (event: Event) => {
+      const detail = (event as CustomEvent<DemoFixedPriceListedDetail>).detail;
+      if (
+        !detail?.item ||
+        detail.auctionId !== auctionId ||
+        detail.liveStreamId !== liveStreamId
+      ) {
+        return;
+      }
+
+      listedSequenceRef.current += 1;
+      setLatestListedItem({ item: detail.item, sequence: listedSequenceRef.current });
+      dispatch({ type: 'fixed_price_listed', payload: { item: detail.item } });
+    };
+
+    window.addEventListener(DEMO_FIXED_PRICE_LISTED_EVENT, handleDemoFixedPriceListed);
+    return () => {
+      window.removeEventListener(DEMO_FIXED_PRICE_LISTED_EVENT, handleDemoFixedPriceListed);
+    };
+  }, [auctionId, liveStreamId]);
 
   const byId = useMemo<Record<number, FixedPriceItem>>(() => {
     return items.reduce<Record<number, FixedPriceItem>>((index, item) => {

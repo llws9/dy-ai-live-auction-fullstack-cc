@@ -153,7 +153,7 @@ describe('useFixedPriceItems', () => {
     expect(mockWsInstances[0].on).toHaveBeenCalledWith('fixed_price_offline', expect.any(Function));
   });
 
-  it('exposes listed item events only for websocket fixed_price_listed messages', async () => {
+  it('exposes listed item events for websocket fixed_price_listed messages', async () => {
     jest.mocked(fetchItems).mockResolvedValue({ items: [baseItem] });
     const listedItem: FixedPriceItem = {
       ...baseItem,
@@ -191,5 +191,33 @@ describe('useFixedPriceItems', () => {
     await waitFor(() => expect(mockWsInstances).toHaveLength(1));
     expect(mockWsInstances[0]).toMatchObject({ auctionId: 1001, token: 'merchant-token' });
     expect(result.current.socket).toBe(mockWsInstances[0]);
+  });
+
+  it('adds same-page demo fixed-price events to the item list and latest listed event', async () => {
+    jest.mocked(fetchItems).mockResolvedValue({ items: [baseItem] });
+    const listedItem: FixedPriceItem = {
+      ...baseItem,
+      id: 7003,
+      product_id: 5003,
+      product_brief: { id: 5003, title: 'Demo 一口价商品' },
+    };
+    const { result } = renderHook(() => useFixedPriceItems(7001, 1001, 'token-1'));
+
+    await waitFor(() => expect(result.current.items).toEqual([baseItem]));
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('demo:fixed-price-listed', {
+        detail: {
+          auctionId: 7001,
+          liveStreamId: 1001,
+          item: listedItem,
+        },
+      }));
+    });
+
+    await waitFor(() => {
+      expect(result.current.byId[7003]).toEqual(listedItem);
+      expect(result.current.latestListedItem).toEqual({ item: listedItem, sequence: 1 });
+    });
   });
 });
