@@ -68,6 +68,17 @@ describe('ChatPanel', () => {
     expect(screen.getByText('arriving')).toBeInTheDocument();
   });
 
+  it('renders quick chat bubbles and sends them on click', () => {
+    const onSend = jest.fn(() => true);
+    render(<ChatPanel currentUserId={1} onSend={onSend} />);
+    const quickChats = screen.getAllByTestId('quick-chat-bubble');
+    expect(quickChats.length).toBeGreaterThan(0);
+
+    const firstQuickChatText = quickChats[0].textContent;
+    fireEvent.click(quickChats[0]);
+    expect(onSend).toHaveBeenCalledWith(firstQuickChatText, expect.any(String));
+  });
+
   it('keeps the chat panel in normal sheet flow without a dark overlay bar', () => {
     const css = readFileSync(join(__dirname, '..', 'ChatPanel.module.css'), 'utf8');
 

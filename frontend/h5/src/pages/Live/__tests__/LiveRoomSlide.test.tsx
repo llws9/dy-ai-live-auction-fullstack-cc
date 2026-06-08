@@ -657,8 +657,8 @@ describe('LiveRoomSlide', () => {
       jest.advanceTimersByTime(240);
     });
 
-    expect(screen.getByTestId('bid-success-flair')).toHaveTextContent('演示买家B 刚刚出价');
-    expect(screen.getByTestId('bid-success-flair')).toHaveTextContent('¥1,300');
+    expect(screen.getByTestId('bid-flair-overlay')).toHaveTextContent('出价');
+    expect(screen.getByTestId('bid-flair-overlay')).toHaveTextContent('¥1,300');
 
     jest.useRealTimers();
   });
@@ -905,6 +905,27 @@ describe('LiveRoomSlide', () => {
     expect(screen.getByText('成交价 ¥1,300')).toBeInTheDocument();
   });
 
+  it('renders UnsoldAnimation when auction_end event arrives without a winner', async () => {
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+
+    const auctionEndHandler = getWebSocketHandler('auction_end');
+    expect(auctionEndHandler).toBeDefined();
+
+    act(() => {
+      auctionEndHandler!({
+        auction_id: 5,
+        winner_id: 0,
+        final_price: '800.00',
+      });
+    });
+
+    const unsoldAnim = await screen.findByTestId('unsold-animation');
+    expect(unsoldAnim).toBeInTheDocument();
+    expect(within(unsoldAnim).getByText('遗憾流拍')).toBeInTheDocument();
+  });
+
   it('repairs mojibake product and room copy in collapsed and expanded states', async () => {
     mockedProductApi.get.mockResolvedValue({
       id: 7,
@@ -944,5 +965,115 @@ describe('LiveRoomSlide', () => {
 
     expect(await screen.findByText('演示买家B')).toBeInTheDocument();
     expect(screen.queryByText(/æ¼|ç¤|ä¹/)).not.toBeInTheDocument();
+  });
+
+  it('toggles haptic feedback and triggers vibration on bid success', async () => {
+    const mockVibrate = jest.fn();
+    Object.defineProperty(global.navigator, 'vibrate', {
+      value: mockVibrate,
+      configurable: true,
+      writable: true,
+    });
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    fireEvent.click(await screen.findByTestId('bid-dock'));
+    const bidButton = await screen.findByRole('button', { name: '立即出价' });
+    
+    act(() => {
+      fireEvent.click(bidButton);
+    });
+
+    await waitFor(() => {
+      expect(mockVibrate).toHaveBeenCalledWith(50);
+    });
+
+    const toggleButton = screen.getByText(/🎵/);
+    fireEvent.click(toggleButton);
+
+    mockVibrate.mockClear();
+
+    fireEvent.click(await screen.findByTestId('bid-dock'));
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: '立即出价' }));
+    });
+
+    await waitFor(() => {
+      expect(mockVibrate).not.toHaveBeenCalled();
+    });
+  });
+
+  it('renders TapBurstHearts and triggers hearts on double click', async () => {
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+
+    const tapContainer = document.querySelector('[data-testid="tap-burst-hearts"]');
+    expect(tapContainer).toBeInTheDocument();
+    expect(tapContainer?.children.length).toBe(0);
+
+    fireEvent.doubleClick(document.body);
+
+    await waitFor(() => {
+      expect(tapContainer?.children.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('applies urgent color to countdown when time left is less than 10s and shows marquee heat', async () => {
+    const baseNow = new Date('2026-06-06T00:00:00.000Z').getTime();
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(baseNow);
+    mockedAuctionApi.get.mockResolvedValue({
+      id: 5,
+      product_id: 7,
+      live_stream_id: 3,
+      status: 1,
+      current_price: 1200,
+      end_time: new Date(baseNow + 9_000).toISOString(),
+    });
+    mockedBidApi.getRanking.mockResolvedValue([
+      { rank: 1, user_id: 1, user_name: '张三', amount: 1200 },
+      { rank: 2, user_id: 2, user_name: '李四', amount: 1100 },
+    ]);
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    fireEvent.click(await screen.findByTestId('bid-dock'));
+
+    const countdownEl = await screen.findByText('00:09');
+    expect(countdownEl).toHaveClass('countdownUrgentText');
+
+    expect(screen.getByText(/🔥 已有 2 人出价 · 128 人围观/)).toBeInTheDocument();
+
+    dateNowSpy.mockRestore();
+  });
+
+  it('renders glitch countdown when time left is <= 5s and drawer is closed, but hides it when drawer is open', async () => {
+    const baseNow = new Date('2026-06-06T00:00:00.000Z').getTime();
+    const dateNowSpy = jest.spyOn(Date, 'now').mockReturnValue(baseNow);
+    mockedAuctionApi.get.mockResolvedValue({
+      id: 5,
+      product_id: 7,
+      live_stream_id: 3,
+      status: 1,
+      current_price: 1200,
+      end_time: new Date(baseNow + 5_000).toISOString(),
+    });
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    
+    // Default sheet is null, countdown should be visible
+    const glitchEl = await screen.findByTestId('glitch-countdown');
+    expect(glitchEl).toBeInTheDocument();
+    expect(glitchEl).toHaveTextContent('5');
+
+    // Open drawer
+    fireEvent.click(screen.getByTestId('bid-dock'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('glitch-countdown')).not.toBeInTheDocument();
+    });
+
+    dateNowSpy.mockRestore();
   });
 });

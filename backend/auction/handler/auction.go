@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 
 	"auction-service/client"
@@ -394,6 +395,19 @@ func (h *AuctionHandler) List(ctx context.Context, c *app.RequestContext) {
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	sortByHot := c.Query("sort") == "hot"
+
+	var priceMin, priceMax *decimal.Decimal
+	if v := c.Query("price_min"); v != "" {
+		if d, err := decimal.NewFromString(v); err == nil {
+			priceMin = &d
+		}
+	}
+	if v := c.Query("price_max"); v != "" {
+		if d, err := decimal.NewFromString(v); err == nil {
+			priceMax = &d
+		}
+	}
 
 	// 归一化为 ListParams
 	params := ListParams{
@@ -402,6 +416,9 @@ func (h *AuctionHandler) List(ctx context.Context, c *app.RequestContext) {
 		Upcoming:       upcoming,
 		Page:           page,
 		PageSize:       pageSize,
+		SortByHot:      sortByHot,
+		PriceMin:       priceMin,
+		PriceMax:       priceMax,
 	}
 	if statusStr != "" {
 		if s, err := strconv.Atoi(statusStr); err == nil {
@@ -452,13 +469,16 @@ func (h *AuctionHandler) List(ctx context.Context, c *app.RequestContext) {
 
 	// 旧路径：未注入 productClient 时走原有逻辑（保持向后兼容，单元测试用）
 	var filters *dao.AuctionFilters
-	if statusStr != "" || liveStreamIDStr != "" || liveStreamName != "" || search != "" || upcoming {
+	if statusStr != "" || liveStreamIDStr != "" || liveStreamName != "" || search != "" || upcoming || sortByHot || priceMin != nil || priceMax != nil {
 		filters = &dao.AuctionFilters{
 			Status:         params.Status,
 			LiveStreamID:   params.LiveStreamID,
 			LiveStreamName: liveStreamName,
 			Search:         search,
 			Upcoming:       upcoming,
+			SortByHot:      sortByHot,
+			PriceMin:       priceMin,
+			PriceMax:       priceMax,
 		}
 	}
 

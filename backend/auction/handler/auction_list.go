@@ -29,6 +29,9 @@ type ListParams struct {
 	Upcoming       bool
 	Page           int
 	PageSize       int
+	SortByHot      bool
+	PriceMin       *decimal.Decimal
+	PriceMax       *decimal.Decimal
 }
 
 // AuctionProductSummary 是 list 响应里内嵌的商品摘要（spec C §4.1）。
@@ -67,6 +70,9 @@ func BuildAuctionListResponse(
 		LiveStreamName: p.LiveStreamName,
 		Search:         p.Search,
 		Upcoming:       p.Upcoming,
+		SortByHot:      p.SortByHot,
+		PriceMin:       p.PriceMin,
+		PriceMax:       p.PriceMax,
 	}
 
 	// Step 1: category 过滤

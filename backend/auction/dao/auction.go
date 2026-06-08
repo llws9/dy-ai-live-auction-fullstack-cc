@@ -349,6 +349,14 @@ func (d *AuctionDAO) ListWithFilters(ctx context.Context, filters *AuctionFilter
 			Where("products.name LIKE ? OR live_streams.name LIKE ?", "%"+filters.Search+"%", "%"+filters.Search+"%")
 	}
 
+	// 价格区间过滤按 auctions.current_price 执行，nil 表示该侧不限。
+	if filters.PriceMin != nil {
+		query = query.Where("auctions.current_price >= ?", *filters.PriceMin)
+	}
+	if filters.PriceMax != nil {
+		query = query.Where("auctions.current_price <= ?", *filters.PriceMax)
+	}
+
 	// 获取总数
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -357,7 +365,14 @@ func (d *AuctionDAO) ListWithFilters(ctx context.Context, filters *AuctionFilter
 	// 分页查询
 	offset := (page - 1) * pageSize
 	listQuery := query
-	if filters.Upcoming {
+	if filters.SortByHot {
+		// 热度排序仅影响列表查询；total 已在 JOIN/GROUP BY 前计算。
+		listQuery = listQuery.
+			Select("auctions.*, COUNT(bids.id) AS bid_count").
+			Joins("LEFT JOIN bids ON bids.auction_id = auctions.id").
+			Group("auctions.id").
+			Order("bid_count DESC, auctions.id DESC")
+	} else if filters.Upcoming {
 		listQuery = listQuery.Order("start_time ASC, id ASC")
 	} else {
 		listQuery = orderByAuctionFeedPriority(listQuery)
@@ -440,6 +455,11 @@ type AuctionFilters struct {
 	// 来自 product-service /internal/products?category_id= 的 id 列表（spec C §5.2）。
 	// 为空切片表示无命中（应由调用方提前短路），nil 表示未过滤。
 	ProductIDs []int64
+	// SortByHot 为 true 时按出价数聚合降序排序，替代默认 feed 排序。
+	SortByHot bool
+	// PriceMin/PriceMax 按 auctions.current_price 区间过滤；nil 表示该侧不限。
+	PriceMin *decimal.Decimal
+	PriceMax *decimal.Decimal
 }
 
 // GetByLiveStreamID 根据直播间ID获取竞拍列表

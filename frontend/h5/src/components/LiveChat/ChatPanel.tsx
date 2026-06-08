@@ -5,6 +5,8 @@ import { useLiveChatStore } from '../../store/liveChatStore';
 
 const MAX_LEN = 50;
 
+const QUICK_CHATS = ['出价！', '太棒了', '好东西', '支持一下', '大佬厉害', '观望中'];
+
 interface ChatPanelProps {
   currentUserId: number;
   onSend: (text: string, clientMsgId: string) => boolean;
@@ -44,11 +46,31 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ currentUserId, onSend }) =
     setText('');
   };
 
+  const handleQuickSend = (quickText: string) => {
+    if (isCoolingDown()) return;
+    const clientMsgId = `${currentUserId}-${Date.now()}`;
+    if (!onSend(quickText, clientMsgId)) return;
+    markSent();
+  };
+
   return (
     <div className={styles.panel}>
       <div className={styles.list} ref={listRef} data-testid="chat-list">
         {history.map((m, i) => (
           <ChatBubble key={`${m.sent_at}-${i}`} msg={m} isSelf={m.user_id === currentUserId} />
+        ))}
+      </div>
+      <div className={styles.quickChatBar}>
+        {QUICK_CHATS.map((text, i) => (
+          <button
+            key={i}
+            className={styles.quickChatBubble}
+            data-testid="quick-chat-bubble"
+            onClick={() => handleQuickSend(text)}
+            disabled={isCoolingDown()}
+          >
+            {text}
+          </button>
         ))}
       </div>
       <div className={styles.inputBar}>
