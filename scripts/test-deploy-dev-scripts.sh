@@ -64,6 +64,11 @@ assert_contains \
   'stop_backend_ports' \
   "start-local-backend.sh stop must clean orphan backend listener processes by port"
 
+assert_contains \
+  "$ROOT/scripts/deploy-dev.sh" \
+  '3000 3001 5173 5175' \
+  "deploy-dev.sh must clean both Docker frontend ports and Vite frontend ports before restart"
+
 assert_not_contains \
   "$ROOT/scripts/start-local-backend.sh" \
   'nohup bash -lc' \

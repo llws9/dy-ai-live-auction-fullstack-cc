@@ -120,7 +120,7 @@ assert_clean_tree() {
 }
 
 stop_frontend_ports() {
-  for port in 5173 5175; do
+  for port in 3000 3001 5173 5175; do
     local pids
     pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
     if [[ -n "$pids" ]]; then
