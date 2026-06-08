@@ -1,0 +1,26 @@
+frontend/h5/src/components/DemoConsole/__tests__/DemoConsole.test.tsx
+  s_827f2a4f5f5d7d::t_6eaf2693fdf719 38-46
+  s_827f2a4f5f5d7d::t_d18d7459ddc207 15,47,65,113,451-466
+frontend/h5/src/components/DemoConsole/index.tsx
+  s_827f2a4f5f5d7d::t_f122b8d068660a 177-185
+  s_827f2a4f5f5d7d::t_fd7025267f107c 11
+  s_827f2a4f5f5d7d::t_99c34e90b24cf3 32,60-68,175-176,186-187,189
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "9651dbdd93a1187f895c8b2e4f5a890be884b9f2",
+  "prompts": {},
+  "sessions": {
+    "s_827f2a4f5f5d7d": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a2715a10bfcee1b04fb812f",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
