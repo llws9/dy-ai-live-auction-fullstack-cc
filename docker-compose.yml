@@ -191,6 +191,8 @@ services:
       - MYSQL_SERVICE_DB_NAME=nacos
       - MYSQL_SERVICE_USER=nacos
       - MYSQL_SERVICE_PASSWORD=nacos123
+      - MYSQL_DATABASE_NUM=1
+      - MYSQL_SERVICE_DB_PARAM=characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useSSL=false&allowPublicKeyRetrieval=true
       - NACOS_AUTH_ENABLE=false
     depends_on:
       - nacos-mysql

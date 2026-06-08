@@ -174,6 +174,16 @@ assert_contains \
   'RABBITMQ_HOST=rabbitmq' \
   "docker-compose.yml auction service must use the Docker network rabbitmq hostname, not localhost"
 
+assert_contains \
+  "$ROOT/docker-compose.yml" \
+  'MYSQL_DATABASE_NUM=1' \
+  "docker-compose.yml Nacos service must declare the MySQL database count for external datasource initialization"
+
+assert_contains \
+  "$ROOT/docker-compose.yml" \
+  'MYSQL_SERVICE_DB_PARAM=.*allowPublicKeyRetrieval=true' \
+  "docker-compose.yml Nacos service must pass MySQL connection parameters compatible with MySQL 8"
+
 test -f "$ROOT/frontend/h5/Dockerfile" || fail "frontend-h5 compose service must have a Dockerfile"
 test -f "$ROOT/frontend/admin/Dockerfile" || fail "frontend-admin compose service must have a Dockerfile"
 test -f "$ROOT/frontend/h5/.dockerignore" || fail "frontend-h5 Docker build must ignore local dependency artifacts"
