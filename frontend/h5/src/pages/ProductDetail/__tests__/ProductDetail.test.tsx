@@ -9,6 +9,7 @@ jest.mock('../../../services/api', () => ({
   auctionApi: {
     get: jest.fn(),
     getBids: jest.fn(),
+    getResult: jest.fn(),
   },
   productApi: {
     get: jest.fn(),
@@ -52,6 +53,7 @@ describe('ProductDetail migration', () => {
     mockedAuctionApi.getBids.mockResolvedValue([
       { id: 1, user_id: 2, user_name: '张三', amount: 1200, created_at: new Date().toISOString() },
     ]);
+    mockedAuctionApi.getResult.mockResolvedValue(null);
     mockedProductApi.get.mockResolvedValue({
       id: 34,
       name: '清代青花瓷瓶',
@@ -321,6 +323,56 @@ describe('ProductDetail migration', () => {
     const resultLink = screen.getByRole('link', { name: '查看竞拍结果' });
     expect(resultLink).toHaveAttribute('href', '/result?id=12');
     expect(resultLink.closest('footer')).toBeNull();
+  });
+
+  it('已结束竞拍价格字段为 0 时用最高出价展示成交价', async () => {
+    mockedAuctionApi.get.mockResolvedValueOnce({
+      id: 12,
+      product_id: 34,
+      live_stream_id: 5,
+      status: 3,
+      current_price: 0,
+      start_price: 0,
+      start_time: '2026-06-04T18:09:00+08:00',
+      end_time: '2026-06-04T18:39:00+08:00',
+    });
+    mockedAuctionApi.getBids.mockResolvedValueOnce([
+      { id: 1, user_id: 2, user_name: '张三', amount: 399, created_at: '2026-06-04T18:20:00+08:00' },
+      { id: 2, user_id: 3, user_name: '李四', amount: 299, created_at: '2026-06-04T18:18:00+08:00' },
+    ]);
+    mockedAuctionApi.getResult.mockResolvedValueOnce({
+      auction_id: 12,
+      final_price: 399,
+      current_price: 0,
+      won_bid: { id: 1, user_id: 2, user_name: '张三', amount: 399 },
+    });
+    mockedProductApi.get.mockResolvedValueOnce({
+      id: 34,
+      name: '手作陶瓷茶具套装',
+      description: '已成交商品',
+      images: ['/tea-set.jpg'],
+      rules: {
+        start_price: 0,
+        increment: 100,
+      },
+    });
+
+    render(
+      <ThemeProvider>
+        <MemoryRouter
+          initialEntries={['/detail?id=12']}
+          future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+        >
+          <ProductDetail />
+        </MemoryRouter>
+      </ThemeProvider>
+    );
+
+    expect(await screen.findByText('手作陶瓷茶具套装')).toBeInTheDocument();
+    expect(screen.getByText('成交价')).toBeInTheDocument();
+    expect(screen.getAllByText('¥399').length).toBeGreaterThan(0);
+    expect(screen.queryByText('¥0')).not.toBeInTheDocument();
+    expect(mockedAuctionApi.getResult).toHaveBeenCalledWith(12);
   });
 
   it('过期的进行中竞拍在详情页按已结束展示', async () => {

@@ -20,6 +20,12 @@ interface AuctionDetail {
   end_time?: string;
 }
 
+interface AuctionResult {
+  final_price?: number | string;
+  current_price?: number | string;
+  won_bid?: BidRecord;
+}
+
 interface AuctionRules {
   start_price?: number;
   increment?: number;
@@ -92,10 +98,44 @@ const getStatusInfo = (status?: number, endTime?: string) => {
 
 const formatPrice = (value?: number) => `¥${Number(value ?? 0).toLocaleString()}`;
 
-const getEffectiveAuctionPrice = (currentPrice?: number, startPrice?: number) => {
+const toPositiveAmount = (value?: number | string) => {
+  const amount = Number(value ?? 0);
+  return Number.isFinite(amount) && amount > 0 ? amount : undefined;
+};
+
+const getHighestBidAmount = (bids: BidRecord[]) =>
+  bids.reduce<number | undefined>((highest, bid) => {
+    const amount = toPositiveAmount(bid.amount);
+    if (amount === undefined) return highest;
+    return highest === undefined ? amount : Math.max(highest, amount);
+  }, undefined);
+
+const getResultPrice = (result?: AuctionResult | null) =>
+  toPositiveAmount(result?.final_price)
+  ?? toPositiveAmount(result?.current_price)
+  ?? toPositiveAmount(result?.won_bid?.amount);
+
+const getEffectiveAuctionPrice = (
+  currentPrice?: number,
+  startPrice?: number,
+  bids: BidRecord[] = [],
+  result?: AuctionResult | null,
+  ended = false,
+) => {
   const normalizedCurrentPrice = Number(currentPrice ?? 0);
   if (Number.isFinite(normalizedCurrentPrice) && normalizedCurrentPrice > 0) {
     return normalizedCurrentPrice;
+  }
+  const resultPrice = getResultPrice(result);
+  if (ended && resultPrice !== undefined) {
+    return resultPrice;
+  }
+  const highestBidAmount = getHighestBidAmount(bids);
+  if (ended && highestBidAmount !== undefined) {
+    return highestBidAmount;
+  }
+  if (highestBidAmount !== undefined) {
+    return Math.max(highestBidAmount, Number(startPrice ?? 0));
   }
   return Number(startPrice ?? 0);
 };
@@ -126,6 +166,7 @@ const ProductDetail: React.FC = () => {
   const cameFromLive = locationState?.from === 'live';
 
   const [auction, setAuction] = useState<AuctionDetail | null>(null);
+  const [result, setResult] = useState<AuctionResult | null>(null);
   const [product, setProduct] = useState<ProductDetailData | null>(null);
   const [bids, setBids] = useState<BidRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,7 +187,7 @@ const ProductDetail: React.FC = () => {
   const statusInfo = getStatusInfo(auction?.status, auction?.end_time);
   const displayPrice = statusInfo.upcoming
     ? rules.start_price ?? 0
-    : getEffectiveAuctionPrice(auction?.current_price, rules.start_price);
+    : getEffectiveAuctionPrice(auction?.current_price, rules.start_price, bids, result, statusInfo.ended);
   const priceLabel = statusInfo.upcoming ? '起拍价' : statusInfo.ended ? '成交价' : '当前出价';
   const timelineLabel = statusInfo.upcoming
     ? '开拍'
@@ -179,13 +220,16 @@ const ProductDetail: React.FC = () => {
       setAuction(auctionData);
 
       const productId = auctionData.product_id ?? auctionData.product?.id;
-      const [bidsData, productData] = await Promise.all([
+      const shouldLoadResult = getStatusInfo(auctionData.status, auctionData.end_time).ended;
+      const [bidsData, productData, resultData] = await Promise.all([
         auctionApi.getBids(auctionId).catch(() => []),
         productId ? productApi.get(productId).catch(() => auctionData.product ?? null) : Promise.resolve(auctionData.product ?? null),
+        shouldLoadResult ? auctionApi.getResult(auctionId).catch(() => null) : Promise.resolve(null),
       ]);
 
       setBids(extractList(bidsData));
       setProduct(productData);
+      setResult(resultData);
 
       if (isAuthenticated && productId) {
         const reminders = await productReminderApi.list().catch(() => null);
@@ -196,6 +240,7 @@ const ProductDetail: React.FC = () => {
     } catch (error) {
       console.error('获取商品详情失败:', error);
       setAuction(null);
+      setResult(null);
       setProduct(null);
       setBids([]);
     } finally {
