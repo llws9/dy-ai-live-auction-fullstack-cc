@@ -8,6 +8,7 @@ import {
   triggerOtherSkyLamp,
   triggerFollowBid,
 } from '../../services/demoApi';
+import { ApiError } from '../../services/api';
 import type { DemoMerchantAuctionMode } from '../../services/demoApi';
 import { useAuth } from '../../store/authContext';
 import { useDemo } from '../../store/demoContext';
@@ -38,6 +39,18 @@ const RECHARGE_TARGETS = [
   { label: '演示账户A', userID: BUYER_A_USER_ID },
   { label: '演示账户B', userID: BUYER_B_USER_ID },
 ];
+
+function isDemoAuthError(error: unknown) {
+  if (error instanceof ApiError) {
+    return error.status === 401;
+  }
+
+  if (typeof error === 'object' && error !== null && 'status' in error) {
+    return Number((error as { status?: unknown }).status) === 401;
+  }
+
+  return false;
+}
 
 export default function DemoConsole() {
   const { login } = useAuth();
@@ -71,6 +84,19 @@ export default function DemoConsole() {
     }
   };
 
+  const runWithDemoAuthRetry = async <T,>(operation: () => Promise<T>): Promise<T> => {
+    try {
+      return await operation();
+    } catch (error) {
+      if (!isDemoAuthError(error)) {
+        throw error;
+      }
+
+      await login({ phone: DEMO_ACCOUNTS[0].phone, password: DEMO_PASSWORD });
+      return operation();
+    }
+  };
+
   const handleFollowBid = async () => {
     if (!currentAuctionId) {
       showToast('请先进入直播间', 'warning', TOAST_DURATION_MS);
@@ -79,7 +105,7 @@ export default function DemoConsole() {
 
     setRunningAction('follow-bid');
     try {
-      await triggerFollowBid({ auctionId: currentAuctionId });
+      await runWithDemoAuthRetry(() => triggerFollowBid({ auctionId: currentAuctionId }));
       showToast('已触发他人跟价', 'success', TOAST_DURATION_MS);
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';
@@ -97,7 +123,7 @@ export default function DemoConsole() {
 
     setRunningAction('other-sky-lamp');
     try {
-      await triggerOtherSkyLamp({ auctionId: currentAuctionId });
+      await runWithDemoAuthRetry(() => triggerOtherSkyLamp({ auctionId: currentAuctionId }));
       showToast('已触发他人天灯', 'success', TOAST_DURATION_MS);
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';
@@ -111,7 +137,7 @@ export default function DemoConsole() {
     const actionKey = `recharge-${target.userID}`;
     setRunningAction(actionKey);
     try {
-      await rechargeDemoUser({ userId: target.userID, amount: DEMO_RECHARGE_AMOUNT });
+      await runWithDemoAuthRetry(() => rechargeDemoUser({ userId: target.userID, amount: DEMO_RECHARGE_AMOUNT }));
       showToast(`已为${target.label}充值`, 'success', TOAST_DURATION_MS);
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';
@@ -129,10 +155,10 @@ export default function DemoConsole() {
 
     setRunningAction('shorten-auction');
     try {
-      await shortenDemoAuction({
+      await runWithDemoAuthRetry(() => shortenDemoAuction({
         auctionId: currentAuctionId,
         remainingSeconds: SHORTEN_AUCTION_REMAINING_SECONDS,
-      });
+      }));
       showToast('竞拍将在10秒后结束', 'success', TOAST_DURATION_MS);
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';
@@ -146,7 +172,7 @@ export default function DemoConsole() {
     const actionKey = `merchant-auction-${mode}`;
     setRunningAction(actionKey);
     try {
-      await createDemoMerchantAuction(mode);
+      await runWithDemoAuthRetry(() => createDemoMerchantAuction(mode));
       showToast(mode === 'upcoming' ? '已创建1分钟后开播的竞拍' : '已创建正在竞拍场次', 'success', TOAST_DURATION_MS);
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';
@@ -164,7 +190,7 @@ export default function DemoConsole() {
 
     setRunningAction('merchant-fixed-price');
     try {
-      await createDemoFixedPriceItem({ auctionId: currentAuctionId, liveStreamId: currentLiveStreamId });
+      await runWithDemoAuthRetry(() => createDemoFixedPriceItem({ auctionId: currentAuctionId, liveStreamId: currentLiveStreamId }));
       showToast('已为当前场次创建一口价商品', 'success', TOAST_DURATION_MS);
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';

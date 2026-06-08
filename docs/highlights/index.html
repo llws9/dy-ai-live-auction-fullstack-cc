@@ -168,6 +168,39 @@ html[data-theme="light"] .codeblk{background:#1a1c22}
 .anno .an{font-family:var(--mono);font-size:10px;color:#fff;background:var(--coral);border-radius:5px;padding:1px 6px}
 .anno .an.t{background:var(--teal);color:#0E0F13} .anno .an.a{background:var(--amber);color:#0E0F13}
 .anno .ad{font-size:12.5px;color:var(--text-2);line-height:1.55}
+.liveux-grid{display:grid;grid-template-columns:320px 1fr;gap:24px;margin-top:22px;align-items:start}
+.liveux-stage{position:relative;min-height:520px;border-radius:28px;border:1px solid var(--line);background:
+  radial-gradient(circle at 50% 16%,rgba(255,59,92,.18),transparent 28%),
+  linear-gradient(180deg,rgba(12,13,18,.95),rgba(12,13,18,.72) 48%,rgba(12,13,18,.98));overflow:hidden;box-shadow:var(--shadow)}
+html[data-theme="light"] .liveux-stage{background:
+  radial-gradient(circle at 50% 16%,rgba(255,59,92,.16),transparent 28%),
+  linear-gradient(180deg,#f9f1e6,#efe7dc 48%,#f8f6f1)}
+.liveux-stage::before{content:"";position:absolute;inset:0;background:
+  linear-gradient(180deg,rgba(0,0,0,.72) 0%,transparent 32%,transparent 58%,rgba(0,0,0,.82) 100%);
+  pointer-events:none}
+html[data-theme="light"] .liveux-stage::before{background:
+  linear-gradient(180deg,rgba(30,24,18,.46) 0%,transparent 34%,transparent 58%,rgba(30,24,18,.52) 100%)}
+.liveux-top{position:absolute;z-index:2;left:14px;right:14px;top:14px;display:flex;justify-content:space-between;align-items:flex-start}
+.host-glass,.liveux-pill{border:1px solid rgba(255,255,255,.16);background:rgba(20,22,30,.48);backdrop-filter:blur(16px);border-radius:999px;color:#fff;box-shadow:0 10px 28px rgba(0,0,0,.22)}
+.host-glass{display:flex;gap:9px;align-items:center;padding:7px 12px}
+.host-glass .avatar{width:28px;height:28px;border-radius:50%;background:var(--grad-line)}
+.host-glass b{font-size:12px}.host-glass span{display:block;font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.68)}
+.liveux-pill{font-family:var(--mono);font-size:10px;padding:7px 10px;display:flex;align-items:center;gap:6px}
+.liveux-pill i{width:7px;height:7px;border-radius:50%;background:var(--coral);box-shadow:0 0 12px var(--coral);animation:pulse 1.5s ease-in-out infinite}
+.combo-flair{position:absolute;z-index:2;left:22px;top:122px;padding:9px 13px;border-radius:14px;border:1px solid rgba(255,59,92,.44);background:linear-gradient(135deg,rgba(255,59,92,.28),rgba(61,212,208,.16));color:#fff;font-family:var(--mono);font-size:11px;box-shadow:0 0 26px rgba(255,59,92,.18);animation:floatIn 2.2s ease-in-out infinite}
+.heart-burst{position:absolute;z-index:2;right:42px;top:228px;color:var(--coral-soft);font-size:26px;text-shadow:0 0 18px rgba(255,59,92,.45);animation:heartPop 1.8s ease-in-out infinite}
+.glitch-count{position:absolute;z-index:2;left:50%;top:46%;transform:translate(-50%,-50%);font-family:var(--disp);font-size:76px;font-weight:700;color:var(--coral);text-shadow:-3px 0 var(--teal),3px 0 var(--violet);animation:glitchFloat 1.6s ease-in-out infinite}
+.liveux-dock{position:absolute;z-index:2;left:14px;right:14px;bottom:16px;border-radius:20px;border:1px solid rgba(255,255,255,.14);background:rgba(15,17,24,.78);backdrop-filter:blur(18px);padding:14px;color:#fff}
+.lead-capsule{display:inline-flex;align-items:center;gap:7px;margin-bottom:9px;padding:5px 10px;border-radius:999px;background:rgba(255,179,71,.18);color:var(--amber);font-size:11px;font-family:var(--mono);border:1px solid rgba(255,179,71,.34)}
+.dock-row{display:flex;align-items:center;justify-content:space-between;gap:12px}.dock-price{font-family:var(--disp);font-size:26px;font-weight:700;color:#fff}.dock-heat{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.66);white-space:nowrap;overflow:hidden}
+.quick-chat{margin-top:11px;display:flex;gap:7px;overflow:hidden}.quick-chat span{font-size:10px;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.12);white-space:nowrap}
+.liveux-points{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.liveux-points .fcard{margin:0}.liveux-points .ic{color:var(--teal)}
+@keyframes pulse{50%{transform:scale(1.35);opacity:.65}}
+@keyframes floatIn{0%,100%{transform:translateX(0);opacity:.9}50%{transform:translateX(18px);opacity:1}}
+@keyframes heartPop{0%{transform:scale(.5) translateY(12px);opacity:0}35%{opacity:1}100%{transform:scale(1.25) translateY(-54px);opacity:0}}
+@keyframes glitchFloat{0%{opacity:0;transform:translate(-50%,8%) scale(.72)}35%{opacity:1;transform:translate(-50%,-50%) scale(1)}70%{opacity:1;filter:none}100%{opacity:0;transform:translate(-50%,-58%) scale(1.08);filter:blur(6px)}}
+@media(prefers-reduced-motion:reduce){.liveux-stage *{animation:none!important}}
 .foot{padding:50px 0 70px;color:var(--text-3);font-size:13px;max-width:var(--maxw)}
 .foot .ft-line{font-family:var(--mono);font-size:11px;margin-top:8px}
 @media(max-width:920px){
@@ -180,6 +213,7 @@ html[data-theme="light"] .codeblk{background:#1a1c22}
   .stats{grid-template-columns:1fr 1fr}
   .mock-wrap{grid-template-columns:1fr}
   .phone{max-width:300px;margin:0 auto}
+  .liveux-grid{grid-template-columns:1fr}.liveux-stage{max-width:320px;margin:0 auto}.liveux-points{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -202,16 +236,17 @@ html[data-theme="light"] .codeblk{background:#1a1c22}
     <a class="navlink" href="#notify"><span class="ix">06</span>用户触达通知</a>
     <a class="navlink" href="#hotcold"><span class="ix">07</span>热拉冷推分层</a>
     <a class="navlink" href="#theme"><span class="ix">08</span>主题系统</a>
+    <a class="navlink" href="#liveux"><span class="ix">09</span>直播间互动体验</a>
     <div class="nav-group">工程难点</div>
-    <a class="navlink" href="#difficulties"><span class="ix">09</span>五大难点</a>
+    <a class="navlink" href="#difficulties"><span class="ix">10</span>五大难点</a>
     <div class="nav-group">能力与质量</div>
-    <a class="navlink" href="#ai"><span class="ix">10</span>AI 能力落地</a>
-    <a class="navlink" href="#observe"><span class="ix">11</span>可观测性</a>
-    <a class="navlink" href="#metrics"><span class="ix">12</span>业务指标体系</a>
-    <a class="navlink" href="#quality"><span class="ix">13</span>工程质量</a>
+    <a class="navlink" href="#ai"><span class="ix">11</span>AI 能力落地</a>
+    <a class="navlink" href="#observe"><span class="ix">12</span>可观测性</a>
+    <a class="navlink" href="#metrics"><span class="ix">13</span>业务指标体系</a>
+    <a class="navlink" href="#quality"><span class="ix">14</span>工程质量</a>
     <div class="nav-group">设计 &amp; 边界</div>
-    <a class="navlink" href="#homeredesign"><span class="ix">14</span>首页维度重构</a>
-    <a class="navlink" href="#boundary"><span class="ix">15</span>如实边界说明</a>
+    <a class="navlink" href="#homeredesign"><span class="ix">15</span>首页维度重构</a>
+    <a class="navlink" href="#boundary"><span class="ix">16</span>如实边界说明</a>
   </nav>
 
   <main>
@@ -368,10 +403,55 @@ html[data-theme="light"] .codeblk{background:#1a1c22}
       </div>
     </section>
 
-    <!-- 09 DIFFICULTIES -->
+    <!-- 09 LIVE UX -->
+    <section id="liveux">
+      <div class="sec-head">
+        <div class="sec-num">09 / 核心亮点</div>
+        <h2>直播间互动：把竞拍从“表单提交”升级成沉浸式战场反馈</h2>
+        <p class="sec-desc">本次交互优化围绕 11 项已确认设计落地：出价氛围、社交参与、临场紧迫感、视觉可读性与流拍结果态。核心价值不是增加装饰动画，而是让用户在关键 5 秒内更快理解“我是否领先、是否要反超、竞拍是否结束”。</p>
+      </div>
+      <div class="liveux-grid">
+        <div class="liveux-stage" aria-label="直播间交互动效示意">
+          <div class="liveux-top">
+            <div class="host-glass"><span class="avatar"></span><div><b>瑾瑜珠宝行</b><span>1.2k online</span></div></div>
+            <div class="liveux-pill"><i></i>LIVE</div>
+          </div>
+          <div class="combo-flair">BID + ¥200 · x3 COMBO</div>
+          <div class="heart-burst">♥</div>
+          <div class="glitch-count">5</div>
+          <div class="liveux-dock">
+            <div class="lead-capsule">LEADING · 当前领先</div>
+            <div class="dock-row">
+              <div>
+                <div class="dock-price">¥12,800</div>
+                <div class="dock-heat">已有 8 人出价 · 1,246 人围观 · 即将结拍</div>
+              </div>
+              <div class="liveux-pill">VIBE ON</div>
+            </div>
+            <div class="quick-chat"><span>+1</span><span>冲</span><span>捡漏了</span><span>还能加吗</span></div>
+          </div>
+        </div>
+        <div class="liveux-points">
+          <div class="fcard"><div class="ic">A1</div><h4>游戏化出价飘屏</h4><p>霓虹描边 + 头像 + 金额 + <code>xN COMBO</code>，把高频出价从普通 toast 升级成可感知的房间事件；多条飘屏错位堆叠，避免遮挡主操作区。</p></div>
+          <div class="fcard"><div class="ic">A2</div><h4>领先/被超状态胶囊</h4><p>出价坞上方直接告诉用户“当前领先”或“被超越”，降低用户从排行榜中推断状态的认知成本；被超时保留快速反超入口。</p></div>
+          <div class="fcard"><div class="ic">S1</div><h4>点击处爆发红心</h4><p>双击直播画面触发本地即时红心粒子，避开按钮、抽屉等交互区域；社交反馈轻量，不打断出价主链路。</p></div>
+          <div class="fcard"><div class="ic">S2</div><h4>横滑快捷弹幕</h4><p>在输入区上方放置“+1 / 冲 / 捡漏了”等短语，复用现有发送链路和冷却逻辑，用低成本降低参与门槛。</p></div>
+          <div class="fcard"><div class="ic">C5</div><h4>最后 5 秒故障倒计时</h4><p>底部抽屉未展开时，数字从中下部浮现到中心，颜色由淡变红并带 RGB 色散；抽屉展开时隐藏，确保信息增强不抢操作焦点。</p></div>
+          <div class="fcard"><div class="ic">U1</div><h4>流拍碎裂消散</h4><p>无人出价结束时触发“碎裂/模糊/消散”的结果态，区别于成交动画，让用户对竞拍结果形成明确记忆点。</p></div>
+        </div>
+      </div>
+      <div class="psv">
+        <div class="pc p"><div class="pl">Problem</div><div class="pt">传统竞拍 UI 只给价格和按钮，用户需要自己推断“我领先吗”“还剩多久”“这场热不热”，最后几秒的决策成本过高。</div></div>
+        <div class="pc s"><div class="pl">Solution</div><div class="pt">把领先状态、热度、倒计时、出价事件、社交反馈拆成互不抢焦点的视觉层；高频动效只用 <code>transform</code>/<code>opacity</code>，并支持 <code>prefers-reduced-motion</code> 降级。</div></div>
+        <div class="pc v"><div class="pl">Value</div><div class="pt">体验从“能出价”升级为“看得懂局势、感受到氛围、知道何时行动”。这是前端交互能力，也是竞拍业务转化能力。</div></div>
+      </div>
+      <div class="takeaway coral"><b>工程边界清晰：</b>交互优化主要收敛在 <code>LiveRoomSlide</code>、<code>BidDock</code>、<code>ChatPanel</code> 与独立动效组件内；不改 API/WS 契约，不新增外部依赖，日/夜主题继续走现有 token 体系。</div>
+    </section>
+
+    <!-- 10 DIFFICULTIES -->
     <section id="difficulties">
       <div class="sec-head">
-        <div class="sec-num">09 / 关键工程难点</div>
+        <div class="sec-num">10 / 关键工程难点</div>
         <h2>五大难点与解决方案</h2>
         <p class="sec-desc">竞拍系统的复杂度集中在状态正确性、防狙击吞吐、外部依赖降级、自动代理出价，以及直播间真实在线 Presence 的可信表达。</p>
       </div>
@@ -420,10 +500,10 @@ html[data-theme="light"] .codeblk{background:#1a1c22}
       </div>
     </section>
 
-    <!-- 10 AI -->
+    <!-- 11 AI -->
     <section id="ai">
       <div class="sec-head">
-        <div class="sec-num">10 / AI 能力使用</div>
+        <div class="sec-num">11 / AI 能力使用</div>
         <h2>把模型调用约束成可替换、可降级的工程能力</h2>
         <p class="sec-desc">重点不是「接了一个模型」，而是把多模态生成约束成结构化、可替换、可降级的工程能力。</p>
       </div>
@@ -436,10 +516,10 @@ html[data-theme="light"] .codeblk{background:#1a1c22}
       <div class="callout note"><span class="cig">边界</span><div class="cbody">LLM 能力收敛在 <code>shared/llm</code>，通过 <code>Provider</code> 接口抽象解耦，<b>不为 AI 单独拆微服务</b>，也不把模型 SDK 侵入业务层。AI 只生成草稿，不直接保存或发布，最终内容仍由商家确认。</div></div>
     </section>
 
-    <!-- 11 OBSERVABILITY -->
+    <!-- 12 OBSERVABILITY -->
     <section id="observe">
       <div class="sec-head">
-        <div class="sec-num">11 / 可观测性</div>
+        <div class="sec-num">12 / 可观测性</div>
         <h2>从请求、业务指标到实验效果的统一观测面</h2>
         <p class="sec-desc">可观测性不是「出了问题再看日志」，而是从请求、业务指标到实验效果都有统一观测入口。</p>
       </div>
@@ -450,10 +530,10 @@ html[data-theme="light"] .codeblk{background:#1a1c22}
       </div>
     </section>
 
-    <!-- 12 BUSINESS METRICS -->
+    <!-- 13 BUSINESS METRICS -->
     <section id="metrics">
       <div class="sec-head">
-        <div class="sec-num">12 / 业务指标监控体系</div>
+        <div class="sec-num">13 / 业务指标监控体系</div>
         <h2>把增长漏斗变成可上报、可落库、可聚合、可告警的链路</h2>
         <p class="sec-desc">核心目标不是增加几个 Counter，而是把「用户触达 → 进房回流 → 出价/一口价参与 → 成交结果」拆成完整可观测漏斗。已完成代码落地并经二次 Code Review 加固。</p>
       </div>
@@ -484,10 +564,10 @@ error_codes={<span class="grn">"400":7095</span>}  <span class="dim"># 仅余业
       </div>
     </section>
 
-    <!-- 13 QUALITY -->
+    <!-- 14 QUALITY -->
     <section id="quality">
       <div class="sec-head">
-        <div class="sec-num">13 / 工程质量与材料完整度</div>
+        <div class="sec-num">14 / 工程质量与材料完整度</div>
         <h2>完成度不仅在功能列表，也在测试深度与工程纪律</h2>
       </div>
       <div class="stats">
@@ -498,14 +578,14 @@ error_codes={<span class="grn">"400":7095</span>}  <span class="dim"># 仅余业
       </div>
       <div class="cards">
         <div class="fcard"><div class="ic">FE</div><h4>前端工程化完整</h4><p>H5 与 Admin 各自维护独立 Design Token（颜色/动画/间距/圆角/字体），支持深浅双主题语义 token；组件按 shared 通用层与业务层分层，配 ErrorBoundary 与全局错误上报。</p></div>
-        <div class="fcard"><div class="ic">UX</div><h4>交互细节打磨</h4><p>排行榜前三高亮、领先标签、被超价 toast、基于 <code>requestAnimationFrame</code> 的毫秒级倒计时、高频刷新 FPS 降级、出价成功动画与震动反馈等均有落地。</p></div>
+        <div class="fcard"><div class="ic">UX</div><h4>交互细节打磨</h4><p>排行榜前三高亮、领先/被超状态胶囊、游戏化出价飘屏、双击红心爆发、快捷弹幕、5 秒沉浸倒计时、流拍消散动画，以及出价成功震动反馈等均有落地。</p></div>
       </div>
     </section>
 
-    <!-- 14 HOME REDESIGN -->
+    <!-- 15 HOME REDESIGN -->
     <section id="homeredesign">
       <div class="sec-head">
-        <div class="sec-num">14 / 设计亮点</div>
+        <div class="sec-num">15 / 设计亮点</div>
         <h2>H5 首页维度重构：从「竞拍维度」到「直播间维度」</h2>
         <p class="sec-desc">一次以第一性原理驱动的信息架构重构：不打补丁，而是追问「首页到底该回答用户什么问题」，从根上修正列表维度错配。</p>
       </div>
@@ -552,10 +632,10 @@ error_codes={<span class="grn">"400":7095</span>}  <span class="dim"># 仅余业
       <div class="takeaway coral"><b>低成本高收益：</b>复用既有 RPC 批量回填模式（参照 <code>GetCurrentByLiveStreamIDs</code>），不跨库 JOIN；feed 形态零改动，改造成本集中在首页。</div>
     </section>
 
-    <!-- 15 BOUNDARY -->
+    <!-- 16 BOUNDARY -->
     <section id="boundary">
       <div class="sec-head">
-        <div class="sec-num">15 / 如实边界说明</div>
+        <div class="sec-num">16 / 如实边界说明</div>
         <h2>主动界定已完成与未完成的边界</h2>
         <p class="sec-desc">以下属于「能力已部分实现但主流程未接通」或「当前确实不存在」的范围，答辩与文档中按现状描述，避免把局部实现表述成完整闭环。</p>
       </div>
@@ -563,7 +643,7 @@ error_codes={<span class="grn">"400":7095</span>}  <span class="dim"># 仅余业
       <div class="blist">
         <div class="bitem"><span class="bdot"></span><div class="btx"><b>起拍价 StartPrice：</b>当前仅作展示字段与规则元数据存储，出价校验路径未读取；实际行为更接近「0 元起拍 + 首次最低出价 = 加价幅度」。</div></div>
         <div class="bitem"><span class="bdot"></span><div class="btx"><b>服务端时间同步：</b><code>time_sync</code> 广播与 <code>useServerTime</code> 校准已实现，但主直播页 <code>LiveRoomSlide</code> 仍基于本地时钟 + 服务端 end_time 计算倒计时，尚未接入 offset 校准结果。</div></div>
-        <div class="bitem"><span class="bdot"></span><div class="btx"><b>出价提示音：</b>代码未实现音效反馈，当前感知来自 toast、震动、动画与视觉高亮，不应表述为「已有提示音」。</div></div>
+        <div class="bitem"><span class="bdot"></span><div class="btx"><b>出价提示音：</b>本次已落地的是震动开关、出价飘屏和视觉高亮；真实音频文件与播放链路仍是预留调用点，不应表述为「已有提示音」。</div></div>
         <div class="bitem"><span class="bdot"></span><div class="btx"><b>Admin 静态页：</b>竞拍规则模板页 <code>AuctionRules</code> 与权限页 <code>Permissions</code> 仍是静态 Mock，未接后端。需区分「后端 RBAC 已实现」与「页面已联通」两个层次。</div></div>
         <div class="bitem"><span class="bdot"></span><div class="btx"><b>product 服务指标：</b>当前暴露 <code>/metrics</code> 的是 gateway 与 auction，product 服务尚未接入 Prometheus 指标导出。</div></div>
       </div>

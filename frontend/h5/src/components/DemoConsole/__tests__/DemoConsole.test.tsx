@@ -316,6 +316,27 @@ describe('DemoConsole', () => {
     expect(mockShowToast).toHaveBeenCalledWith('已创建正在竞拍场次', 'success', 2500);
   });
 
+  it('refreshes the demo account token and retries when merchant action sees an expired token', async () => {
+    const user = userEvent.setup();
+    mockedCreateDemoMerchantAuction
+      .mockRejectedValueOnce({ status: 401, message: 'invalid jwt' })
+      .mockResolvedValueOnce({ ok: true });
+    renderConsole();
+
+    await user.click(screen.getByTestId('demo-console-fab'));
+    await user.click(screen.getByRole('button', { name: '商家' }));
+    await user.click(screen.getByRole('button', { name: '正在竞拍' }));
+
+    expect(mockLogin).toHaveBeenCalledWith({
+      phone: '13800138001',
+      password: 'Demo@123456',
+    });
+    expect(mockedCreateDemoMerchantAuction).toHaveBeenCalledTimes(2);
+    expect(mockedCreateDemoMerchantAuction).toHaveBeenNthCalledWith(1, 'ongoing');
+    expect(mockedCreateDemoMerchantAuction).toHaveBeenNthCalledWith(2, 'ongoing');
+    expect(mockShowToast).toHaveBeenCalledWith('已创建正在竞拍场次', 'success', 2500);
+  });
+
   it('warns and skips fixed-price creation outside a live room', async () => {
     const user = userEvent.setup();
     renderConsole(12345, null);
