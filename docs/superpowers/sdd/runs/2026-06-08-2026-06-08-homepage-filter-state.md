@@ -38,7 +38,7 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `7` |
-| Done | `5` |
+| Done | `4` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `2` |
@@ -73,7 +73,7 @@
 | `T002` | `后端 AuctionFilters 与 ListWithFilters 实现价格过滤与热度排序` | `done` | `subagent-t002` | `W2` | `T001` | `DAO filters, SQL, DAO tests` | `backend/auction/dao/auction.go; backend/auction/dao/auction_filter_test.go` | `backend/auction/model/auction.go; backend/auction/dao/auction_current_test.go; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go test ./dao/ -run 'TestListWithFiltersPriceRange|TestListWithFiltersSortByHot' -v` | `none` |
 | `T003` | `后端 handler 解析筛选参数并透传` | `done` | `subagent-t003` | `W3` | `T002` | `GET /auctions query parsing and filter propagation` | `backend/auction/handler/auction.go; backend/auction/handler/auction_list.go` | `backend/auction/dao/auction.go; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go build ./... && go test ./handler/ -v` | `none` |
 | `T004` | `前端 auctionApi.list 扩展查询参数` | `done` | `subagent-t004` | `W4` | `T003` | `H5 API client params` | `frontend/h5/src/services/api.ts` | `docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
-| `T005` | `前端价格底部抽屉组件 PriceFilterSheet` | `changes_requested` | `subagent-t005` | `W5` | `T004` | `bottom sheet component and styles` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css` | `frontend/h5/src/pages/Home/index.tsx; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
+| `T005` | `前端价格底部抽屉组件 PriceFilterSheet` | `review` | `subagent-t005` | `W5` | `T004` | `bottom sheet component and styles` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css` | `frontend/h5/src/pages/Home/index.tsx; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
 | `T006` | `前端 Home 集成筛选胶囊、状态与参数组装` | `pending` | `unassigned` | `W6` | `T005` | `Home UI integration and interaction test` | `frontend/h5/src/pages/Home/index.tsx; frontend/h5/src/pages/Home/__tests__/Home.test.tsx` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css; frontend/h5/src/services/api.ts; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx -t '点击最热胶囊'` | `none` |
 | `T007` | `端到端验收与全量回归` | `pending` | `unassigned` | `W7` | `T006` | `verification only` | `docs/superpowers/sdd/runs/2026-06-08-2026-06-08-homepage-filter-state.md` | `STARTUP_GUIDE.md; frontend/h5/src/pages/Home/index.tsx; backend/auction` | `cd backend/auction && go test ./... && cd ../../frontend/h5 && npx jest` | `gateway-service; auction-service; h5 if browser verification runs` |
 
@@ -407,10 +407,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `changes_requested` |
+| Status | `review` |
 | Owner | `subagent-t005` |
 | Started At | `2026-06-09 01:03` |
-| Completed At | `2026-06-09 01:09` |
+| Completed At | `2026-06-09 01:16` |
 | Branch | `feat/homepage-filter-sdd` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-homepage-filter-sdd` |
 | Base Commit | `351a147089502bac70ae6d7ed5fafa4a303ab584` |
@@ -448,6 +448,8 @@
 | `cd frontend/h5 && npx tsc --noEmit` | After implementation; no new task-related errors | Exit `2`; same known unrelated LiveChat/zustand failures; no `PriceFilterSheet.tsx` or `Home.module.css` errors | `known_fail_no_new_task_errors` |
 | `rg -n "export interface PriceRange|const PRICE_PRESETS|不限|0 - 1000|1000 - 5000|5000 以上|parsePriceInput|价格不能为负数|最低价不能高于最高价|sheetOverlay|stopPropagation|disabled=\{Boolean\(errorText\)\}" frontend/h5/src/pages/Home/PriceFilterSheet.tsx frontend/h5/src/pages/Home/Home.module.css` | Static sentinel finds exported contract, presets, validation, overlay close surface, propagation stop, disabled confirm, and sheet style class | Matches found in `PriceFilterSheet.tsx` and `Home.module.css`; exit `0` | `pass` |
 | `git diff --check -- frontend/h5/src/pages/Home/PriceFilterSheet.tsx frontend/h5/src/pages/Home/Home.module.css` | No whitespace errors in task diff | No output; exit `0` | `pass` |
+| `cd frontend/h5 && npx tsc --noEmit` | Spec fix verification; no new `PriceFilterSheet.tsx` errors | Exit `2`; errors remain limited to existing `src/components/LiveChat/ChatPanel.tsx` implicit any and `src/store/liveChatStore.ts` missing `zustand`/implicit any; no `PriceFilterSheet.tsx` errors | `known_fail_no_new_price_sheet_errors` |
+| `rg -n "const handlePresetClick\|const handleConfirm\|onConfirm\(\|onClose\(" frontend/h5/src/pages/Home/PriceFilterSheet.tsx` | Static spec fix sentinel confirms preset click and valid confirm both call `onConfirm` then `onClose` | Lines `77-85` show `handlePresetClick` calls `onConfirm(preset.value); onClose();` and `handleConfirm` calls `onConfirm(selectedRange); onClose();`; exit `0` | `pass` |
 
 **Modified Files**
 
