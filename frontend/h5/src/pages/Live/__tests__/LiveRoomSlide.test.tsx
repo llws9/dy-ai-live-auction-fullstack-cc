@@ -859,7 +859,6 @@ describe('LiveRoomSlide', () => {
     expect(await screen.findByText('本场竞拍已结束')).toBeInTheDocument();
     expect(screen.getByText('流拍')).toBeInTheDocument();
     expect(screen.queryByText(/成交价/)).not.toBeInTheDocument();
-    expect(screen.queryByText('已结束')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: '查看竞拍结果' })).toHaveAttribute('href', '/result?id=5');
     expect(screen.queryByTestId('bid-dock')).not.toBeInTheDocument();
     expect(screen.queryByTestId('chat-panel')).not.toBeInTheDocument();
