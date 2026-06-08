@@ -1,0 +1,23 @@
+frontend/h5/src/pages/Live/TreasureProgressBar.tsx
+  s_5d4c429a8a181d::t_6cb38636c5ea74 24-111
+frontend/h5/src/services/api.ts
+  s_5d4c429a8a181d::t_a169ecf535c36e 497-498
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "1e311f8178e724c6c0cd5b5745ae083500fe46a6",
+  "prompts": {},
+  "sessions": {
+    "s_5d4c429a8a181d": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a26f1640bfcee1b04fb4f52",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
