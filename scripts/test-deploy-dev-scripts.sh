@@ -200,6 +200,16 @@ assert_contains \
   "frontend-admin Dockerfile must serve built assets through nginx"
 
 assert_contains \
+  "$ROOT/frontend/h5/nginx/default.conf" \
+  'resolver 127\.0\.0\.11' \
+  "frontend-h5 nginx must use Docker DNS so gateway container recreation does not leave a stale upstream IP"
+
+assert_contains \
+  "$ROOT/frontend/admin/nginx/default.conf" \
+  'resolver 127\.0\.0\.11' \
+  "frontend-admin nginx must use Docker DNS so gateway container recreation does not leave a stale upstream IP"
+
+assert_contains \
   "$ROOT/frontend/h5/.dockerignore" \
   '^node_modules$' \
   "frontend-h5 Docker build context must exclude node_modules"
