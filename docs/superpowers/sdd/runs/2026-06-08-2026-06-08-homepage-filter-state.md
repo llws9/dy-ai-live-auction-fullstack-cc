@@ -389,6 +389,11 @@
 
 - `4d4140d42b9031de3a54a0e0cdda91958f194d9f` - `feat(h5): extend auctionApi.list with sort and price params`
 
+**Review Notes**
+
+- Spec review: approved; list 参数类型和 URLSearchParams 序列化符合 Task 4。
+- Code quality review: approved; `price_min/price_max !== undefined` 支持 0，内联参数类型符合当前文件风格。剩余风险：未新增 query 序列化边界单测，不阻塞后续。
+
 **Risks / Blockers**
 
 - Existing H5 typecheck baseline remains red because of unrelated `LiveChat/ChatPanel.tsx` implicit any and `liveChatStore.ts` missing `zustand`/implicit any; task scope forbids fixing those files.
