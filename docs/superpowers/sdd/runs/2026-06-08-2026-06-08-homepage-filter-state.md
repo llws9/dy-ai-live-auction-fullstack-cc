@@ -38,11 +38,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `7` |
-| Done | `0` |
+| Done | `1` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `6` |
-| Last Updated | `2026-06-08 23:30` |
+| Last Updated | `2026-06-09 00:12` |
 
 ## Status Legend
 
@@ -69,7 +69,7 @@
 
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Write Set | Read Set | Regression Sentinels | Runtime Services |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `T001` | `后端 Auction 模型增加只读 BidCount 字段` | `assigned` | `subagent-t001` | `W1` | `-` | `model field only` | `backend/auction/model/auction.go` | `AGENTS.md; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go build ./...` | `none` |
+| `T001` | `后端 Auction 模型增加只读 BidCount 字段` | `done` | `subagent-t001` | `W1` | `-` | `model field only` | `backend/auction/model/auction.go` | `AGENTS.md; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go build ./...` | `none` |
 | `T002` | `后端 AuctionFilters 与 ListWithFilters 实现价格过滤与热度排序` | `pending` | `unassigned` | `W2` | `T001` | `DAO filters, SQL, DAO tests` | `backend/auction/dao/auction.go; backend/auction/dao/auction_filter_test.go` | `backend/auction/model/auction.go; backend/auction/dao/auction_current_test.go; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go test ./dao/ -run 'TestListWithFiltersPriceRange|TestListWithFiltersSortByHot' -v` | `none` |
 | `T003` | `后端 handler 解析筛选参数并透传` | `pending` | `unassigned` | `W3` | `T002` | `GET /auctions query parsing and filter propagation` | `backend/auction/handler/auction.go; backend/auction/handler/auction_list.go` | `backend/auction/dao/auction.go; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go build ./... && go test ./handler/ -v` | `none` |
 | `T004` | `前端 auctionApi.list 扩展查询参数` | `pending` | `unassigned` | `W4` | `T003` | `H5 API client params` | `frontend/h5/src/services/api.ts` | `docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
@@ -95,10 +95,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `assigned` |
+| Status | `done` |
 | Owner | `subagent-t001` |
 | Started At | `2026-06-08 23:35` |
-| Completed At | `-` |
+| Completed At | `2026-06-09 00:12` |
 | Branch | `feat/homepage-filter-sdd` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-homepage-filter-sdd` |
 | Base Commit | `351a147089502bac70ae6d7ed5fafa4a303ab584` |
@@ -137,7 +137,9 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `TDD Red -> Green -> Verify evidence` | `not_run` | `pending` |
+| `go test ./...` in `/tmp/t001_bidcount_contract` | Red: compile fails because `model.Auction.BidCount` is missing | `auction.BidCount undefined (type model.Auction has no field or method BidCount)` | `red_confirmed` |
+| `go test ./...` in `/tmp/t001_bidcount_contract` | Green: compile and contract assertions pass after model field addition | `ok t001-bidcount-contract 0.570s` | `pass` |
+| `cd backend/auction && go build ./...` | Compile sentinel passes | `exit 0` | `pass` |
 
 **Runtime Source Evidence**
 
@@ -147,7 +149,8 @@
 
 **Modified Files**
 
-- `-`
+- `backend/auction/model/auction.go`
+- `docs/superpowers/sdd/runs/2026-06-08-2026-06-08-homepage-filter-state.md`
 
 **Integration Check**
 
@@ -158,7 +161,7 @@
 
 **Commits**
 
-- `not_committed`
+- `011ca53f4ba7e5665b7639f7281052f5c35e685e` - `feat(auction): add read-only BidCount field to Auction model`
 
 **Review Notes**
 
@@ -166,11 +169,11 @@
 
 **Risks / Blockers**
 
-- `-`
+- `none`
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `yes`
 
 ### T002 - `后端 AuctionFilters 与 ListWithFilters 实现价格过滤与热度排序`
 
