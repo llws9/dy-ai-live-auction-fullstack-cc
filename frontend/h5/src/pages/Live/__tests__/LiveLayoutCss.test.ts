@@ -3,9 +3,23 @@ import { join } from 'node:path';
 
 describe('Live layout css', () => {
   const readLiveCss = () => readFileSync(join(__dirname, '..', 'Live.module.css'), 'utf8');
+  const readTreasureCss = () => readFileSync(join(__dirname, '..', 'TreasureProgressBar.module.css'), 'utf8');
   const getClassBlock = (css: string, className: string) => css.match(new RegExp(`\\.${className}\\s*\\{[\\s\\S]*?\\n\\}`))?.[0] ?? '';
   const getDeclaration = (block: string, property: string) =>
     block.match(new RegExp(`${property}:\\s*([^;]+);`))?.[1] ?? '';
+
+  it('anchors the treasure progress panel below the host pill', () => {
+    const css = readTreasureCss();
+    const containerCss = getClassBlock(css, 'container');
+    const glassPanelCss = getClassBlock(css, 'glassPanel');
+
+    expect(containerCss).toContain('position: absolute;');
+    expect(containerCss).toContain('top: calc(var(--spacing-4) + env(safe-area-inset-top, 0px) + 58px);');
+    expect(containerCss).toContain('left: var(--spacing-4);');
+    expect(containerCss).toContain('width: min(calc(100vw - 132px), 260px);');
+    expect(containerCss).toContain('z-index: 3;');
+    expect(glassPanelCss).toContain('box-sizing: border-box;');
+  });
 
   it('places fixed-price cards at the lower-right above the bid dock and away from chat input', () => {
     const css = readLiveCss();
