@@ -74,6 +74,16 @@ assert_contains \
   '3000 3001 5173 5175' \
   "deploy-dev.sh must clean both Docker frontend ports and Vite frontend ports before restart"
 
+assert_contains \
+  "$ROOT/scripts/deploy-dev.sh" \
+  'listener_pids_excluding_docker' \
+  "deploy-dev.sh port cleanup must exclude Docker Desktop port proxy PIDs instead of killing the Docker engine"
+
+assert_contains \
+  "$ROOT/scripts/deploy-dev.sh" \
+  'Skipping Docker-owned listener' \
+  "deploy-dev.sh must explicitly skip Docker-owned port listeners when clearing published compose ports"
+
 assert_not_contains \
   "$ROOT/scripts/start-local-backend.sh" \
   'nohup bash -lc' \

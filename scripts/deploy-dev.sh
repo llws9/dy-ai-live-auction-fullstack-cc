@@ -36,6 +36,27 @@ port_owner() {
   lsof -nP -iTCP:"$port" -sTCP:LISTEN 2>/dev/null || true
 }
 
+is_docker_owned_pid() {
+  local pid=$1
+  local comm
+  comm="$(ps -p "$pid" -o comm= 2>/dev/null || true)"
+  [[ "$comm" == *com.docker* || "$comm" == *Docker* ]]
+}
+
+listener_pids_excluding_docker() {
+  local port=$1
+  local pid
+
+  while IFS= read -r pid; do
+    [[ -z "$pid" ]] && continue
+    if is_docker_owned_pid "$pid"; then
+      echo -e "${YELLOW}Skipping Docker-owned listener on port $port: $pid${NC}" >&2
+      continue
+    fi
+    echo "$pid"
+  done < <(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)
+}
+
 print_port_status() {
   for port in 3000 3001 3002 3003 3100 3200 3306 5672 6379 8080 8081 8082 8083 8848 9091 9848 15672 18090 18091 18092; do
     echo "=== port $port ==="
@@ -122,12 +143,12 @@ assert_clean_tree() {
 stop_frontend_ports() {
   for port in 3000 3001 5173 5175; do
     local pids
-    pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
+    pids="$(listener_pids_excluding_docker "$port")"
     if [[ -n "$pids" ]]; then
       echo -e "${YELLOW}停止端口 $port 上的前端进程: $pids${NC}"
       kill $pids 2>/dev/null || true
       sleep 1
-      pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
+      pids="$(listener_pids_excluding_docker "$port")"
       if [[ -n "$pids" ]]; then
         kill -9 $pids 2>/dev/null || true
       fi
@@ -140,12 +161,12 @@ stop_backend() {
   ./scripts/start-local-backend.sh stop || true
   for port in 8080 8081 8082 8083 18090 18091 18092; do
     local pids
-    pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
+    pids="$(listener_pids_excluding_docker "$port")"
     if [[ -n "$pids" ]]; then
       echo -e "${YELLOW}停止端口 $port 上的后端进程: $pids${NC}"
       kill $pids 2>/dev/null || true
       sleep 1
-      pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
+      pids="$(listener_pids_excluding_docker "$port")"
       if [[ -n "$pids" ]]; then
         kill -9 $pids 2>/dev/null || true
       fi
