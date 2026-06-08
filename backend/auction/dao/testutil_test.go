@@ -28,6 +28,9 @@ func setupTestDB(t *testing.T) *gorm.DB {
 		&model.FixedPriceItem{},
 		&model.FixedPricePurchase{},
 		&model.UserBalance{},
+		&model.UserCoin{},
+		&model.UserWatchDuration{},
+		&model.TreasureClaim{},
 	))
 	t.Cleanup(func() {
 		sqlDB, err := db.DB()

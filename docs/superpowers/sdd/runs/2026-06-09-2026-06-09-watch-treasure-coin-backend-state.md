@@ -38,11 +38,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `7` |
-| Done | `1` |
+| Done | `2` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `6` |
-| Last Updated | `2026-06-09 01:43` |
+| Pending | `5` |
+| Last Updated | `2026-06-09 01:52` |
 
 ## Status Legend
 
@@ -70,7 +70,7 @@
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Write Set | Read Set | Regression Sentinels | Runtime Services |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `数据模型与建表 DDL` | `done` | `subagent` | `W1` | `-` | `model + migration` | `backend/auction/model/treasure.go; backend/auction/migration/003_create_treasure_tables.sql` | `docs/superpowers/specs/2026-06-09-watch-treasure-coin-design.md; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md; backend/auction/model/user_balance.go` | `cd backend/auction && go build ./model/...` | `none` |
-| `T002` | `DAO：时长累加 + 金币读取 + 幂等领取` | `pending` | `unassigned` | `W2` | `T001` | `dao + dao tests` | `backend/auction/dao/treasure.go; backend/auction/dao/treasure_test.go; backend/auction/dao/testutil_test.go` | `backend/auction/model/treasure.go; backend/auction/dao/user_balance.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./dao/ -run TestTreasureDAO -v` | `none` |
+| `T002` | `DAO：时长累加 + 金币读取 + 幂等领取` | `done` | `subagent` | `W2` | `T001` | `dao + dao tests` | `backend/auction/dao/treasure.go; backend/auction/dao/treasure_test.go; backend/auction/dao/testutil_test.go` | `backend/auction/model/treasure.go; backend/auction/dao/user_balance.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./dao/ -run TestTreasureDAO -v` | `none` |
 | `T003` | `Service：档位常量 + 心跳封顶 + 状态编排 + 领取编排` | `pending` | `unassigned` | `W3` | `T002` | `service + service tests` | `backend/auction/service/treasure.go; backend/auction/service/treasure_test.go` | `backend/auction/dao/treasure.go; backend/auction/service/clock.go; backend/auction/service/testutil_test.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./service/ -run TestTreasureService -v` | `none` |
 | `T004` | `Handler：3 个 HTTP 端点` | `pending` | `unassigned` | `W4` | `T003` | `handler + handler tests` | `backend/auction/handler/treasure.go; backend/auction/handler/treasure_test.go` | `backend/auction/service/treasure.go; backend/auction/handler/user_balance_http.go; frontend/h5/src/services/api.ts; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./handler/ -run TestTreasureHandler -v` | `none` |
 | `T005` | `Auction 装配：AutoMigrate + main.go 路由` | `pending` | `unassigned` | `W5` | `T004` | `auction main wiring` | `backend/auction/main.go` | `backend/auction/model/treasure.go; backend/auction/dao/treasure.go; backend/auction/service/treasure.go; backend/auction/handler/treasure.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go build ./... && go test ./dao/ ./service/ ./handler/` | `none` |
@@ -185,6 +185,107 @@
 - First response line used: `pending final response`
 
 
+### T002 - `DAO：时长累加 + 金币读取 + 幂等领取`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `subagent` |
+| Started At | `2026-06-09 01:47` |
+| Completed At | `2026-06-09 01:52` |
+| Branch | `feat/watch-treasure-coin-backend` |
+| Worktree | `/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-watch-treasure-coin-backend` |
+| Base Commit | `ecde5cac1c4c0c59827493b754b58a2b59b77261` |
+| Target Branch | `main` |
+| Depends On | `T001` |
+| Parallel Group | `W2` |
+
+**TDD Plan**
+
+- Red: write DAO tests for watch-duration accumulation, zero reads, claimed-tier listing, successful claim, and duplicate-claim idempotency.
+- Green: implement `TreasureDAO` with GORM upserts and a transaction around claim insertion + coin increment.
+- Verify: run targeted DAO tests and mutation-check the two regression sentinels.
+
+**Write Set**
+
+- `backend/auction/dao/treasure.go`
+- `backend/auction/dao/treasure_test.go`
+- `backend/auction/dao/testutil_test.go`
+
+**Read Set**
+
+- `AGENTS.md`
+- `docs/CONSTITUTION.md`
+- `docs/CODING.md`
+- `docs/superpowers/sdd/RUNBOOK.md`
+- `docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md`
+- `backend/auction/model/treasure.go`
+- `backend/auction/dao/user_balance.go`
+- `backend/auction/dao/user_balance_test.go`
+
+**Scope Expansion Requests**
+
+| Time | Requested Files | Reason | Decision |
+| --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` |
+
+**Regression Sentinels**
+
+- Automated sentinel: `TestTreasureDAO_AddWatchSeconds_AccumulatesPerDate`
+- Rollback behavior caught: `changing AddWatchSeconds upsert from accumulation to overwrite fails with expected 60, actual 30`
+- Automated sentinel: `TestTreasureDAO_ClaimTx_DuplicateIsIdempotent`
+- Rollback behavior caught: `removing duplicate-claim RowsAffected guard fails with nil ErrAlreadyClaimed and balance 600 instead of 300`
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `cd backend/auction && go test ./dao/ -run TestTreasureDAO -v` | `RED: compile failure before implementation` | `undefined: NewTreasureDAO; undefined: ErrAlreadyClaimed` | `expected_fail` |
+| `cd backend/auction && go test ./dao/ -run TestTreasureDAO -v` | `GREEN: all TreasureDAO tests pass` | `6 tests pass; PASS auction-service/dao` | `pass` |
+| `cd backend/auction && go test ./dao/ -run TestTreasureDAO_AddWatchSeconds_AccumulatesPerDate -v` with temporary overwrite mutation | `sentinel fails when duration is not accumulated` | `expected 60, actual 30` | `expected_fail` |
+| `cd backend/auction && go test ./dao/ -run TestTreasureDAO_ClaimTx_DuplicateIsIdempotent -v` with temporary duplicate-guard removal | `sentinel fails when duplicate claim can issue coins again` | `expected ErrAlreadyClaimed got nil; expected balance 300, actual 600` | `expected_fail` |
+| `cd backend/auction && go test ./dao/ -run TestTreasureDAO -v -count=1` | `fresh verify pass after restoring implementation` | `6 tests pass; PASS auction-service/dao; 0.355s` | `pass` |
+
+**Runtime Source Evidence**
+
+| Service | Branch | Worktree | Commit | Dirty | Command | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` | `-` | `-` | `-` |
+
+**Modified Files**
+
+- `backend/auction/dao/treasure.go`
+- `backend/auction/dao/treasure_test.go`
+- `backend/auction/dao/testutil_test.go`
+- `docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md`
+
+**Integration Check**
+
+- Target branch: `main`
+- Branch relationship: `task branch only; no integration performed by T002`
+- Diff reviewed: `git diff -- backend/auction/dao/treasure.go backend/auction/dao/treasure_test.go backend/auction/dao/testutil_test.go docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md`
+- Overlapping write-set tasks serialized: `yes; T002 depends on T001 and only owns DAO/state write set`
+
+**Commits**
+
+- Planned message: `feat(treasure): add TreasureDAO with watch-accumulate and idempotent claim`
+- Actual commit: `feat(treasure): add TreasureDAO with watch-accumulate and idempotent claim`
+
+**Review Notes**
+
+- `setupTestDB` migrates `UserCoin`, `UserWatchDuration`, and `TreasureClaim`.
+- `TreasureDAO` uses `int64` for coins and `int` for watch seconds.
+- `UserBalance/user_balances` code was read only and not modified.
+
+**Risks / Blockers**
+
+- `none`
+
+**Handoff**
+
+- First response line used: `pending final response`
+
+
 ## Cross-Task Decisions
 
 | Time | Decision | Reason | Impact | Owner |
@@ -203,7 +304,7 @@
 | --- | --- | --- | --- | --- |
 | Backend Gateway | `cd backend/gateway && go test ./...` | no | `not_run` | `-` |
 | Backend Product | `cd backend/product && go test ./...` | no | `not_run` | `-` |
-| Backend Auction | `cd backend/auction && go test ./...` | no | `not_run` | `-` |
+| Backend Auction | `cd backend/auction && go test ./dao/ -run TestTreasureDAO -v -count=1` | yes for T002 | `pass` | `6 TreasureDAO tests pass` |
 | Frontend Admin | `cd frontend/admin && npm test -- --runInBand` | no | `not_run` | `-` |
 | Frontend Admin Build | `cd frontend/admin && npm run build` | no | `not_run` | `-` |
 | Frontend H5 | `cd frontend/h5 && npm test -- --runInBand` | no | `not_run` | `-` |
@@ -231,4 +332,4 @@
 
 **状态**
 
-- `initialized`
+- `T002 done; waiting for downstream W3-W7`
