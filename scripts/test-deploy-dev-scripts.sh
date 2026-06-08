@@ -284,9 +284,24 @@ assert_contains \
   "frontend-h5 nginx must use Docker DNS so gateway container recreation does not leave a stale upstream IP"
 
 assert_contains \
+  "$ROOT/frontend/h5/nginx/default.conf" \
+  'location = /api/v1/ws' \
+  "frontend-h5 nginx must proxy auction WebSocket before the generic /api location"
+
+assert_contains \
+  "$ROOT/frontend/h5/nginx/default.conf" \
+  'proxy_pass http://\$auction_ws_upstream/ws\$is_args\$args' \
+  "frontend-h5 nginx must rewrite /api/v1/ws to auction /ws and preserve query params"
+
+assert_contains \
   "$ROOT/frontend/admin/nginx/default.conf" \
   'resolver 127\.0\.0\.11' \
   "frontend-admin nginx must use Docker DNS so gateway container recreation does not leave a stale upstream IP"
+
+assert_contains \
+  "$ROOT/frontend/admin/nginx/default.conf" \
+  'location = /api/v1/ws' \
+  "frontend-admin nginx must proxy auction WebSocket before the generic /api location"
 
 assert_contains \
   "$ROOT/frontend/h5/.dockerignore" \
