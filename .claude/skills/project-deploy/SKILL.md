@@ -1,6 +1,6 @@
 ---
 name: project-deploy
-description: Deploys this project locally or to demo prod. Invoke for /dp-dev, /dp-prod, local restart, or demo deployment.
+description: Deploys the full dy-ai-live-auction project locally or to demo prod. Invoke for /dp-dev, /dp-prod, full-stack local restart, full demo deployment, local Docker Compose deployment, or demo production deployment.
 ---
 
 # Project Deploy Skill
@@ -11,8 +11,30 @@ This skill is only for `/Users/bytedance/myself/coding/dy-ai-live-auction-fullst
 
 It supports two commands:
 
-- `/dp-dev`: strong local restart from `origin/main`.
-- `/dp-prod`: demo production deployment to `14.103.53.55`, plan first, confirm before apply.
+- `/dp-dev`: strong full-stack local Docker Compose restart from `origin/main`.
+- `/dp-prod`: full demo production deployment to `14.103.53.55`, plan first, confirm before apply.
+
+## Full Service Scope
+
+Treat deployment as successful only when the full mature-project service set is deployed and verified.
+
+Local `/dp-dev` full stack:
+
+- backend/API: `gateway`, `product`, `auction`
+- infrastructure: `mysql`, `redis`, `rabbitmq`, `nacos`, `nacos-mysql`
+- frontends: `frontend-h5`, `frontend-admin`
+- test platform: `test-service`, `test-dashboard`
+- observability: `loki`, `promtail`, `prometheus`, `grafana`
+- experiment platform: `growthbook`, `growthbook-db`
+
+Demo `/dp-prod` full stack:
+
+- backend/API: `gateway`, `product`, `auction`
+- infrastructure: `mysql`, `redis`, `rabbitmq`, `nacos`, `nacos-mysql`
+- test platform: `test-service`, `test-dashboard`
+- observability: `loki`, `promtail`, `prometheus`, `grafana`
+- experiment platform: `growthbook`, `growthbook-db`
+- static frontends are built locally and synchronized to Nginx directories: H5 and Admin
 
 ## Mandatory First Step
 
@@ -37,7 +59,7 @@ Do not claim anything is synced until the command output confirms it.
 
 Use this when the user enters `/dp-dev`.
 
-1. Explain that `/dp-dev` will force restart local project services.
+1. Explain that `/dp-dev` will force restart the local full Docker Compose stack, not only the core backend services.
 2. Run read-only status:
 
 ```bash
@@ -60,10 +82,18 @@ scripts/deploy-dev.sh verify
 
 7. Report exact URLs:
 
-- H5: `http://localhost:5173`
-- Admin: `http://localhost:5175`
+- H5: `http://localhost:3000`
+- Admin: `http://localhost:3001`
 - Gateway API: `http://localhost:8080/api/v1`
 - Auction WS: `ws://localhost:8083/ws`
+- Test Service: `http://localhost:18090`
+- Test Dashboard: `http://localhost:3003`
+- Grafana: `http://localhost:3002`
+- Prometheus: `http://localhost:9091`
+- Loki: `http://localhost:3100`
+- GrowthBook: `http://localhost:3200`
+- Nacos: `http://localhost:8848/nacos/`
+- RabbitMQ Management: `http://localhost:15672`
 
 Never stop a dev server after giving the user a preview URL unless the user explicitly asks to stop it.
 
@@ -82,7 +112,8 @@ scripts/deploy-prod.sh plan
 - target commit
 - remote current commit
 - changed areas
-- expected actions
+- expected full-stack actions
+- full service set to be verified
 - verification commands
 - rollback point
 
@@ -137,5 +168,5 @@ Final response must include:
 - command invoked: `/dp-dev` or `/dp-prod`
 - target commit
 - commands executed
-- verification evidence
+- verification evidence for all services in scope
 - remaining risks or follow-up actions

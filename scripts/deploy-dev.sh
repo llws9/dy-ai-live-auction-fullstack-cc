@@ -16,10 +16,10 @@ usage() {
 用法: scripts/deploy-dev.sh <status|verify|restart|stop>
 
 说明:
-  status   只读检查本地端口、Git 和 Docker 基础设施状态
-  verify   验证本地前后端端口和核心 API 是否可访问
-  restart  强制重启本地基础设施、后端和前端
-  stop     停止本项目本地前后端服务
+  status   只读检查本地端口、Git 和 Docker 全量服务状态
+  verify   验证本地全量 Docker Compose 服务、端口和核心 API 是否可访问
+  restart  强制重启本地 Docker Compose 全量服务栈
+  stop     停止本项目本地全量服务栈和旧本机开发进程
 USAGE
 }
 
@@ -37,7 +37,7 @@ port_owner() {
 }
 
 print_port_status() {
-  for port in 3306 6379 5672 8080 8081 8082 8083 5173 5175; do
+  for port in 3000 3001 3002 3003 3100 3200 3306 5672 6379 8080 8081 8082 8083 8848 9091 9848 15672 18090 18091 18092; do
     echo "=== port $port ==="
     port_owner "$port" || true
   done
@@ -155,11 +155,15 @@ stop_backend() {
 
 stop_conflicting_containers() {
   cd "$PROJECT_ROOT"
-  INTERNAL_API_TOKEN=dev docker compose stop gateway product auction >/dev/null 2>&1 || true
+  INTERNAL_API_TOKEN=dev docker compose stop $(local_full_stack_services) >/dev/null 2>&1 || true
 }
 
 compose_project_name() {
   basename "$PROJECT_ROOT"
+}
+
+local_full_stack_services() {
+  echo "gateway product auction mysql redis rabbitmq nacos nacos-mysql frontend-h5 frontend-admin test-service test-dashboard loki promtail prometheus grafana growthbook growthbook-db"
 }
 
 local_compose_services() {
@@ -281,6 +285,64 @@ start_infra() {
   wait_for_infra_ready
 }
 
+wait_for_users_table() {
+  cd "$PROJECT_ROOT"
+  echo -e "${BLUE}等待 product 服务迁移 users 表...${NC}"
+
+  local exists
+  for _ in $(seq 1 60); do
+    exists="$(INTERNAL_API_TOKEN=dev docker compose exec -T mysql \
+      mysql -uroot -proot -N -B -e \
+      "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='auction' AND TABLE_NAME='users';" 2>/dev/null | tr -d '[:space:]' || true)"
+    if [[ "$exists" == "1" ]]; then
+      echo -e "${GREEN}✓ users 表已就绪${NC}"
+      return 0
+    fi
+    sleep 2
+  done
+
+  echo -e "${RED}错误: product 服务未能在预期时间内创建 users 表${NC}" >&2
+  INTERNAL_API_TOKEN=dev docker compose logs --tail=80 product >&2 || true
+  exit 1
+}
+
+wait_for_http_ready() {
+  echo -e "${BLUE}等待应用服务 HTTP 就绪...${NC}"
+
+  local url
+  local code
+  for url in \
+    "http://localhost:8080/api/v1/products" \
+    "http://localhost:8081" \
+    "http://localhost:8848/nacos/" \
+    "http://localhost:3200"; do
+    local ready=0
+    for _ in $(seq 1 60); do
+      code="$(curl_code "$url")"
+      if [[ "$code" != "000" ]]; then
+        ready=1
+        break
+      fi
+      sleep 2
+    done
+    if [[ "$ready" -eq 1 ]]; then
+      echo -e "${GREEN}✓ $url 已就绪 ($code)${NC}"
+    else
+      echo -e "${YELLOW}警告: $url 在预期时间内未就绪，继续验证阶段${NC}"
+    fi
+  done
+}
+
+start_full_stack() {
+  cd "$PROJECT_ROOT"
+  remove_foreign_project_containers
+  stop_non_docker_infra_ports
+  INTERNAL_API_TOKEN=dev docker compose down --remove-orphans >/dev/null 2>&1 || true
+  INTERNAL_API_TOKEN=dev docker compose up -d --build --remove-orphans $(local_full_stack_services)
+  wait_for_infra_ready
+  wait_for_users_table
+}
+
 init_demo_users() {
   cd "$PROJECT_ROOT"
   ./scripts/init-demo-users.sh
@@ -306,11 +368,19 @@ verify_local() {
   local code
 
   for url in \
-    "http://localhost:5173" \
-    "http://localhost:5175" \
+    "http://localhost:3000" \
+    "http://localhost:3001" \
+    "http://localhost:3002" \
+    "http://localhost:3003" \
+    "http://localhost:3100/ready" \
+    "http://localhost:3200" \
     "http://localhost:8080" \
     "http://localhost:8081" \
-    "http://localhost:8082"; do
+    "http://localhost:8082" \
+    "http://localhost:8848/nacos/" \
+    "http://localhost:9091" \
+    "http://localhost:15672" \
+    "http://localhost:18090"; do
     code="$(curl_code "$url")"
     echo "$url -> $code"
     if [[ "$code" == "000" ]]; then
@@ -331,11 +401,40 @@ verify_local() {
     echo "ws://localhost:8083/ws -> 端口已监听"
   fi
 
+  if [[ -z "$(port_owner 18092)" ]]; then
+    echo -e "${RED}ws://localhost:18092 -> 端口未监听${NC}"
+    failed=1
+  else
+    echo "ws://localhost:18092 -> 端口已监听"
+  fi
+
+  verify_local_containers || failed=1
+
   if [[ "$failed" -ne 0 ]]; then
     echo -e "${RED}本地验证失败${NC}" >&2
     exit 1
   fi
   echo -e "${GREEN}本地验证通过${NC}"
+}
+
+verify_local_containers() {
+  cd "$PROJECT_ROOT"
+  local service
+  local running
+  local failed=0
+
+  running="$(INTERNAL_API_TOKEN=dev docker compose ps --services --filter status=running 2>/dev/null || true)"
+  echo "=== Docker full stack services ==="
+  INTERNAL_API_TOKEN=dev docker compose ps $(local_full_stack_services) || true
+
+  for service in $(local_full_stack_services); do
+    if ! echo "$running" | grep -qx "$service"; then
+      echo -e "${RED}错误: 本地容器未 running: $service${NC}" >&2
+      failed=1
+    fi
+  done
+
+  return "$failed"
 }
 
 show_status() {
@@ -347,7 +446,7 @@ show_status() {
   echo "origin/main: $(git rev-parse origin/main)"
   echo ""
   echo "=== Docker infra ==="
-  INTERNAL_API_TOKEN=dev docker compose ps mysql redis rabbitmq || true
+  INTERNAL_API_TOKEN=dev docker compose ps $(local_full_stack_services) || true
   echo ""
   echo "=== Ports ==="
   print_port_status
@@ -358,23 +457,22 @@ restart_all() {
   require_cmd docker
   require_cmd lsof
   require_cmd curl
-  require_cmd go
-  require_cmd npm
   assert_origin_main
   assert_clean_tree
   stop_frontend_ports
   stop_backend
   stop_conflicting_containers
-  start_infra
+  start_full_stack
   init_demo_users
-  start_backend
-  start_frontend
+  wait_for_http_ready
   verify_local
 }
 
 stop_all() {
   stop_frontend_ports
   stop_backend
+  cd "$PROJECT_ROOT"
+  INTERNAL_API_TOKEN=dev docker compose down --remove-orphans
 }
 
 case "${1:-}" in

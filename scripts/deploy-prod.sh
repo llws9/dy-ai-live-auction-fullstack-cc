@@ -67,6 +67,10 @@ compose_cmd() {
   echo "docker compose --project-name $(shell_quote "$COMPOSE_PROJECT_NAME") --env-file $env_file -f docker-compose.demo.yml"
 }
 
+demo_full_stack_services() {
+  echo "gateway product auction mysql redis rabbitmq nacos nacos-mysql test-service test-dashboard loki promtail prometheus grafana growthbook growthbook-db"
+}
+
 ssh_base() {
   local ssh_opts=(-i "$DEPLOY_KEY" -o BatchMode=yes -o StrictHostKeyChecking=accept-new)
   ssh "${ssh_opts[@]}" "$(ssh_dest)" "$@"
@@ -244,14 +248,15 @@ plan() {
   echo "- 同步 H5 到 $REMOTE_H5_DIR"
   echo "- 同步 Admin 到 $REMOTE_ADMIN_DIR"
   echo "- 同步仓库源码到 $REMOTE_APP_DIR"
-  echo "- 执行 docker compose --project-name $COMPOSE_PROJECT_NAME --env-file $REMOTE_ENV_FILE -f docker-compose.demo.yml up -d --build --remove-orphans"
+  echo "- 执行 docker compose --project-name $COMPOSE_PROJECT_NAME --env-file $REMOTE_ENV_FILE -f docker-compose.demo.yml up -d --build --remove-orphans，覆盖全量服务:"
+  echo "  $(demo_full_stack_services)"
   echo "- 执行 nginx -t && systemctl reload nginx"
   echo ""
   echo "验证:"
   echo "- curl -I http://$DEPLOY_HOST/"
   echo "- curl -I http://$DEPLOY_HOST/admin/"
   echo "- curl http://$DEPLOY_HOST/api/v1/products"
-  echo "- docker compose --project-name $COMPOSE_PROJECT_NAME ps gateway product auction"
+  echo "- docker compose --project-name $COMPOSE_PROJECT_NAME ps $(demo_full_stack_services)"
   echo ""
   echo "回滚:"
   echo "- 前端静态资源使用 $REMOTE_BACKUP_DIR 最近备份恢复"
@@ -314,19 +319,45 @@ http_expect() {
   [[ "$code" =~ $expected_regex ]]
 }
 
+wait_for_remote_http_ready() {
+  echo -e "${BLUE}等待线上服务 HTTP 就绪...${NC}"
+
+  local url
+  local code
+  for url in \
+    "http://$DEPLOY_HOST/" \
+    "http://$DEPLOY_HOST/admin/" \
+    "http://$DEPLOY_HOST/api/v1/products"; do
+    local ready=0
+    for _ in $(seq 1 60); do
+      code="$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$url" || true)"
+      if [[ "$code" != "000" ]]; then
+        ready=1
+        break
+      fi
+      sleep 2
+    done
+    if [[ "$ready" -eq 1 ]]; then
+      echo -e "${GREEN}✓ $url 已就绪 ($code)${NC}"
+    else
+      echo -e "${YELLOW}警告: $url 在预期时间内未就绪，继续验证阶段${NC}"
+    fi
+  done
+}
+
 print_remote_logs_hint() {
   local app_dir env_file compose
   app_dir="$(shell_quote "$REMOTE_APP_DIR")"
   env_file="$(shell_quote "$REMOTE_ENV_FILE")"
   compose="$(compose_cmd "$env_file")"
   echo "远端日志排查命令:"
-  echo "ssh -i $(shell_quote "$DEPLOY_KEY") $(ssh_dest) 'cd $app_dir && $compose logs --tail=100 gateway product auction'"
+  echo "ssh -i $(shell_quote "$DEPLOY_KEY") $(ssh_dest) 'cd $app_dir && $compose logs --tail=100 $(demo_full_stack_services)'"
 }
 
 verify_remote_compose_uniqueness() {
   local project
   project="$(shell_quote "$COMPOSE_PROJECT_NAME")"
-  ssh_base "target_project=$project; failed=0; for service in gateway product auction mysql redis rabbitmq; do docker ps -a --filter \"label=com.docker.compose.service=\$service\" --format '{{.ID}}|{{.Names}}|{{.Label \"com.docker.compose.project\"}}|{{.Label \"com.docker.compose.service\"}}' | awk -F'|' -v target=\"\$target_project\" 'length(\$1) > 0 && \$3 != target { printf \"duplicate compose service: service=%s container=%s project=%s expected=%s\\n\", \$4, \$2, \$3, target > \"/dev/stderr\"; bad=1 } END { exit bad }' || failed=1; done; exit \$failed" | redact_sensitive
+  ssh_base "target_project=$project; failed=0; for service in $(demo_full_stack_services); do docker ps -a --filter \"label=com.docker.compose.service=\$service\" --format '{{.ID}}|{{.Names}}|{{.Label \"com.docker.compose.project\"}}|{{.Label \"com.docker.compose.service\"}}' | awk -F'|' -v target=\"\$target_project\" 'length(\$1) > 0 && \$3 != target { printf \"duplicate compose service: service=%s container=%s project=%s expected=%s\\n\", \$4, \$2, \$3, target > \"/dev/stderr\"; bad=1 } END { exit bad }' || failed=1; done; exit \$failed" | redact_sensitive
 }
 
 verify_remote_containers() {
@@ -335,10 +366,10 @@ verify_remote_containers() {
   env_file="$(shell_quote "$REMOTE_ENV_FILE")"
   compose="$(compose_cmd "$env_file")"
   verify_remote_compose_uniqueness
-  output="$(ssh_base "cd $app_dir && $compose ps --format json gateway product auction" | redact_sensitive)"
+  output="$(ssh_base "cd $app_dir && $compose ps --format json $(demo_full_stack_services)" | redact_sensitive)"
   echo "$output"
 
-  for service in gateway product auction; do
+  for service in $(demo_full_stack_services); do
     if ! echo "$output" | grep -E "\"Service\":\"$service\"|\"Name\":\"[^\"]*$service[^\"]*\"" >/dev/null; then
       echo -e "${RED}错误: 远端容器缺失: $service${NC}" >&2
       failed=1
@@ -386,6 +417,7 @@ apply() {
   sync_frontend
   sync_backend
   restart_remote
+  wait_for_remote_http_ready
   verify_prod
 }
 

@@ -111,6 +111,26 @@ assert_contains \
 
 assert_contains \
   "$ROOT/scripts/deploy-dev.sh" \
+  'local_full_stack_services' \
+  "deploy-dev.sh must define the full local docker compose service set for deployment and verification"
+
+assert_contains \
+  "$ROOT/scripts/deploy-dev.sh" \
+  'docker compose up -d --build --remove-orphans' \
+  "deploy-dev.sh restart must deploy all local docker compose services, not only core backend services"
+
+assert_contains \
+  "$ROOT/scripts/deploy-dev.sh" \
+  'verify_local_containers' \
+  "deploy-dev.sh verify must check every local docker compose service container"
+
+assert_contains \
+  "$ROOT/scripts/deploy-dev.sh" \
+  'gateway product auction mysql redis rabbitmq nacos nacos-mysql frontend-h5 frontend-admin test-service test-dashboard loki promtail prometheus grafana growthbook growthbook-db' \
+  "deploy-dev.sh must include all mature-project local services in the full deployment set"
+
+assert_contains \
+  "$ROOT/scripts/deploy-dev.sh" \
   'stop_non_docker_infra_ports' \
   "deploy-dev.sh must stop host-level infra listeners before starting Docker infra"
 
@@ -138,6 +158,21 @@ assert_contains \
   "$ROOT/scripts/deploy-dev.sh" \
   '"\$workdir" != "\$PROJECT_ROOT"\*' \
   "deploy-dev.sh must not delete compose projects launched from the current repository tree"
+
+assert_contains \
+  "$ROOT/scripts/deploy-dev.sh" \
+  'wait_for_users_table' \
+  "deploy-dev.sh must wait for product service to migrate the users table before seeding demo users"
+
+assert_contains \
+  "$ROOT/scripts/deploy-dev.sh" \
+  "information_schema.TABLES WHERE TABLE_SCHEMA='auction' AND TABLE_NAME='users'" \
+  "deploy-dev.sh must detect users table readiness via information_schema instead of guessing"
+
+assert_contains \
+  "$ROOT/scripts/deploy-dev.sh" \
+  'wait_for_http_ready' \
+  "deploy-dev.sh must wait for slow-start application HTTP services before verification to avoid false 000 failures"
 
 assert_contains \
   "$ROOT/scripts/deploy-dev.sh" \
