@@ -1,0 +1,34 @@
+backend/auction/handler/statistics_test.go
+  6acc9bbdac1dfe60 1-95
+backend/auction/route_internal_test.go
+  6acc9bbdac1dfe60 43
+backend/auction/main.go
+  6acc9bbdac1dfe60 100,199,292,400,422-424
+backend/auction/handler/statistics.go
+  6acc9bbdac1dfe60 1-94
+backend/auction/admin_route_test.go
+  6acc9bbdac1dfe60 51
+docs/superpowers/sdd/runs/2026-06-06-2026-06-06-admin-auction-statistics-real-state.md
+  6acc9bbdac1dfe60 12-17,19-35,37,39,41-45,47-59,61-62,64-81,89-93,97-101,111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "c94f5dfc11d301f58511a203bd3f6d3695ed12f2",
+  "prompts": {
+    "6acc9bbdac1dfe60": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a23e94b2ec60aa1a73a6199",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>",
+      "total_additions": 208,
+      "total_deletions": 3,
+      "accepted_lines": 207,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

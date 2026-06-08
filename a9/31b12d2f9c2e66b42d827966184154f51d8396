@@ -1,0 +1,63 @@
+docs/superpowers/specs/2026-06-05-admin-live-start-product-design.md
+  6640f50781da4706 1-215 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22c5f02ec60aa1a73a20aa","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,215]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "a931b12d2f9c2e66b42d827966184154f51d8396",
+  "prompts": {
+    "6640f50781da4706": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a22c1da2ec60aa1a73a1cdd",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>",
+      "messages": [],
+      "total_additions": 215,
+      "total_deletions": 0,
+      "accepted_lines": 215,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "docs/superpowers/specs/2026-06-05-admin-live-start-product-design.md": [
+      {
+        "hash": "6640f50781da4706",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              215
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22c5f02ec60aa1a73a20aa",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  215
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "6640f50781da4706": {
+      "tool": "trae",
+      "conversation_id": "6a22c1da2ec60aa1a73a1cdd",
+      "session_id": "6a22c1da2ec60aa1a73a1cdd",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

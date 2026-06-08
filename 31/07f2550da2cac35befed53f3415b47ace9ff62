@@ -1,0 +1,129 @@
+docs/superpowers/specs/2026-06-05-admin-live-start-product-design.md
+  6640f50781da4706 9-30,33,94,100-101,106-107,160-161,220-228,239 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22cdae2ec60aa1a73a252d","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[9,30]},{"Single":33},{"Single":94},{"Range":[100,101]},{"Range":[106,107]},{"Range":[160,161]},{"Range":[220,228]},{"Single":239}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "3107f2550da2cac35befed53f3415b47ace9ff62",
+  "prompts": {
+    "6640f50781da4706": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a22c1da2ec60aa1a73a1cdd",
+        "model": "openrouter-3o__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>",
+      "messages": [],
+      "total_additions": 40,
+      "total_deletions": 9,
+      "accepted_lines": 40,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "docs/superpowers/specs/2026-06-05-admin-live-start-product-design.md": [
+      {
+        "hash": "6640f50781da4706",
+        "line_ranges": [
+          {
+            "Range": [
+              9,
+              30
+            ]
+          },
+          {
+            "Single": 33
+          },
+          {
+            "Single": 94
+          },
+          {
+            "Range": [
+              100,
+              101
+            ]
+          },
+          {
+            "Range": [
+              106,
+              107
+            ]
+          },
+          {
+            "Range": [
+              160,
+              161
+            ]
+          },
+          {
+            "Range": [
+              220,
+              228
+            ]
+          },
+          {
+            "Single": 239
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22cdae2ec60aa1a73a252d",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  9,
+                  30
+                ]
+              },
+              {
+                "Single": 33
+              },
+              {
+                "Single": 94
+              },
+              {
+                "Range": [
+                  100,
+                  101
+                ]
+              },
+              {
+                "Range": [
+                  106,
+                  107
+                ]
+              },
+              {
+                "Range": [
+                  160,
+                  161
+                ]
+              },
+              {
+                "Range": [
+                  220,
+                  228
+                ]
+              },
+              {
+                "Single": 239
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "6640f50781da4706": {
+      "tool": "trae",
+      "conversation_id": "6a22c1da2ec60aa1a73a1cdd",
+      "session_id": "6a22c1da2ec60aa1a73a1cdd",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

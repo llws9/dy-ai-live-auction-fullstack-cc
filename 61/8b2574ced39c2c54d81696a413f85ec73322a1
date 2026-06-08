@@ -1,0 +1,41 @@
+backend/auction/service/bid_cap_price_settlement_test.go
+  s_b812e67a2a275d::t_36f13a23d07a02 285-309
+  s_b812e67a2a275d::t_a6550fde90f853 254-284
+  s_b812e67a2a275d::t_2d08ad8c977e92 191-253
+backend/auction/service/auction.go
+  s_b812e67a2a275d::t_baa2920a5194fb 12
+  s_b812e67a2a275d::t_5443714822f043 134-139,141-144,146
+  s_b812e67a2a275d::t_bb4f9f9d663941 147-150,154
+backend/auction/service/auction_test.go
+  s_b812e67a2a275d::t_7c626f3cd27683 242,247,250-254,261,297-300
+  s_b812e67a2a275d::t_9231b4af7638cf 303,333-338
+  s_b812e67a2a275d::t_b186a1934087db 239-241
+backend/auction/dao/auction_settlement_task.go
+  s_b812e67a2a275d::t_7d14ff7f262526 6,69-83,85-88,90
+  s_b812e67a2a275d::t_b2f46fc9b249a2 84,89,91-103
+  s_b812e67a2a275d::t_ff145d8b1f97e3 115
+backend/auction/service/auction_settlement.go
+  s_b812e67a2a275d::t_efc69317be0c0d 68-74,106-112
+  s_b812e67a2a275d::t_77c910b8bf2dca 80-89,99-100,102,171,180-182,185,190-193,207-209
+  s_b812e67a2a275d::t_2e6cbe3754407d 90-92,95-98,101
+backend/auction/model/auction_settlement_task.go
+  s_b812e67a2a275d::t_968b55a3b7f984 10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "618b2574ced39c2c54d81696a413f85ec73322a1",
+  "prompts": {},
+  "sessions": {
+    "s_b812e67a2a275d": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a23f1ec3eefb8c530aa6ecf",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}

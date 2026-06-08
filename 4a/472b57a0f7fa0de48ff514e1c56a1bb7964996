@@ -1,0 +1,129 @@
+docs/superpowers/sdd/runs/2026-06-05-test-dashboard-demo-theater-state.md
+  ead3d75f704152da 18,36,39-40,51,347-350,364-394,399-402,410-413 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a23178c2ec60aa1a73a4d53","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":18},{"Single":36},{"Range":[39,40]},{"Single":51},{"Range":[347,350]},{"Range":[364,394]},{"Range":[399,402]},{"Range":[410,413]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "4a472b57a0f7fa0de48ff514e1c56a1bb7964996",
+  "prompts": {
+    "ead3d75f704152da": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a22eaa12ec60aa1a73a3e14",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>",
+      "messages": [],
+      "total_additions": 48,
+      "total_deletions": 17,
+      "accepted_lines": 48,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "docs/superpowers/sdd/runs/2026-06-05-test-dashboard-demo-theater-state.md": [
+      {
+        "hash": "ead3d75f704152da",
+        "line_ranges": [
+          {
+            "Single": 18
+          },
+          {
+            "Single": 36
+          },
+          {
+            "Range": [
+              39,
+              40
+            ]
+          },
+          {
+            "Single": 51
+          },
+          {
+            "Range": [
+              347,
+              350
+            ]
+          },
+          {
+            "Range": [
+              364,
+              394
+            ]
+          },
+          {
+            "Range": [
+              399,
+              402
+            ]
+          },
+          {
+            "Range": [
+              410,
+              413
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a23178c2ec60aa1a73a4d53",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 18
+              },
+              {
+                "Single": 36
+              },
+              {
+                "Range": [
+                  39,
+                  40
+                ]
+              },
+              {
+                "Single": 51
+              },
+              {
+                "Range": [
+                  347,
+                  350
+                ]
+              },
+              {
+                "Range": [
+                  364,
+                  394
+                ]
+              },
+              {
+                "Range": [
+                  399,
+                  402
+                ]
+              },
+              {
+                "Range": [
+                  410,
+                  413
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "ead3d75f704152da": {
+      "tool": "trae",
+      "conversation_id": "6a22eaa12ec60aa1a73a3e14",
+      "session_id": "6a22eaa12ec60aa1a73a3e14",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

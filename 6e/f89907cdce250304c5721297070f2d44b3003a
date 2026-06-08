@@ -1,0 +1,545 @@
+docker-compose.yml
+  54451a7adfd0b70d 21-25,28,318 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22b34a2ec60aa1a73a14b6","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[21,25]},{"Single":28},{"Single":318}]}]}
+backend/gateway/handler/business_event_test.go
+  54451a7adfd0b70d 5,19-21,24,26,30-33,39,53,74-105,124-163 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22b34a2ec60aa1a73a14b6","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":5},{"Range":[19,21]},{"Single":24},{"Single":26},{"Range":[30,33]},{"Single":39},{"Single":53},{"Range":[74,105]},{"Range":[124,163]}]}]}
+backend/gateway/handler/business_event.go
+  54451a7adfd0b70d 6,8,20,60-76,111-118,136-137,146-150,187-210 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22b34a2ec60aa1a73a14b6","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":6},{"Single":8},{"Single":20},{"Range":[60,76]},{"Range":[111,118]},{"Range":[136,137]},{"Range":[146,150]},{"Range":[187,210]}]}]}
+docker-compose.demo.yml
+  54451a7adfd0b70d 23-27,31 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22b34a2ec60aa1a73a14b6","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[23,27]},{"Single":31}]}]}
+frontend/h5/src/pages/Live/LiveRoomSlide.tsx
+  54451a7adfd0b70d 202,229-230,233-234,237,241-242,244 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22b34a2ec60aa1a73a14b6","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":202},{"Range":[229,230]},{"Range":[233,234]},{"Single":237},{"Range":[241,242]},{"Single":244}]}]}
+observability/docker-compose.yaml
+  54451a7adfd0b70d 45 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22b34a2ec60aa1a73a14b6","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":45}]}]}
+backend/gateway/dao/business_event_test.go
+  54451a7adfd0b70d 20,29,51-56 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22b34a2ec60aa1a73a14b6","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":20},{"Single":29},{"Range":[51,56]}]}]}
+backend/gateway/dao/business_event.go
+  54451a7adfd0b70d 20-21,24-25 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22b34a2ec60aa1a73a14b6","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[20,21]},{"Range":[24,25]}]}]}
+frontend/h5/src/pages/Live/__tests__/LiveRoomSlide.test.tsx
+  54451a7adfd0b70d 8,57-60,105,217-227 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a22b34a2ec60aa1a73a14b6","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":8},{"Range":[57,60]},{"Single":105},{"Range":[217,227]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "6ef89907cdce250304c5721297070f2d44b3003a",
+  "prompts": {
+    "54451a7adfd0b70d": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a21e2742ec60aa1a739e59a",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>",
+      "messages": [],
+      "total_additions": 202,
+      "total_deletions": 21,
+      "accepted_lines": 211,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "backend/gateway/dao/business_event.go": [
+      {
+        "hash": "54451a7adfd0b70d",
+        "line_ranges": [
+          {
+            "Range": [
+              20,
+              21
+            ]
+          },
+          {
+            "Range": [
+              24,
+              25
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22b34a2ec60aa1a73a14b6",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  20,
+                  21
+                ]
+              },
+              {
+                "Range": [
+                  24,
+                  25
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/gateway/dao/business_event_test.go": [
+      {
+        "hash": "54451a7adfd0b70d",
+        "line_ranges": [
+          {
+            "Single": 20
+          },
+          {
+            "Single": 29
+          },
+          {
+            "Range": [
+              51,
+              56
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22b34a2ec60aa1a73a14b6",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 20
+              },
+              {
+                "Single": 29
+              },
+              {
+                "Range": [
+                  51,
+                  56
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/gateway/handler/business_event.go": [
+      {
+        "hash": "54451a7adfd0b70d",
+        "line_ranges": [
+          {
+            "Single": 6
+          },
+          {
+            "Single": 8
+          },
+          {
+            "Single": 20
+          },
+          {
+            "Range": [
+              60,
+              76
+            ]
+          },
+          {
+            "Range": [
+              111,
+              118
+            ]
+          },
+          {
+            "Range": [
+              136,
+              137
+            ]
+          },
+          {
+            "Range": [
+              146,
+              150
+            ]
+          },
+          {
+            "Range": [
+              187,
+              210
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22b34a2ec60aa1a73a14b6",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 6
+              },
+              {
+                "Single": 8
+              },
+              {
+                "Single": 20
+              },
+              {
+                "Range": [
+                  60,
+                  76
+                ]
+              },
+              {
+                "Range": [
+                  111,
+                  118
+                ]
+              },
+              {
+                "Range": [
+                  136,
+                  137
+                ]
+              },
+              {
+                "Range": [
+                  146,
+                  150
+                ]
+              },
+              {
+                "Range": [
+                  187,
+                  210
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/gateway/handler/business_event_test.go": [
+      {
+        "hash": "54451a7adfd0b70d",
+        "line_ranges": [
+          {
+            "Single": 5
+          },
+          {
+            "Range": [
+              19,
+              21
+            ]
+          },
+          {
+            "Single": 24
+          },
+          {
+            "Single": 26
+          },
+          {
+            "Range": [
+              30,
+              33
+            ]
+          },
+          {
+            "Single": 39
+          },
+          {
+            "Single": 53
+          },
+          {
+            "Range": [
+              74,
+              105
+            ]
+          },
+          {
+            "Range": [
+              124,
+              163
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22b34a2ec60aa1a73a14b6",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 5
+              },
+              {
+                "Range": [
+                  19,
+                  21
+                ]
+              },
+              {
+                "Single": 24
+              },
+              {
+                "Single": 26
+              },
+              {
+                "Range": [
+                  30,
+                  33
+                ]
+              },
+              {
+                "Single": 39
+              },
+              {
+                "Single": 53
+              },
+              {
+                "Range": [
+                  74,
+                  105
+                ]
+              },
+              {
+                "Range": [
+                  124,
+                  163
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "docker-compose.demo.yml": [
+      {
+        "hash": "54451a7adfd0b70d",
+        "line_ranges": [
+          {
+            "Range": [
+              23,
+              27
+            ]
+          },
+          {
+            "Single": 31
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22b34a2ec60aa1a73a14b6",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  23,
+                  27
+                ]
+              },
+              {
+                "Single": 31
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "docker-compose.yml": [
+      {
+        "hash": "54451a7adfd0b70d",
+        "line_ranges": [
+          {
+            "Range": [
+              21,
+              25
+            ]
+          },
+          {
+            "Single": 28
+          },
+          {
+            "Single": 318
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22b34a2ec60aa1a73a14b6",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  21,
+                  25
+                ]
+              },
+              {
+                "Single": 28
+              },
+              {
+                "Single": 318
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frontend/h5/src/pages/Live/LiveRoomSlide.tsx": [
+      {
+        "hash": "54451a7adfd0b70d",
+        "line_ranges": [
+          {
+            "Single": 202
+          },
+          {
+            "Range": [
+              229,
+              230
+            ]
+          },
+          {
+            "Range": [
+              233,
+              234
+            ]
+          },
+          {
+            "Single": 237
+          },
+          {
+            "Range": [
+              241,
+              242
+            ]
+          },
+          {
+            "Single": 244
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22b34a2ec60aa1a73a14b6",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 202
+              },
+              {
+                "Range": [
+                  229,
+                  230
+                ]
+              },
+              {
+                "Range": [
+                  233,
+                  234
+                ]
+              },
+              {
+                "Single": 237
+              },
+              {
+                "Range": [
+                  241,
+                  242
+                ]
+              },
+              {
+                "Single": 244
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "frontend/h5/src/pages/Live/__tests__/LiveRoomSlide.test.tsx": [
+      {
+        "hash": "54451a7adfd0b70d",
+        "line_ranges": [
+          {
+            "Single": 8
+          },
+          {
+            "Range": [
+              57,
+              60
+            ]
+          },
+          {
+            "Single": 105
+          },
+          {
+            "Range": [
+              217,
+              227
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22b34a2ec60aa1a73a14b6",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 8
+              },
+              {
+                "Range": [
+                  57,
+                  60
+                ]
+              },
+              {
+                "Single": 105
+              },
+              {
+                "Range": [
+                  217,
+                  227
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "observability/docker-compose.yaml": [
+      {
+        "hash": "54451a7adfd0b70d",
+        "line_ranges": [
+          {
+            "Single": 45
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a22b34a2ec60aa1a73a14b6",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 45
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "54451a7adfd0b70d": {
+      "tool": "trae",
+      "conversation_id": "6a21e2742ec60aa1a739e59a",
+      "session_id": "6a21e2742ec60aa1a739e59a",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

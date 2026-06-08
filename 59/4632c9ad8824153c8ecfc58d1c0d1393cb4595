@@ -1,0 +1,103 @@
+backend/test/handler/demo.go
+  s_49752f86dede93::t_b4953a214366a6 25-27,273-276,492,622
+backend/test/handler/demo_test.go
+  s_49752f86dede93::t_4ac4bfb53c944c 150-152,275-276
+backend/test/client/auction/client.go
+  s_49752f86dede93::t_51be3d2876243f 88,92-97,287-288
+scripts/backfill_product_category.sql
+  s_49752f86dede93::t_6249870e92862d 1,4-5,30,33-61,65,70,73-74
+backend/product/handler/product_test.go
+  s_49752f86dede93::t_92941bc6843ca8 565,567,570-572,595
+backend/test/client/auction/client_test.go
+  s_49752f86dede93::t_7d75af15dbe0ff 130-132,135,147,149-151,159-160
+  s_49752f86dede93::t_3a2a392cc503ca 42-43 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a25c51f0bfcee1b04fb1bff","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[42,43]}]}]}
+backend/product/dao/product.go
+  s_49752f86dede93::t_0fd8323b886ff7 92-102,112-115,117,119
+backend/product/dao/product_test.go
+  s_49752f86dede93::t_c871ebbe11b8a8 19,21,31-33,42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "594632c9ad8824153c8ecfc58d1c0d1393cb4595",
+  "prompts": {},
+  "sessions": {
+    "s_49752f86dede93": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a25bce00bfcee1b04fb15bd",
+        "model": "gpt-5.5__dev",
+        "display_model_name": "GPT-5.5"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {
+    "backend/test/client/auction/client_test.go": [
+      {
+        "hash": "s_49752f86dede93::t_3a2a392cc503ca",
+        "line_ranges": [
+          {
+            "Range": [
+              42,
+              43
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a25c51f0bfcee1b04fb1bff",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  42,
+                  43
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "s_00af32a6944870": {
+      "tool": "trae",
+      "conversation_id": "6a25aeb90bfcee1b04fb1180",
+      "session_id": "6a25aeb90bfcee1b04fb1180",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_00af32a6944870::t_062fd9d728dda6": {
+      "tool": "trae",
+      "conversation_id": "6a25aeb90bfcee1b04fb1180",
+      "session_id": "6a25aeb90bfcee1b04fb1180",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_49752f86dede93": {
+      "tool": "trae",
+      "conversation_id": "6a25bce00bfcee1b04fb15bd",
+      "session_id": "6a25bce00bfcee1b04fb15bd",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_49752f86dede93::t_0753411793760a": {
+      "tool": "trae",
+      "conversation_id": "6a25bce00bfcee1b04fb15bd",
+      "session_id": "6a25bce00bfcee1b04fb15bd",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_49752f86dede93::t_3a2a392cc503ca": {
+      "tool": "trae",
+      "conversation_id": "6a25bce00bfcee1b04fb15bd",
+      "session_id": "6a25bce00bfcee1b04fb15bd",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

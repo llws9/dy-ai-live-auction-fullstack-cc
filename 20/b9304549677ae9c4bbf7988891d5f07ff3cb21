@@ -1,0 +1,209 @@
+backend/gateway/router/router.go
+  6acc9bbdac1dfe60 194 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a23ed502ec60aa1a73a651c","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":194}]}]}
+backend/gateway/router/admin_statistics_route_test.go
+  6acc9bbdac1dfe60 17-29,32,36-89,111-113,117-119,122-123,127-128,130-131,135-137 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a23ed502ec60aa1a73a651c","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[17,29]},{"Single":32},{"Range":[36,89]},{"Range":[111,113]},{"Range":[117,119]},{"Range":[122,123]},{"Range":[127,128]},{"Range":[130,131]},{"Range":[135,137]}]}]}
+docs/superpowers/sdd/runs/2026-06-06-2026-06-06-admin-auction-statistics-real-state.md
+  6acc9bbdac1dfe60 12-92 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a23ed502ec60aa1a73a651c","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[12,92]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "20b9304549677ae9c4bbf7988891d5f07ff3cb21",
+  "prompts": {
+    "6acc9bbdac1dfe60": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a23e94b2ec60aa1a73a6199",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>",
+      "messages": [],
+      "total_additions": 105,
+      "total_deletions": 35,
+      "accepted_lines": 105,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "backend/gateway/router/admin_statistics_route_test.go": [
+      {
+        "hash": "6acc9bbdac1dfe60",
+        "line_ranges": [
+          {
+            "Range": [
+              17,
+              29
+            ]
+          },
+          {
+            "Single": 32
+          },
+          {
+            "Range": [
+              36,
+              89
+            ]
+          },
+          {
+            "Range": [
+              111,
+              113
+            ]
+          },
+          {
+            "Range": [
+              117,
+              119
+            ]
+          },
+          {
+            "Range": [
+              122,
+              123
+            ]
+          },
+          {
+            "Range": [
+              127,
+              128
+            ]
+          },
+          {
+            "Range": [
+              130,
+              131
+            ]
+          },
+          {
+            "Range": [
+              135,
+              137
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a23ed502ec60aa1a73a651c",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  17,
+                  29
+                ]
+              },
+              {
+                "Single": 32
+              },
+              {
+                "Range": [
+                  36,
+                  89
+                ]
+              },
+              {
+                "Range": [
+                  111,
+                  113
+                ]
+              },
+              {
+                "Range": [
+                  117,
+                  119
+                ]
+              },
+              {
+                "Range": [
+                  122,
+                  123
+                ]
+              },
+              {
+                "Range": [
+                  127,
+                  128
+                ]
+              },
+              {
+                "Range": [
+                  130,
+                  131
+                ]
+              },
+              {
+                "Range": [
+                  135,
+                  137
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/gateway/router/router.go": [
+      {
+        "hash": "6acc9bbdac1dfe60",
+        "line_ranges": [
+          {
+            "Single": 194
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a23ed502ec60aa1a73a651c",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 194
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "docs/superpowers/sdd/runs/2026-06-06-2026-06-06-admin-auction-statistics-real-state.md": [
+      {
+        "hash": "6acc9bbdac1dfe60",
+        "line_ranges": [
+          {
+            "Range": [
+              12,
+              92
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a23ed502ec60aa1a73a651c",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  12,
+                  92
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "6acc9bbdac1dfe60": {
+      "tool": "trae",
+      "conversation_id": "6a23e94b2ec60aa1a73a6199",
+      "session_id": "6a23e94b2ec60aa1a73a6199",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

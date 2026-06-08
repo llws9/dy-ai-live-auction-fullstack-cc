@@ -1,0 +1,29 @@
+frontend/h5/src/components/auction/bid-success-animation.css
+  s_455a9e86c0d1f6::t_4a5f230b4bd969 22
+  s_455a9e86c0d1f6::t_0376746ae39101 126
+  s_455a9e86c0d1f6::t_ec0aa637ccd791 202-214,221-222
+  s_455a9e86c0d1f6::t_1248f1e08be731 74
+  s_455a9e86c0d1f6::t_080a1b61c85c51 60
+  s_455a9e86c0d1f6::t_4be8f45aca6c5a 151
+  s_455a9e86c0d1f6::t_68ed023ef64482 44
+frontend/h5/src/components/auction/BidSuccessAnimation.tsx
+  s_455a9e86c0d1f6::t_81e92cf4eb3706 27,32-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "23bf4647e890b1e93aa032fa3c589a8f862ac451",
+  "prompts": {},
+  "sessions": {
+    "s_455a9e86c0d1f6": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a25bdaf0bfcee1b04fb1675",
+        "model": "gemini-3.1-pro__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
