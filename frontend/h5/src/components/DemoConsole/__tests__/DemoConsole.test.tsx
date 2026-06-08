@@ -12,6 +12,7 @@ import {
   triggerOtherSkyLamp,
   triggerFollowBid,
 } from '../../../services/demoApi';
+import { liveStreamApi } from '../../../services/api';
 
 jest.mock('../../../store/authContext', () => ({
   useAuth: jest.fn(),
@@ -34,6 +35,16 @@ jest.mock('../../../services/demoApi', () => ({
   rechargeDemoUser: jest.fn(),
 }));
 
+jest.mock('../../../services/api', () => {
+  const actual = jest.requireActual('../../../services/api');
+  return {
+    ...actual,
+    liveStreamApi: {
+      list: jest.fn(),
+    },
+  };
+});
+
 const mockNavigate = jest.fn();
 let mockPathname = '/';
 
@@ -51,6 +62,7 @@ const mockedRechargeDemoUser = rechargeDemoUser as jest.MockedFunction<typeof re
 const mockedCreateDemoMerchantAuction = createDemoMerchantAuction as jest.MockedFunction<typeof createDemoMerchantAuction>;
 const mockedCreateDemoFixedPriceItem = createDemoFixedPriceItem as jest.MockedFunction<typeof createDemoFixedPriceItem>;
 const mockedShortenDemoAuction = shortenDemoAuction as jest.MockedFunction<typeof shortenDemoAuction>;
+const mockedLiveStreamList = liveStreamApi.list as jest.MockedFunction<typeof liveStreamApi.list>;
 const mockLogin = jest.fn();
 const mockShowToast = jest.fn();
 
@@ -98,6 +110,7 @@ describe('DemoConsole', () => {
       stock: 10,
     });
     mockedShortenDemoAuction.mockResolvedValue({ ok: true });
+    mockedLiveStreamList.mockResolvedValue({ list: [] });
   });
 
   it('shows the assistive touch menu and second-level skeletons', async () => {
@@ -433,6 +446,24 @@ describe('DemoConsole', () => {
 
     expect(mockedShortenDemoAuction).toHaveBeenCalledWith({ auctionId: 777, remainingSeconds: 10 });
     expect(mockShowToast).toHaveBeenCalledWith('竞拍将在10秒后结束', 'success', 2500);
+  });
+
+  it('resolves the latest current auction from the current live stream before shortening', async () => {
+    const user = userEvent.setup();
+    mockedLiveStreamList.mockResolvedValueOnce({
+      list: [
+        { id: 88, current_auction_id: 999 },
+        { id: 89, current_auction_id: 123 },
+      ],
+    });
+    renderConsole(777, 88);
+
+    await user.click(screen.getByTestId('demo-console-fab'));
+    await user.click(screen.getByRole('button', { name: '演示' }));
+    await user.click(screen.getByRole('button', { name: '倒计时' }));
+
+    expect(mockedLiveStreamList).toHaveBeenCalledWith(1, 50, 1);
+    expect(mockedShortenDemoAuction).toHaveBeenCalledWith({ auctionId: 999, remainingSeconds: 10 });
   });
 
   it('warns and skips auction shorten when there is no current auction', async () => {

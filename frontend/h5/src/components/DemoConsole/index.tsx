@@ -8,7 +8,7 @@ import {
   triggerOtherSkyLamp,
   triggerFollowBid,
 } from '../../services/demoApi';
-import { ApiError } from '../../services/api';
+import { ApiError, liveStreamApi } from '../../services/api';
 import type { DemoMerchantAuctionMode } from '../../services/demoApi';
 import { dispatchDemoFixedPriceListed } from '../../events/fixedPriceEvents';
 import { useAuth } from '../../store/authContext';
@@ -29,6 +29,7 @@ const BUYER_B_USER_ID = 9102;
 const DEMO_RECHARGE_AMOUNT = '10000.00';
 const TOAST_DURATION_MS = 2500;
 const SHORTEN_AUCTION_REMAINING_SECONDS = 10;
+const LIVE_STREAM_STATUS_LIVE = 1;
 
 const DEMO_ACCOUNTS: DemoAccount[] = [
   { label: '买家A', phone: '13800138001' },
@@ -54,6 +55,15 @@ function isDemoAuthError(error: unknown) {
   }
 
   return false;
+}
+
+function extractList(response: any): any[] {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.list)) return response.list;
+  if (Array.isArray(response?.items)) return response.items;
+  if (Array.isArray(response?.data?.list)) return response.data.list;
+  if (Array.isArray(response?.data?.items)) return response.data.items;
+  return [];
 }
 
 export default function DemoConsole() {
@@ -162,8 +172,21 @@ export default function DemoConsole() {
 
     setRunningAction('shorten-auction');
     try {
+      let targetAuctionId = currentAuctionId;
+      if (currentLiveStreamId) {
+        try {
+          const response = await liveStreamApi.list(1, 50, LIVE_STREAM_STATUS_LIVE);
+          const currentRoom = extractList(response).find((room) => Number(room?.id) === currentLiveStreamId);
+          const latestAuctionId = Number(currentRoom?.current_auction_id);
+          if (Number.isFinite(latestAuctionId) && latestAuctionId > 0) {
+            targetAuctionId = latestAuctionId;
+          }
+        } catch (error) {
+          console.warn('刷新当前竞拍失败，回退到页面上下文:', error);
+        }
+      }
       await runWithDemoAuthRetry(() => shortenDemoAuction({
-        auctionId: currentAuctionId,
+        auctionId: targetAuctionId,
         remainingSeconds: SHORTEN_AUCTION_REMAINING_SECONDS,
       }));
       showToast('竞拍将在10秒后结束', 'success', TOAST_DURATION_MS);
