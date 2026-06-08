@@ -38,11 +38,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `7` |
-| Done | `1` |
+| Done | `2` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `5` |
-| Last Updated | `2026-06-09 00:12` |
+| Last Updated | `2026-06-09 00:25` |
 
 ## Status Legend
 
@@ -70,7 +70,7 @@
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Write Set | Read Set | Regression Sentinels | Runtime Services |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `后端 Auction 模型增加只读 BidCount 字段` | `done` | `subagent-t001` | `W1` | `-` | `model field only` | `backend/auction/model/auction.go` | `AGENTS.md; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go build ./...` | `none` |
-| `T002` | `后端 AuctionFilters 与 ListWithFilters 实现价格过滤与热度排序` | `assigned` | `subagent-t002` | `W2` | `T001` | `DAO filters, SQL, DAO tests` | `backend/auction/dao/auction.go; backend/auction/dao/auction_filter_test.go` | `backend/auction/model/auction.go; backend/auction/dao/auction_current_test.go; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go test ./dao/ -run 'TestListWithFiltersPriceRange|TestListWithFiltersSortByHot' -v` | `none` |
+| `T002` | `后端 AuctionFilters 与 ListWithFilters 实现价格过滤与热度排序` | `done` | `subagent-t002` | `W2` | `T001` | `DAO filters, SQL, DAO tests` | `backend/auction/dao/auction.go; backend/auction/dao/auction_filter_test.go` | `backend/auction/model/auction.go; backend/auction/dao/auction_current_test.go; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go test ./dao/ -run 'TestListWithFiltersPriceRange|TestListWithFiltersSortByHot' -v` | `none` |
 | `T003` | `后端 handler 解析筛选参数并透传` | `pending` | `unassigned` | `W3` | `T002` | `GET /auctions query parsing and filter propagation` | `backend/auction/handler/auction.go; backend/auction/handler/auction_list.go` | `backend/auction/dao/auction.go; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go build ./... && go test ./handler/ -v` | `none` |
 | `T004` | `前端 auctionApi.list 扩展查询参数` | `pending` | `unassigned` | `W4` | `T003` | `H5 API client params` | `frontend/h5/src/services/api.ts` | `docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
 | `T005` | `前端价格底部抽屉组件 PriceFilterSheet` | `pending` | `unassigned` | `W5` | `T004` | `bottom sheet component and styles` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css` | `frontend/h5/src/pages/Home/index.tsx; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
@@ -179,10 +179,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `assigned` |
+| Status | `done` |
 | Owner | `subagent-t002` |
 | Started At | `2026-06-09 00:16` |
-| Completed At | `-` |
+| Completed At | `2026-06-09 00:25` |
 | Branch | `feat/homepage-filter-sdd` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-homepage-filter-sdd` |
 | Base Commit | `351a147089502bac70ae6d7ed5fafa4a303ab584` |
@@ -217,19 +217,40 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `red then green DAO sentinel` | `not_run` | `pending` |
+| `cd backend/auction && go test ./dao/ -run 'TestListWithFiltersPriceRange|TestListWithFiltersSortByHot' -v` | Red: compile fails before `AuctionFilters` fields exist | `unknown field PriceMin/PriceMax/SortByHot in struct literal of type AuctionFilters`; exit `1` | `red_confirmed` |
+| `cd backend/auction && go test ./dao/ -run 'TestListWithFiltersPriceRange|TestListWithFiltersSortByHot' -count=1 -v` | Green: price range and hot sort sentinel tests pass | `PASS`; `ok auction-service/dao 0.468s` | `pass` |
+| `cd backend/auction && go test ./dao/ -count=1 -v` | Full DAO package regression passes | `PASS`; `ok auction-service/dao 0.343s` | `pass` |
+
+**Runtime Source Evidence**
+
+| Service | Branch | Worktree | Commit | Dirty | Command | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` | `-` | `-` | `-` |
 
 **Modified Files**
 
-- `-`
+- `backend/auction/dao/auction.go`
+- `backend/auction/dao/auction_filter_test.go`
+- `docs/superpowers/sdd/runs/2026-06-08-2026-06-08-homepage-filter-state.md`
+
+**Integration Check**
+
+- Target branch: `main`
+- Branch relationship: `TBD before integration`
+- Diff reviewed: `TBD before integration`
+- Overlapping write-set tasks serialized: `yes; T002 depends on completed T001 and only touched declared write set`
+
+**Commits**
+
+- `17e4f4b6f879d6c8bfa0e9715e3dfd616ca69f80` - `feat(auction): add price-range filter and hot-sort to ListWithFilters`
 
 **Risks / Blockers**
 
-- `COUNT/GROUP BY` behavior must remain compatible with SQLite tests and production DB.
+- `none`
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `yes`
 
 ### T003 - `后端 handler 解析筛选参数并透传`
 
