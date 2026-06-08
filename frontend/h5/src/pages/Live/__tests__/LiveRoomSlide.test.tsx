@@ -271,6 +271,7 @@ describe('LiveRoomSlide', () => {
     const productDetailLink = within(header as HTMLElement).getByRole('link', { name: /商品详情/ });
     const statusPill = within(header as HTMLElement).getByText('正在竞拍');
     expect(viewersRow).toHaveTextContent('128');
+    expect(within(header as HTMLElement).queryByLabelText('退出直播间')).not.toBeInTheDocument();
     expect(productDetailLink).toHaveAttribute('href', '/detail?id=5');
     expect(productDetailLink.previousElementSibling).toBe(viewersRow);
     expect(statusPill.previousElementSibling).toBe(productDetailLink);

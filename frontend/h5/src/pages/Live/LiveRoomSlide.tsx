@@ -1003,7 +1003,6 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
                 )}
               </div>
               <span className={styles.viewerCountPill}>{viewerCount.toLocaleString()}</span>
-              <Link className={styles.closeBtn} to="/" aria-label="退出直播间">×</Link>
             </div>
             <Link className={styles.productDetailBtn} to={`/detail?id=${auctionId}`} state={{ from: 'live' }}>
               商品详情 ›

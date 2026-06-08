@@ -87,6 +87,17 @@ describe('Live layout css', () => {
     expect(rankingBlockCss).toContain('padding: 16px;');
   });
 
+  it('keeps the online viewers pill aligned to the host pill height without a close affordance', () => {
+    const css = readLiveCss();
+    const viewersRowCss = getClassBlock(css, 'viewersRow');
+
+    expect(css).not.toContain('--live-header-pill-width');
+    expect(viewersRowCss).not.toContain('width:');
+    expect(viewersRowCss).toContain('height: 42px;');
+    expect(viewersRowCss).toContain('box-sizing: border-box;');
+    expect(css).not.toContain('.closeBtn');
+  });
+
   it('keeps the auction ended summary in the luxury shimmer treatment', () => {
     const css = readLiveCss();
     const endedSummaryCss = getClassBlock(css, 'endedSummary');
