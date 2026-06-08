@@ -480,3 +480,21 @@ export const liveStreamApi = {
     return get<any>(`/live-streams/${liveStreamId}`);
   },
 };
+
+// 宝箱互动 API
+export const treasureApi = {
+  // 获取宝箱状态
+  getStatus: () => {
+    return get<any>('/treasure/status', { showError: false });
+  },
+
+  // 领取宝箱
+  claim: (tier: number) => {
+    return post<any>(`/treasure/claim`, { tier });
+  },
+
+  // 观看心跳上报
+  heartbeat: (liveStreamId: number) => {
+    return post<any>('/watch/heartbeat', { live_stream_id: liveStreamId }, { showError: false });
+  },
+};

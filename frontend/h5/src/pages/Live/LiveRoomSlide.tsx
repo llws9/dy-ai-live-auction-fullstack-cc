@@ -18,6 +18,7 @@ import { useLiveChatStore } from '../../store/liveChatStore';
 import { trackBusinessEvent } from '../../utils/businessEvent';
 import { repairUtf8Mojibake } from '../../utils/textEncoding';
 import BidDock from './BidDock';
+import { TreasureProgressBar } from './TreasureProgressBar';
 import styles from './Live.module.css';
 
 interface Auction {
@@ -760,7 +761,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     const onAuctionEnded = (data: any) => {
       if (!belongsToThisRoom(data)) return;
       setAuction((previous) => previous ? { ...previous, status: 3, current_price: toAmount(data?.final_price, toAmount(previous.current_price)) } : previous);
-      
+
       // If there is no winner, it means the auction is unsold
       if (!data.winner_id) {
         setShowUnsoldAnimation(true);
@@ -1056,6 +1057,12 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
             </div>
           </div>
         </header>
+
+        {/* 直播宝箱进度条（悬浮在视频层上方、topBar下方） */}
+        <TreasureProgressBar
+          liveStreamId={effectiveLiveStreamId}
+          isAuthenticated={isAuthenticated}
+        />
       </div>
 
       {!hasEnded && fixedPriceItems.length > 0 && (
@@ -1152,16 +1159,16 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
               const isSecond = index === 1;
               const isEmpty = !item;
               const isMe = isAuthenticated && item?.user_id === user?.id;
-              
+
               return (
-                <div 
-                  className={`${styles.rankingItem} ${isFirst && !isEmpty ? styles.rankingItemFirst : ''} ${isEmpty ? styles.rankingItemEmpty : ''} ${isMe ? styles.rankingItemMe : ''}`} 
+                <div
+                  className={`${styles.rankingItem} ${isFirst && !isEmpty ? styles.rankingItemFirst : ''} ${isEmpty ? styles.rankingItemEmpty : ''} ${isMe ? styles.rankingItemMe : ''}`}
                   key={item ? `${item.user_id ?? item.id}-${index}` : `empty-${index}`}
                 >
                   <div className={styles.rankingItemLeft}>
                     <span className={`${styles.rank} ${
-                      isFirst && !isEmpty ? styles.rankFirst : 
-                      isSecond && !isEmpty ? styles.rankSecond : 
+                      isFirst && !isEmpty ? styles.rankFirst :
+                      isSecond && !isEmpty ? styles.rankSecond :
                       !isEmpty ? styles.rankThird :
                       styles.rankEmpty
                     }`}>
@@ -1178,7 +1185,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
               );
             })}
           </div>
-          
+
           {/* 我的出价状态 - 方案A 悬浮轻量卡片 */}
           <div className={styles.myBidSection}>
             <div className={styles.myBidCard}>
@@ -1187,8 +1194,8 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
                   <>
                     <div className={styles.myBidRankCircle}>
                       <span className={styles.myBidRank}>
-                        {ranking.findIndex(r => r.user_id === user?.id) > -1 
-                          ? ranking.findIndex(r => r.user_id === user?.id) + 1 
+                        {ranking.findIndex(r => r.user_id === user?.id) > -1
+                          ? ranking.findIndex(r => r.user_id === user?.id) + 1
                           : '-'}
                       </span>
                     </div>
@@ -1199,8 +1206,8 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
                 )}
               </div>
               <strong className={styles.myBidAmount}>
-                {isAuthenticated 
-                  ? `¥${formatMoney(ranking.find(r => r.user_id === user?.id)?.amount || 0)}` 
+                {isAuthenticated
+                  ? `¥${formatMoney(ranking.find(r => r.user_id === user?.id)?.amount || 0)}`
                   : '-'}
               </strong>
             </div>
@@ -1325,10 +1332,10 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         />
       )}
       {animatingFixedPriceItems.map(item => (
-        <FixedPriceIntroAnimation 
-          key={`anim-${item.id}`} 
-          item={item} 
-          onComplete={handleIntroAnimationComplete} 
+        <FixedPriceIntroAnimation
+          key={`anim-${item.id}`}
+          item={item}
+          onComplete={handleIntroAnimationComplete}
         />
       ))}
       <FixedPriceFlair socket={fixedPriceSocket} />
