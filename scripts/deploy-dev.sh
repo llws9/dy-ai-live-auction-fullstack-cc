@@ -138,7 +138,7 @@ stop_frontend_ports() {
 stop_backend() {
   cd "$PROJECT_ROOT"
   ./scripts/start-local-backend.sh stop || true
-  for port in 8080 8081 8082 8083; do
+  for port in 8080 8081 8082 8083 18090 18091 18092; do
     local pids
     pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
     if [[ -n "$pids" ]]; then

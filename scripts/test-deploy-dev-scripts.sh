@@ -66,6 +66,11 @@ assert_contains \
 
 assert_contains \
   "$ROOT/scripts/deploy-dev.sh" \
+  '8080 8081 8082 8083 18090 18091 18092' \
+  "deploy-dev.sh must clean backend and test-service host ports before Docker full-stack restart"
+
+assert_contains \
+  "$ROOT/scripts/deploy-dev.sh" \
   '3000 3001 5173 5175' \
   "deploy-dev.sh must clean both Docker frontend ports and Vite frontend ports before restart"
 
