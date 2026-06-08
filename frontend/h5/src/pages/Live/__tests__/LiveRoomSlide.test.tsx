@@ -945,4 +945,40 @@ describe('LiveRoomSlide', () => {
     expect(await screen.findByText('演示买家B')).toBeInTheDocument();
     expect(screen.queryByText(/æ¼|ç¤|ä¹/)).not.toBeInTheDocument();
   });
+
+  it('toggles haptic feedback and triggers vibration on bid success', async () => {
+    const mockVibrate = jest.fn();
+    Object.defineProperty(global.navigator, 'vibrate', {
+      value: mockVibrate,
+      configurable: true,
+      writable: true,
+    });
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    fireEvent.click(await screen.findByTestId('bid-dock'));
+    const bidButton = await screen.findByRole('button', { name: '立即出价' });
+    
+    act(() => {
+      fireEvent.click(bidButton);
+    });
+
+    await waitFor(() => {
+      expect(mockVibrate).toHaveBeenCalledWith(50);
+    });
+
+    const toggleButton = screen.getByText(/🎵/);
+    fireEvent.click(toggleButton);
+
+    mockVibrate.mockClear();
+
+    fireEvent.click(await screen.findByTestId('bid-dock'));
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: '立即出价' }));
+    });
+
+    await waitFor(() => {
+      expect(mockVibrate).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -233,12 +233,10 @@
 
 .videoGradient {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  bottom: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.68) 0%, rgba(0, 0, 0, 0.04) 42%, rgba(0, 0, 0, 0.78) 100%);
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 25%, transparent 70%, rgba(0,0,0,0.8) 100%);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .topBar {
@@ -265,9 +263,12 @@
   gap: var(--spacing-2);
   max-width: calc(100% - 128px);
   padding: 4px var(--spacing-3) 4px 4px;
-  border-radius: var(--radius-full);
-  background: rgba(0, 0, 0, 0.48);
-  backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  box-shadow: var(--shadow-sm);
 }
 
 .backLink {
@@ -339,6 +340,27 @@
   background: var(--live-follow-accent-muted);
   cursor: not-allowed;
   opacity: 0.8;
+}
+
+.audioTogglePill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  transition: all 0.2s;
+}
+
+:global(:root[data-theme='dark']) .audioTogglePill {
+  background: rgba(30, 41, 59, 0.4);
 }
 
 .rightActions {
@@ -434,11 +456,20 @@
   align-items: center;
   gap: 6px;
   padding: 7px var(--spacing-3);
-  border-radius: var(--radius-full);
-  background: rgba(0, 0, 0, 0.48);
   color: #f5f0e8;
   font-size: 11px;
-  backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+:global(:root[data-theme='dark']) .hostPill,
+:global(:root[data-theme='dark']) .statusPill {
+    background: rgba(30, 41, 59, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .liveDot,

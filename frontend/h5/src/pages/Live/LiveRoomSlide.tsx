@@ -238,6 +238,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const [followingPending, setFollowingPending] = useState(false);
   const [connected, setConnected] = useState(false);
   const [toast, setToast] = useState('');
+  const [hapticsEnabled, setHapticsEnabled] = useState(true);
   const [bidSuccessFlair, setBidSuccessFlair] = useState<BidSuccessFlair | null>(null);
   const [wonAnimation, setWonAnimation] = useState<WonAnimationState | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -377,7 +378,16 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     window.setTimeout(() => setToast(''), 2200);
   }, []);
 
+  const triggerHaptic = useCallback(() => {
+    if (!hapticsEnabled) return;
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(50);
+    }
+  }, [hapticsEnabled]);
+
   const showBidSuccessFlair = useCallback((amount: number, userName: string) => {
+    triggerHaptic();
+    
     if (bidFlairDelayTimerRef.current !== null) {
       window.clearTimeout(bidFlairDelayTimerRef.current);
     }
@@ -397,7 +407,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       }, BID_SUCCESS_FLAIR_VISIBLE_MS);
       bidFlairDelayTimerRef.current = null;
     }, BID_SUCCESS_FLAIR_DELAY_MS);
-  }, []);
+  }, [triggerHaptic]);
 
   useEffect(() => {
     return () => {
@@ -988,6 +998,9 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
             </button>
           </div>
           <div className={styles.rightActions}>
+            <div className={styles.audioTogglePill} onClick={() => setHapticsEnabled(!hapticsEnabled)}>
+              🎵 {hapticsEnabled ? 'ON' : 'OFF'}
+            </div>
             <div className={styles.viewersRow} aria-label="在线人数">
               <div className={styles.avatarsGroup} aria-hidden="true">
                 {presenceViewers.length > 0 ? (
