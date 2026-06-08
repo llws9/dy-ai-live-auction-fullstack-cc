@@ -38,11 +38,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `7` |
-| Done | `2` |
+| Done | `3` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `5` |
-| Last Updated | `2026-06-09 01:52` |
+| Pending | `4` |
+| Last Updated | `2026-06-09 02:18` |
 
 ## Status Legend
 
@@ -71,7 +71,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `数据模型与建表 DDL` | `done` | `subagent` | `W1` | `-` | `model + migration` | `backend/auction/model/treasure.go; backend/auction/migration/003_create_treasure_tables.sql` | `docs/superpowers/specs/2026-06-09-watch-treasure-coin-design.md; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md; backend/auction/model/user_balance.go` | `cd backend/auction && go build ./model/...` | `none` |
 | `T002` | `DAO：时长累加 + 金币读取 + 幂等领取` | `done` | `subagent` | `W2` | `T001` | `dao + dao tests` | `backend/auction/dao/treasure.go; backend/auction/dao/treasure_test.go; backend/auction/dao/testutil_test.go` | `backend/auction/model/treasure.go; backend/auction/dao/user_balance.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./dao/ -run TestTreasureDAO -v` | `none` |
-| `T003` | `Service：档位常量 + 心跳封顶 + 状态编排 + 领取编排` | `pending` | `unassigned` | `W3` | `T002` | `service + service tests` | `backend/auction/service/treasure.go; backend/auction/service/treasure_test.go` | `backend/auction/dao/treasure.go; backend/auction/service/clock.go; backend/auction/service/testutil_test.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./service/ -run TestTreasureService -v` | `none` |
+| `T003` | `Service：档位常量 + 心跳封顶 + 状态编排 + 领取编排` | `done` | `subagent` | `W3` | `T002` | `service + service tests` | `backend/auction/service/treasure.go; backend/auction/service/treasure_test.go` | `backend/auction/dao/treasure.go; backend/auction/service/clock.go; backend/auction/service/testutil_test.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./service/ -run TestTreasureService -v` | `none` |
 | `T004` | `Handler：3 个 HTTP 端点` | `pending` | `unassigned` | `W4` | `T003` | `handler + handler tests` | `backend/auction/handler/treasure.go; backend/auction/handler/treasure_test.go` | `backend/auction/service/treasure.go; backend/auction/handler/user_balance_http.go; frontend/h5/src/services/api.ts; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./handler/ -run TestTreasureHandler -v` | `none` |
 | `T005` | `Auction 装配：AutoMigrate + main.go 路由` | `pending` | `unassigned` | `W5` | `T004` | `auction main wiring` | `backend/auction/main.go` | `backend/auction/model/treasure.go; backend/auction/dao/treasure.go; backend/auction/service/treasure.go; backend/auction/handler/treasure.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go build ./... && go test ./dao/ ./service/ ./handler/` | `none` |
 | `T006` | `Gateway 路由代理` | `pending` | `unassigned` | `W6` | `T005` | `gateway authGroup proxy` | `backend/gateway/router/router.go` | `backend/gateway/middleware/*; backend/gateway/handler/*; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/gateway && go build ./... && go test ./...` | `none` |
@@ -286,6 +286,122 @@
 - First response line used: `pending final response`
 
 
+### T003 - `Service：档位常量 + 心跳封顶 + 状态编排 + 领取编排`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `subagent` |
+| Started At | `2026-06-09 02:02` |
+| Completed At | `2026-06-09 02:18` |
+| Branch | `feat/watch-treasure-coin-backend` |
+| Worktree | `/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-watch-treasure-coin-backend` |
+| Base Commit | `66cf2285e85414ec97c51e13f0d6c953bbcd4131` |
+| Target Branch | `main` |
+| Depends On | `T002` |
+| Parallel Group | `W3` |
+
+**TDD Plan**
+
+- Red: write service tests for treasure tier constants, heartbeat first beat/cap/short interval, status state machine, JSON tags, threshold invalid tier, and duplicate claim.
+- Green: implement `TreasureService` using `TreasureDAO` and Redis heartbeat key `treasure:hb:<userID>`.
+- Verify: run targeted service tests and mutation-check regression sentinels.
+
+**Write Set**
+
+- `backend/auction/service/treasure.go`
+- `backend/auction/service/treasure_test.go`
+
+**Read Set**
+
+- `AGENTS.md`
+- `docs/CONSTITUTION.md`
+- `docs/CODING.md`
+- `docs/superpowers/sdd/RUNBOOK.md`
+- `docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md`
+- `backend/auction/dao/treasure.go`
+- `backend/auction/model/treasure.go`
+- `backend/auction/service/clock.go`
+- `backend/auction/service/testutil_test.go`
+
+**Scope Expansion Requests**
+
+| Time | Requested Files | Reason | Decision |
+| --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` |
+
+**Regression Sentinels**
+
+- Automated sentinel: `TestTreasureService_Heartbeat_FirstBeatRecords30s`
+- Rollback behavior caught: `changing heartbeatCapSeconds from 30 to 500 fails with expected 30, actual 500`
+- Automated sentinel: `TestTreasureService_Heartbeat_ShortIntervalDoesNotAddFullBeat`
+- Rollback behavior caught: `short/negative elapsed interval cannot repeatedly add a full 30s beat`
+- Automated sentinel: `TestTreasureService_Heartbeat_CapsAt30sPerBeat`
+- Rollback behavior caught: `single heartbeat after 500s still caps at 30s; cap mutation fails`
+- Automated sentinel: `TestTreasureService_GetStatus_StateMachine`
+- Rollback behavior caught: `claimed precedence regression returns unlockable instead of claimed for tier0 at 640s`
+- Automated sentinel: `TestTreasureService_Claim_RejectsWhenBelowThreshold`
+- Rollback behavior caught: `removing threshold check returns nil instead of ErrThresholdNotMet`
+- Automated sentinel: `TestTreasureService_Claim_RejectsInvalidTier`
+- Rollback behavior caught: `accepting unknown tier returns nil instead of ErrInvalidTier`
+- Automated sentinel: `TestTreasureService_Claim_DuplicateRejected`
+- Rollback behavior caught: `swallowing dao.ErrAlreadyClaimed returns nil on duplicate claim`
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `cd backend/auction && go test ./service/ -run TestTreasureService -v` | `RED: compile failure before implementation` | `undefined: TreasureService; undefined: NewTreasureService; undefined: businessStatDate; undefined: heartbeatKey; undefined: ErrThresholdNotMet` | `expected_fail` |
+| `cd backend/auction && go test ./service/ -run TestTreasureService -v` | `GREEN: all TreasureService tests pass` | `9 tests pass; PASS auction-service/service; 0.862s` | `pass` |
+| `cd backend/auction && go test ./service/ -run 'TestTreasureService_Heartbeat_(FirstBeatRecords30s|CapsAt30sPerBeat)' -v` with temporary `heartbeatCapSeconds=500` mutation | `sentinel fails when first beat/cap is not 30s` | `expected 30, actual 500` | `expected_fail` |
+| `cd backend/auction && go test ./service/ -run TestTreasureService_GetStatus_StateMachine -v` with temporary claimed-precedence mutation | `sentinel fails when claimed/unlockable/locked state machine regresses` | `expected claimed, actual unlockable` | `expected_fail` |
+| `cd backend/auction && go test ./service/ -run TestTreasureService_Claim_RejectsWhenBelowThreshold -v` with temporary threshold-check removal | `sentinel fails when low duration can claim` | `expected ErrThresholdNotMet got nil` | `expected_fail` |
+| `cd backend/auction && go test ./service/ -run TestTreasureService_Claim_RejectsInvalidTier -v` with temporary invalid-tier acceptance | `sentinel fails when invalid tier is accepted` | `expected ErrInvalidTier got nil` | `expected_fail` |
+| `cd backend/auction && go test ./service/ -run TestTreasureService_Claim_DuplicateRejected -v` with temporary duplicate-error swallow | `sentinel fails when duplicate claim does not propagate dao.ErrAlreadyClaimed` | `expected dao.ErrAlreadyClaimed got nil` | `expected_fail` |
+| `cd backend/auction && go test ./service/ -run TestTreasureService -v -count=1` | `fresh verify pass after restoring implementation` | `9 tests pass; PASS auction-service/service; 0.832s` | `pass` |
+
+**Runtime Source Evidence**
+
+| Service | Branch | Worktree | Commit | Dirty | Command | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` | `-` | `-` | `-` |
+
+**Modified Files**
+
+- `backend/auction/service/treasure.go`
+- `backend/auction/service/treasure_test.go`
+- `docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md`
+
+**Integration Check**
+
+- Target branch: `main`
+- Branch relationship: `task branch only; no integration performed by T003`
+- Diff reviewed: `git diff -- backend/auction/service/treasure.go backend/auction/service/treasure_test.go` before commit; `rg "UserBalance|user_balances|decimal" backend/auction/service/treasure.go backend/auction/service/treasure_test.go` returned no matches.
+- Overlapping write-set tasks serialized: `yes; T003 depends on T002 and only owns service/state write set`
+
+**Commits**
+
+- Planned message: `feat(treasure): add TreasureService with capped heartbeat and claim orchestration`
+- Actual commit: `a0a38f741a73886843f34bcb68c754c32c2fe737 feat(treasure): add TreasureService with capped heartbeat and claim orchestration`
+
+**Review Notes**
+
+- `treasureTiers` is service-layer SSOT: `0:180s/100`, `1:600s/300`, `2:1800s/800`.
+- `businessStatDate()` uses `auctionBusinessNow()` and therefore Asia/Shanghai business date.
+- `Heartbeat` uses Redis key `treasure:hb:<userID>`, TTL `120s`, first beat `30s`, real elapsed interval capped at `30s`, and Redis errors fail closed.
+- `GetStatus` returns `stat_date/watched_seconds/coin_balance/tiers[{tier,threshold_seconds,coins,state}]`.
+- `Claim` validates `userID`, `tier`, and today threshold before calling `dao.ClaimTx`; duplicate claim propagates `dao.ErrAlreadyClaimed`.
+- `UserBalance/user_balances` was not touched.
+
+**Risks / Blockers**
+
+- `none`
+
+**Handoff**
+
+- First response line used: `pending final response`
+
+
 ## Cross-Task Decisions
 
 | Time | Decision | Reason | Impact | Owner |
@@ -305,6 +421,7 @@
 | Backend Gateway | `cd backend/gateway && go test ./...` | no | `not_run` | `-` |
 | Backend Product | `cd backend/product && go test ./...` | no | `not_run` | `-` |
 | Backend Auction | `cd backend/auction && go test ./dao/ -run TestTreasureDAO -v -count=1` | yes for T002 | `pass` | `6 TreasureDAO tests pass` |
+| Backend Auction Service | `cd backend/auction && go test ./service/ -run TestTreasureService -v -count=1` | yes for T003 | `pass` | `9 TreasureService tests pass` |
 | Frontend Admin | `cd frontend/admin && npm test -- --runInBand` | no | `not_run` | `-` |
 | Frontend Admin Build | `cd frontend/admin && npm run build` | no | `not_run` | `-` |
 | Frontend H5 | `cd frontend/h5 && npm test -- --runInBand` | no | `not_run` | `-` |
@@ -332,4 +449,4 @@
 
 **状态**
 
-- `T002 done; waiting for downstream W3-W7`
+- `T003 done; waiting for downstream W4-W7`
