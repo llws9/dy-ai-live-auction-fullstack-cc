@@ -104,12 +104,27 @@ func (d *AuctionDAO) GetActiveByProductID(ctx context.Context, productID int64) 
 	return &auction, nil
 }
 
-// GetActiveByLiveStreamID returns the latest non-terminal auction in a live stream.
-func (d *AuctionDAO) GetActiveByLiveStreamID(ctx context.Context, liveStreamID int64) (*model.Auction, error) {
+// GetPendingByLiveStreamID returns the latest pending auction in a live stream.
+func (d *AuctionDAO) GetPendingByLiveStreamID(ctx context.Context, liveStreamID int64) (*model.Auction, error) {
+	var auction model.Auction
+	err := d.db.WithContext(ctx).
+		Where("live_stream_id = ? AND status = ?", liveStreamID, model.AuctionStatusPending).
+		Order("id DESC").
+		First(&auction).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &auction, nil
+}
+
+// GetRunningByLiveStreamID returns the latest ongoing or delayed auction in a live stream.
+func (d *AuctionDAO) GetRunningByLiveStreamID(ctx context.Context, liveStreamID int64) (*model.Auction, error) {
 	var auction model.Auction
 	err := d.db.WithContext(ctx).
 		Where("live_stream_id = ? AND status IN ?", liveStreamID, []model.AuctionStatus{
-			model.AuctionStatusPending,
 			model.AuctionStatusOngoing,
 			model.AuctionStatusDelayed,
 		}).

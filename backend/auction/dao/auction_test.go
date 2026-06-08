@@ -47,3 +47,31 @@ func TestAuctionDAO_GetActiveAndLatestTerminalByProductID(t *testing.T) {
 	assert.Equal(t, int64(2), terminal.ID)
 	assert.NotNil(t, terminal.WinnerID)
 }
+
+func TestAuctionDAO_GetPendingAndRunningByLiveStreamID(t *testing.T) {
+	db := newAuctionDAOTestDB(t)
+	d := NewAuctionDAO(db)
+	now := time.Now()
+	liveStreamID := int64(77)
+	otherLiveStreamID := int64(88)
+	rows := []model.Auction{
+		{ID: 1, ProductID: 11, LiveStreamID: &liveStreamID, Status: model.AuctionStatusOngoing, StartTime: now.Add(-time.Minute), EndTime: now.Add(time.Hour)},
+		{ID: 2, ProductID: 12, LiveStreamID: &liveStreamID, Status: model.AuctionStatusPending, StartTime: now.Add(time.Minute), EndTime: now.Add(2 * time.Hour)},
+		{ID: 3, ProductID: 13, LiveStreamID: &otherLiveStreamID, Status: model.AuctionStatusDelayed, StartTime: now.Add(-time.Hour), EndTime: now.Add(time.Minute)},
+	}
+	require.NoError(t, db.Create(&rows).Error)
+
+	pending, err := d.GetPendingByLiveStreamID(context.Background(), liveStreamID)
+	require.NoError(t, err)
+	require.NotNil(t, pending)
+	assert.Equal(t, int64(2), pending.ID)
+
+	running, err := d.GetRunningByLiveStreamID(context.Background(), liveStreamID)
+	require.NoError(t, err)
+	require.NotNil(t, running)
+	assert.Equal(t, int64(1), running.ID)
+
+	missing, err := d.GetPendingByLiveStreamID(context.Background(), 999)
+	require.NoError(t, err)
+	assert.Nil(t, missing)
+}

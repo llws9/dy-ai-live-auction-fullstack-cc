@@ -203,8 +203,8 @@ func TestIsActiveAuctionUniqueConflict(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "mysql duplicate on active live stream key is not product conflict",
-			err:  errors.New("Error 1062 (23000): Duplicate entry '77' for key 'uk_active_live_stream'"),
+			name: "mysql duplicate on pending live stream key is not product conflict",
+			err:  errors.New("Error 1062 (23000): Duplicate entry '77' for key 'uk_pending_live_stream'"),
 			want: false,
 		},
 		{
@@ -221,15 +221,20 @@ func TestIsActiveAuctionUniqueConflict(t *testing.T) {
 	}
 }
 
-func TestIsActiveLiveStreamUniqueConflict(t *testing.T) {
+func TestIsPendingLiveStreamUniqueConflict(t *testing.T) {
 	tests := []struct {
 		name string
 		err  error
 		want bool
 	}{
 		{
-			name: "mysql duplicate on active live stream key",
-			err:  errors.New("Error 1062 (23000): Duplicate entry '77' for key 'uk_active_live_stream'"),
+			name: "mysql duplicate on pending live stream key",
+			err:  errors.New("Error 1062 (23000): Duplicate entry '77' for key 'uk_pending_live_stream'"),
+			want: true,
+		},
+		{
+			name: "mysql duplicate on pending live stream generated column",
+			err:  errors.New("Error 1062 (23000): Duplicate entry '77' for key 'pending_live_stream_key'"),
 			want: true,
 		},
 		{
@@ -246,7 +251,7 @@ func TestIsActiveLiveStreamUniqueConflict(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, isActiveLiveStreamUniqueConflict(tt.err))
+			assert.Equal(t, tt.want, isPendingLiveStreamUniqueConflict(tt.err))
 		})
 	}
 }
