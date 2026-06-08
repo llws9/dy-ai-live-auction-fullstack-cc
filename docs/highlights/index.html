@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>实时竞拍大师 · 项目亮点总览</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0E0F13; --bg-elev:#16181F; --bg-elev2:#1D2029;
+  --line:#282C37; --line-soft:#21242D;
+  --text:#F2F0EB; --text-2:#A7ABB7; --text-3:#6E727E;
+  --coral:#FF3B5C; --coral-soft:#FF6B82; --teal:#3DD4D0; --amber:#FFB347; --violet:#9B8CFF;
+  --grad-line:linear-gradient(90deg,var(--coral),var(--teal));
+  --shadow:0 10px 40px -12px rgba(0,0,0,.6);
+  --maxw:1080px;
+  --disp:"Space Grotesk","PingFang SC","Hiragino Sans GB",sans-serif;
+  --mono:"JetBrains Mono","SFMono-Regular",monospace;
+  --sans:"PingFang SC","Hiragino Sans GB","Space Grotesk",sans-serif;
+}
+html[data-theme="light"]{
+  --bg:#F7F5F1; --bg-elev:#FFFFFF; --bg-elev2:#FBFAF7;
+  --line:#E4E0D8; --line-soft:#EDEAE3;
+  --text:#16181F; --text-2:#565A66; --text-3:#8A8E99;
+  --shadow:0 10px 40px -16px rgba(40,40,60,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased;transition:background .5s ease,color .5s ease;font-feature-settings:"tnum"}
+::selection{background:var(--coral);color:#fff}
+.wrap{display:grid;grid-template-columns:248px 1fr;max-width:1440px;margin:0 auto;min-height:100vh}
+nav.side{position:sticky;top:0;height:100vh;padding:34px 20px;border-right:1px solid var(--line-soft);display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.brand{margin-bottom:22px}
+.brand .logo{font-family:var(--disp);font-weight:700;font-size:17px;letter-spacing:-.02em;display:flex;align-items:center;gap:9px}
+.brand .dot{width:11px;height:11px;border-radius:3px;background:var(--grad-line);box-shadow:0 0 14px var(--coral)}
+.brand .sub{font-family:var(--mono);font-size:10px;color:var(--text-3);margin-top:7px;letter-spacing:.02em}
+nav.side a.navlink{font-size:12.5px;color:var(--text-2);text-decoration:none;padding:6px 11px;border-radius:8px;display:flex;align-items:center;gap:9px;transition:.18s;position:relative}
+nav.side a.navlink:hover{color:var(--text);background:var(--bg-elev)}
+nav.side a.navlink.active{color:var(--text);background:var(--bg-elev)}
+nav.side a.navlink.active::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:14px;background:var(--grad-line);border-radius:2px}
+nav.side a .ix{font-family:var(--mono);font-size:10px;color:var(--text-3);min-width:16px}
+.nav-group{font-family:var(--mono);font-size:9.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.12em;margin:14px 11px 5px}
+main{min-width:0;padding:0 clamp(20px,5vw,72px)}
+section{padding:80px 0;border-bottom:1px solid var(--line-soft);max-width:var(--maxw);scroll-margin-top:20px}
+section:last-child{border-bottom:none}
+.theme-tg{position:fixed;top:22px;right:26px;z-index:50;width:46px;height:46px;border-radius:13px;border:1px solid var(--line);background:var(--bg-elev);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:var(--shadow);transition:.25s}
+.theme-tg:hover{transform:translateY(-2px);border-color:var(--coral)}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--coral);display:flex;align-items:center;gap:10px;margin-bottom:24px}
+.eyebrow::before{content:"";width:30px;height:1px;background:var(--coral)}
+h1.hero{font-family:var(--disp);font-weight:700;font-size:clamp(38px,6vw,66px);line-height:1.05;letter-spacing:-.03em;margin-bottom:22px}
+h1.hero .hl{background:var(--grad-line);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero-lead{font-size:clamp(15px,2vw,18px);color:var(--text-2);max-width:640px;margin-bottom:40px;text-wrap:pretty}
+.score-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:48px}
+.score-card{background:var(--bg-elev);border:1px solid var(--line-soft);border-radius:15px;padding:20px 18px;transition:.25s}
+.score-card:hover{transform:translateY(-3px);border-color:var(--line);box-shadow:var(--shadow)}
+.score-card .pct{font-family:var(--disp);font-weight:700;font-size:34px;letter-spacing:-.02em}
+.score-card .pct b{font-size:17px;color:var(--text-3);font-weight:500}
+.score-card .lb{font-size:12.5px;color:var(--text-2);margin-top:5px}
+.score-card .bar{height:3px;border-radius:2px;background:var(--line);margin-top:13px;overflow:hidden}
+.score-card .bar i{display:block;height:100%;background:var(--grad-line);border-radius:2px;width:0;transition:width 1.1s cubic-bezier(.22,1,.36,1)}
+.c1{color:var(--coral)} .c2{color:var(--teal)} .c3{color:var(--amber)} .c4{color:var(--violet)}
+.sec-head{margin-bottom:40px}
+.sec-num{font-family:var(--mono);font-size:12px;color:var(--text-3);letter-spacing:.1em}
+h2{font-family:var(--disp);font-weight:600;font-size:clamp(25px,4vw,38px);letter-spacing:-.02em;margin:8px 0 16px;line-height:1.12}
+.sec-desc{color:var(--text-2);max-width:660px;font-size:15.5px;text-wrap:pretty}
+.arch{display:flex;flex-direction:column;gap:16px;margin-top:14px}
+.arch-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.node{background:var(--bg-elev);border:1px solid var(--line-soft);border-radius:13px;padding:16px 14px;text-align:center;transition:.25s}
+.node:hover{border-color:var(--coral);transform:translateY(-3px)}
+.node .nt{font-weight:600;font-size:14px;margin-bottom:4px}
+.node .nd{font-size:11px;color:var(--text-3);font-family:var(--mono)}
+.gw{background:linear-gradient(160deg,var(--bg-elev2),var(--bg-elev));border:1px solid var(--line)}
+.gw .nt{color:var(--teal)}
+.arch-band{display:flex;align-items:center;justify-content:center;gap:10px;padding:11px;border:1px dashed var(--line);border-radius:11px;font-family:var(--mono);font-size:12px;color:var(--text-2)}
+.svc-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.svc{background:var(--bg-elev);border:1px solid var(--line-soft);border-radius:13px;padding:16px 14px;text-align:center;position:relative;overflow:hidden}
+.svc::after{content:"";position:absolute;top:0;left:0;width:3px;height:100%;background:var(--grad-line);opacity:.7}
+.svc .nt{font-weight:600;font-size:14px}
+.svc .nd{font-size:11px;color:var(--text-3);font-family:var(--mono);margin-top:3px}
+.layers{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:18px}
+.layer{background:var(--bg-elev);border:1px solid var(--line-soft);border-radius:16px;padding:24px 20px;position:relative;overflow:hidden;transition:.3s}
+.layer:hover{transform:translateY(-4px);box-shadow:var(--shadow);border-color:var(--line)}
+.layer .ln{font-family:var(--mono);font-size:11px;color:var(--text-3);letter-spacing:.1em}
+.layer h3{font-family:var(--disp);font-size:18px;font-weight:600;margin:9px 0 6px}
+.layer .role{font-size:12px;font-family:var(--mono);padding:3px 9px;border-radius:20px;display:inline-block;margin-bottom:13px}
+.layer.l1 .role{background:rgba(255,59,92,.14);color:var(--coral-soft)}
+.layer.l2 .role{background:rgba(61,212,208,.14);color:var(--teal)}
+.layer.l3 .role{background:rgba(255,179,71,.14);color:var(--amber)}
+.layer p{font-size:13px;color:var(--text-2);text-wrap:pretty}
+.layer .big{position:absolute;top:14px;right:18px;font-family:var(--disp);font-weight:700;font-size:46px;color:var(--line);line-height:1}
+code,.mono{font-family:var(--mono);color:var(--teal);font-size:.92em}
+.flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin-top:18px}
+.flow .fcell{flex:1;min-width:150px;background:var(--bg-elev);border:1px solid var(--line-soft);border-radius:13px;padding:18px 16px}
+.flow .fk{font-family:var(--mono);font-size:10.5px;color:var(--text-3);letter-spacing:.06em;margin-bottom:8px;text-transform:uppercase}
+.flow .ft{font-weight:600;font-size:14px;margin-bottom:5px}
+.flow .fd{font-size:12.5px;color:var(--text-2);line-height:1.55}
+.flow .farr{display:flex;align-items:center;color:var(--text-3);font-size:20px;padding:0 6px;flex:0 0 auto}
+@media(max-width:760px){.flow .farr{transform:rotate(90deg);width:100%;justify-content:center;padding:8px 0}}
+.psv{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:18px}
+.psv .pc{background:var(--bg-elev);border:1px solid var(--line-soft);border-radius:14px;padding:20px 18px;border-top:2px solid var(--line)}
+.psv .pc.p{border-top-color:var(--coral)} .psv .pc.s{border-top-color:var(--teal)} .psv .pc.v{border-top-color:var(--amber)}
+.psv .pl{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:9px}
+.psv .pc.p .pl{color:var(--coral-soft)} .psv .pc.s .pl{color:var(--teal)} .psv .pc.v .pl{color:var(--amber)}
+.psv .pt{font-size:13px;color:var(--text-2);line-height:1.6;text-wrap:pretty}
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:18px}
+.cards.c3{grid-template-columns:repeat(3,1fr)}
+.fcard{background:var(--bg-elev);border:1px solid var(--line-soft);border-radius:14px;padding:20px 18px;transition:.25s}
+.fcard:hover{transform:translateY(-3px);border-color:var(--line);box-shadow:var(--shadow)}
+.fcard .ic{width:34px;height:34px;border-radius:9px;background:var(--bg-elev2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;color:var(--coral);margin-bottom:13px}
+.fcard h4{font-family:var(--disp);font-size:15px;font-weight:600;margin-bottom:7px}
+.fcard p{font-size:13px;color:var(--text-2);line-height:1.6;text-wrap:pretty}
+.fcard p b{color:var(--text)}
+.fcard code{font-size:12px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:20px}
+.stat{background:var(--bg-elev);border:1px solid var(--line-soft);border-radius:14px;padding:20px 16px}
+.stat .sv{font-family:var(--disp);font-weight:700;font-size:30px;letter-spacing:-.02em;line-height:1}
+.stat .sl{font-size:12px;color:var(--text-2);margin-top:7px}
+.takeaway{margin-top:20px;padding:18px 22px;border-radius:14px;background:var(--bg-elev2);border:1px solid var(--line-soft);font-size:14px;color:var(--text-2);text-wrap:pretty}
+.takeaway b{color:var(--text)}
+.takeaway.coral{border-left:3px solid var(--coral)}
+.codeblk{margin-top:18px;background:#0a0b0e;border:1px solid var(--line);border-radius:13px;overflow:hidden;font-family:var(--mono);font-size:12.5px}
+html[data-theme="light"] .codeblk{background:#1a1c22}
+.codeblk .ch{padding:9px 16px;border-bottom:1px solid var(--line);color:var(--text-3);font-size:11px;letter-spacing:.06em;background:rgba(255,255,255,.02)}
+.codeblk pre{padding:16px;overflow-x:auto;color:#c8ccd6;line-height:1.7;margin:0}
+.codeblk .red{color:var(--coral-soft)} .codeblk .grn{color:var(--teal)} .codeblk .dim{color:var(--text-3)}
+.ctable{width:100%;border-collapse:collapse;margin-top:18px;background:var(--bg-elev);border:1px solid var(--line-soft);border-radius:14px;overflow:hidden;font-size:13.5px}
+.ctable th,.ctable td{padding:13px 16px;text-align:left;border-bottom:1px solid var(--line-soft);vertical-align:top}
+.ctable th{background:var(--bg-elev2);font-family:var(--disp);font-weight:600;font-size:13px}
+.ctable tr:last-child td{border-bottom:none}
+.ctable td:first-child{color:var(--text-2);font-weight:500;width:120px}
+.ctable .hl-coral{color:var(--coral-soft)} .ctable .hl-teal{color:var(--teal)}
+.tl{display:flex;align-items:center;gap:0;margin-top:20px;flex-wrap:wrap}
+.tl .ts{background:var(--bg-elev);border:1px solid var(--line);border-radius:11px;padding:12px 16px;text-align:center;font-weight:600;font-size:13px}
+.tl .ts .sub{font-family:var(--mono);font-size:10px;color:var(--text-3);font-weight:400;margin-top:2px}
+.tl .ta{color:var(--coral);font-size:18px;padding:0 10px;font-family:var(--mono)}
+.tl .ts.end{border-color:var(--teal);color:var(--teal)}
+.tl .ts.cancel{border-style:dashed;color:var(--text-3)}
+.callout{margin-top:20px;padding:18px 22px;border-radius:14px;display:flex;gap:14px;align-items:flex-start;font-size:13.5px;line-height:1.6}
+.callout .cig{font-family:var(--mono);font-weight:700;flex:0 0 auto;font-size:12px;padding:3px 10px;border-radius:6px}
+.callout.warn{background:rgba(255,179,71,.07);border:1px solid rgba(255,179,71,.25)}
+.callout.warn .cig{background:rgba(255,179,71,.16);color:var(--amber)}
+.callout.note{background:rgba(61,212,208,.06);border:1px solid rgba(61,212,208,.22)}
+.callout.note .cig{background:rgba(61,212,208,.14);color:var(--teal)}
+.callout .cbody{color:var(--text-2)} .callout .cbody b{color:var(--text)}
+.blist{margin-top:18px;display:flex;flex-direction:column;gap:10px}
+.bitem{background:var(--bg-elev);border:1px solid var(--line-soft);border-radius:12px;padding:15px 18px;display:flex;gap:14px;align-items:flex-start}
+.bitem .bdot{flex:0 0 auto;width:8px;height:8px;border-radius:50%;background:var(--amber);margin-top:7px}
+.bitem .btx{font-size:13.5px;color:var(--text-2);line-height:1.6}
+.bitem .btx b{color:var(--text);font-weight:600}
+.mock-wrap{display:grid;grid-template-columns:300px 1fr;gap:30px;margin-top:22px;align-items:start}
+.phone{background:var(--bg-elev2);border:1px solid var(--line);border-radius:26px;padding:12px;box-shadow:var(--shadow)}
+.phone .screen{background:var(--bg);border-radius:18px;overflow:hidden;border:1px solid var(--line-soft)}
+.phone .pbar{height:30px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--text-3);border-bottom:1px solid var(--line-soft)}
+.room-card{margin:11px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--bg-elev)}
+.room-card .rtop{height:78px;background:linear-gradient(135deg,rgba(255,59,92,.18),rgba(61,212,208,.12));position:relative;display:flex;align-items:flex-end;padding:9px}
+.room-card .live-badge{position:absolute;top:8px;left:8px;background:var(--coral);color:#fff;font-size:9px;font-family:var(--mono);padding:2px 7px;border-radius:5px;font-weight:600}
+.room-card .rname{font-size:12px;font-weight:600;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+.room-card .rbody{padding:10px}
+.room-card .now{font-size:12px;font-weight:600;margin-bottom:3px}
+.room-card .price{font-family:var(--disp);font-weight:700;color:var(--coral);font-size:16px}
+.room-card .next{font-size:10px;color:var(--text-2);margin-top:7px;padding-top:7px;border-top:1px dashed var(--line-soft)}
+.room-card .deals{font-size:9.5px;color:var(--text-3);font-family:var(--mono);margin-top:5px}
+.mock-anno{display:flex;flex-direction:column;gap:12px}
+.anno{background:var(--bg-elev);border:1px solid var(--line-soft);border-radius:12px;padding:14px 16px}
+.anno .at{font-weight:600;font-size:13px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.anno .an{font-family:var(--mono);font-size:10px;color:#fff;background:var(--coral);border-radius:5px;padding:1px 6px}
+.anno .an.t{background:var(--teal);color:#0E0F13} .anno .an.a{background:var(--amber);color:#0E0F13}
+.anno .ad{font-size:12.5px;color:var(--text-2);line-height:1.55}
+.foot{padding:50px 0 70px;color:var(--text-3);font-size:13px;max-width:var(--maxw)}
+.foot .ft-line{font-family:var(--mono);font-size:11px;margin-top:8px}
+@media(max-width:920px){
+  .wrap{grid-template-columns:1fr}
+  nav.side{display:none}
+  .score-grid{grid-template-columns:repeat(2,1fr)}
+  .layers{grid-template-columns:1fr}
+  .arch-row,.svc-row{grid-template-columns:1fr 1fr}
+  .psv,.cards,.cards.c3{grid-template-columns:1fr}
+  .stats{grid-template-columns:1fr 1fr}
+  .mock-wrap{grid-template-columns:1fr}
+  .phone{max-width:300px;margin:0 auto}
+}
+</style>
+</head>
+<body>
+<button class="theme-tg" id="themeBtn" aria-label="切换主题">◐</button>
+<div class="wrap">
+  <nav class="side">
+    <div class="brand">
+      <div class="logo"><span class="dot"></span>实时竞拍大师</div>
+      <div class="sub">REAL-TIME AUCTION · FULLSTACK</div>
+    </div>
+    <div class="nav-group">概览</div>
+    <a class="navlink" href="#hero"><span class="ix">00</span>项目全景</a>
+    <a class="navlink" href="#arch"><span class="ix">01</span>5端架构</a>
+    <div class="nav-group">核心亮点</div>
+    <a class="navlink" href="#concurrency"><span class="ix">02</span>三层并发控制</a>
+    <a class="navlink" href="#websocket"><span class="ix">03</span>实时同步链路</a>
+    <a class="navlink" href="#testplat"><span class="ix">04</span>测试编排平台</a>
+    <a class="navlink" href="#fixedprice"><span class="ix">05</span>一口价闭环</a>
+    <a class="navlink" href="#notify"><span class="ix">06</span>用户触达通知</a>
+    <a class="navlink" href="#hotcold"><span class="ix">07</span>热拉冷推分层</a>
+    <a class="navlink" href="#theme"><span class="ix">08</span>主题系统</a>
+    <div class="nav-group">工程难点</div>
+    <a class="navlink" href="#difficulties"><span class="ix">09</span>四大难点</a>
+    <div class="nav-group">能力与质量</div>
+    <a class="navlink" href="#ai"><span class="ix">10</span>AI 能力落地</a>
+    <a class="navlink" href="#observe"><span class="ix">11</span>可观测性</a>
+    <a class="navlink" href="#metrics"><span class="ix">12</span>业务指标体系</a>
+    <a class="navlink" href="#quality"><span class="ix">13</span>工程质量</a>
+    <div class="nav-group">设计 &amp; 边界</div>
+    <a class="navlink" href="#homeredesign"><span class="ix">14</span>首页维度重构</a>
+    <a class="navlink" href="#boundary"><span class="ix">15</span>如实边界说明</a>
+  </nav>
+
+  <main>
+    <!-- 00 HERO -->
+    <section id="hero">
+      <div class="eyebrow">抖音电商直播竞拍 · 全栈系统</div>
+      <h1 class="hero">不止于功能闭环<br>而是<span class="hl">生产级</span>的工程深度</h1>
+      <p class="hero-lead">课题基线只要求「商家端 + 用户端」两端闭环。本项目实际交付 5 端 + 可观测栈的微服务系统，并在高并发写路径、实时链路、通知系统、测试体系与前端基础设施上给出相对完整的工程解法。所有结论基于真实代码核对，对「能力已具备但主流程未串联」的部分均如实标注。</p>
+      <div class="score-grid">
+        <div class="score-card"><div class="pct c1">50<b>%</b></div><div class="lb">技术实现与工程完整度</div><div class="bar"><i data-w="100%"></i></div></div>
+        <div class="score-card"><div class="pct c2">25<b>%</b></div><div class="lb">技术深度与创新性</div><div class="bar"><i data-w="100%"></i></div></div>
+        <div class="score-card"><div class="pct c3">15<b>%</b></div><div class="lb">AI 使用与落地效果</div><div class="bar"><i data-w="100%"></i></div></div>
+        <div class="score-card"><div class="pct c4">10<b>%</b></div><div class="lb">项目材料完整度</div><div class="bar"><i data-w="100%"></i></div></div>
+      </div>
+    </section>
+
+    <!-- 01 ARCH -->
+    <section id="arch">
+      <div class="sec-head">
+        <div class="sec-num">01 / 项目全景</div>
+        <h2>超出基线的「5 端 + 可观测」形态</h2>
+        <p class="sec-desc">前端流量统一经网关 <code>/api/v1</code> 入口，服务间走 <code>/internal/*</code> 接口，不跨服务直连数据库。</p>
+      </div>
+      <div class="arch">
+        <div class="arch-row">
+          <div class="node"><div class="nt">用户端 H5</div><div class="nd">frontend/h5</div></div>
+          <div class="node"><div class="nt">管理端 Admin</div><div class="nd">frontend/admin</div></div>
+          <div class="node"><div class="nt">测试编排平台</div><div class="nd">test-dashboard</div></div>
+          <div class="node"><div class="nt">日志端</div><div class="nd">Loki+Promtail</div></div>
+          <div class="node"><div class="nt">大盘端</div><div class="nd">Grafana</div></div>
+        </div>
+        <div class="arch-band">↓ &nbsp; 统一网关入口 &nbsp; /api/v1 &nbsp; ↓</div>
+        <div class="arch-row" style="grid-template-columns:1fr">
+          <div class="node gw"><div class="nt">gateway-service · 8080</div><div class="nd">JWT 鉴权 / 路由 / 限流 / 实验预评估</div></div>
+        </div>
+        <div class="svc-row">
+          <div class="svc"><div class="nt">product</div><div class="nd">8081 · 商品/统计</div></div>
+          <div class="svc"><div class="nt">auction</div><div class="nd">8082 · 竞拍/一口价</div></div>
+          <div class="svc"><div class="nt">auction-ws</div><div class="nd">8083 · 实时同步</div></div>
+        </div>
+      </div>
+      <div class="takeaway">课题基线只要求两端闭环，本项目交付的是一套含独立测试编排平台（自带 1920×1080 演示大屏）与 Loki+Grafana 可观测栈的生产级微服务系统。</div>
+    </section>
+
+    <!-- 02 CONCURRENCY -->
+    <section id="concurrency">
+      <div class="sec-head">
+        <div class="sec-num">02 / 核心亮点 · 旗舰</div>
+        <h2>出价并发：三层控制，而非单点加锁</h2>
+        <p class="sec-desc">高并发出价不是「上一把 Redis 锁」这么简单，而是把互斥、版本冲突、事务一致性拆成三层，各解决一类问题。</p>
+      </div>
+      <div class="layers">
+        <div class="layer l1"><div class="big">01</div><div class="ln">LAYER · MUTEX</div><h3>Redis 分布式锁</h3><span class="role">互斥 + 短时限流</span><p>SETNX 获取锁，锁值用纳秒时间戳防误删；解锁/续期走 Lua 脚本保证原子。TTL 5s，默认重试 10 次 × 50ms。</p></div>
+        <div class="layer l2"><div class="big">02</div><div class="ln">LAYER · CAS</div><h3>DB 乐观锁</h3><span class="role">防覆盖</span><p>价格更新走 <code>UPDATE ... WHERE id=? AND version=?</code> 的 CAS 路径，RowsAffected=0 视为冲突，自动「重读→重校验→重试」最多 3 次。</p></div>
+        <div class="layer l3"><div class="big">03</div><div class="ln">LAYER · TXN</div><h3>单事务一致性</h3><span class="role">结果一致</span><p>bid 写入与竞拍状态更新位于同一事务；进入临界区前后各做一次最低价校验，避免排队过程中的脏写。</p></div>
+      </div>
+      <div class="takeaway coral"><b>核心取舍：</b>延时判定、通知发送、点天灯自动出价等高成本逻辑全部移到锁外异步执行 —— 把锁的职责收敛到「保护共享状态」，而非「串行化整个业务流程」。</div>
+    </section>
+
+    <!-- 03 WEBSOCKET -->
+    <section id="websocket">
+      <div class="sec-head">
+        <div class="sec-num">03 / 核心亮点</div>
+        <h2>WebSocket：完整的实时同步链路</h2>
+        <p class="sec-desc">重点不在「用了 WebSocket」，而在于把连接、恢复、广播和背压处理做成一条完整链路，在高频更新、断线重连和慢连接并存时仍然可控。</p>
+      </div>
+      <div class="cards c3">
+        <div class="fcard"><div class="ic">RM</div><h4>房间模型清晰</h4><p>竞拍房 / 弹幕房 / 用户通知房三类独立管理，广播粒度按业务域拆开；慢客户端采用<b>非阻塞丢弃</b>，避免单连接拖慢整个房间。</p></div>
+        <div class="fcard"><div class="ic">RC</div><h4>状态恢复可落地</h4><p>服务端心跳 30s Ping / 60s Pong 超时；前端指数退避重连 <code>[1,2,4,8,16,30]s</code>，4401 鉴权失败单独处理；重连后 <code>sync_request</code> 回灌当前价、领先者、结束时间。</p></div>
+        <div class="fcard"><div class="ic">TH</div><h4>高频广播可控</h4><p>前端按类型节流（<code>rank_update</code> 200ms / <code>bid_placed</code> 100ms），服务端排名广播同样窗口节流，并通过房间归属校验避免消息串台。</p></div>
+      </div>
+      <div class="takeaway">目标不是单纯「把数据推到前端」，而是让实时链路具备「可连接、可恢复、可控广播」的完整工程闭环，而非只能在理想网络下工作的演示级实现。</div>
+    </section>
+
+    <!-- 04 TEST PLATFORM -->
+    <section id="testplat">
+      <div class="sec-head">
+        <div class="sec-num">04 / 核心亮点</div>
+        <h2>测试能力：独立的编排系统，而非附属脚本</h2>
+        <p class="sec-desc">项目没有把测试停留在单测和本地脚本层面，而是单独实现了一套可在线触发、可观测、可复盘的测试编排平台。</p>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="sv c1">7</div><div class="sl">类测试场景<br>压测/E2E/防狙击/回调/混沌/剧本/AB</div></div>
+        <div class="stat"><div class="sv c2">P99</div><div class="sl">实时聚合<br>QPS / P50 / P95 / P99 / 错误码</div></div>
+        <div class="stat"><div class="sv c3">3段</div><div class="sl">混沌曲线<br>基线 - 注入 - 恢复</div></div>
+        <div class="stat"><div class="sv c4">HMAC</div><div class="sl">可靠投递<br>幂等 inbox + 故障注入</div></div>
+      </div>
+      <div class="cards">
+        <div class="fcard"><div class="ic">LD</div><h4>压测链路工程化</h4><p>执行器基于 <b>goroutine 池 + 连接池复用</b>，请求指标通过原子计数器和固定桶直方图聚合，实时产出 QPS/分位延迟/错误码分布，并经 WebSocket 节流回传前端。</p></div>
+        <div class="fcard"><div class="ic">CH</div><h4>混沌测试可量化</h4><p>进程内 <code>RoundTripper</code> 注入 latency、jitter、error_rate、disconnect、redis_flap、mq_pause 等故障，输出三段曲线并量化检测延迟与恢复延迟。</p></div>
+      </div>
+      <div class="takeaway">这部分说明项目不是「功能做完就结束」，而是具备对复杂链路做回归验证和压力验证的能力。</div>
+    </section>
+
+    <!-- 05 FIXED PRICE -->
+    <section id="fixedprice">
+      <div class="sec-head">
+        <div class="sec-num">05 / 核心亮点</div>
+        <h2>一口价：单服务闭环 + 三层并发控制</h2>
+        <p class="sec-desc">一口价不是在竞拍主路径上加一个「直接成交」分支，而是在 <code>auction-service</code> 内单独实现一套 <code>fixed_price</code> 闭环。</p>
+      </div>
+      <div class="cards c3">
+        <div class="fcard"><div class="ic">①</div><h4>Redis Lua 原子预扣</h4><p>库存键与「已购用户集合」在<b>同一段 Lua 脚本</b>内完成初始化检查、重复购买判断、库存扣减、已购标记，从机制上避免超卖与重复抢购。</p></div>
+        <div class="fcard"><div class="ic">②</div><h4>DB 事务保一致</h4><p>余额扣减走 <code>available_amount &gt;= amount</code> 条件更新，购买记录写入与资金扣减位于同一事务，避免读-判-写竞态。</p></div>
+        <div class="fcard"><div class="ic">③</div><h4>唯一索引 + 幂等 + 补偿</h4><p><code>(item_id, user_id)</code> 唯一索引兜底重复提交；前端携带 <code>X-Idempotency-Key</code>；Redis 预扣成功但 DB 失败则补偿回滚。</p></div>
+      </div>
+      <div class="takeaway coral"><b>设计价值：</b>把固定价抢购与竞拍出价彻底解耦。竞拍主链路不必为一口价承担额外状态复杂度，而直播间又能同时承载「竞拍 + 固定价抢购」两类交易模型。</div>
+    </section>
+
+    <!-- 06 NOTIFY -->
+    <section id="notify">
+      <div class="sec-head">
+        <div class="sec-num">06 / 核心亮点</div>
+        <h2>用户触达：实时推送 + 未读落库 + 去重回执</h2>
+        <p class="sec-desc">通知能力不是简单「发一条消息」，而是按时效性和可追溯性拆成多条链路，解决实时性、离线可追溯与重复提醒三个常见问题。</p>
+      </div>
+      <div class="cards">
+        <div class="fcard"><div class="ic">RT</div><h4>被超价实时推送</h4><p>出价成功后若前任领先者被超越，立即写入通知并通过用户专属 WS 房间推送 <code>bid_outbid</code>。</p></div>
+        <div class="fcard"><div class="ic">DB</div><h4>结果通知落库沉淀</h4><p>竞拍结束时，中标与未中标结果统一进入通知中心，确保用户离线时也不会错过关键结果。</p></div>
+        <div class="fcard"><div class="ic">LV</div><h4>提醒场景分层</h4><p>关注主播的开播提醒走 <code>pending-reminder</code> 与冷启动调度器；订阅商品的开拍提醒走 reminder 表落库再热拉补齐。</p></div>
+        <div class="fcard"><div class="ic">ID</div><h4>幂等由回执表保证</h4><p>开播提醒用 <code>(user_id, live_stream_id, live_started_at)</code> 去重，单品提醒用 <code>(user_id, auction_id)</code> 去重，避免重复触达。</p></div>
+      </div>
+    </section>
+
+    <!-- 07 HOT/COLD -->
+    <section id="hotcold">
+      <div class="sec-head">
+        <div class="sec-num">07 / 核心亮点</div>
+        <h2>消息链路：热拉冷推分层，而非一律依赖 WebSocket</h2>
+        <p class="sec-desc">项目没有把所有消息都强行塞进 WebSocket，而是按时效性和触达成本做分层 —— 把「实时性」和「广播成本」分开考虑。</p>
+      </div>
+      <div class="flow">
+        <div class="fcell"><div class="fk">热数据 · 推送</div><div class="ft">WebSocket 实时广播</div><div class="fd">竞拍排名、价格变化、实时通知等强时效数据，前后端两侧均做节流控制。</div></div>
+        <div class="farr">⇄</div>
+        <div class="fcell"><div class="fk">冷数据 · 拉取</div><div class="ft">hot-pull 主动补齐</div><div class="fd">用户回到前台时主动调用 hot-pull 与未读数接口，补齐离线期间的提醒，而非「在线才收到」。</div></div>
+        <div class="farr">⇄</div>
+        <div class="fcell"><div class="fk">冷门 · 定向</div><div class="ft">ColdPushScheduler</div><div class="fd">按 Redis 热/冷集合做定向提醒，避免把所有直播都当广播事件处理。</div></div>
+      </div>
+      <div class="takeaway"><b>恢复关注的是状态，不是日志重放：</b>断线恢复时从 Redis 读取竞拍快照，仅同步业务所需的最小状态，而非回放完整消息流。</div>
+    </section>
+
+    <!-- 08 THEME -->
+    <section id="theme">
+      <div class="sec-head">
+        <div class="sec-num">08 / 核心亮点</div>
+        <h2>日 / 夜外观：全局主题系统，而非局部样式切换</h2>
+        <p class="sec-desc">H5 端深浅色切换不是零散 CSS 改造，而是围绕主题系统做的基础设施建设。本页右上角的切换按钮即是同款能力的活体演示。</p>
+      </div>
+      <div class="cards">
+        <div class="fcard"><div class="ic">3L</div><h4>状态/DOM/样式三层解耦</h4><p><code>ThemeProvider</code> 维护主题状态，根节点用 <code>data-theme</code> 暴露，组件层只消费<b>语义化 CSS Variables</b>，不直接依赖具体色值。</p></div>
+        <div class="fcard"><div class="ic">0F</div><h4>首屏无闪烁</h4><p><code>index.html</code> 内联极小预执行脚本，在 React Hydration 前从 <code>localStorage</code> 恢复主题并写入根节点，避免先亮后暗的闪烁。</p></div>
+        <div class="fcard"><div class="ic">GL</div><h4>覆盖范围是全局</h4><p>页头统一挂载 <code>ThemeToggle</code>，页面/弹窗/导航/玻璃态 surface/文本层级共享同一套 token，切换是系统级而非局部换色。</p></div>
+        <div class="fcard"><div class="ic">EX</div><h4>扩展成本可控</h4><p>没有引入额外主题框架，把深浅色收敛为 token 体系，为后续品牌换色或节日皮肤预留稳定扩展面。</p></div>
+      </div>
+    </section>
+
+    <!-- 09 DIFFICULTIES -->
+    <section id="difficulties">
+      <div class="sec-head">
+        <div class="sec-num">09 / 关键工程难点</div>
+        <h2>四大难点与解决方案</h2>
+        <p class="sec-desc">竞拍系统的复杂度集中在状态正确性、防狙击吞吐、外部依赖降级与自动代理出价的边界控制。</p>
+      </div>
+
+      <div class="fcard" style="margin-top:18px"><h4 style="font-size:16px;color:var(--coral-soft)">难点一 · 竞拍规则复杂且状态转换必须可验证</h4>
+        <div class="tl">
+          <div class="ts">待开始<div class="sub">PENDING</div></div><div class="ta">→</div>
+          <div class="ts">进行中<div class="sub">ACTIVE</div></div><div class="ta">→</div>
+          <div class="ts">延时中<div class="sub">DELAYING</div></div><div class="ta">→</div>
+          <div class="ts end">已结束<div class="sub">ENDED</div></div><div class="ta">/</div>
+          <div class="ts cancel">已取消<div class="sub">CANCELLED</div></div>
+        </div>
+        <p style="margin-top:14px">5 态有向图，状态转换集中在<b>纯判断模块</b>中，避免条件散落到 handler/service/定时任务。事件驱动（出价触发延时/封顶）与时间驱动（scheduler 每秒扫描开收场）共享同一套状态约束。金额统一用 <code>shopspring/decimal</code>，避免 float 比较误差。</p>
+      </div>
+
+      <div class="cards" style="margin-top:14px">
+        <div class="fcard"><h4 style="color:var(--amber)">难点二 · 防狙击自动延时</h4><p>出价落在结束前窗口（<code>ShouldTriggerDelay</code>）且累计延时未超上限（<code>CanDelay</code>）时切「延时中」。时间更新用 SQL <code>DATE_ADD(end_time, INTERVAL ? SECOND)</code> 原子累加；延时判定<b>放到锁外</b>，避免放大锁竞争。</p></div>
+        <div class="fcard"><h4 style="color:var(--teal)">难点三 · 外部依赖降级兜底</h4><p>Redis 锁异常退化到本地 <code>sync.Map</code> 锁（<code>LoadOrStore</code> 原子 CAS）；弹幕限流故障走放行；广播队列满非阻塞丢弃；AI 链路默认 <b>fail-open</b>。原则：不把「依赖可用」当作「业务可用」前提。</p></div>
+      </div>
+
+      <div class="fcard" style="margin-top:14px"><h4 style="font-size:16px;color:var(--violet)">难点四 · 点天灯（自动代理出价）的锁嵌套与递归触发</h4>
+        <p style="margin-top:6px">业务语义接近 eBay 代理出价：用户提交预算上限后，被超越时按最小加价自动跟价。实现要点：</p>
+        <div class="flow" style="margin-top:14px">
+          <div class="fcell"><div class="fk">补偿替代长事务</div><div class="fd">短事务创建订阅 → 事务外执行出价 → 失败则补偿删除订阅，避免出价逻辑与 Redis 锁/事务/WS 推送包进一个长事务。</div></div>
+          <div class="farr">+</div>
+          <div class="fcell"><div class="fk">并发粒度细化</div><div class="fd">锁粒度从 per-auction 拆到 per-subscription，配合容量信号量限制并发，防止热点竞拍下自动出价互相阻塞。</div></div>
+          <div class="farr">+</div>
+          <div class="fcell"><div class="fk">递归显式阻断</div><div class="fd">通过 <code>SkipSkyLampTrigger</code> 等标记避免自动出价再次触发自身，防止陷入自激循环。</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 AI -->
+    <section id="ai">
+      <div class="sec-head">
+        <div class="sec-num">10 / AI 能力使用</div>
+        <h2>把模型调用约束成可替换、可降级的工程能力</h2>
+        <p class="sec-desc">重点不是「接了一个模型」，而是把多模态生成约束成结构化、可替换、可降级的工程能力。</p>
+      </div>
+      <div class="cards">
+        <div class="fcard"><div class="ic">MD</div><h4>模型选型</h4><p>火山方舟豆包 <code>doubao-seed-1-6-vision-250815</code>，OpenAI 兼容协议接入，能力形态为视觉多模态生成。</p></div>
+        <div class="fcard"><div class="ic">IO</div><h4>接入位置</h4><p>商家后台「商品 AI 一键文案」。输入最多 6 张商品图 + 关键词，输出标题、描述、卖点和建议起拍价草稿。</p></div>
+        <div class="fcard"><div class="ic">PR</div><h4>Prompt 设计</h4><p>System prompt 约束扮演「直播竞拍文案专家」并显式定义输出 schema，开启 <b>JSON mode</b> 保证结构化稳定，temperature 0.6，图文混合多模态输入。</p></div>
+        <div class="fcard"><div class="ic">FB</div><h4>失败分级双兜底</h4><p>服务端对超时/上游错误/解析失败分级映射为 400/429/502/504；前端对图片数量、格式、错误码文案再做一次用户态兜底。</p></div>
+      </div>
+      <div class="callout note"><span class="cig">边界</span><div class="cbody">LLM 能力收敛在 <code>shared/llm</code>，通过 <code>Provider</code> 接口抽象解耦，<b>不为 AI 单独拆微服务</b>，也不把模型 SDK 侵入业务层。AI 只生成草稿，不直接保存或发布，最终内容仍由商家确认。</div></div>
+    </section>
+
+    <!-- 11 OBSERVABILITY -->
+    <section id="observe">
+      <div class="sec-head">
+        <div class="sec-num">11 / 可观测性</div>
+        <h2>从请求、业务指标到实验效果的统一观测面</h2>
+        <p class="sec-desc">可观测性不是「出了问题再看日志」，而是从请求、业务指标到实验效果都有统一观测入口。</p>
+      </div>
+      <div class="cards c3">
+        <div class="fcard"><div class="ic">LOG</div><h4>结构化日志</h4><p>统一 JSON <code>LogEntry</code>，覆盖 service/request_id/operation_type/user_id/duration；<code>X-Request-ID</code> 跨服务串联，password/token/secret 统一脱敏。进 Loki 保留 31 天，Grafana LogQL 查询。</p></div>
+        <div class="fcard"><div class="ic">MET</div><h4>业务指标完备</h4><p>Prometheus 覆盖竞拍创建、出价、延时触发、并发峰值、溢价率、GMV、支付成功率、WS 连接数、SQL 耗时；GORM 插件自动采集 DB 指标，前端埋点回流同一大盘。</p></div>
+        <div class="fcard"><div class="ic">AB</div><h4>实验能力闭环</h4><p>GrowthBook Go SDK，网关侧特征预评估，<code>X-Experiment-Context</code> 透传下游；曝光与转化统一落 Prometheus，形成从分流到结果观测的闭环。</p></div>
+      </div>
+    </section>
+
+    <!-- 12 BUSINESS METRICS -->
+    <section id="metrics">
+      <div class="sec-head">
+        <div class="sec-num">12 / 业务指标监控体系</div>
+        <h2>把增长漏斗变成可上报、可落库、可聚合、可告警的链路</h2>
+        <p class="sec-desc">核心目标不是增加几个 Counter，而是把「用户触达 → 进房回流 → 出价/一口价参与 → 成交结果」拆成完整可观测漏斗。已完成代码落地并经二次 Code Review 加固。</p>
+      </div>
+      <div class="flow">
+        <div class="fcell"><div class="fk">提醒点击</div><div class="ft">reminder_click</div></div><div class="farr">→</div>
+        <div class="fcell"><div class="fk">进房回流</div><div class="ft">live_room_enter</div></div><div class="farr">→</div>
+        <div class="fcell"><div class="fk">点击出价</div><div class="ft">bid_button_click</div></div><div class="farr">→</div>
+        <div class="fcell"><div class="fk">一口价点击</div><div class="ft">fixed_price_click</div></div><div class="farr">→</div>
+        <div class="fcell"><div class="fk">购买成功</div><div class="ft">purchase_success</div></div>
+      </div>
+      <div class="psv">
+        <div class="pc p"><div class="pl">问题</div><div class="pt">原有监控只覆盖接口、出价、一口价等交易结果，缺少「提醒点击、进房、点击出价、购买成功」等漏斗中间节点。只看成交，无法判断用户损失发生在触达、回流还是交易阶段。</div></div>
+        <div class="pc s"><div class="pl">方案</div><div class="pt">网关新增认证入口 <code>POST /api/v1/events</code>，解析 JWT 后用真实 user_id 写入 <code>business_events</code> 表。事件类型白名单控制，<code>client_event_id</code> 幂等去重；metadata 仅允许有限 key、拒绝无界结构。</div></div>
+        <div class="pc v"><div class="pl">价值</div><div class="pt">业务事件从前端临时埋点变成后端可追溯事实表，可定位「触达了但没回流」「进房了但没参与交易」等断点。输入边界与幂等语义收紧后更接近真实生产。</div></div>
+      </div>
+      <div class="cards" style="margin-top:14px">
+        <div class="fcard"><div class="ic">H5</div><h4>关键路径打点</h4><p>H5 新增 <code>trackBusinessEvent</code> 统一上报。<code>live_room_enter</code> 仅在 liveStreamId/auctionId/productId 全就绪后上报，并以三者拼接为去重 key，<b>移除对非权威 product state 的回退</b>，避免写入上一场竞拍的商品 ID。</p></div>
+        <div class="fcard"><div class="ic">HP</div><h4>通知热拉指标补齐</h4><p><code>notification_hot_pull_total{source,result}</code> 把候选/创建/重复/失败从日志提升为 Prometheus 指标，评审时可直接看到提醒触达链路是否正常。</p></div>
+      </div>
+      <div class="callout warn"><span class="cig">加固</span><div class="cbody">二次审查后部署配置同步加固：compose 挂载 <code>business-alerts.yml</code>、gateway 补齐 DB 环境变量、Prometheus scrape 目标修正为 <code>gateway:9090</code>、MySQL 增加 healthcheck 且 gateway 等待 <code>service_healthy</code> 后启动。</div></div>
+      <div class="fcard" style="margin-top:14px"><h4>高并发压测连接池治理</h4>
+        <p style="margin-top:6px">100 并发 / 10 拍卖分片吞吐压测曾出现 0/500/502 非业务失败，根因是本机临时端口被打满（<code>can't assign requested address</code>）。通过 gateway proxy client 连接复用 + auction Redis client 有界连接池治理后修复：</p>
+        <div class="codeblk"><div class="ch">吞吐压测 · 100 并发 / 10 分片 / 30s</div><pre><span class="dim"># 修复前</span>
+error_codes={<span class="red">"0":13023</span>,"400":6650,<span class="red">"500":22</span>,<span class="red">"502":41</span>}
+
+<span class="dim"># 修复后</span>
+error_codes={<span class="grn">"400":7095</span>}  <span class="dim"># 仅余业务竞争：出价不足/已被超越</span></pre></div>
+      </div>
+    </section>
+
+    <!-- 13 QUALITY -->
+    <section id="quality">
+      <div class="sec-head">
+        <div class="sec-num">13 / 工程质量与材料完整度</div>
+        <h2>完成度不仅在功能列表，也在测试深度与工程纪律</h2>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="sv c1">138</div><div class="sl">后端 Go 测试<br>混沌/压测/反狙击</div></div>
+        <div class="stat"><div class="sv c2">66</div><div class="sl">前端 Jest<br>单测 / 集成测试</div></div>
+        <div class="stat"><div class="sv c3">15</div><div class="sl">Playwright<br>E2E + Visual Regression</div></div>
+        <div class="stat"><div class="sv c4">CI</div><div class="sl">GitHub Actions<br>单测/构建/Lighthouse</div></div>
+      </div>
+      <div class="cards">
+        <div class="fcard"><div class="ic">FE</div><h4>前端工程化完整</h4><p>H5 与 Admin 各自维护独立 Design Token（颜色/动画/间距/圆角/字体），支持深浅双主题语义 token；组件按 shared 通用层与业务层分层，配 ErrorBoundary 与全局错误上报。</p></div>
+        <div class="fcard"><div class="ic">UX</div><h4>交互细节打磨</h4><p>排行榜前三高亮、领先标签、被超价 toast、基于 <code>requestAnimationFrame</code> 的毫秒级倒计时、高频刷新 FPS 降级、出价成功动画与震动反馈等均有落地。</p></div>
+      </div>
+    </section>
+
+    <!-- 14 HOME REDESIGN -->
+    <section id="homeredesign">
+      <div class="sec-head">
+        <div class="sec-num">14 / 设计亮点</div>
+        <h2>H5 首页维度重构：从「竞拍维度」到「直播间维度」</h2>
+        <p class="sec-desc">一次以第一性原理驱动的信息架构重构：不打补丁，而是追问「首页到底该回答用户什么问题」，从根上修正列表维度错配。</p>
+      </div>
+      <div class="psv">
+        <div class="pc p"><div class="pl">问题 · 维度错配</div><div class="pt">首页原按<b>竞拍维度</b>铺卡，但 <code>live_streams.CreatorID</code> 唯一 → 一商家一直播间，且会累积大量已结束竞拍。导致历史「已结束」一条条铺成独立卡，把活跃竞拍挤到下方。</div></div>
+        <div class="pc s"><div class="pl">洞察 · 伪问题</div><div class="pt">「已结束如何分页」是伪问题。根因是把已结束当成了<b>一等卡片</b>。改为直播间维度、明确已结束仅作氛围信号后，复杂分页不复存在。</div></div>
+        <div class="pc v"><div class="pl">价值 · 修根因</div><div class="pt">没有为「已结束分页」打补丁，而是修正列表维度本身，复杂查询随之消失；与「一商家一直播间」业务模型对齐。</div></div>
+      </div>
+      <div class="mock-wrap">
+        <div class="phone"><div class="screen">
+          <div class="pbar">H5 首页 · 直播间维度</div>
+          <div class="room-card">
+            <div class="rtop"><span class="live-badge">● LIVE</span><span class="rname">瑾瑜珠宝行</span></div>
+            <div class="rbody">
+              <div class="now">正在竞拍 · 和田玉籽料手镯</div>
+              <div class="price">¥ 12,800</div>
+              <div class="next">即将开始 · 翡翠平安扣 · 3 分钟后</div>
+              <div class="deals">最近成交 · 羊脂玉吊坠 ¥8,600 · 碧玉手串 ¥3,200</div>
+            </div>
+          </div>
+        </div></div>
+        <div class="mock-anno">
+          <div class="anno"><div class="at"><span class="an">①</span>正在竞拍</div><div class="ad">主视觉，可直接进入。复用现有 <code>current_auction</code> 回填。</div></div>
+          <div class="anno"><div class="at"><span class="an t">②</span>即将开始</div><div class="ad">预约钩子；无在播时升为主视觉。新增 <code>next_auction</code>（每间 status=0 取最近一条）。</div></div>
+          <div class="anno"><div class="at"><span class="an a">③</span>最近成交</div><div class="ad">氛围/留存信号，滚动展示。新增 <code>recent_deals</code>（每间最近 2~3 条），不再单独成卡。</div></div>
+        </div>
+      </div>
+      <h4 style="font-family:var(--disp);font-size:16px;margin:34px 0 0">职责分层：首页 vs 直播 feed 的边界</h4>
+      <p class="sec-desc" style="margin-top:8px">解法不是靠「藏数据」区分，而是靠职责与形态 —— 二者构成「目录 → 内容流」的标准漏斗。</p>
+      <div class="flow">
+        <div class="fcell"><div class="fk">TAB · 首页 /</div><div class="ft">货架概览</div><div class="fd">直播间卡片 grid，决策入口，可预约。</div></div>
+        <div class="farr">→</div>
+        <div class="fcell"><div class="fk">点卡片 · 进入</div><div class="ft">沉浸 feed /live</div><div class="fd">全屏直播流，定位该间，上下滑切换其他在播间。</div></div>
+        <div class="farr">→</div>
+        <div class="fcell"><div class="fk">出价 / 成交</div><div class="ft">竞拍交互</div><div class="fd">在 feed 内完成出价、看排行、下单。</div></div>
+      </div>
+      <table class="ctable">
+        <tbody><tr><th>维度</th><th class="hl-coral">首页（货架）</th><th class="hl-teal">直播 feed（播放器）</th></tr>
+        <tr><td>心智</td><td>逛、挑、决策「进哪个」</td><td>看、沉浸、消费「就看这个」</td></tr>
+        <tr><td>布局</td><td>卡片 grid，滚动浏览多间</td><td>全屏单间，竖向滑动切间</td></tr>
+        <tr><td>数据范围</td><td>在播 + 即将开始 + 氛围成交</td><td>仅正在播</td></tr>
+        <tr><td>核心动作</td><td>进入直播间 / 预约开拍</td><td>出价、互动、切下一间</td></tr>
+      </tbody></table>
+      <div class="takeaway coral"><b>低成本高收益：</b>复用既有 RPC 批量回填模式（参照 <code>GetCurrentByLiveStreamIDs</code>），不跨库 JOIN；feed 形态零改动，改造成本集中在首页。</div>
+    </section>
+
+    <!-- 15 BOUNDARY -->
+    <section id="boundary">
+      <div class="sec-head">
+        <div class="sec-num">15 / 如实边界说明</div>
+        <h2>主动界定已完成与未完成的边界</h2>
+        <p class="sec-desc">以下属于「能力已部分实现但主流程未接通」或「当前确实不存在」的范围，答辩与文档中按现状描述，避免把局部实现表述成完整闭环。</p>
+      </div>
+      <div class="callout warn"><span class="cig">CAUTION</span><div class="cbody">保留本节的目的不是自我降级，而是用边界意识换取可信度 —— 评审更信任「敢于说清楚没做什么」的项目。</div></div>
+      <div class="blist">
+        <div class="bitem"><span class="bdot"></span><div class="btx"><b>起拍价 StartPrice：</b>当前仅作展示字段与规则元数据存储，出价校验路径未读取；实际行为更接近「0 元起拍 + 首次最低出价 = 加价幅度」。</div></div>
+        <div class="bitem"><span class="bdot"></span><div class="btx"><b>服务端时间同步：</b><code>time_sync</code> 广播与 <code>useServerTime</code> 校准已实现，但主直播页 <code>LiveRoomSlide</code> 仍基于本地时钟 + 服务端 end_time 计算倒计时，尚未接入 offset 校准结果。</div></div>
+        <div class="bitem"><span class="bdot"></span><div class="btx"><b>出价提示音：</b>代码未实现音效反馈，当前感知来自 toast、震动、动画与视觉高亮，不应表述为「已有提示音」。</div></div>
+        <div class="bitem"><span class="bdot"></span><div class="btx"><b>Admin 静态页：</b>竞拍规则模板页 <code>AuctionRules</code> 与权限页 <code>Permissions</code> 仍是静态 Mock，未接后端。需区分「后端 RBAC 已实现」与「页面已联通」两个层次。</div></div>
+        <div class="bitem"><span class="bdot"></span><div class="btx"><b>product 服务指标：</b>当前暴露 <code>/metrics</code> 的是 gateway 与 auction，product 服务尚未接入 Prometheus 指标导出。</div></div>
+      </div>
+    </section>
+
+    <div class="foot">
+      实时竞拍大师 · 抖音电商直播竞拍全栈系统 · 项目亮点总览
+      <div class="ft-line">所有结论基于真实代码核对 · 暗色/明亮主题可切换（右上角）</div>
+    </div>
+  </main>
+</div>
+
+
+
+
+<script>
+const root=document.documentElement, btn=document.getElementById('themeBtn');
+const saved=localStorage.getItem('theme'); if(saved) root.setAttribute('data-theme',saved);
+btn.addEventListener('click',()=>{
+  const next=root.getAttribute('data-theme')==='dark'?'light':'dark';
+  root.setAttribute('data-theme',next); localStorage.setItem('theme',next);
+});
+function fillBars(){document.querySelectorAll('.score-card .bar i').forEach(i=>{i.style.width=i.dataset.w});}
+setTimeout(fillBars,300);
+const links=[...document.querySelectorAll('nav.side a.navlink')];
+const secs=links.map(l=>document.querySelector(l.getAttribute('href'))).filter(Boolean);
+const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));const a=links.find(l=>l.getAttribute('href')==='#'+e.target.id);if(a)a.classList.add('active');}});},{rootMargin:'-35% 0px -60% 0px'});
+secs.forEach(s=>io.observe(s));
+</script>
+</body>
+</html>
