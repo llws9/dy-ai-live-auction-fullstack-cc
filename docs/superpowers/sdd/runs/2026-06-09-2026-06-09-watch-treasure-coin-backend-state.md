@@ -38,11 +38,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `7` |
-| Done | `3` |
+| Done | `4` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `4` |
-| Last Updated | `2026-06-09 02:18` |
+| Pending | `3` |
+| Last Updated | `2026-06-09 02:22` |
 
 ## Status Legend
 
@@ -72,7 +72,7 @@
 | `T001` | `数据模型与建表 DDL` | `done` | `subagent` | `W1` | `-` | `model + migration` | `backend/auction/model/treasure.go; backend/auction/migration/003_create_treasure_tables.sql` | `docs/superpowers/specs/2026-06-09-watch-treasure-coin-design.md; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md; backend/auction/model/user_balance.go` | `cd backend/auction && go build ./model/...` | `none` |
 | `T002` | `DAO：时长累加 + 金币读取 + 幂等领取` | `done` | `subagent` | `W2` | `T001` | `dao + dao tests` | `backend/auction/dao/treasure.go; backend/auction/dao/treasure_test.go; backend/auction/dao/testutil_test.go` | `backend/auction/model/treasure.go; backend/auction/dao/user_balance.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./dao/ -run TestTreasureDAO -v` | `none` |
 | `T003` | `Service：档位常量 + 心跳封顶 + 状态编排 + 领取编排` | `done` | `subagent` | `W3` | `T002` | `service + service tests` | `backend/auction/service/treasure.go; backend/auction/service/treasure_test.go` | `backend/auction/dao/treasure.go; backend/auction/service/clock.go; backend/auction/service/testutil_test.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./service/ -run TestTreasureService -v` | `none` |
-| `T004` | `Handler：3 个 HTTP 端点` | `pending` | `unassigned` | `W4` | `T003` | `handler + handler tests` | `backend/auction/handler/treasure.go; backend/auction/handler/treasure_test.go` | `backend/auction/service/treasure.go; backend/auction/handler/user_balance_http.go; frontend/h5/src/services/api.ts; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./handler/ -run TestTreasureHandler -v` | `none` |
+| `T004` | `Handler：3 个 HTTP 端点` | `done` | `subagent` | `W4` | `T003` | `handler + handler tests` | `backend/auction/handler/treasure.go; backend/auction/handler/treasure_test.go` | `backend/auction/service/treasure.go; backend/auction/handler/user_balance_http.go; frontend/h5/src/services/api.ts; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./handler/ -run TestTreasureHandler -v` | `none` |
 | `T005` | `Auction 装配：AutoMigrate + main.go 路由` | `pending` | `unassigned` | `W5` | `T004` | `auction main wiring` | `backend/auction/main.go` | `backend/auction/model/treasure.go; backend/auction/dao/treasure.go; backend/auction/service/treasure.go; backend/auction/handler/treasure.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go build ./... && go test ./dao/ ./service/ ./handler/` | `none` |
 | `T006` | `Gateway 路由代理` | `pending` | `unassigned` | `W6` | `T005` | `gateway authGroup proxy` | `backend/gateway/router/router.go` | `backend/gateway/middleware/*; backend/gateway/handler/*; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/gateway && go build ./... && go test ./...` | `none` |
 | `T007` | `端到端联调验证` | `pending` | `unassigned` | `W7` | `T006` | `verification only` | `docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md` | `backend/auction/**; backend/gateway/**; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./dao/ ./service/ ./handler/ && cd ../gateway && go test ./...` | `auction/gateway optional if manual curl is performed` |
@@ -419,6 +419,116 @@
 - First response line used: `pending final response`
 
 
+### T004 - `Handler：3 个 HTTP 端点`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `subagent` |
+| Started At | `2026-06-09 02:20` |
+| Completed At | `2026-06-09 02:22` |
+| Branch | `feat/watch-treasure-coin-backend` |
+| Worktree | `/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-watch-treasure-coin-backend` |
+| Base Commit | `1327794400c27a2013eba3a078bfac26130c26c6` |
+| Target Branch | `main` |
+| Depends On | `T003` |
+| Parallel Group | `W4` |
+
+**TDD Plan**
+
+- Red: write handler contract tests for auth, response shape, heartbeat shape, threshold error, claim success, invalid JSON, and duplicate claim conflict.
+- Green: implement `NewTreasureHandler`, `GetStatus`, `Heartbeat`, and `Claim` as a thin HTTP layer over `service.TreasureService`.
+- Verify: run the targeted handler test command with `-count=1` and confirm no `UserBalance/user_balances/decimal` references in T004 files.
+
+**Write Set**
+
+- `backend/auction/handler/treasure.go`
+- `backend/auction/handler/treasure_test.go`
+
+**Read Set**
+
+- `AGENTS.md`
+- `docs/CONSTITUTION.md`
+- `docs/CODING.md`
+- `docs/superpowers/sdd/RUNBOOK.md`
+- `docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md`
+- `backend/auction/service/treasure.go`
+- `backend/auction/dao/treasure.go`
+- `backend/auction/handler/user_balance_http.go`
+- `frontend/h5/src/services/api.ts`
+
+**Scope Expansion Requests**
+
+| Time | Requested Files | Reason | Decision |
+| --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` |
+
+**Regression Sentinels**
+
+- Automated sentinel: `TestTreasureHandlerGetStatusRequiresLogin`
+- Rollback behavior caught: `GetStatus without gateway-injected user_id returns 401 with readable message`
+- Automated sentinel: `TestTreasureHandlerGetStatusResponseShape`
+- Rollback behavior caught: `GetStatus success must return {code:200,data:{watched_seconds,coin_balance,tiers}} with exactly 3 tiers`
+- Automated sentinel: `TestTreasureHandlerHeartbeatResponseShape`
+- Rollback behavior caught: `Heartbeat success must return {code:200,data:{watched_seconds}}`
+- Automated sentinel: `TestTreasureHandlerClaimRejectsThresholdNotMet`
+- Rollback behavior caught: `Claim below threshold maps service.ErrThresholdNotMet to HTTP 400 with readable message`
+- Automated sentinel: `TestTreasureHandlerClaimSuccessResponseShape`
+- Rollback behavior caught: `Claim success must return {code:200,data:{coins,coin_balance}}`
+- Automated sentinel: `TestTreasureHandlerClaimRejectsInvalidJSON`
+- Rollback behavior caught: `invalid JSON body maps to HTTP 400`
+- Automated sentinel: `TestTreasureHandlerClaimDuplicateReturnsConflict`
+- Rollback behavior caught: `dao.ErrAlreadyClaimed maps to HTTP 409`
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `cd backend/auction && go test ./handler/ -run TestTreasureHandler -v` | `RED: compile failure before implementation` | `undefined: NewTreasureHandler` | `expected_fail` |
+| `cd backend/auction && go test ./handler/ -run TestTreasureHandler -v` | `GREEN: all TreasureHandler tests pass` | `7 tests pass; PASS auction-service/handler; 0.752s` | `pass` |
+| `cd backend/auction && go test ./handler/ -run TestTreasureHandler -v -count=1` | `fresh verify pass` | `7 tests pass; PASS auction-service/handler; 0.585s` | `pass` |
+| `rg -n "UserBalance|user_balances|shopspring/decimal" backend/auction/handler/treasure.go backend/auction/handler/treasure_test.go` | `no references to cash balance implementation` | `exit 1, no matches` | `pass` |
+
+**Runtime Source Evidence**
+
+| Service | Branch | Worktree | Commit | Dirty | Command | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` | `-` | `-` | `-` |
+
+**Modified Files**
+
+- `backend/auction/handler/treasure.go`
+- `backend/auction/handler/treasure_test.go`
+- `docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md`
+
+**Integration Check**
+
+- Target branch: `main`
+- Branch relationship: `task branch only; no integration performed by T004`
+- Diff reviewed: `git diff -- backend/auction/handler/treasure.go backend/auction/handler/treasure_test.go docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md`
+- Overlapping write-set tasks serialized: `yes; T004 depends on T003 and only owns handler/state write set`
+
+**Commits**
+
+- Planned message: `feat(treasure): add HTTP handlers for status heartbeat and claim`
+- Actual commit: `0d620ca4 feat(treasure): add HTTP handlers for status heartbeat and claim`
+
+**Review Notes**
+
+- `userID` is read only via `c.GetInt64("user_id")`; `<=0` returns 401.
+- Successful handler responses use `{code:200,data:...}` so frontend `request()` unwraps `data.data`.
+- `Claim` accepts JSON body `{tier}`; invalid JSON returns 400; `ErrThresholdNotMet` and `ErrInvalidTier` return 400; `dao.ErrAlreadyClaimed` returns 409; unexpected errors return 500.
+- `UserBalance/user_balances` was not touched.
+
+**Risks / Blockers**
+
+- `T005` still needs to wire these handlers into `auction-service` routes; T004 only implements and tests handler methods.
+
+**Handoff**
+
+- First response line used: `pending final response`
+
+
 ## Cross-Task Decisions
 
 | Time | Decision | Reason | Impact | Owner |
@@ -439,6 +549,7 @@
 | Backend Product | `cd backend/product && go test ./...` | no | `not_run` | `-` |
 | Backend Auction | `cd backend/auction && go test ./dao/ -run TestTreasureDAO -v -count=1` | yes for T002 | `pass` | `6 TreasureDAO tests pass` |
 | Backend Auction Service | `cd backend/auction && go test ./service/ -run TestTreasureService -v -count=1` | yes for T003 | `pass` | `9 TreasureService tests pass` |
+| Backend Auction Handler | `cd backend/auction && go test ./handler/ -run TestTreasureHandler -v -count=1` | yes for T004 | `pass` | `7 TreasureHandler tests pass` |
 | Frontend Admin | `cd frontend/admin && npm test -- --runInBand` | no | `not_run` | `-` |
 | Frontend Admin Build | `cd frontend/admin && npm run build` | no | `not_run` | `-` |
 | Frontend H5 | `cd frontend/h5 && npm test -- --runInBand` | no | `not_run` | `-` |
@@ -466,4 +577,4 @@
 
 **状态**
 
-- `T003 done; waiting for downstream W4-W7`
+- `T004 done; waiting for downstream W5-W7`
