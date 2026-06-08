@@ -38,11 +38,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `7` |
-| Done | `2` |
+| Done | `3` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `4` |
-| Last Updated | `2026-06-09 00:25` |
+| Pending | `3` |
+| Last Updated | `2026-06-09 00:40` |
 
 ## Status Legend
 
@@ -71,7 +71,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `后端 Auction 模型增加只读 BidCount 字段` | `done` | `subagent-t001` | `W1` | `-` | `model field only` | `backend/auction/model/auction.go` | `AGENTS.md; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go build ./...` | `none` |
 | `T002` | `后端 AuctionFilters 与 ListWithFilters 实现价格过滤与热度排序` | `done` | `subagent-t002` | `W2` | `T001` | `DAO filters, SQL, DAO tests` | `backend/auction/dao/auction.go; backend/auction/dao/auction_filter_test.go` | `backend/auction/model/auction.go; backend/auction/dao/auction_current_test.go; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go test ./dao/ -run 'TestListWithFiltersPriceRange|TestListWithFiltersSortByHot' -v` | `none` |
-| `T003` | `后端 handler 解析筛选参数并透传` | `assigned` | `subagent-t003` | `W3` | `T002` | `GET /auctions query parsing and filter propagation` | `backend/auction/handler/auction.go; backend/auction/handler/auction_list.go` | `backend/auction/dao/auction.go; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go build ./... && go test ./handler/ -v` | `none` |
+| `T003` | `后端 handler 解析筛选参数并透传` | `done` | `subagent-t003` | `W3` | `T002` | `GET /auctions query parsing and filter propagation` | `backend/auction/handler/auction.go; backend/auction/handler/auction_list.go` | `backend/auction/dao/auction.go; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go build ./... && go test ./handler/ -v` | `none` |
 | `T004` | `前端 auctionApi.list 扩展查询参数` | `pending` | `unassigned` | `W4` | `T003` | `H5 API client params` | `frontend/h5/src/services/api.ts` | `docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
 | `T005` | `前端价格底部抽屉组件 PriceFilterSheet` | `pending` | `unassigned` | `W5` | `T004` | `bottom sheet component and styles` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css` | `frontend/h5/src/pages/Home/index.tsx; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
 | `T006` | `前端 Home 集成筛选胶囊、状态与参数组装` | `pending` | `unassigned` | `W6` | `T005` | `Home UI integration and interaction test` | `frontend/h5/src/pages/Home/index.tsx; frontend/h5/src/pages/Home/__tests__/Home.test.tsx` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css; frontend/h5/src/services/api.ts; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx -t '点击最热胶囊'` | `none` |
@@ -261,10 +261,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `assigned` |
+| Status | `done` |
 | Owner | `subagent-t003` |
 | Started At | `2026-06-09 00:28` |
-| Completed At | `-` |
+| Completed At | `2026-06-09 00:40` |
 | Branch | `feat/homepage-filter-sdd` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-homepage-filter-sdd` |
 | Base Commit | `351a147089502bac70ae6d7ed5fafa4a303ab584` |
@@ -274,7 +274,7 @@
 
 **TDD Plan**
 
-- Red: build fails before `ListParams`/`AuctionFilters` fields are wired if handler uses new query params.
+- Red/baseline: write set does not include handler test files, so no new failing test was added; ran the required build/handler sentinel first and recorded the existing passing baseline before implementation.
 - Green: parse `sort=hot`, `price_min`, `price_max` with `decimal.NewFromString`; pass fields through `ListParams` into `dao.AuctionFilters`.
 - Verify: `cd backend/auction && go build ./... && go test ./handler/ -v`.
 
@@ -298,19 +298,33 @@
 
 | Command | Expected | Actual | Result |
 | --- | --- | --- | --- |
-| `not_run` | `build and handler tests pass` | `not_run` | `pending` |
+| `cd backend/auction && go build ./... && go test ./handler/ -v` | Baseline before implementation due write-set limiting test changes | `PASS`; `ok auction-service/handler 0.763s`; exit `0` | `baseline_pass` |
+| `cd backend/auction && go build ./... && go test ./handler/ -v` | Build and handler sentinel pass after parsing/propagation implementation | `PASS`; `ok auction-service/handler 0.803s`; exit `0` | `pass` |
+
+**Runtime Source Evidence**
+
+| Service | Branch | Worktree | Commit | Dirty | Command | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` | `-` | `-` | `not_used` |
 
 **Modified Files**
 
-- `-`
+- `backend/auction/handler/auction.go`
+- `backend/auction/handler/auction_list.go`
+- `docs/superpowers/sdd/runs/2026-06-08-2026-06-08-homepage-filter-state.md`
+
+**Commits**
+
+- `8302d277bdcb053a53e75235592233b1d20d85dc` - `feat(auction): parse sort/price_min/price_max in GET /auctions`
 
 **Risks / Blockers**
 
 - Invalid price query values are ignored by design; no 400 behavior planned.
+- No task-scoped test file was modified because `*_test.go` was outside T003 write set; coverage relies on the required build/handler sentinel plus DAO sentinels from T002.
 
 **Handoff**
 
-- First response line used: `pending`
+- First response line used: `yes`
 
 ### T004 - `前端 auctionApi.list 扩展查询参数`
 
