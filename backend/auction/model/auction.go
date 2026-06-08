@@ -31,6 +31,8 @@ type Auction struct {
 	DelayUsed    int             `json:"delay_used" gorm:"default:0"` // 已延时秒数
 	Version      int             `json:"version" gorm:"default:0"`    // 乐观锁版本号
 	CreatedAt    time.Time       `json:"created_at" gorm:"autoCreateTime"`
+	// BidCount 由聚合查询回填，不参与建表或写入。
+	BidCount int `json:"bid_count" gorm:"->;-:migration"`
 }
 
 type AuctionOrderRequest struct {
