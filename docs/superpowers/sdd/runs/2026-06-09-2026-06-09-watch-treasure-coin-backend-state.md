@@ -38,11 +38,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `7` |
-| Done | `4` |
+| Done | `5` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `3` |
-| Last Updated | `2026-06-09 02:22` |
+| Pending | `2` |
+| Last Updated | `2026-06-09 02:44` |
 
 ## Status Legend
 
@@ -73,7 +73,7 @@
 | `T002` | `DAO：时长累加 + 金币读取 + 幂等领取` | `done` | `subagent` | `W2` | `T001` | `dao + dao tests` | `backend/auction/dao/treasure.go; backend/auction/dao/treasure_test.go; backend/auction/dao/testutil_test.go` | `backend/auction/model/treasure.go; backend/auction/dao/user_balance.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./dao/ -run TestTreasureDAO -v` | `none` |
 | `T003` | `Service：档位常量 + 心跳封顶 + 状态编排 + 领取编排` | `done` | `subagent` | `W3` | `T002` | `service + service tests` | `backend/auction/service/treasure.go; backend/auction/service/treasure_test.go` | `backend/auction/dao/treasure.go; backend/auction/service/clock.go; backend/auction/service/testutil_test.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./service/ -run TestTreasureService -v` | `none` |
 | `T004` | `Handler：3 个 HTTP 端点` | `done` | `subagent` | `W4` | `T003` | `handler + handler tests` | `backend/auction/handler/treasure.go; backend/auction/handler/treasure_test.go` | `backend/auction/service/treasure.go; backend/auction/handler/user_balance_http.go; frontend/h5/src/services/api.ts; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./handler/ -run TestTreasureHandler -v` | `none` |
-| `T005` | `Auction 装配：AutoMigrate + main.go 路由` | `pending` | `unassigned` | `W5` | `T004` | `auction main wiring` | `backend/auction/main.go` | `backend/auction/model/treasure.go; backend/auction/dao/treasure.go; backend/auction/service/treasure.go; backend/auction/handler/treasure.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go build ./... && go test ./dao/ ./service/ ./handler/` | `none` |
+| `T005` | `Auction 装配：AutoMigrate + main.go 路由` | `done` | `subagent` | `W5` | `T004` | `auction main wiring` | `backend/auction/main.go` | `backend/auction/model/treasure.go; backend/auction/dao/treasure.go; backend/auction/service/treasure.go; backend/auction/handler/treasure.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go build ./... && go test ./dao/ ./service/ ./handler/` | `none` |
 | `T006` | `Gateway 路由代理` | `pending` | `unassigned` | `W6` | `T005` | `gateway authGroup proxy` | `backend/gateway/router/router.go` | `backend/gateway/middleware/*; backend/gateway/handler/*; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/gateway && go build ./... && go test ./...` | `none` |
 | `T007` | `端到端联调验证` | `pending` | `unassigned` | `W7` | `T006` | `verification only` | `docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md` | `backend/auction/**; backend/gateway/**; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./dao/ ./service/ ./handler/ && cd ../gateway && go test ./...` | `auction/gateway optional if manual curl is performed` |
 
@@ -529,6 +529,112 @@
 - First response line used: `pending final response`
 
 
+### T005 - `Auction 装配：AutoMigrate + main.go 路由`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `subagent` |
+| Started At | `2026-06-09 02:35` |
+| Completed At | `2026-06-09 02:44` |
+| Branch | `feat/watch-treasure-coin-backend` |
+| Worktree | `/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-watch-treasure-coin-backend` |
+| Base Commit | `7e04037f` |
+| Target Branch | `main` |
+| Depends On | `T004` |
+| Parallel Group | `W5` |
+
+**TDD Plan**
+
+- Red: run static contract checks against the parent version of `backend/auction/main.go` to prove missing AutoMigrate, initialization, and route wiring are detected.
+- Green: minimally wire treasure models, DAO/service/handler, `registerRoutes` parameter, and three `/api/v1` routes in `backend/auction/main.go`.
+- Verify: run static sentinels plus auction build and dao/service/handler tests.
+
+**Write Set**
+
+- `backend/auction/main.go`
+
+**Read Set**
+
+- `AGENTS.md`
+- `docs/CONSTITUTION.md`
+- `docs/CODING.md`
+- `docs/superpowers/sdd/RUNBOOK.md`
+- `docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md`
+- `backend/auction/model/treasure.go`
+- `backend/auction/dao/treasure.go`
+- `backend/auction/service/treasure.go`
+- `backend/auction/handler/treasure.go`
+
+**Scope Expansion Requests**
+
+| Time | Requested Files | Reason | Decision |
+| --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` |
+
+**Regression Sentinels**
+
+- Automated sentinel: `rg -q '&model\.UserCoin\{\}'`, `rg -q '&model\.UserWatchDuration\{\}'`, and `rg -q '&model\.TreasureClaim\{\}'` against `backend/auction/main.go`.
+- Rollback behavior caught: removing the three treasure models from `AutoMigrate` fails the static contract.
+- Automated sentinel: `rg -q 'treasureDAO := dao\.NewTreasureDAO\(db\)'` and `rg -q 'treasureHandler := handler\.NewTreasureHandler\(service\.NewTreasureService\(treasureDAO, dao\.GetRedis\(\)\)\)'` against `backend/auction/main.go`.
+- Rollback behavior caught: removing DAO/service/handler initialization fails the static contract.
+- Automated sentinel: `rg -q 'treasureHandler \*handler\.TreasureHandler'`, `rg -q 'v1\.GET\("/treasure/status", treasureHandler\.GetStatus\)'`, `rg -q 'v1\.POST\("/treasure/claim", treasureHandler\.Claim\)'`, and `rg -q 'v1\.POST\("/watch/heartbeat", treasureHandler\.Heartbeat\)'` against `backend/auction/main.go`.
+- Rollback behavior caught: removing `registerRoutes` parameter or any of the three `/api/v1` auction-service routes fails the static contract.
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `git show HEAD^:backend/auction/main.go \| rg -q '&model\.UserCoin\{\}' && git show HEAD^:backend/auction/main.go \| rg -q '&model\.UserWatchDuration\{\}' && git show HEAD^:backend/auction/main.go \| rg -q '&model\.TreasureClaim\{\}'` | `RED: parent version lacks treasure AutoMigrate wiring` | `exit 1, no matches` | `expected_fail` |
+| `git show HEAD^:backend/auction/main.go \| rg -q 'treasureDAO := dao\.NewTreasureDAO\(db\)' && git show HEAD^:backend/auction/main.go \| rg -q 'treasureHandler := handler\.NewTreasureHandler\(service\.NewTreasureService\(treasureDAO, dao\.GetRedis\(\)\)\)'` | `RED: parent version lacks treasure initialization` | `exit 1, no matches` | `expected_fail` |
+| `git show HEAD^:backend/auction/main.go \| rg -q 'treasureHandler \*handler\.TreasureHandler' && git show HEAD^:backend/auction/main.go \| rg -q 'v1\.GET\("/treasure/status", treasureHandler\.GetStatus\)' && git show HEAD^:backend/auction/main.go \| rg -q 'v1\.POST\("/treasure/claim", treasureHandler\.Claim\)' && git show HEAD^:backend/auction/main.go \| rg -q 'v1\.POST\("/watch/heartbeat", treasureHandler\.Heartbeat\)'` | `RED: parent version lacks treasure route registration` | `exit 1, no matches` | `expected_fail` |
+| `rg -q '&model\.UserCoin\{\}' backend/auction/main.go && rg -q '&model\.UserWatchDuration\{\}' backend/auction/main.go && rg -q '&model\.TreasureClaim\{\}' backend/auction/main.go` | `GREEN: AutoMigrate static contract passes` | `exit 0` | `pass` |
+| `rg -q 'treasureDAO := dao\.NewTreasureDAO\(db\)' backend/auction/main.go && rg -q 'treasureHandler := handler\.NewTreasureHandler\(service\.NewTreasureService\(treasureDAO, dao\.GetRedis\(\)\)\)' backend/auction/main.go` | `GREEN: initialization static contract passes` | `exit 0` | `pass` |
+| `rg -q 'treasureHandler \*handler\.TreasureHandler' backend/auction/main.go && rg -q 'v1\.GET\("/treasure/status", treasureHandler\.GetStatus\)' backend/auction/main.go && rg -q 'v1\.POST\("/treasure/claim", treasureHandler\.Claim\)' backend/auction/main.go && rg -q 'v1\.POST\("/watch/heartbeat", treasureHandler\.Heartbeat\)' backend/auction/main.go` | `GREEN: route static contract passes` | `exit 0` | `pass` |
+| `cd backend/auction && go build ./...` | `auction-service builds` | `exit 0, no output` | `pass` |
+| `cd backend/auction && go test ./dao/ ./service/ ./handler/` | `target packages pass` | `ok auction-service/dao (cached); ok auction-service/service (cached); ok auction-service/handler 1.130s` | `pass` |
+| `cd backend/auction && go test ./dao/ ./service/ ./handler/ -count=1` | `fresh target packages pass` | `ok auction-service/dao 0.654s; ok auction-service/service 4.814s; ok auction-service/handler 0.841s` | `pass` |
+
+**Runtime Source Evidence**
+
+| Service | Branch | Worktree | Commit | Dirty | Command | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` | `-` | `-` | `none` |
+
+**Modified Files**
+
+- `backend/auction/main.go`
+- `docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md`
+
+**Integration Check**
+
+- Target branch: `main`
+- Branch relationship: `task branch only; no integration performed by T005`
+- Diff reviewed: `git diff -- backend/auction/main.go` before implementation commit.
+- Overlapping write-set tasks serialized: `yes; T005 depends on T004 and only owns main/state write set`.
+
+**Commits**
+
+- Planned message: `feat(treasure): wire treasure routes in auction service`
+- Actual implementation commit: `abe2d9a5e919e8beb57b0752df11e1da7d0c6453 feat(treasure): wire treasure routes in auction service`
+
+**Review Notes**
+
+- `AutoMigrate` now includes `&model.UserCoin{}`, `&model.UserWatchDuration{}`, and `&model.TreasureClaim{}`.
+- `main` initializes `treasureDAO := dao.NewTreasureDAO(db)` and `treasureHandler := handler.NewTreasureHandler(service.NewTreasureService(treasureDAO, dao.GetRedis()))`.
+- `registerRoutes` now accepts `treasureHandler *handler.TreasureHandler`; the call site passes `treasureHandler`.
+- `/api/v1` now registers `GET /treasure/status`, `POST /treasure/claim`, and `POST /watch/heartbeat`.
+
+**Risks / Blockers**
+
+- `T006` still needs gateway proxy wiring before H5 can reach these auction-service routes through the required `/api/v1` gateway entry.
+- No runtime service was started; T005 validation is build/test/static-contract only as specified.
+
+**Handoff**
+
+- First response line used: `pending final response`
+
+
 ## Cross-Task Decisions
 
 | Time | Decision | Reason | Impact | Owner |
@@ -550,6 +656,8 @@
 | Backend Auction | `cd backend/auction && go test ./dao/ -run TestTreasureDAO -v -count=1` | yes for T002 | `pass` | `6 TreasureDAO tests pass` |
 | Backend Auction Service | `cd backend/auction && go test ./service/ -run TestTreasureService -v -count=1` | yes for T003 | `pass` | `9 TreasureService tests pass` |
 | Backend Auction Handler | `cd backend/auction && go test ./handler/ -run TestTreasureHandler -v -count=1` | yes for T004 | `pass` | `7 TreasureHandler tests pass` |
+| Backend Auction Build | `cd backend/auction && go build ./...` | yes for T005 | `pass` | `exit 0, no output` |
+| Backend Auction T005 | `cd backend/auction && go test ./dao/ ./service/ ./handler/ -count=1` | yes for T005 | `pass` | `dao/service/handler fresh pass` |
 | Frontend Admin | `cd frontend/admin && npm test -- --runInBand` | no | `not_run` | `-` |
 | Frontend Admin Build | `cd frontend/admin && npm run build` | no | `not_run` | `-` |
 | Frontend H5 | `cd frontend/h5 && npm test -- --runInBand` | no | `not_run` | `-` |
@@ -577,4 +685,4 @@
 
 **状态**
 
-- `T004 done; waiting for downstream W5-W7`
+- `T005 done; waiting for downstream W6-W7`
