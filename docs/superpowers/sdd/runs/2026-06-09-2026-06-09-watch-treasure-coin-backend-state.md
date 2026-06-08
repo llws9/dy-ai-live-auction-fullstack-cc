@@ -407,7 +407,7 @@
 - Regression sentinel: `TestTreasureService_HeartbeatKey_IncludesStatDate` catches rollback to cross-day shared key by requiring `treasure:hb:<userID>:<statDate>`.
 - Modified files: `backend/auction/service/treasure.go`, `backend/auction/service/treasure_test.go`, `docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md`.
 - Planned commit message: `fix(treasure): make heartbeat accrual atomic per day`.
-- Actual commit: `pending; to be filled after git commit creates the hash`.
+- Actual fix commit: `58d2ceee fix(treasure): make heartbeat accrual atomic per day`.
 
 **Risks / Blockers**
 
