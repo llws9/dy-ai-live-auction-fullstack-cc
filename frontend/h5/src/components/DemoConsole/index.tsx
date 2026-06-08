@@ -35,6 +35,9 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
   { label: '管理员', phone: '13800138003' },
 ];
 
+const DEMO_BUYER_ACCOUNT = DEMO_ACCOUNTS[0];
+const DEMO_MERCHANT_ACCOUNT = DEMO_ACCOUNTS[1];
+
 const RECHARGE_TARGETS = [
   { label: '演示账户A', userID: BUYER_A_USER_ID },
   { label: '演示账户B', userID: BUYER_B_USER_ID },
@@ -84,7 +87,10 @@ export default function DemoConsole() {
     }
   };
 
-  const runWithDemoAuthRetry = async <T,>(operation: () => Promise<T>): Promise<T> => {
+  const runWithDemoAuthRetry = async <T,>(
+    operation: () => Promise<T>,
+    retryAccount: DemoAccount = DEMO_BUYER_ACCOUNT,
+  ): Promise<T> => {
     try {
       return await operation();
     } catch (error) {
@@ -92,7 +98,7 @@ export default function DemoConsole() {
         throw error;
       }
 
-      await login({ phone: DEMO_ACCOUNTS[0].phone, password: DEMO_PASSWORD });
+      await login({ phone: retryAccount.phone, password: DEMO_PASSWORD });
       return operation();
     }
   };
@@ -172,7 +178,7 @@ export default function DemoConsole() {
     const actionKey = `merchant-auction-${mode}`;
     setRunningAction(actionKey);
     try {
-      await runWithDemoAuthRetry(() => createDemoMerchantAuction(mode));
+      await runWithDemoAuthRetry(() => createDemoMerchantAuction(mode), DEMO_MERCHANT_ACCOUNT);
       showToast(mode === 'upcoming' ? '已创建1分钟后开播的竞拍' : '已创建正在竞拍场次', 'success', TOAST_DURATION_MS);
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';
@@ -190,7 +196,10 @@ export default function DemoConsole() {
 
     setRunningAction('merchant-fixed-price');
     try {
-      await runWithDemoAuthRetry(() => createDemoFixedPriceItem({ auctionId: currentAuctionId, liveStreamId: currentLiveStreamId }));
+      await runWithDemoAuthRetry(
+        () => createDemoFixedPriceItem({ auctionId: currentAuctionId, liveStreamId: currentLiveStreamId }),
+        DEMO_MERCHANT_ACCOUNT,
+      );
       showToast('已为当前场次创建一口价商品', 'success', TOAST_DURATION_MS);
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';

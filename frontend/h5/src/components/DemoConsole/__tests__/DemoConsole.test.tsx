@@ -316,7 +316,7 @@ describe('DemoConsole', () => {
     expect(mockShowToast).toHaveBeenCalledWith('已创建正在竞拍场次', 'success', 2500);
   });
 
-  it('refreshes the demo account token and retries when merchant action sees an expired token', async () => {
+  it('refreshes with the merchant account and retries when merchant action sees an expired token', async () => {
     const user = userEvent.setup();
     mockedCreateDemoMerchantAuction
       .mockRejectedValueOnce({ status: 401, message: 'invalid jwt' })
@@ -328,13 +328,34 @@ describe('DemoConsole', () => {
     await user.click(screen.getByRole('button', { name: '正在竞拍' }));
 
     expect(mockLogin).toHaveBeenCalledWith({
-      phone: '13800138001',
+      phone: '13800138002',
       password: 'Demo@123456',
     });
     expect(mockedCreateDemoMerchantAuction).toHaveBeenCalledTimes(2);
     expect(mockedCreateDemoMerchantAuction).toHaveBeenNthCalledWith(1, 'ongoing');
     expect(mockedCreateDemoMerchantAuction).toHaveBeenNthCalledWith(2, 'ongoing');
     expect(mockShowToast).toHaveBeenCalledWith('已创建正在竞拍场次', 'success', 2500);
+  });
+
+  it('refreshes with the merchant account before retrying fixed-price creation', async () => {
+    const user = userEvent.setup();
+    mockedCreateDemoFixedPriceItem
+      .mockRejectedValueOnce({ status: 401, message: 'invalid jwt' })
+      .mockResolvedValueOnce({ ok: true });
+    renderConsole(12345, 880301);
+
+    await user.click(screen.getByTestId('demo-console-fab'));
+    await user.click(screen.getByRole('button', { name: '商家' }));
+    await user.click(screen.getByRole('button', { name: '一口价' }));
+
+    expect(mockLogin).toHaveBeenCalledWith({
+      phone: '13800138002',
+      password: 'Demo@123456',
+    });
+    expect(mockedCreateDemoFixedPriceItem).toHaveBeenCalledTimes(2);
+    expect(mockedCreateDemoFixedPriceItem).toHaveBeenNthCalledWith(1, { auctionId: 12345, liveStreamId: 880301 });
+    expect(mockedCreateDemoFixedPriceItem).toHaveBeenNthCalledWith(2, { auctionId: 12345, liveStreamId: 880301 });
+    expect(mockShowToast).toHaveBeenCalledWith('已为当前场次创建一口价商品', 'success', 2500);
   });
 
   it('warns and skips fixed-price creation outside a live room', async () => {
