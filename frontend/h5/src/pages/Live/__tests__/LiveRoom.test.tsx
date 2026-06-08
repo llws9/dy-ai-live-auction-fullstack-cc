@@ -451,7 +451,7 @@ describe('LiveRoom migration', () => {
     );
 
     expect(await screen.findByText('一口价翡翠')).toBeInTheDocument();
-    expect(mockedUseFixedPriceItems).toHaveBeenCalledWith(5, 3);
+    expect(mockedUseFixedPriceItems).toHaveBeenCalledWith(5, 3, 'token-1');
 
     fireEvent.click(screen.getByRole('button', { name: /立即抢/ }));
     expect(await screen.findByRole('dialog', { name: /确认抢购/ })).toBeInTheDocument();

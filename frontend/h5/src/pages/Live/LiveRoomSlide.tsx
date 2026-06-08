@@ -7,6 +7,10 @@ import FixedPriceCard from '@/components/FixedPriceCard';
 import FixedPriceFlair from '@/components/FixedPriceFlair';
 import FixedPricePurchaseModal from '@/components/FixedPricePurchaseModal';
 import { FixedPriceIntroAnimation } from '@/components/auction/FixedPriceIntroAnimation';
+import {
+  DEMO_FIXED_PRICE_LISTED_EVENT,
+  type DemoFixedPriceListedDetail,
+} from '@/events/fixedPriceEvents';
 import { useFixedPriceItems } from '@/hooks/useFixedPriceItems';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi, skyLampApi } from '@/services/api';
 import WebSocketService from '@/services/websocket';
@@ -323,6 +327,31 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       latestListedItem.item,
     ]);
   }, [hasEnded, latestListedItem]);
+
+  useEffect(() => {
+    const handleDemoFixedPriceListed = (event: Event) => {
+      if (hasEnded) {
+        return;
+      }
+      const detail = (event as CustomEvent<DemoFixedPriceListedDetail>).detail;
+      if (
+        !detail?.item ||
+        detail.auctionId !== effectiveAuctionId ||
+        detail.liveStreamId !== effectiveLiveStreamId
+      ) {
+        return;
+      }
+      setAnimatingFixedPriceItems((previous) => [
+        ...previous.filter((item) => item.id !== detail.item.id),
+        detail.item,
+      ]);
+    };
+
+    window.addEventListener(DEMO_FIXED_PRICE_LISTED_EVENT, handleDemoFixedPriceListed);
+    return () => {
+      window.removeEventListener(DEMO_FIXED_PRICE_LISTED_EVENT, handleDemoFixedPriceListed);
+    };
+  }, [effectiveAuctionId, effectiveLiveStreamId, hasEnded]);
 
   const handleIntroAnimationComplete = useCallback((itemId: number) => {
     setAnimatingFixedPriceItems(prev => prev.filter(i => i.id !== itemId));

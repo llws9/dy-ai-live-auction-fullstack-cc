@@ -89,7 +89,14 @@ describe('DemoConsole', () => {
     mockedTriggerOtherSkyLamp.mockResolvedValue({ ok: true });
     mockedRechargeDemoUser.mockResolvedValue({ ok: true });
     mockedCreateDemoMerchantAuction.mockResolvedValue({ ok: true });
-    mockedCreateDemoFixedPriceItem.mockResolvedValue({ ok: true });
+    mockedCreateDemoFixedPriceItem.mockResolvedValue({
+      ok: true,
+      item_id: 7001,
+      product_id: 5001,
+      live_stream_id: 88,
+      price: '99.00',
+      stock: 10,
+    });
     mockedShortenDemoAuction.mockResolvedValue({ ok: true });
   });
 
@@ -341,7 +348,14 @@ describe('DemoConsole', () => {
     const user = userEvent.setup();
     mockedCreateDemoFixedPriceItem
       .mockRejectedValueOnce({ status: 401, message: 'invalid jwt' })
-      .mockResolvedValueOnce({ ok: true });
+      .mockResolvedValueOnce({
+        ok: true,
+        item_id: 7002,
+        product_id: 5002,
+        live_stream_id: 880301,
+        price: '99.00',
+        stock: 10,
+      });
     renderConsole(12345, 880301);
 
     await user.click(screen.getByTestId('demo-console-fab'));
@@ -372,6 +386,8 @@ describe('DemoConsole', () => {
 
   it('creates a fixed-price item for the current live room', async () => {
     const user = userEvent.setup();
+    const listedHandler = jest.fn();
+    window.addEventListener('demo:fixed-price-listed', listedHandler);
     renderConsole(12345, 880301);
 
     await user.click(screen.getByTestId('demo-console-fab'));
@@ -379,7 +395,20 @@ describe('DemoConsole', () => {
     await user.click(screen.getByRole('button', { name: '一口价' }));
 
     expect(mockedCreateDemoFixedPriceItem).toHaveBeenCalledWith({ auctionId: 12345, liveStreamId: 880301 });
+    expect(listedHandler).toHaveBeenCalledWith(expect.objectContaining({
+      detail: expect.objectContaining({
+        auctionId: 12345,
+        liveStreamId: 880301,
+        item: expect.objectContaining({
+          id: 7001,
+          product_id: 5001,
+          price: '99.00',
+          status: 'on_sale',
+        }),
+      }),
+    }));
     expect(mockShowToast).toHaveBeenCalledWith('已为当前场次创建一口价商品', 'success', 2500);
+    window.removeEventListener('demo:fixed-price-listed', listedHandler);
   });
 
   it('shows a short error toast when a merchant action fails', async () => {

@@ -31,6 +31,15 @@ export type CreateDemoFixedPriceItemInput = {
   liveStreamId: number;
 };
 
+export type CreateDemoFixedPriceItemResponse = {
+  ok: boolean;
+  item_id: number;
+  product_id: number;
+  live_stream_id: number;
+  price: string;
+  stock: number;
+};
+
 function toMoneyString(value: MoneyInput): string {
   return String(value);
 }
@@ -122,5 +131,5 @@ export function createDemoFixedPriceItem(input: CreateDemoFixedPriceItemInput) {
   return postDemo('/merchant/fixed-price-items', {
     auction_id: input.auctionId,
     live_stream_id: input.liveStreamId,
-  });
+  }) as Promise<CreateDemoFixedPriceItemResponse>;
 }

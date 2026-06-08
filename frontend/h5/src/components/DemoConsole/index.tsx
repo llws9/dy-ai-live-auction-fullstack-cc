@@ -10,6 +10,7 @@ import {
 } from '../../services/demoApi';
 import { ApiError } from '../../services/api';
 import type { DemoMerchantAuctionMode } from '../../services/demoApi';
+import { dispatchDemoFixedPriceListed } from '../../events/fixedPriceEvents';
 import { useAuth } from '../../store/authContext';
 import { useDemo } from '../../store/demoContext';
 import { useToast } from '../Toast';
@@ -196,10 +197,26 @@ export default function DemoConsole() {
 
     setRunningAction('merchant-fixed-price');
     try {
-      await runWithDemoAuthRetry(
+      const result = await runWithDemoAuthRetry(
         () => createDemoFixedPriceItem({ auctionId: currentAuctionId, liveStreamId: currentLiveStreamId }),
         DEMO_MERCHANT_ACCOUNT,
       );
+      if (result.item_id > 0) {
+        dispatchDemoFixedPriceListed({
+          auctionId: currentAuctionId,
+          liveStreamId: currentLiveStreamId,
+          item: {
+            id: result.item_id,
+            auction_id: currentAuctionId,
+            product_id: result.product_id,
+            product_title: '一口价商品',
+            price: result.price,
+            total_stock: result.stock,
+            remaining_stock: result.stock,
+            status: 'on_sale',
+          },
+        });
+      }
       showToast('已为当前场次创建一口价商品', 'success', TOAST_DURATION_MS);
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';
