@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"os"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -186,9 +188,21 @@ func isAllowedDemoUserID(userID int64) bool {
 	switch userID {
 	case buyerAUserID, buyerBUserID, merchantUserID, adminUserID:
 		return true
-	default:
-		return false
 	}
+
+	for _, raw := range strings.FieldsFunc(os.Getenv("DEMO_ALLOWED_USER_IDS"), func(r rune) bool {
+		return r == ',' || r == ';' || r == ' ' || r == '\n' || r == '\t'
+	}) {
+		allowedID, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
+		if err != nil {
+			continue
+		}
+		if userID == allowedID {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (h *DemoHandler) authorizeDemoRequest(c *app.RequestContext) bool {

@@ -105,6 +105,19 @@ func TestDemoUserIDFromAuthorization(t *testing.T) {
 	}
 }
 
+func TestDemoUserIDFromAuthorizationAllowsConfiguredLegacyDemoUsers(t *testing.T) {
+	const secret = "demo-secret"
+	t.Setenv("DEMO_ALLOWED_USER_IDS", "4,5,6")
+
+	got, err := demoUserIDFromAuthorization("Bearer "+signDemoToken(t, secret, 6), secret)
+	if err != nil {
+		t.Fatalf("demoUserIDFromAuthorization() err=%v", err)
+	}
+	if got != 6 {
+		t.Fatalf("demoUserIDFromAuthorization()=%d want 6", got)
+	}
+}
+
 func TestDecimalToBidAmountRejectsUnsupportedRange(t *testing.T) {
 	_, err := decimalToBidAmount(decimal.New(1, 400))
 	if err == nil {

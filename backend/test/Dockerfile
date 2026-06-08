@@ -3,7 +3,7 @@
 # 运行：通过 docker-compose（profile=test）启动
 
 # ---------- 构建阶段 ----------
-FROM golang:1.25-alpine AS builder
+FROM docker.m.daocloud.io/library/golang:1.25-alpine AS builder
 
 WORKDIR /src
 ENV GOPROXY=https://goproxy.cn,direct \
@@ -17,7 +17,7 @@ COPY . .
 RUN go build -o /out/test-service .
 
 # ---------- 运行阶段 ----------
-FROM alpine:3.19
+FROM docker.m.daocloud.io/library/alpine:3.19
 ENV TZ=Asia/Shanghai
 
 WORKDIR /app

@@ -10,16 +10,16 @@ services:
       - GATEWAY_PORT=:8080
       - PRODUCT_SERVICE_URL=http://product:8081
       - AUCTION_SERVICE_URL=http://auction:8082
-      - TEST_SERVICE_URL=http://127.0.0.1:18090
-      - TEST_SERVICE_WS_URL=ws://127.0.0.1:18092
+      - TEST_SERVICE_URL=http://test-service:18090
+      - TEST_SERVICE_WS_URL=ws://${APP_PUBLIC_HOST:-127.0.0.1}:18092
       - REDIS_ADDR=redis:6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}
       - JWT_SECRET=${JWT_SECRET:?set JWT_SECRET}
-      - GROWTHBOOK_ENABLED=false
-      - GROWTHBOOK_API_HOST=http://127.0.0.1:3200
-      - GROWTHBOOK_CLIENT_KEY=disabled
-      - GROWTHBOOK_SECRET_KEY=disabled
+      - GROWTHBOOK_ENABLED=${GROWTHBOOK_ENABLED:-true}
+      - GROWTHBOOK_API_HOST=http://growthbook:3100
+      - GROWTHBOOK_CLIENT_KEY=${GROWTHBOOK_CLIENT_KEY:-demo-client-key}
+      - GROWTHBOOK_SECRET_KEY=${GROWTHBOOK_SECRET_KEY:-demo-secret-key}
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_USER=root
@@ -34,9 +34,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      test-service:
+        condition: service_started
     restart: unless-stopped
     networks:
       - auction-demo
+    labels:
+      - "service_name=gateway"
 
   product:
     build:
@@ -61,6 +65,8 @@ services:
     restart: unless-stopped
     networks:
       - auction-demo
+    labels:
+      - "service_name=product"
 
   auction:
     build:
@@ -95,6 +101,8 @@ services:
     restart: unless-stopped
     networks:
       - auction-demo
+    labels:
+      - "service_name=auction"
 
   mysql:
     image: docker.m.daocloud.io/library/mysql:8
@@ -143,6 +151,205 @@ services:
     networks:
       - auction-demo
 
+  nacos:
+    image: docker.m.daocloud.io/nacos/nacos-server:v2.2.3
+    platform: linux/amd64
+    ports:
+      - "127.0.0.1:8848:8848"
+      - "127.0.0.1:9848:9848"
+    environment:
+      - MODE=standalone
+      - SPRING_DATASOURCE_PLATFORM=mysql
+      - MYSQL_SERVICE_HOST=nacos-mysql
+      - MYSQL_SERVICE_PORT=3306
+      - MYSQL_SERVICE_DB_NAME=nacos
+      - MYSQL_SERVICE_USER=nacos
+      - MYSQL_SERVICE_PASSWORD=${NACOS_DB_PASSWORD:?set NACOS_DB_PASSWORD}
+      - MYSQL_DATABASE_NUM=1
+      - MYSQL_SERVICE_DB_PARAM=characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useSSL=false&allowPublicKeyRetrieval=true
+      - NACOS_AUTH_ENABLE=false
+    volumes:
+      - nacos-demo-logs:/home/nacos/logs
+    depends_on:
+      nacos-mysql:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - auction-demo
+    labels:
+      - "service_name=nacos"
+
+  nacos-mysql:
+    image: docker.m.daocloud.io/library/mysql:8
+    environment:
+      - MYSQL_ROOT_PASSWORD=${NACOS_ROOT_PASSWORD:?set NACOS_ROOT_PASSWORD}
+      - MYSQL_DATABASE=nacos
+      - MYSQL_USER=nacos
+      - MYSQL_PASSWORD=${NACOS_DB_PASSWORD:?set NACOS_DB_PASSWORD}
+      - MYSQL_CHARSET=utf8mb4
+      - MYSQL_COLLATION=utf8mb4_unicode_ci
+    volumes:
+      - nacos-mysql-demo-data:/var/lib/mysql
+      - ./scripts/nacos-init.sql:/docker-entrypoint-initdb.d/nacos-init.sql:ro
+    restart: unless-stopped
+    networks:
+      - auction-demo
+
+  test-service:
+    build:
+      context: ./backend/test
+      dockerfile: Dockerfile
+    image: dy-ai-live-auction-test-service:demo
+    ports:
+      - "127.0.0.1:18090:18090"
+      - "127.0.0.1:18091:18091"
+      # Browser-side test progress websocket uses endpoint discovery from gateway.
+      - "18092:18092"
+    environment:
+      - TEST_HTTP_PORT=:18090
+      - TEST_WS_PORT=:18092
+      - TEST_MOCK_PARTNER_PORT=:18091
+      - TEST_GATEWAY_URL=http://gateway:8080
+      - TEST_AUCTION_URL=http://auction:8082
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=${DB_PASSWORD:?set DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-auction}
+      - JWT_SECRET=${JWT_SECRET:?set JWT_SECRET}
+      - TEST_RETENTION_DAYS=${TEST_RETENTION_DAYS:-7}
+      - ENABLE_DEMO_SEED=${ENABLE_DEMO_SEED:-true}
+      - DEMO_ALLOWED_USER_IDS=${DEMO_ALLOWED_USER_IDS:-9101,9102,9103,9104}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - auction-demo
+    labels:
+      - "service_name=test-service"
+
+  test-dashboard:
+    build:
+      context: ./frontend/test-dashboard
+      dockerfile: Dockerfile
+    image: dy-ai-live-auction-test-dashboard:demo
+    ports:
+      - "127.0.0.1:3003:80"
+    depends_on:
+      gateway:
+        condition: service_started
+      test-service:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - auction-demo
+    labels:
+      - "service_name=test-dashboard"
+
+  loki:
+    image: docker.m.daocloud.io/grafana/loki:2.9.4
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "127.0.0.1:3101:3100"
+    volumes:
+      - ./observability/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki-demo-data:/loki
+    restart: unless-stopped
+    networks:
+      - auction-demo
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  promtail:
+    image: docker.m.daocloud.io/grafana/promtail:2.9.4
+    command: -config.file=/etc/promtail/config.yaml
+    volumes:
+      - ./observability/promtail/promtail-config.yaml:/etc/promtail/config.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      loki:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - auction-demo
+
+  prometheus:
+    image: docker.m.daocloud.io/prom/prometheus:v2.52.0
+    ports:
+      - "127.0.0.1:9090:9090"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}
+      - --web.enable-lifecycle
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/business-alerts.yml:/etc/prometheus/business-alerts.yml:ro
+      - prometheus-demo-data:/prometheus
+    restart: unless-stopped
+    networks:
+      - auction-demo
+
+  grafana:
+    image: docker.m.daocloud.io/grafana/grafana:10.4.2
+    ports:
+      - "127.0.0.1:3002:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://${APP_PUBLIC_HOST:-127.0.0.1}:3002
+    volumes:
+      - grafana-demo-data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      loki:
+        condition: service_healthy
+      prometheus:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - auction-demo
+
+  growthbook:
+    image: growthbook/growthbook:latest
+    platform: linux/amd64
+    ports:
+      - "127.0.0.1:3200:3000"
+      - "127.0.0.1:3100:3100"
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://growthbook:${GROWTHBOOK_DB_PASSWORD:?set GROWTHBOOK_DB_PASSWORD}@growthbook-db:27017/growthbook?authSource=admin
+      - APP_ORIGIN=http://${APP_PUBLIC_HOST:-127.0.0.1}:3200
+      - API_HOST=http://${APP_PUBLIC_HOST:-127.0.0.1}:3100
+      - JWT_SECRET=${GROWTHBOOK_JWT_SECRET:?set GROWTHBOOK_JWT_SECRET}
+      - ENCRYPTION_KEY=${GROWTHBOOK_ENCRYPTION_KEY:?set GROWTHBOOK_ENCRYPTION_KEY}
+    depends_on:
+      growthbook-db:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - auction-demo
+    labels:
+      - "service_name=growthbook"
+
+  growthbook-db:
+    image: docker.m.daocloud.io/library/mongo:6
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=growthbook
+      - MONGO_INITDB_ROOT_PASSWORD=${GROWTHBOOK_DB_PASSWORD:?set GROWTHBOOK_DB_PASSWORD}
+    volumes:
+      - growthbook-demo-data:/data/db
+    restart: unless-stopped
+    networks:
+      - auction-demo
+
 networks:
   auction-demo:
     driver: bridge
@@ -151,3 +358,9 @@ volumes:
   mysql-demo-data:
   redis-demo-data:
   rabbitmq-demo-data:
+  nacos-demo-logs:
+  nacos-mysql-demo-data:
+  loki-demo-data:
+  grafana-demo-data:
+  prometheus-demo-data:
+  growthbook-demo-data:
