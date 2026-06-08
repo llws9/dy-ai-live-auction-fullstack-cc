@@ -93,7 +93,7 @@ export function reduceItems(state: FixedPriceItem[], action: FixedPriceAction): 
   }
 }
 
-export function useFixedPriceItems(auctionId: number, liveStreamId: number) {
+export function useFixedPriceItems(auctionId: number, liveStreamId: number, authToken?: string | null) {
   const [items, dispatch] = useReducer(reduceItems, [] as FixedPriceItem[]);
   const [socket, setSocket] = useState<WebSocketService | null>(null);
   const [latestListedItem, setLatestListedItem] = useState<FixedPriceListedItemEvent | null>(null);
@@ -127,14 +127,13 @@ export function useFixedPriceItems(auctionId: number, liveStreamId: number) {
   }, [auctionId]);
 
   useEffect(() => {
-    if (liveStreamId <= 0) {
+    if (liveStreamId <= 0 || !authToken) {
       setSocket(null);
       setLatestListedItem(null);
       return undefined;
     }
 
-    const token = localStorage.getItem('auth_token') ?? localStorage.getItem('token') ?? undefined;
-    const socket = new WebSocketService(liveStreamId, token);
+    const socket = new WebSocketService(liveStreamId, authToken);
     setSocket(socket);
     const handlers = FIXED_PRICE_MESSAGE_TYPES.map((type: FixedPriceMessageType) => {
       const handler = (payload: unknown) => {
@@ -160,7 +159,7 @@ export function useFixedPriceItems(auctionId: number, liveStreamId: number) {
       socket.disconnect();
       setSocket(null);
     };
-  }, [liveStreamId]);
+  }, [authToken, liveStreamId]);
 
   const byId = useMemo<Record<number, FixedPriceItem>>(() => {
     return items.reduce<Record<number, FixedPriceItem>>((index, item) => {

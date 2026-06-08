@@ -9,6 +9,9 @@ jest.mock('../../api/fixedPrice', () => ({
 }));
 
 const mockWsInstances: Array<{
+  auctionId: number;
+  token?: string;
+  liveStreamId?: number;
   handlers: Map<string, Set<(data: unknown) => void>>;
   connect: jest.Mock<() => Promise<void>>;
   disconnect: jest.Mock;
@@ -32,7 +35,14 @@ jest.mock('../../services/websocket', () => ({
       this.handlers.get(type)?.delete(handler);
     });
 
-    constructor() {
+    auctionId: number;
+    token?: string;
+    liveStreamId?: number;
+
+    constructor(auctionId: number, token?: string, liveStreamId?: number) {
+      this.auctionId = auctionId;
+      this.token = token;
+      this.liveStreamId = liveStreamId;
       mockWsInstances.push(this);
     }
 
@@ -107,7 +117,7 @@ describe('useFixedPriceItems', () => {
   it('loads initial items and exposes a byId index', async () => {
     jest.mocked(fetchItems).mockResolvedValue({ items: [baseItem] });
 
-    const { result } = renderHook(() => useFixedPriceItems(7001, 1001));
+    const { result } = renderHook(() => useFixedPriceItems(7001, 1001, 'token-1'));
 
     await waitFor(() => expect(result.current.items).toEqual([baseItem]));
     expect(result.current.byId[7001]).toEqual(baseItem);
@@ -126,10 +136,11 @@ describe('useFixedPriceItems', () => {
 
   it('subscribes to fixed-price websocket messages and applies incremental updates', async () => {
     jest.mocked(fetchItems).mockResolvedValue({ items: [baseItem] });
-    const { result } = renderHook(() => useFixedPriceItems(7001, 1001));
+    const { result } = renderHook(() => useFixedPriceItems(7001, 1001, 'token-1'));
 
     await waitFor(() => expect(mockWsInstances).toHaveLength(1));
     await waitFor(() => expect(result.current.socket).toBe(mockWsInstances[0]));
+    expect(mockWsInstances[0]).toMatchObject({ auctionId: 1001, token: 'token-1' });
 
     act(() => {
       mockWsInstances[0].emit('fixed_price_stock', { item_id: 7001, remaining_stock: 86 });
@@ -149,7 +160,7 @@ describe('useFixedPriceItems', () => {
       id: 7002,
       product_brief: { id: 5002, title: '新上架翡翠' },
     };
-    const { result } = renderHook(() => useFixedPriceItems(7001, 1001));
+    const { result } = renderHook(() => useFixedPriceItems(7001, 1001, 'token-1'));
 
     await waitFor(() => expect(result.current.items).toEqual([baseItem]));
     expect(result.current.latestListedItem).toBeNull();
@@ -162,5 +173,23 @@ describe('useFixedPriceItems', () => {
       expect(result.current.byId[7002]).toEqual(listedItem);
       expect(result.current.latestListedItem).toEqual({ item: listedItem, sequence: 1 });
     });
+  });
+
+  it('waits for an auth token before opening the fixed-price websocket and reconnects after login', async () => {
+    jest.mocked(fetchItems).mockResolvedValue({ items: [baseItem] });
+    const { rerender, result } = renderHook(
+      ({ token }) => useFixedPriceItems(7001, 1001, token),
+      { initialProps: { token: null as string | null } },
+    );
+
+    await waitFor(() => expect(result.current.items).toEqual([baseItem]));
+    expect(mockWsInstances).toHaveLength(0);
+    expect(result.current.socket).toBeNull();
+
+    rerender({ token: 'merchant-token' });
+
+    await waitFor(() => expect(mockWsInstances).toHaveLength(1));
+    expect(mockWsInstances[0]).toMatchObject({ auctionId: 1001, token: 'merchant-token' });
+    expect(result.current.socket).toBe(mockWsInstances[0]);
   });
 });
