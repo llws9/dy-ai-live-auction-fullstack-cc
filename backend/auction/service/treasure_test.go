@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"auction-service/client"
 	"auction-service/dao"
 	"auction-service/model"
 
@@ -22,6 +23,24 @@ import (
 )
 
 var treasureServiceDBCounter int64
+
+type fakeLiveStreamLookup struct {
+	items map[int64]client.LiveStreamSummary
+	err   error
+}
+
+func (f fakeLiveStreamLookup) BatchGetLiveStreams(ctx context.Context, ids []int64) (map[int64]client.LiveStreamSummary, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	out := make(map[int64]client.LiveStreamSummary, len(ids))
+	for _, id := range ids {
+		if item, ok := f.items[id]; ok {
+			out[id] = item
+		}
+	}
+	return out, nil
+}
 
 func setupTreasureService(t *testing.T) (*TreasureService, *dao.TreasureDAO, *redis.Client) {
 	t.Helper()
@@ -48,14 +67,18 @@ func setupTreasureService(t *testing.T) (*TreasureService, *dao.TreasureDAO, *re
 	t.Cleanup(func() { _ = rdb.Close() })
 
 	d := dao.NewTreasureDAO(db)
-	return NewTreasureService(d, rdb), d, rdb
+	svc := NewTreasureService(d, rdb)
+	svc.SetLiveStreamLookup(fakeLiveStreamLookup{items: map[int64]client.LiveStreamSummary{
+		200: {ID: 200, Status: 1},
+	}})
+	return svc, d, rdb
 }
 
 func TestTreasureService_Heartbeat_FirstBeatRecords30s(t *testing.T) {
 	svc, dd, _ := setupTreasureService(t)
 	ctx := context.Background()
 
-	total, err := svc.Heartbeat(ctx, 100)
+	total, err := svc.Heartbeat(ctx, 100, 200)
 
 	require.NoError(t, err)
 	assert.Equal(t, 30, total)
@@ -77,7 +100,7 @@ func TestTreasureService_Heartbeat_ConcurrentFirstBeatDoesNotMultiplyWindow(t *t
 		go func() {
 			defer wg.Done()
 			<-start
-			_, err := svc.Heartbeat(ctx, 100)
+			_, err := svc.Heartbeat(ctx, 100, 200)
 			errs <- err
 		}()
 	}
@@ -107,12 +130,12 @@ func TestTreasureService_Heartbeat_ShortIntervalDoesNotAddFullBeat(t *testing.T)
 	svc, dd, rdb := setupTreasureService(t)
 	ctx := context.Background()
 
-	total, err := svc.Heartbeat(ctx, 100)
+	total, err := svc.Heartbeat(ctx, 100, 200)
 	require.NoError(t, err)
 	require.Equal(t, 30, total)
 	require.NoError(t, rdb.Set(ctx, heartbeatKey(100, businessStatDate()), auctionBusinessNow().Add(10*time.Second).Unix(), 120*time.Second).Err())
 
-	total, err = svc.Heartbeat(ctx, 100)
+	total, err = svc.Heartbeat(ctx, 100, 200)
 
 	require.NoError(t, err)
 	assert.Equal(t, 30, total)
@@ -125,18 +148,55 @@ func TestTreasureService_Heartbeat_CapsAt30sPerBeat(t *testing.T) {
 	svc, dd, rdb := setupTreasureService(t)
 	ctx := context.Background()
 
-	total, err := svc.Heartbeat(ctx, 100)
+	total, err := svc.Heartbeat(ctx, 100, 200)
 	require.NoError(t, err)
 	require.Equal(t, 30, total)
 	require.NoError(t, rdb.Set(ctx, heartbeatKey(100, businessStatDate()), auctionBusinessNow().Add(-500*time.Second).Unix(), 120*time.Second).Err())
 
-	total, err = svc.Heartbeat(ctx, 100)
+	total, err = svc.Heartbeat(ctx, 100, 200)
 
 	require.NoError(t, err)
 	assert.Equal(t, 60, total)
 	secs, err := dd.GetWatchSeconds(ctx, 100, businessStatDate())
 	require.NoError(t, err)
 	assert.Equal(t, 60, secs)
+}
+
+func TestTreasureService_Heartbeat_RejectsMissingOrNonLiveStream(t *testing.T) {
+	svc, dd, _ := setupTreasureService(t)
+	ctx := context.Background()
+	svc.SetLiveStreamLookup(fakeLiveStreamLookup{items: map[int64]client.LiveStreamSummary{
+		201: {ID: 201, Status: 2},
+	}})
+
+	total, err := svc.Heartbeat(ctx, 100, 999)
+
+	assert.ErrorIs(t, err, ErrLiveStreamNotLive)
+	assert.Equal(t, 0, total)
+	secs, err := dd.GetWatchSeconds(ctx, 100, businessStatDate())
+	require.NoError(t, err)
+	assert.Equal(t, 0, secs)
+
+	total, err = svc.Heartbeat(ctx, 100, 201)
+
+	assert.ErrorIs(t, err, ErrLiveStreamNotLive)
+	assert.Equal(t, 0, total)
+	secs, err = dd.GetWatchSeconds(ctx, 100, businessStatDate())
+	require.NoError(t, err)
+	assert.Equal(t, 0, secs)
+}
+
+func TestTreasureService_Heartbeat_LiveStreamAccumulates(t *testing.T) {
+	svc, dd, _ := setupTreasureService(t)
+	ctx := context.Background()
+
+	total, err := svc.Heartbeat(ctx, 100, 200)
+
+	require.NoError(t, err)
+	assert.Equal(t, 30, total)
+	secs, err := dd.GetWatchSeconds(ctx, 100, businessStatDate())
+	require.NoError(t, err)
+	assert.Equal(t, 30, secs)
 }
 
 func TestTreasureService_GetStatus_StateMachine(t *testing.T) {

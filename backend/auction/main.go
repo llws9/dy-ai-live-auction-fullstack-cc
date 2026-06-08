@@ -222,7 +222,9 @@ func main() {
 	productAuctionsHandler := handler.NewInternalProductAuctionsHandler(auctionDAO)
 	auctionCountHandler := handler.NewInternalAuctionCountHandler(auctionDAO)
 	statisticsHandler := handler.NewStatisticsHandler(service.NewStatisticsService(statisticsDAO))
-	treasureHandler := handler.NewTreasureHandler(service.NewTreasureService(treasureDAO, dao.GetRedis()))
+	treasureService := service.NewTreasureService(treasureDAO, dao.GetRedis())
+	treasureService.SetLiveStreamLookup(liveStreamClient)
+	treasureHandler := handler.NewTreasureHandler(treasureService)
 
 	// 一口价秒杀（A5 M1）：dao + Redis 库存/幂等 + service + handler。
 	fixedPriceItemDAO := dao.NewFixedPriceItemDAO(db)

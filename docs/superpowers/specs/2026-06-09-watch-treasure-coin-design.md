@@ -56,7 +56,7 @@ CREATE TABLE treasure_claims (
 
 | Method/Path | 鉴权 | 用途 | 防刷点 |
 |---|---|---|---|
-| `POST /api/v1/watch/heartbeat` | JWT | 前端每 30s 上报一次，累加今日时长 | 服务端按「上次心跳时间差」累加，单次封顶 30s，丢弃异常大跳变 |
+| `POST /api/v1/watch/heartbeat` `{live_stream_id}` | JWT | 前端每 30s 上报一次直播间观看心跳，累加今日时长 | 服务端先通过 product-service 校验直播间存在且 `status=1`（直播中），再按「上次心跳时间差」累加，单次封顶 30s；校验失败不累计 |
 | `GET /api/v1/treasure/status` | JWT | 返回今日时长 + 3 宝箱状态 + 金币余额 | 状态完全由后端时长算出，前端不可篡改 |
 | `POST /api/v1/treasure/claim` `{tier}` | JWT | 领取某宝箱并发币 | 校验 `total_seconds≥门槛` + 唯一键幂等；不达标/重复领取返回明确错误（失败关闭） |
 
@@ -81,10 +81,18 @@ CREATE TABLE treasure_claims (
 - `state` 枚举：`locked`（未达时长）/ `unlockable`（达标未领）/ `claimed`（已领）。
 - `claim` 成功返回 `{ "code":200, "data": { "coins":300, "coin_balance":700 } }`。
 
+**`POST /watch/heartbeat` 请求**：
+
+```json
+{ "live_stream_id": 123 }
+```
+
+- `live_stream_id` 必须为正整数；缺失、无效、直播间不存在或非 `status=1` 时失败关闭，不写 Redis/DB。
+
 ## 5. 时长与计时口径
 
 - 累计粒度：今日跨房间累计，0 点重置（`stat_date`）。
-- 心跳节流 30s；仅在直播间页面（`LiveRoomSlide`）发送，离开/首页不发。
+- 心跳节流 30s；仅在直播间页面（`LiveRoomSlide`）携带当前 `live_stream_id` 发送，离开/首页不发。
 - 页面 `visibilitychange` 隐藏时停发心跳（不计后台时长），符合真实观看。
 - 进入/重进直播间先 `GET /treasure/status` 拉权威态，避免本地计时与后端漂移导致「显示能领却领取失败」。
 

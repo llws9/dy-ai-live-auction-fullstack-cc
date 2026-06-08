@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"auction-service/client"
 	"auction-service/dao"
 	"auction-service/model"
 	"auction-service/service"
@@ -28,6 +29,24 @@ import (
 )
 
 var treasureHandlerDBCounter int64
+
+type fakeTreasureLiveStreamLookup struct {
+	items map[int64]client.LiveStreamSummary
+	err   error
+}
+
+func (f fakeTreasureLiveStreamLookup) BatchGetLiveStreams(ctx context.Context, ids []int64) (map[int64]client.LiveStreamSummary, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	out := make(map[int64]client.LiveStreamSummary, len(ids))
+	for _, id := range ids {
+		if item, ok := f.items[id]; ok {
+			out[id] = item
+		}
+	}
+	return out, nil
+}
 
 type treasureHandlerTestEnv struct {
 	server *server.Hertz
@@ -58,6 +77,9 @@ func newTreasureHandlerTestEnv(t *testing.T) *treasureHandlerTestEnv {
 
 	treasureDAO := dao.NewTreasureDAO(db)
 	treasureService := service.NewTreasureService(treasureDAO, rdb)
+	treasureService.SetLiveStreamLookup(fakeTreasureLiveStreamLookup{items: map[int64]client.LiveStreamSummary{
+		200: {ID: 200, Status: 1},
+	}})
 	treasureHandler := NewTreasureHandler(treasureService)
 
 	h := server.Default(server.WithHostPorts("127.0.0.1:0"))
@@ -117,8 +139,9 @@ func TestTreasureHandlerGetStatusResponseShape(t *testing.T) {
 	var resp struct {
 		Code int `json:"code"`
 		Data struct {
-			WatchedSeconds int   `json:"watched_seconds"`
-			CoinBalance    int64 `json:"coin_balance"`
+			StatDate       string `json:"stat_date"`
+			WatchedSeconds int    `json:"watched_seconds"`
+			CoinBalance    int64  `json:"coin_balance"`
 			Tiers          []struct {
 				Tier             int8   `json:"tier"`
 				ThresholdSeconds int    `json:"threshold_seconds"`
@@ -129,6 +152,7 @@ func TestTreasureHandlerGetStatusResponseShape(t *testing.T) {
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.Equal(t, 200, resp.Code)
+	assert.NotEmpty(t, resp.Data.StatDate)
 	assert.Equal(t, 640, resp.Data.WatchedSeconds)
 	assert.Equal(t, int64(0), resp.Data.CoinBalance)
 	require.Len(t, resp.Data.Tiers, 3)
@@ -141,7 +165,7 @@ func TestTreasureHandlerGetStatusResponseShape(t *testing.T) {
 func TestTreasureHandlerHeartbeatResponseShape(t *testing.T) {
 	env := newTreasureHandlerTestEnv(t)
 
-	w := performTreasureRequest(env.server, http.MethodPost, "/api/v1/watch/heartbeat", "100", `{}`)
+	w := performTreasureRequest(env.server, http.MethodPost, "/api/v1/watch/heartbeat", "100", `{"live_stream_id":200}`)
 
 	require.Equal(t, http.StatusOK, w.Code)
 	var resp struct {
@@ -153,6 +177,24 @@ func TestTreasureHandlerHeartbeatResponseShape(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	assert.Equal(t, 200, resp.Code)
 	assert.Equal(t, 30, resp.Data.WatchedSeconds)
+}
+
+func TestTreasureHandlerHeartbeatRejectsMissingLiveStreamID(t *testing.T) {
+	env := newTreasureHandlerTestEnv(t)
+
+	w := performTreasureRequest(env.server, http.MethodPost, "/api/v1/watch/heartbeat", "100", `{}`)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "live_stream_id")
+}
+
+func TestTreasureHandlerHeartbeatRejectsInvalidJSON(t *testing.T) {
+	env := newTreasureHandlerTestEnv(t)
+
+	w := performTreasureRequest(env.server, http.MethodPost, "/api/v1/watch/heartbeat", "100", `{"live_stream_id":`)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "invalid json")
 }
 
 func TestTreasureHandlerClaimRejectsThresholdNotMet(t *testing.T) {
@@ -199,6 +241,18 @@ func TestTreasureHandlerClaimRejectsInvalidJSON(t *testing.T) {
 
 	require.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Contains(t, w.Body.String(), "invalid json")
+}
+
+func TestTreasureHandlerClaimRejectsTierOverflow(t *testing.T) {
+	env := newTreasureHandlerTestEnv(t)
+	ctx := context.Background()
+	_, err := env.dao.AddWatchSeconds(ctx, 100, treasureHandlerStatDate(t), 200)
+	require.NoError(t, err)
+
+	w := performTreasureRequest(env.server, http.MethodPost, "/api/v1/treasure/claim", "100", `{"tier":256}`)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "无效的宝箱档位")
 }
 
 func TestTreasureHandlerClaimDuplicateReturnsConflict(t *testing.T) {

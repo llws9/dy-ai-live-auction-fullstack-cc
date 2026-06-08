@@ -4,7 +4,7 @@
 
 **Goal:** 为已落地的前端「观看时长宝箱」组件补齐 auction-service 后端：观看时长心跳累加、宝箱状态查询、领取发币，并经 gateway JWT 暴露给 H5。
 
-**Architecture:** 沿用 auction-service 既有 model/dao/service/handler 分层。新增 3 张表（`user_coins`、`user_watch_duration`、`treasure_claims`）。时长心跳由 Redis「上次心跳时间戳」做封顶累加（单次最多 30s）防刷；宝箱档位为后端常量 SSOT；领取在单事务内「校验时长 + 唯一键插入 claim + 累加金币」，唯一键 `(user_id, stat_date, tier)` 保证幂等。所有金额为整数 `BIGINT`，与现金 `user_balances`（decimal/CNY）完全隔离。
+**Architecture:** 沿用 auction-service 既有 model/dao/service/handler 分层。新增 3 张表（`user_coins`、`user_watch_duration`、`treasure_claims`）。时长心跳请求必须携带 `live_stream_id`，auction-service 通过 product-service live stream client 校验直播间存在且 `status=1`（直播中）后，才由 Redis「上次心跳时间戳」做封顶累加（单次最多 30s）；校验失败则失败关闭，不写 Redis/DB。宝箱档位为后端常量 SSOT；领取在单事务内「校验时长 + 唯一键插入 claim + 累加金币」，唯一键 `(user_id, stat_date, tier)` 保证幂等。所有金额为整数 `BIGINT`，与现金 `user_balances`（decimal/CNY）完全隔离。
 
 **Tech Stack:** Go 1.24 + Hertz + GORM + go-redis；测试用内存 sqlite（`setupTestDB`）+ miniredis（`setupTestRedis`）+ testify。
 
@@ -17,9 +17,9 @@ Spec: [2026-06-09-watch-treasure-coin-design.md](file:///Users/bytedance/myself/
 前端已实现（**契约只读、不可改**）：
 - [TreasureProgressBar.tsx](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/src/pages/Live/TreasureProgressBar.tsx)
 - [api.ts treasureApi](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/src/services/api.ts#L482-L497)：
-  - `getStatus()` → `GET /api/v1/treasure/status`，期望 data = `{ watched_seconds, coin_balance, tiers: [{tier, threshold_seconds, coins, state}] }`
+  - `getStatus()` → `GET /api/v1/treasure/status`，期望 data = `{ stat_date, watched_seconds, coin_balance, tiers: [{tier, threshold_seconds, coins, state}] }`
   - `claim(tier)` → `POST /api/v1/treasure/claim` body `{tier}`，期望 data = `{ coins, coin_balance }`
-  - `heartbeat()` → `POST /api/v1/watch/heartbeat` body `{}`
+  - `heartbeat(liveStreamID)` → `POST /api/v1/watch/heartbeat` body `{ "live_stream_id": liveStreamID }`
 
 前端 `request()` 解包逻辑（[api.ts:203-221](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/frontend/h5/src/services/api.ts#L203-L221)）：业务码必须落在 `SUCCESS_CODES`（含 `200`/`0`），否则抛 `ApiError(message)`；成功时返回 `data.data`。因此所有 handler 成功响应统一 `{ "code": 200, "data": {...} }`，失败响应 `{ "code": <非成功码>, "message": "..." }`。
 
@@ -433,7 +433,7 @@ git commit -m "feat(treasure): add TreasureDAO with watch-accumulate and idempot
 - Create: `backend/auction/service/treasure.go`
 - Create: `backend/auction/service/treasure_test.go`
 
-说明：心跳防刷采用「Redis 记录上次心跳时间戳，按真实间隔累加且单次封顶 30s」。Redis key `treasure:hb:<userID>`，TTL 120s。首次心跳无上次时间戳时记入基础 30s（与前端 30s 节拍对齐）。
+说明：心跳防刷采用「请求携带 `live_stream_id` + product-service 校验直播间 `status=1` + Redis 记录上次心跳时间戳」。只有直播间存在且直播中才按真实间隔累加且单次封顶 30s。Redis key `treasure:hb:<userID>:<statDate>`，TTL 120s。首次心跳无上次时间戳时记入基础 30s（与前端 30s 节拍对齐）。
 
 - [ ] **Step 1: 写失败测试 `treasure_test.go`**
 
@@ -480,7 +480,7 @@ func setupTreasureService(t *testing.T) (*TreasureService, *dao.TreasureDAO, *mi
 
 func TestTreasureService_Heartbeat_FirstBeatRecords30s(t *testing.T) {
 	svc, _, _ := setupTreasureService(t)
-	total, err := svc.Heartbeat(context.Background(), 100)
+	total, err := svc.Heartbeat(context.Background(), 100, 123)
 	require.NoError(t, err)
 	assert.Equal(t, 30, total)
 }
@@ -489,12 +489,12 @@ func TestTreasureService_Heartbeat_CapsAt30sPerBeat(t *testing.T) {
 	svc, dd, mr := setupTreasureService(t)
 	ctx := context.Background()
 
-	_, err := svc.Heartbeat(ctx, 100)
+	_, err := svc.Heartbeat(ctx, 100, 123)
 	require.NoError(t, err)
 
 	// 模拟客户端隔了很久（500s）再上报：单次仍只累加封顶 30s，而非 500s。
 	mr.FastForward(0) // 占位：实际由 service 用 now-last 差值计算
-	total, err := svc.Heartbeat(ctx, 100)
+	total, err := svc.Heartbeat(ctx, 100, 123)
 	require.NoError(t, err)
 	assert.LessOrEqual(t, total, 60, "单次心跳累加不得超过 30s 封顶")
 
@@ -647,7 +647,7 @@ func heartbeatKey(userID int64) string {
 
 // Heartbeat 累加观看时长：按「距上次心跳的真实秒数」累加，单次封顶 30s。
 // 首次心跳（无上次时间戳）记入基础 30s。返回今日累计总秒数。
-func (s *TreasureService) Heartbeat(ctx context.Context, userID int64) (int, error) {
+func (s *TreasureService) Heartbeat(ctx context.Context, userID, liveStreamID int64) (int, error) {
 	if userID <= 0 {
 		return 0, errors.New("invalid user_id")
 	}
@@ -770,9 +770,9 @@ func TestTreasureService_Heartbeat_CapsAt30sPerBeat(t *testing.T) {
 	svc, dd, _ := setupTreasureService(t)
 	ctx := context.Background()
 
-	_, err := svc.Heartbeat(ctx, 100)
+	_, err := svc.Heartbeat(ctx, 100, 123)
 	require.NoError(t, err)
-	total, err := svc.Heartbeat(ctx, 100)
+	total, err := svc.Heartbeat(ctx, 100, 123)
 	require.NoError(t, err)
 	assert.LessOrEqual(t, total, 60, "单次心跳累加不得超过 30s 封顶")
 
@@ -862,6 +862,7 @@ func TestTreasureHandler_GetStatus_OK(t *testing.T) {
 	var body struct {
 		Code int `json:"code"`
 		Data struct {
+			StatDate       string `json:"stat_date"`
 			WatchedSeconds int   `json:"watched_seconds"`
 			CoinBalance    int64 `json:"coin_balance"`
 			Tiers          []struct {
@@ -872,6 +873,7 @@ func TestTreasureHandler_GetStatus_OK(t *testing.T) {
 	}
 	require.NoError(t, json.Unmarshal(c.Response.Body(), &body))
 	assert.DeepEqual(t, 200, body.Code)
+	assert.NotEmpty(t, body.Data.StatDate)
 	assert.DeepEqual(t, 3, len(body.Data.Tiers))
 }
 
@@ -879,6 +881,7 @@ func TestTreasureHandler_Heartbeat_OK(t *testing.T) {
 	h, _ := newTreasureHandler(t)
 	c := app.NewContext(0)
 	c.Set("user_id", int64(100))
+	c.Request.SetBody([]byte(`{"live_stream_id":123}`))
 	h.Heartbeat(context.Background(), c)
 	assert.DeepEqual(t, 200, c.Response.StatusCode())
 }
@@ -977,7 +980,7 @@ func (h *TreasureHandler) Heartbeat(ctx context.Context, c *app.RequestContext) 
 		c.JSON(401, map[string]any{"code": 401, "message": "未登录或无效用户"})
 		return
 	}
-	total, err := h.svc.Heartbeat(ctx, userID)
+	total, err := h.svc.Heartbeat(ctx, userID, req.LiveStreamID)
 	if err != nil {
 		c.JSON(500, map[string]any{"code": 500, "message": "心跳上报失败"})
 		return
@@ -1148,7 +1151,7 @@ Expected：返回 `code:200`，`data.tiers` 长度 3，初始 `watched_seconds:0
 - [ ] **Step 3: 心跳累加**
 
 ```bash
-curl -s -X POST -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{}' http://localhost:<gatewayPort>/api/v1/watch/heartbeat | jq
+curl -s -X POST -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"live_stream_id":123}' http://localhost:<gatewayPort>/api/v1/watch/heartbeat | jq
 ```
 
 Expected：`data.watched_seconds` 为 30；连续调用受 Redis 时间戳约束（间隔短则 delta 小）。

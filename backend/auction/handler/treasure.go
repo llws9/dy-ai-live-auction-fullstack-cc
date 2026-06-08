@@ -38,6 +38,7 @@ func (h *TreasureHandler) GetStatus(ctx context.Context, c *app.RequestContext) 
 	c.JSON(http.StatusOK, map[string]any{
 		"code": 200,
 		"data": map[string]any{
+			"stat_date":       status.StatDate,
 			"watched_seconds": status.WatchedSeconds,
 			"coin_balance":    status.CoinBalance,
 			"tiers":           status.Tiers,
@@ -51,12 +52,27 @@ func (h *TreasureHandler) Heartbeat(ctx context.Context, c *app.RequestContext) 
 		return
 	}
 
-	watchedSeconds, err := h.svc.Heartbeat(ctx, userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, map[string]any{
-			"code":    500,
-			"message": "记录观看时长失败",
+	var req struct {
+		LiveStreamID int64 `json:"live_stream_id"`
+	}
+	if err := json.Unmarshal(c.Request.Body(), &req); err != nil {
+		c.JSON(http.StatusBadRequest, map[string]any{
+			"code":    400,
+			"message": "invalid json",
 		})
+		return
+	}
+	if req.LiveStreamID <= 0 {
+		c.JSON(http.StatusBadRequest, map[string]any{
+			"code":    400,
+			"message": "live_stream_id 必须为正整数",
+		})
+		return
+	}
+
+	watchedSeconds, err := h.svc.Heartbeat(ctx, userID, req.LiveStreamID)
+	if err != nil {
+		writeTreasureHeartbeatError(c, err)
 		return
 	}
 
@@ -82,6 +98,10 @@ func (h *TreasureHandler) Claim(ctx context.Context, c *app.RequestContext) {
 			"code":    400,
 			"message": "invalid json",
 		})
+		return
+	}
+	if req.Tier != 0 && req.Tier != 1 && req.Tier != 2 {
+		writeTreasureClaimError(c, service.ErrInvalidTier)
 		return
 	}
 
@@ -110,6 +130,31 @@ func requireTreasureUser(c *app.RequestContext) (int64, bool) {
 		return 0, false
 	}
 	return userID, true
+}
+
+func writeTreasureHeartbeatError(c *app.RequestContext, err error) {
+	switch {
+	case errors.Is(err, service.ErrInvalidLiveStreamID):
+		c.JSON(http.StatusBadRequest, map[string]any{
+			"code":    400,
+			"message": "live_stream_id 必须为正整数",
+		})
+	case errors.Is(err, service.ErrLiveStreamNotLive):
+		c.JSON(http.StatusBadRequest, map[string]any{
+			"code":    400,
+			"message": "直播间不存在或未开播，观看时长未累计",
+		})
+	case errors.Is(err, service.ErrLiveStreamLookupUnavailable):
+		c.JSON(http.StatusServiceUnavailable, map[string]any{
+			"code":    503,
+			"message": "直播间状态校验暂不可用，观看时长未累计",
+		})
+	default:
+		c.JSON(http.StatusInternalServerError, map[string]any{
+			"code":    500,
+			"message": "记录观看时长失败",
+		})
+	}
 }
 
 func writeTreasureClaimError(c *app.RequestContext, err error) {

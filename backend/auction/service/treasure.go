@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"auction-service/client"
 	"auction-service/dao"
 
 	"github.com/redis/go-redis/v9"
@@ -26,11 +27,17 @@ var treasureTiers = []TierConfig{
 const (
 	heartbeatCapSeconds = 30
 	heartbeatTTL        = 120 * time.Second
+
+	// Mirrors product-service model.LiveStreamStatusLive without importing its model package.
+	liveStreamStatusLive = 1
 )
 
 var (
-	ErrThresholdNotMet = errors.New("watch duration below threshold")
-	ErrInvalidTier     = errors.New("invalid tier")
+	ErrThresholdNotMet             = errors.New("watch duration below threshold")
+	ErrInvalidTier                 = errors.New("invalid tier")
+	ErrInvalidLiveStreamID         = errors.New("invalid live_stream_id")
+	ErrLiveStreamNotLive           = errors.New("live stream is not live")
+	ErrLiveStreamLookupUnavailable = errors.New("live stream lookup unavailable")
 )
 
 const heartbeatDeltaScript = `
@@ -71,13 +78,22 @@ type TreasureStatus struct {
 	Tiers          []TierStatus `json:"tiers"`
 }
 
+type LiveStreamLookup interface {
+	BatchGetLiveStreams(ctx context.Context, ids []int64) (map[int64]client.LiveStreamSummary, error)
+}
+
 type TreasureService struct {
-	dao *dao.TreasureDAO
-	rdb *redis.Client
+	dao              *dao.TreasureDAO
+	rdb              *redis.Client
+	liveStreamLookup LiveStreamLookup
 }
 
 func NewTreasureService(d *dao.TreasureDAO, rdb *redis.Client) *TreasureService {
 	return &TreasureService{dao: d, rdb: rdb}
+}
+
+func (s *TreasureService) SetLiveStreamLookup(lookup LiveStreamLookup) {
+	s.liveStreamLookup = lookup
 }
 
 func businessStatDate() string {
@@ -88,9 +104,12 @@ func heartbeatKey(userID int64, statDate string) string {
 	return fmt.Sprintf("treasure:hb:%d:%s", userID, statDate)
 }
 
-func (s *TreasureService) Heartbeat(ctx context.Context, userID int64) (int, error) {
+func (s *TreasureService) Heartbeat(ctx context.Context, userID, liveStreamID int64) (int, error) {
 	if userID <= 0 {
 		return 0, errors.New("invalid user_id")
+	}
+	if err := s.ensureLiveStreamIsLive(ctx, liveStreamID); err != nil {
+		return 0, err
 	}
 
 	now := auctionBusinessNow()
@@ -110,6 +129,24 @@ func (s *TreasureService) Heartbeat(ctx context.Context, userID int64) (int, err
 		return s.dao.GetWatchSeconds(ctx, userID, statDate)
 	}
 	return s.dao.AddWatchSeconds(ctx, userID, statDate, delta)
+}
+
+func (s *TreasureService) ensureLiveStreamIsLive(ctx context.Context, liveStreamID int64) error {
+	if liveStreamID <= 0 {
+		return ErrInvalidLiveStreamID
+	}
+	if s.liveStreamLookup == nil {
+		return ErrLiveStreamLookupUnavailable
+	}
+	items, err := s.liveStreamLookup.BatchGetLiveStreams(ctx, []int64{liveStreamID})
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrLiveStreamLookupUnavailable, err)
+	}
+	item, ok := items[liveStreamID]
+	if !ok || item.Status != liveStreamStatusLive {
+		return ErrLiveStreamNotLive
+	}
+	return nil
 }
 
 func (s *TreasureService) GetStatus(ctx context.Context, userID int64) (*TreasureStatus, error) {

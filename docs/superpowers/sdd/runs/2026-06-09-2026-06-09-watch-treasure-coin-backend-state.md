@@ -846,6 +846,73 @@
 - First response line used: `当前分支/worktree：feat/watch-treasure-coin-backend @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-watch-treasure-coin-backend`
 
 
+### Final Code Review Fixes - `watch treasure coin backend`
+
+| Key | Value |
+| --- | --- |
+| Status | `verifying before commit` |
+| Owner | `main-agent` |
+| Started At | `2026-06-09 02:50` |
+| Completed At | `2026-06-09 02:56` |
+| Branch | `feat/watch-treasure-coin-backend` |
+| Worktree | `/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-watch-treasure-coin-backend` |
+| Target Branch | `main` |
+| Review Scope | `final code review findings: heartbeat source validation, tier overflow, stat_date response contract` |
+
+**Final Review Findings**
+
+1. High: `POST /watch/heartbeat` accepted empty body and trusted only JWT `user_id`; this could count heartbeats without proving the user is in a live room.
+2. Medium: claim handler converted request `tier` from `int` to `int8` before whitelist validation; values like `256` could wrap to `0`.
+3. Low: status contract includes `stat_date`, but handler response shape/tests did not assert or return it.
+
+**Fixes**
+
+- `TreasureService.Heartbeat(ctx, userID, liveStreamID)` now requires `liveStreamID > 0` and calls a `LiveStreamLookup` injected via `SetLiveStreamLookup`.
+- `main.go` injects the existing product-service `liveStreamClient`; service fails closed when lookup is missing, lookup fails, stream is absent, or stream status is not `1`.
+- `liveStreamStatusLive = 1` is defined in auction-service with a comment documenting it mirrors product-service `LiveStreamStatusLive`.
+- Handler heartbeat now parses JSON body `{ "live_stream_id": 123 }`; invalid JSON or missing/invalid ID returns `400`, lookup unavailable returns `503`, and non-live/missing stream returns `400`, all with readable `message`.
+- Claim handler validates `tier` is exactly `0/1/2` before `int8` conversion.
+- Status handler now includes `data.stat_date`; handler test asserts it is present and non-empty.
+- Spec and plan now document heartbeat body `{live_stream_id}` and status `1` validation before accumulation.
+
+**RED Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `cd backend/auction && go test ./service/ -run TestTreasureService -v -count=1` | `RED before implementation` | `build failed: SetLiveStreamLookup undefined; Heartbeat too many arguments; ErrLiveStreamNotLive undefined` | `expected_fail` |
+| `cd backend/auction && go test ./handler/ -run TestTreasureHandler -v -count=1` | `RED before implementation` | `build failed: TreasureService.SetLiveStreamLookup undefined` | `expected_fail` |
+
+**GREEN / Verify Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `cd backend/auction && go test ./service/ -run TestTreasureService -v -count=1` | `TreasureService tests pass` | `13 tests pass; ok auction-service/service 3.487s` | `pass` |
+| `cd backend/auction && go test ./handler/ -run TestTreasureHandler -v -count=1` | `TreasureHandler tests pass` | `10 tests pass; ok auction-service/handler 1.437s` | `pass` |
+| `cd backend/auction && go test ./dao/ ./service/ ./handler/ -count=1` | `dao/service/handler regression pass` | `ok auction-service/dao 0.847s; ok auction-service/service 5.714s; ok auction-service/handler 1.723s` | `pass` |
+| `cd backend/auction && go build ./...` | `auction-service builds` | `exit 0, no output` | `pass` |
+
+**Modified Files**
+
+- `backend/auction/service/treasure.go`
+- `backend/auction/service/treasure_test.go`
+- `backend/auction/handler/treasure.go`
+- `backend/auction/handler/treasure_test.go`
+- `backend/auction/main.go`
+- `docs/superpowers/specs/2026-06-09-watch-treasure-coin-design.md`
+- `docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md`
+- `docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md`
+
+**Commits**
+
+- Planned implementation commit: `fix(treasure): validate live heartbeat source and tier input`
+- Actual implementation commit: `pending`
+- Planned state commit after implementation hash is known: `docs(sdd): record final review fixes`
+
+**Risks / Blockers**
+
+- Frontend caller must be updated to send `live_stream_id`; this task only updates backend contract/docs within the allowed write set.
+- Runtime product-service integration was not started; coverage is via injected live stream client fakes plus auction-service build/tests.
+
 ## Cross-Task Decisions
 
 | Time | Decision | Reason | Impact | Owner |
@@ -856,7 +923,8 @@
 
 | API / Field | Change | Frontend Impact | Backend Impact | Docs Updated |
 | --- | --- | --- | --- | --- |
-| `-` | `-` | `-` | `-` | `no` |
+| `POST /api/v1/watch/heartbeat` | `body {}` -> `{ "live_stream_id": number }` | `frontend must send current live_stream_id` | `auction-service validates product-service stream status=1 before accumulating` | `yes` |
+| `GET /api/v1/treasure/status data.stat_date` | `handler response now includes stat_date` | `field available for date bucket display/debugging` | `TreasureStatus.StatDate exposed through handler` | `yes` |
 
 ## Test Commands
 
