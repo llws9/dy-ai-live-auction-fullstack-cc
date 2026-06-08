@@ -38,11 +38,11 @@
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `7` |
-| Done | `5` |
+| Done | `6` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `2` |
-| Last Updated | `2026-06-09 02:44` |
+| Pending | `1` |
+| Last Updated | `2026-06-09 02:52` |
 
 ## Status Legend
 
@@ -74,7 +74,7 @@
 | `T003` | `Service：档位常量 + 心跳封顶 + 状态编排 + 领取编排` | `done` | `subagent` | `W3` | `T002` | `service + service tests` | `backend/auction/service/treasure.go; backend/auction/service/treasure_test.go` | `backend/auction/dao/treasure.go; backend/auction/service/clock.go; backend/auction/service/testutil_test.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./service/ -run TestTreasureService -v` | `none` |
 | `T004` | `Handler：3 个 HTTP 端点` | `done` | `subagent` | `W4` | `T003` | `handler + handler tests` | `backend/auction/handler/treasure.go; backend/auction/handler/treasure_test.go` | `backend/auction/service/treasure.go; backend/auction/handler/user_balance_http.go; frontend/h5/src/services/api.ts; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./handler/ -run TestTreasureHandler -v` | `none` |
 | `T005` | `Auction 装配：AutoMigrate + main.go 路由` | `done` | `subagent` | `W5` | `T004` | `auction main wiring` | `backend/auction/main.go` | `backend/auction/model/treasure.go; backend/auction/dao/treasure.go; backend/auction/service/treasure.go; backend/auction/handler/treasure.go; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go build ./... && go test ./dao/ ./service/ ./handler/` | `none` |
-| `T006` | `Gateway 路由代理` | `pending` | `unassigned` | `W6` | `T005` | `gateway authGroup proxy` | `backend/gateway/router/router.go` | `backend/gateway/middleware/*; backend/gateway/handler/*; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/gateway && go build ./... && go test ./...` | `none` |
+| `T006` | `Gateway 路由代理` | `done` | `subagent` | `W6` | `T005` | `gateway authGroup proxy` | `backend/gateway/router/router.go` | `backend/gateway/middleware/*; backend/gateway/handler/*; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/gateway && go build ./... && go test ./...` | `none` |
 | `T007` | `端到端联调验证` | `pending` | `unassigned` | `W7` | `T006` | `verification only` | `docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md` | `backend/auction/**; backend/gateway/**; docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md` | `cd backend/auction && go test ./dao/ ./service/ ./handler/ && cd ../gateway && go test ./...` | `auction/gateway optional if manual curl is performed` |
 
 ## Wave Plan
@@ -627,8 +627,103 @@
 
 **Risks / Blockers**
 
-- `T006` still needs gateway proxy wiring before H5 can reach these auction-service routes through the required `/api/v1` gateway entry.
+- `T006` resolved gateway proxy wiring in commit `4e03dc5a559f43b980100178da7a380e28968484`.
 - No runtime service was started; T005 validation is build/test/static-contract only as specified.
+
+**Handoff**
+
+- First response line used: `pending final response`
+
+
+### T006 - `Gateway 路由代理`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `subagent` |
+| Started At | `2026-06-09 02:45` |
+| Completed At | `2026-06-09 02:52` |
+| Branch | `feat/watch-treasure-coin-backend` |
+| Worktree | `/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-watch-treasure-coin-backend` |
+| Base Commit | `580e60d8` |
+| Target Branch | `main` |
+| Depends On | `T005` |
+| Parallel Group | `W6` |
+
+**TDD Plan**
+
+- Red: run a static gateway route contract check proving the three treasure routes are not registered under `authGroup`.
+- Green: minimally add the three proxy routes in `backend/gateway/router/router.go` under the JWT-protected `authGroup`.
+- Verify: run the static sentinel, `cd backend/gateway && go build ./...`, and `cd backend/gateway && go test ./...`.
+
+**Write Set**
+
+- `backend/gateway/router/router.go`
+
+**Read Set**
+
+- `AGENTS.md`
+- `docs/CONSTITUTION.md`
+- `docs/CODING.md`
+- `docs/superpowers/sdd/RUNBOOK.md`
+- `docs/superpowers/plans/2026-06-09-watch-treasure-coin-backend.md`
+- `backend/gateway/middleware/*`
+- `backend/gateway/handler/*`
+
+**Scope Expansion Requests**
+
+| Time | Requested Files | Reason | Decision |
+| --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` |
+
+**Regression Sentinels**
+
+- Automated sentinel: `test $(rg -n 'authGroup\.GET\("/treasure/status", auctionProxy\.Forward\)|authGroup\.POST\("/treasure/claim", auctionProxy\.Forward\)|authGroup\.POST\("/watch/heartbeat", auctionProxy\.Forward\)' backend/gateway/router/router.go | wc -l | tr -d ' ') -eq 3`
+- Automated sentinel: `! rg -n 'v1\.(GET|POST)\("/(treasure/status|treasure/claim|watch/heartbeat)"' backend/gateway/router/router.go`
+- Rollback behavior caught: removing any treasure route or moving it from `authGroup` to public `v1` fails the static contract; routes remain behind `JWTAuth`, so downstream receives user identity via gateway proxy `X-User-ID`.
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `test $(rg -n 'authGroup\.GET\("/treasure/status", auctionProxy\.Forward\)|authGroup\.POST\("/treasure/claim", auctionProxy\.Forward\)|authGroup\.POST\("/watch/heartbeat", auctionProxy\.Forward\)' backend/gateway/router/router.go \| wc -l \| tr -d ' ') -eq 3` | `RED: route contract fails before implementation because routes are absent` | `exit 1, no matches` | `expected_fail` |
+| `test $(rg -n 'authGroup\.GET\("/treasure/status", auctionProxy\.Forward\)|authGroup\.POST\("/treasure/claim", auctionProxy\.Forward\)|authGroup\.POST\("/watch/heartbeat", auctionProxy\.Forward\)' backend/gateway/router/router.go \| wc -l \| tr -d ' ') -eq 3 && ! rg -n 'v1\.(GET\|POST)\("/(treasure/status\|treasure/claim\|watch/heartbeat)"' backend/gateway/router/router.go && rg -n 'authGroup\.(GET\|POST)\("/(treasure/status\|treasure/claim\|watch/heartbeat)", auctionProxy\.Forward\)' backend/gateway/router/router.go` | `GREEN: three routes are on authGroup and not public v1` | `matched lines 127-129; exit 0` | `pass` |
+| `cd backend/gateway && go build ./...` | `gateway-service builds` | `exit 0, no output` | `pass` |
+| `cd backend/gateway && go test ./...` | `gateway-service tests pass` | `ok gateway-service; ok gateway-service/config; ok gateway-service/dao; ok gateway-service/handler; ok gateway-service/middleware; ok gateway-service/pkg/metrics; ok gateway-service/router 1.105s; docs/model/pkg/nacos no test files` | `pass` |
+
+**Runtime Source Evidence**
+
+| Service | Branch | Worktree | Commit | Dirty | Command | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` | `-` | `-` | `none` |
+
+**Modified Files**
+
+- `backend/gateway/router/router.go`
+- `docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md`
+
+**Integration Check**
+
+- Target branch: `main`
+- Branch relationship: `task branch only; no integration performed by T006`
+- Diff reviewed: `git diff -- backend/gateway/router/router.go` before implementation commit.
+- Overlapping write-set tasks serialized: `yes; T006 depends on T005 and only owns gateway router/state write set`.
+
+**Commits**
+
+- Planned message: `feat(treasure): proxy treasure routes through gateway`
+- Actual implementation commit: `4e03dc5a559f43b980100178da7a380e28968484 feat(treasure): proxy treasure routes through gateway`
+
+**Review Notes**
+
+- `backend/gateway/router/router.go` now registers `authGroup.GET("/treasure/status", auctionProxy.Forward)`.
+- `backend/gateway/router/router.go` now registers `authGroup.POST("/treasure/claim", auctionProxy.Forward)`.
+- `backend/gateway/router/router.go` now registers `authGroup.POST("/watch/heartbeat", auctionProxy.Forward)`.
+- Static sentinel confirmed no public `v1.GET/POST` registration for those three paths.
+
+**Risks / Blockers**
+
+- No runtime service was started; T006 validation is build/test/static-contract only as specified.
 
 **Handoff**
 
@@ -651,7 +746,7 @@
 
 | Area | Command | Required | Last Result | Notes |
 | --- | --- | --- | --- | --- |
-| Backend Gateway | `cd backend/gateway && go test ./...` | no | `not_run` | `-` |
+| Backend Gateway | `cd backend/gateway && go test ./...` | yes for T006 | `pass` | `all gateway packages pass; router 1.105s` |
 | Backend Product | `cd backend/product && go test ./...` | no | `not_run` | `-` |
 | Backend Auction | `cd backend/auction && go test ./dao/ -run TestTreasureDAO -v -count=1` | yes for T002 | `pass` | `6 TreasureDAO tests pass` |
 | Backend Auction Service | `cd backend/auction && go test ./service/ -run TestTreasureService -v -count=1` | yes for T003 | `pass` | `9 TreasureService tests pass` |
@@ -685,4 +780,4 @@
 
 **状态**
 
-- `T005 done; waiting for downstream W6-W7`
+- `T006 done; waiting for downstream W7`
