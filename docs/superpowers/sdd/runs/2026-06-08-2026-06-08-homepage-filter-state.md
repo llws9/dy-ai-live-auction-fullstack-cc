@@ -244,6 +244,11 @@
 
 - `17e4f4b6dc4cdf98efb06cdeeef535eee6806073` - `feat(auction): add price-range filter and hot-sort to ListWithFilters`
 
+**Review Notes**
+
+- Spec review: approved; price filter, hot sort, bid_count 回填、默认/Upcoming 排序保留均符合 Task 2。
+- Code quality review: approved; `Count` 在 JOIN/GROUP 前执行，不污染 total；常量 `Order` 无注入风险。剩余风险：未覆盖真实 MySQL/MariaDB 方言下 ONLY_FULL_GROUP_BY、hot+price 组合和同分兜底排序，后续全量/集成验证关注。
+
 **Risks / Blockers**
 
 - `none`
