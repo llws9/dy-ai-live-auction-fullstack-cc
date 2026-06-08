@@ -163,7 +163,7 @@ describe('LiveRoomSlide', () => {
     });
     mockWebSocketInstance.connect.mockResolvedValue(undefined);
     mockWebSocketInstance.onNotification.mockReturnValue(jest.fn());
-    mockedUseFixedPriceItems.mockReturnValue({ items: [], byId: {}, socket: null });
+    mockedUseFixedPriceItems.mockReturnValue({ items: [], byId: {}, socket: null, latestListedItem: null });
 
     mockedAuctionApi.get.mockResolvedValue({
       id: 5,
@@ -851,6 +851,7 @@ describe('LiveRoomSlide', () => {
       }],
       byId: {},
       socket: null,
+      latestListedItem: null,
     });
 
     renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
@@ -879,6 +880,7 @@ describe('LiveRoomSlide', () => {
       }],
       byId: {},
       socket: null,
+      latestListedItem: null,
     });
     renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
 
@@ -1075,5 +1077,69 @@ describe('LiveRoomSlide', () => {
     });
 
     dateNowSpy.mockRestore();
+  });
+
+  it('triggers intro animation when new fixed price item is added', async () => {
+    const fixedPriceItem = {
+      id: 7001,
+      auction_id: 5,
+      product_brief: { id: 8001, title: '一口价翡翠', cover_image: '/fp.jpg' },
+      price: '99.00',
+      total_stock: 10,
+      remaining_stock: 10,
+      status: 'on_sale' as const,
+    };
+    
+    // Start with empty items
+    mockedUseFixedPriceItems.mockReturnValue({ items: [], byId: {}, socket: null, latestListedItem: null });
+    const { rerender } = render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        <LocationDisplay />
+      </MemoryRouter>
+    );
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    expect(screen.queryByText('一口价翡翠')).not.toBeInTheDocument();
+
+    // Update with new item
+    mockedUseFixedPriceItems.mockReturnValue({ items: [fixedPriceItem], byId: { 7001: fixedPriceItem }, socket: null, latestListedItem: null });
+    rerender(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        <LocationDisplay />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText('新上架 一口价')).not.toBeInTheDocument();
+
+    mockedUseFixedPriceItems.mockReturnValue({
+      items: [fixedPriceItem],
+      byId: { 7001: fixedPriceItem },
+      socket: null,
+      latestListedItem: { item: fixedPriceItem, sequence: 1 },
+    });
+    rerender(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <LiveRoomSlide liveStreamId={3} currentAuctionId={5} active />
+        <LocationDisplay />
+      </MemoryRouter>
+    );
+
+    // The animation component should render the badge
+    expect(await screen.findByText('新上架 一口价')).toBeInTheDocument();
+    
+    // Simulate animation end
+    const animationCard = screen.getByText('新上架 一口价').parentElement;
+    if (animationCard) {
+      const event = new Event('animationend', { bubbles: true });
+      Object.defineProperty(event, 'animationName', { value: 'flyToBottomRight_somehash' });
+      fireEvent(animationCard, event);
+    }
+
+    // The animation should be removed, and it should pulse
+    await waitFor(() => {
+      expect(screen.queryByText('新上架 一口价')).not.toBeInTheDocument();
+    });
   });
 });

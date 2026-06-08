@@ -117,7 +117,7 @@ describe('LiveRoom migration', () => {
     mockWebSocketInstance.onNotification.mockReturnValue(jest.fn());
     mockWebSocketInstance.on.mockImplementation(() => undefined);
     mockWebSocketInstance.off.mockImplementation(() => undefined);
-    mockedUseFixedPriceItems.mockReturnValue({ items: [], byId: {}, socket: null });
+    mockedUseFixedPriceItems.mockReturnValue({ items: [], byId: {}, socket: null, latestListedItem: null });
 
     mockedAuctionApi.get.mockResolvedValue({
       id: 5,
@@ -429,6 +429,7 @@ describe('LiveRoom migration', () => {
       }],
       byId: {},
       socket: fixedPriceSocket,
+      latestListedItem: null,
     });
     mockedPurchase.mockResolvedValue({
       order_id: 88,
@@ -491,6 +492,7 @@ describe('LiveRoom migration', () => {
       }],
       byId: {},
       socket: null,
+      latestListedItem: null,
     });
     mockedFetchMyPurchase.mockResolvedValue({
       i_bought: true,

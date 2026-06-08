@@ -111,6 +111,7 @@ describe('useFixedPriceItems', () => {
 
     await waitFor(() => expect(result.current.items).toEqual([baseItem]));
     expect(result.current.byId[7001]).toEqual(baseItem);
+    expect(result.current.latestListedItem).toBeNull();
     expect(fetchItems).toHaveBeenCalledWith(7001);
   });
 
@@ -139,5 +140,27 @@ describe('useFixedPriceItems', () => {
     expect(mockWsInstances[0].on).toHaveBeenCalledWith('fixed_price_stock', expect.any(Function));
     expect(mockWsInstances[0].on).toHaveBeenCalledWith('fixed_price_sold_out', expect.any(Function));
     expect(mockWsInstances[0].on).toHaveBeenCalledWith('fixed_price_offline', expect.any(Function));
+  });
+
+  it('exposes listed item events only for websocket fixed_price_listed messages', async () => {
+    jest.mocked(fetchItems).mockResolvedValue({ items: [baseItem] });
+    const listedItem: FixedPriceItem = {
+      ...baseItem,
+      id: 7002,
+      product_brief: { id: 5002, title: '新上架翡翠' },
+    };
+    const { result } = renderHook(() => useFixedPriceItems(7001, 1001));
+
+    await waitFor(() => expect(result.current.items).toEqual([baseItem]));
+    expect(result.current.latestListedItem).toBeNull();
+
+    act(() => {
+      mockWsInstances[0].emit('fixed_price_listed', { item: listedItem });
+    });
+
+    await waitFor(() => {
+      expect(result.current.byId[7002]).toEqual(listedItem);
+      expect(result.current.latestListedItem).toEqual({ item: listedItem, sequence: 1 });
+    });
   });
 });
