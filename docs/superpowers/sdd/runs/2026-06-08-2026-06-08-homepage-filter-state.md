@@ -317,6 +317,11 @@
 
 - `8302d277bdcb053a53e75235592233b1d20d85dc` - `feat(auction): parse sort/price_min/price_max in GET /auctions`
 
+**Review Notes**
+
+- Spec review: approved; `ListParams`、编排路径、旧兼容路径和 query 解析均符合 Task 3。
+- Code quality review: approved; 无效 decimal query 静默忽略符合现有风格，未发现 panic/nil 解引用风险。剩余风险：未新增 HTTP query 级专项测试，后续扩展筛选参数时建议补。
+
 **Risks / Blockers**
 
 - Invalid price query values are ignored by design; no 400 behavior planned.
