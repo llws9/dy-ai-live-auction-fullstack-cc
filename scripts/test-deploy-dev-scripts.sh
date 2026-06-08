@@ -149,6 +149,31 @@ assert_contains \
   'dockerfile: product/Dockerfile' \
   "docker-compose.yml product build must point to product/Dockerfile from backend context"
 
+assert_contains \
+  "$ROOT/docker-compose.yml" \
+  'PRODUCT_SERVICE_URL=http://product:8081' \
+  "docker-compose.yml gateway and auction must use the Docker network product hostname, not localhost"
+
+assert_contains \
+  "$ROOT/docker-compose.yml" \
+  'AUCTION_SERVICE_URL=http://auction:8082' \
+  "docker-compose.yml gateway and product must use the Docker network auction hostname, not localhost"
+
+assert_contains \
+  "$ROOT/docker-compose.yml" \
+  'DB_HOST=mysql' \
+  "docker-compose.yml application services must use the Docker network mysql hostname, not localhost"
+
+assert_contains \
+  "$ROOT/docker-compose.yml" \
+  'REDIS_ADDR=redis:6379' \
+  "docker-compose.yml application services must use the Docker network redis hostname, not localhost"
+
+assert_contains \
+  "$ROOT/docker-compose.yml" \
+  'RABBITMQ_HOST=rabbitmq' \
+  "docker-compose.yml auction service must use the Docker network rabbitmq hostname, not localhost"
+
 test -f "$ROOT/frontend/h5/Dockerfile" || fail "frontend-h5 compose service must have a Dockerfile"
 test -f "$ROOT/frontend/admin/Dockerfile" || fail "frontend-admin compose service must have a Dockerfile"
 test -f "$ROOT/frontend/h5/.dockerignore" || fail "frontend-h5 Docker build must ignore local dependency artifacts"

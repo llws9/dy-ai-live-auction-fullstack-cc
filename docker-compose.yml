@@ -10,14 +10,24 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - GATEWAY_PORT=:8080
       - NACOS_SERVER_ADDR=nacos:8848
       - NACOS_NAMESPACE=auction-dev
       - NACOS_GROUP=gateway
       - NACOS_DATA_ID=gateway-config.yaml
+      - PRODUCT_SERVICE_URL=http://product:8081
+      - AUCTION_SERVICE_URL=http://auction:8082
       - TEST_SERVICE_URL=http://test-service:18090
       # Browser connects directly to host-exposed WS port after gateway endpoint discovery.
       - TEST_SERVICE_WS_URL=ws://localhost:18092
       - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}
+      - JWT_SECRET=dev-secret
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=
+      - GROWTHBOOK_ENABLED=true
+      - GROWTHBOOK_API_HOST=http://growthbook:3100
+      - GROWTHBOOK_CLIENT_KEY=dev-client-key
+      - GROWTHBOOK_SECRET_KEY=dev-secret-key
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_USER=root
@@ -45,10 +55,19 @@ services:
     ports:
       - "8081:8081"
     environment:
+      - PRODUCT_SERVICE_PORT=:8081
       - NACOS_SERVER_ADDR=nacos:8848
       - NACOS_NAMESPACE=auction-dev
       - NACOS_GROUP=product
       - NACOS_DATA_ID=product-config.yaml
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_NAME=auction
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=
+      - AUCTION_SERVICE_URL=http://auction:8082
       - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}
     depends_on:
       - nacos
@@ -68,10 +87,27 @@ services:
       - "8082:8082"  # HTTP
       - "8083:8083"  # WebSocket
     environment:
+      - HTTP_PORT=:8082
+      - WS_PORT=:8083
       - NACOS_SERVER_ADDR=nacos:8848
       - NACOS_NAMESPACE=auction-dev
       - NACOS_GROUP=auction
       - NACOS_DATA_ID=auction-config.yaml
+      - NACOS_ENABLED=false
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_NAME=auction
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - RABBITMQ_VHOST=/
+      - JWT_SECRET=dev-secret
+      - PRODUCT_SERVICE_URL=http://product:8081
       - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}
     depends_on:
       - nacos
