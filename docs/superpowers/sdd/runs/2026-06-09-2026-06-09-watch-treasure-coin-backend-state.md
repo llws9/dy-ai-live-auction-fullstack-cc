@@ -850,7 +850,7 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `verifying before commit` |
+| Status | `done` |
 | Owner | `main-agent` |
 | Started At | `2026-06-09 02:50` |
 | Completed At | `2026-06-09 02:56` |
@@ -905,7 +905,7 @@
 **Commits**
 
 - Planned implementation commit: `fix(treasure): validate live heartbeat source and tier input`
-- Actual implementation commit: `pending`
+- Actual implementation commit: `7b8f012c8aea135b82644d563375b2b1be6c5143 fix(treasure): validate live heartbeat source and tier input`
 - Planned state commit after implementation hash is known: `docs(sdd): record final review fixes`
 
 **Risks / Blockers**
