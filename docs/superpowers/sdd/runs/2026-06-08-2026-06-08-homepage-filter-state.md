@@ -559,6 +559,8 @@
 - Spec review: approved; Task 6 UI/params/sorting integration requirements met.
 - Code quality review: changes_requested; stale response guard missing, old filter/list request can overwrite newer view. Add request id/abort guard and regression test before T007.
 - T006-fix: changes_requested resolved; deferred-promise regression reproduces stale overwrite, and `fetchAuctions` now invalidates older requests via request sequence before any post-await Home list/favorite/loading state write.
+- T006-fix spec re-review: approved; original Task 6 contract still satisfied and stale-response regression evidence recorded.
+- T006-fix code quality re-review: approved; request sequence and cleanup interaction will not mis-kill current requests; remaining risk is limited to stale error log noise and untested stale reject/favorite branches.
 
 **Risks / Blockers**
 
