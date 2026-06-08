@@ -24,7 +24,7 @@ export const BidSuccessAnimation: React.FC<BidSuccessAnimationProps> = ({
   useEffect(() => {
     const timer = window.setTimeout(() => {
       onAnimationEndRef.current?.();
-    }, 4100);
+    }, 3000);
     return () => window.clearTimeout(timer);
   }, []);
 

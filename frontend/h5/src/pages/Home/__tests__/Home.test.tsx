@@ -62,6 +62,16 @@ const renderHome = () =>
     </MemoryRouter>
   );
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+};
+
 const mockAuthAuthenticated = () => {
   mockedUseAuth.mockReturnValue({
     isAuthenticated: true,
@@ -531,6 +541,74 @@ describe('HomePage 分类联动 (T2.10)', () => {
 
     expect(await screen.findByRole('heading', { name: '沉香手串专场' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '进入直播' })).toHaveAttribute('href', '/live?id=89');
+  });
+
+  it('点击最热胶囊后以 sort=hot 调用列表接口', async () => {
+    renderHome();
+
+    await waitFor(() => expect(mockedAuctionApi.list).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: '最热' }));
+
+    await waitFor(() =>
+      expect(mockedAuctionApi.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: 'hot' })
+      )
+    );
+  });
+
+  it('忽略过期的筛选请求，避免旧列表覆盖最新筛选结果', async () => {
+    const defaultRequest = createDeferred<{ list: unknown[]; total: number }>();
+    const hotRequest = createDeferred<{ list: unknown[]; total: number }>();
+    mockedAuctionApi.list
+      .mockImplementationOnce(() => defaultRequest.promise)
+      .mockImplementationOnce(() => hotRequest.promise);
+
+    renderHome();
+
+    await waitFor(() => expect(mockedAuctionApi.list).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: '最热' }));
+
+    await waitFor(() =>
+      expect(mockedAuctionApi.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: 'hot' })
+      )
+    );
+
+    await act(async () => {
+      hotRequest.resolve({
+        list: [
+          {
+            id: 2,
+            status: 1,
+            current_price: 200,
+            product: { id: 2, name: '热度结果' },
+          },
+        ],
+        total: 1,
+      });
+      await hotRequest.promise;
+    });
+
+    expect(await screen.findByRole('heading', { name: '热度结果' })).toBeInTheDocument();
+
+    await act(async () => {
+      defaultRequest.resolve({
+        list: [
+          {
+            id: 1,
+            status: 1,
+            current_price: 100,
+            product: { id: 1, name: '过期结果' },
+          },
+        ],
+        total: 1,
+      });
+      await defaultRequest.promise;
+    });
+
+    expect(screen.getByRole('heading', { name: '热度结果' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '过期结果' })).not.toBeInTheDocument();
   });
 });
 

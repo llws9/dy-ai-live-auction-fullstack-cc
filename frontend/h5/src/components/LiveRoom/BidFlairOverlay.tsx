@@ -26,7 +26,11 @@ export const BidFlairOverlay: React.FC<{ latestBid?: BidEvent | null }> = ({ lat
   return (
     <div className={styles.flairContainer} data-testid="bid-flair-overlay">
       {flairs.map(f => (
-        <div key={f.id} className={`${styles.flairItem} ${f.isSelf ? styles.isSelf : ''}`} data-testid={`bid-flair-item-${f.id}`}>
+        <div
+          key={f.id}
+          className={`${styles.flairItem} ${f.isSelf ? styles.isSelf : ''}`}
+          data-testid={f.isSelf ? 'bid-success-flair' : `bid-flair-item-${f.id}`}
+        >
           {f.avatar ? (
             <img src={f.avatar} className={styles.avatar} alt="" />
           ) : (
@@ -35,7 +39,7 @@ export const BidFlairOverlay: React.FC<{ latestBid?: BidEvent | null }> = ({ lat
             </div>
           )}
           {f.combo > 1 && <span className={styles.comboText}>x{f.combo} COMBO</span>}
-          <span>出价 <span className={styles.priceText}>¥{f.price}</span></span>
+          <span>{f.userId} 刚刚出价 <span className={styles.priceText}>¥{f.price}</span></span>
         </div>
       ))}
     </div>

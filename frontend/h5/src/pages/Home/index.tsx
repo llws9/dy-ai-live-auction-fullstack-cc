@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auctionApi, followApi, productApi, productReminderApi } from '@/services/api';
 import { notificationApi } from '@/services/notification';
@@ -9,6 +9,7 @@ import BadgeDot from '@/components/BadgeDot';
 import { trackEvent } from '@/utils/trackEvent';
 import { notifyTouchpointSummaryInvalidated } from '@/utils/touchpointSummaryEvents';
 import { repairUtf8Mojibake } from '@/utils/textEncoding';
+import PriceFilterSheet, { PriceRange } from './PriceFilterSheet';
 import styles from './Home.module.css';
 
 // 固定 tab：「全部」「收藏」无需 category_id；动态 tab 来自 GET /categories
@@ -302,14 +303,22 @@ const HomePage: React.FC = () => {
   const navigate = useNavigate();
   // activeTab 用 string 既能存「全部」/「收藏」也能存动态分类 name
   const [activeTab, setActiveTab] = useState<string>('全部');
+  const [filterSort, setFilterSort] = useState<'default' | 'hot'>('default');
+  const [filterPrice, setFilterPrice] = useState<PriceRange>({});
+  const [priceSheetOpen, setPriceSheetOpen] = useState(false);
   const [categories, setCategories] = useState<CategoryTab[]>([]);
   const [auctions, setAuctions] = useState<HomeAuction[]>([]);
   const [favoriteLiveStreams, setFavoriteLiveStreams] = useState<LiveStream[]>([]);
   const [loading, setLoading] = useState(true);
+  const auctionRequestSeqRef = useRef(0);
   const [subscribedProductIds, setSubscribedProductIds] = useState<Set<number>>(() => new Set());
   const [reminderPendingProductId, setReminderPendingProductId] = useState<number | null>(null);
   const { isAuthenticated } = useAuth();
   const { unreadTotal } = useTouchpointNotifications();
+  const activeCategoryId =
+    activeTab === '全部' || activeTab === '收藏'
+      ? undefined
+      : categories.find((category) => category.name === activeTab)?.id;
 
   // F-D2：登录后热拉通知（mount + 回到前台），成功后刷新共享触达汇总。
   useEffect(() => {
@@ -380,56 +389,72 @@ const HomePage: React.FC = () => {
   }, []);
 
   const fetchAuctions = useCallback(async () => {
+    const requestSeq = auctionRequestSeqRef.current + 1;
+    auctionRequestSeqRef.current = requestSeq;
+    const isLatestRequest = () => requestSeq === auctionRequestSeqRef.current;
+
     setLoading(true);
 
     if (activeTab === '收藏') {
       try {
         const response = await followApi.getFollowedLiveStreams(1, 20);
+        if (!isLatestRequest()) return;
         setFavoriteLiveStreams(extractList<LiveStream>(response));
         setAuctions([]);
       } catch (error) {
         console.error('获取收藏直播间失败:', error);
+        if (!isLatestRequest()) return;
         setFavoriteLiveStreams([]);
       } finally {
-        setLoading(false);
+        if (isLatestRequest()) {
+          setLoading(false);
+        }
       }
       return;
     }
 
     try {
-      const params: { page: number; page_size: number; category_id?: number } = {
+      const params: {
+        page: number;
+        page_size: number;
+        category_id?: number;
+        sort?: string;
+        price_min?: number;
+        price_max?: number;
+      } = {
         page: 1,
         page_size: 20,
       };
-      if (activeTab !== '全部') {
-        const matched = categories.find((c) => c.name === activeTab);
-        if (matched) {
-          params.category_id = matched.id;
-        }
+      if (activeCategoryId !== undefined) {
+        params.category_id = activeCategoryId;
       }
+      if (filterSort === 'hot') params.sort = 'hot';
+      if (filterPrice.min !== undefined) params.price_min = filterPrice.min;
+      if (filterPrice.max !== undefined) params.price_max = filterPrice.max;
 
       const response = await auctionApi.list(params);
+      if (!isLatestRequest()) return;
       const rawAuctions = extractList<RawAuction>(response);
+      const normalized = rawAuctions.map((auction) => normalizeAuction(auction));
 
       setFavoriteLiveStreams([]);
-      setAuctions(sortAuctionsForHome(rawAuctions.map((auction) => normalizeAuction(auction))));
+      // hot 态保留后端排序，避免客户端 feed 排序覆盖「最热」结果。
+      setAuctions(filterSort === 'hot' ? normalized : sortAuctionsForHome(normalized));
     } catch (error) {
       console.error('获取竞拍列表失败:', error);
+      if (!isLatestRequest()) return;
       setAuctions([]);
     } finally {
-      setLoading(false);
+      if (isLatestRequest()) {
+        setLoading(false);
+      }
     }
-  }, [activeTab, categories]);
+  }, [activeTab, activeCategoryId, filterSort, filterPrice.min, filterPrice.max]);
 
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      await fetchAuctions();
-      if (cancelled) return;
-    };
-    load();
+    fetchAuctions();
     return () => {
-      cancelled = true;
+      auctionRequestSeqRef.current += 1;
     };
   }, [fetchAuctions]);
 
@@ -520,6 +545,43 @@ const HomePage: React.FC = () => {
           </button>
         ))}
       </nav>
+
+      {activeTab !== '收藏' && (
+        <div className={styles.filters} aria-label="排序与价格筛选">
+          <button
+            type="button"
+            className={`${styles.filterPill} ${filterSort === 'default' ? styles.filterPillActive : ''}`}
+            onClick={() => setFilterSort('default')}
+          >
+            综合
+          </button>
+          <button
+            type="button"
+            className={`${styles.filterPill} ${filterSort === 'hot' ? styles.filterPillActive : ''}`}
+            onClick={() => setFilterSort('hot')}
+          >
+            最热
+          </button>
+          <button
+            type="button"
+            className={`${styles.filterPill} ${
+              filterPrice.min !== undefined || filterPrice.max !== undefined ? styles.filterPillActive : ''
+            }`}
+            onClick={() => setPriceSheetOpen(true)}
+          >
+            {filterPrice.min !== undefined || filterPrice.max !== undefined
+              ? `¥${filterPrice.min ?? 0}${filterPrice.max !== undefined ? `-${filterPrice.max}` : '+'}`
+              : '价格区间'}
+          </button>
+        </div>
+      )}
+
+      <PriceFilterSheet
+        open={priceSheetOpen}
+        value={filterPrice}
+        onClose={() => setPriceSheetOpen(false)}
+        onConfirm={(range) => setFilterPrice(range)}
+      />
 
       <main className={styles.content} id="content-area">
         {loading ? (
