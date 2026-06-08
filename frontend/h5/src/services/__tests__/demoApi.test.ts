@@ -94,6 +94,21 @@ describe('demoApi', () => {
     await expect(triggerFollowBid({ auctionId: 42 })).rejects.toThrow('跟价冲突，请重试');
   });
 
+  it('preserves the HTTP status on demo API auth errors so callers can retry login', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ error: 'authorization bearer token is required' }),
+    } as Response);
+
+    await expect(createDemoMerchantAuction('ongoing')).rejects.toEqual(
+      expect.objectContaining({
+        status: 401,
+        message: 'authorization bearer token is required',
+      })
+    );
+  });
+
   it('posts merchant auction mode to the demo merchant endpoint', async () => {
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true,

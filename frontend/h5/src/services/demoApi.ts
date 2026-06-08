@@ -1,3 +1,5 @@
+import { ApiError } from './api';
+
 const DEMO_BASE_URL = '/api/test/demo';
 
 type MoneyInput = string | number;
@@ -71,7 +73,7 @@ async function postDemo<T>(path: string, body: unknown): Promise<T> {
 
   const data = await readJson(response);
   if (!response.ok) {
-    throw new Error(getErrorMessage(data, response.status));
+    throw new ApiError(getErrorMessage(data, response.status), response.status, data?.code, data);
   }
 
   return data as T;
