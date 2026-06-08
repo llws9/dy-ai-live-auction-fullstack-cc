@@ -29,6 +29,31 @@ assert_not_contains() {
   fi
 }
 
+assert_compose_dependency_condition() {
+  local service=$1
+  local dependency=$2
+  local condition=$3
+  local message=$4
+
+  python3 - "$ROOT/docker-compose.yml" "$service" "$dependency" "$condition" "$message" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+path, service, dependency, condition, message = sys.argv[1:]
+text = Path(path).read_text()
+service_match = re.search(rf"^  {re.escape(service)}:\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:|\Z)", text, re.M | re.S)
+if not service_match:
+    print(f"FAIL: service {service} not found", file=sys.stderr)
+    sys.exit(1)
+body = service_match.group("body")
+dep_match = re.search(rf"^      {re.escape(dependency)}:\n(?P<body>.*?)(?=^      [A-Za-z0-9_-]+:|^    [A-Za-z0-9_-]+:|\Z)", body, re.M | re.S)
+if not dep_match or f"condition: {condition}" not in dep_match.group("body"):
+    print(f"FAIL: {message}", file=sys.stderr)
+    sys.exit(1)
+PY
+}
+
 assert_contains \
   "$ROOT/scripts/start-local-backend.sh" \
   'launchctl load "\$plist"' \
@@ -203,6 +228,24 @@ assert_contains \
   "$ROOT/docker-compose.yml" \
   'MYSQL_SERVICE_DB_PARAM=.*allowPublicKeyRetrieval=true' \
   "docker-compose.yml Nacos service must pass MySQL connection parameters compatible with MySQL 8"
+
+assert_compose_dependency_condition \
+  product \
+  mysql \
+  service_healthy \
+  "docker-compose.yml product must wait for MySQL health before starting"
+
+assert_compose_dependency_condition \
+  auction \
+  mysql \
+  service_healthy \
+  "docker-compose.yml auction must wait for MySQL health before starting"
+
+assert_compose_dependency_condition \
+  auction \
+  rabbitmq \
+  service_healthy \
+  "docker-compose.yml auction must wait for RabbitMQ health before starting"
 
 test -f "$ROOT/frontend/h5/Dockerfile" || fail "frontend-h5 compose service must have a Dockerfile"
 test -f "$ROOT/frontend/admin/Dockerfile" || fail "frontend-admin compose service must have a Dockerfile"

@@ -70,9 +70,12 @@ services:
       - AUCTION_SERVICE_URL=http://auction:8082
       - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}
     depends_on:
-      - nacos
-      - mysql
-      - redis
+      nacos:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - auction-network
     labels:
@@ -110,9 +113,14 @@ services:
       - PRODUCT_SERVICE_URL=http://product:8081
       - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}
     depends_on:
-      - nacos
-      - mysql
-      - redis
+      nacos:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     networks:
       - auction-network
     labels:
