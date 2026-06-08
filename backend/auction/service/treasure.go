@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"auction-service/dao"
@@ -34,6 +33,30 @@ var (
 	ErrInvalidTier     = errors.New("invalid tier")
 )
 
+const heartbeatDeltaScript = `
+local last = redis.call("GET", KEYS[1])
+local now = tonumber(ARGV[1])
+local cap = tonumber(ARGV[2])
+local ttl = tonumber(ARGV[3])
+local delta = cap
+
+if last then
+	local lastUnix = tonumber(last)
+	if lastUnix then
+		local elapsed = now - lastUnix
+		if elapsed < 0 then
+			elapsed = 0
+		end
+		if elapsed < delta then
+			delta = elapsed
+		end
+	end
+end
+
+redis.call("SET", KEYS[1], now, "EX", ttl)
+return delta
+`
+
 type TierStatus struct {
 	Tier             int8   `json:"tier"`
 	ThresholdSeconds int    `json:"threshold_seconds"`
@@ -61,8 +84,8 @@ func businessStatDate() string {
 	return auctionBusinessNow().Format("2006-01-02")
 }
 
-func heartbeatKey(userID int64) string {
-	return fmt.Sprintf("treasure:hb:%d", userID)
+func heartbeatKey(userID int64, statDate string) string {
+	return fmt.Sprintf("treasure:hb:%d:%s", userID, statDate)
 }
 
 func (s *TreasureService) Heartbeat(ctx context.Context, userID int64) (int, error) {
@@ -71,36 +94,22 @@ func (s *TreasureService) Heartbeat(ctx context.Context, userID int64) (int, err
 	}
 
 	now := auctionBusinessNow()
-	delta := heartbeatCapSeconds
-	key := heartbeatKey(userID)
+	statDate := now.In(auctionBusinessLocation).Format("2006-01-02")
+	key := heartbeatKey(userID, statDate)
 
-	lastStr, err := s.rdb.Get(ctx, key).Result()
-	switch {
-	case err == nil:
-		lastUnix, parseErr := strconv.ParseInt(lastStr, 10, 64)
-		if parseErr == nil {
-			elapsed := int(now.Unix() - lastUnix)
-			if elapsed < 0 {
-				elapsed = 0
-			}
-			if elapsed < delta {
-				delta = elapsed
-			}
-		}
-	case errors.Is(err, redis.Nil):
-	default:
+	delta, err := s.rdb.Eval(ctx, heartbeatDeltaScript, []string{key},
+		now.Unix(),
+		heartbeatCapSeconds,
+		int(heartbeatTTL/time.Second),
+	).Int()
+	if err != nil {
 		return 0, err
 	}
 
-	if err := s.rdb.Set(ctx, key, now.Unix(), heartbeatTTL).Err(); err != nil {
-		return 0, err
-	}
-
-	date := businessStatDate()
 	if delta <= 0 {
-		return s.dao.GetWatchSeconds(ctx, userID, date)
+		return s.dao.GetWatchSeconds(ctx, userID, statDate)
 	}
-	return s.dao.AddWatchSeconds(ctx, userID, date, delta)
+	return s.dao.AddWatchSeconds(ctx, userID, statDate, delta)
 }
 
 func (s *TreasureService) GetStatus(ctx context.Context, userID int64) (*TreasureStatus, error) {

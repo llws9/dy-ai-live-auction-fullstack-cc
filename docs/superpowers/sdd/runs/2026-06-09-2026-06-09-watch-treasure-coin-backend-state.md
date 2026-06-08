@@ -393,9 +393,26 @@
 - `Claim` validates `userID`, `tier`, and today threshold before calling `dao.ClaimTx`; duplicate claim propagates `dao.ErrAlreadyClaimed`.
 - `UserBalance/user_balances` was not touched.
 
+**Quality Review Fix - 2026-06-09**
+
+- Review issue P1: `Heartbeat` used non-atomic Redis `GET -> SET -> dao.AddWatchSeconds`; concurrent same-user heartbeats could all observe `redis.Nil` or the same old timestamp and multiply one 30s watch window into `N*30s`.
+- Review issue P2: heartbeat Redis key only contained `userID`; a heartbeat around business-day rollover could reuse the previous day's timestamp while writing elapsed seconds into the new `stat_date`. `Heartbeat` also took separate clock snapshots for delta and `businessStatDate()`.
+- Fix: replaced Redis read/write sequence with Lua `EVAL` that atomically reads the old timestamp, computes `delta = cap` for missing old value or `min(max(now-last,0),cap)` for existing value, writes `SET key now EX ttl`, and returns only the delta to persist through `dao.AddWatchSeconds`.
+- Fix: `Heartbeat` now takes one `now := auctionBusinessNow()`, derives `statDate := now.In(auctionBusinessLocation).Format("2006-01-02")`, passes that date to DAO, and uses `heartbeatKey(userID, statDate)` formatted as `treasure:hb:<userID>:<statDate>`.
+- RED: `cd backend/auction && go test ./service/ -run 'TestTreasureService_Heartbeat_(ConcurrentFirstBeatDoesNotMultiplyWindow|Key_IncludesStatDate)' -v -count=1` failed with concurrent first beat accumulating `600s > 30s`.
+- RED: `cd backend/auction && go test ./service/ -run TestTreasureService_HeartbeatKey_IncludesStatDate -v -count=1` failed because key was `treasure:hb:100` and did not contain `2026-06-09`.
+- GREEN: `cd backend/auction && go test ./service/ -run TestTreasureService -v -count=1` passed; 11 `TestTreasureService` tests pass.
+- GREEN: `cd backend/auction && go test ./service ./dao` passed; `auction-service/service` and `auction-service/dao` pass.
+- Regression sentinel: `TestTreasureService_Heartbeat_ConcurrentFirstBeatDoesNotMultiplyWindow` catches rollback from Redis Lua/CAS to non-atomic `GET -> SET` by proving 20 concurrent first heartbeats do not exceed one cap window.
+- Regression sentinel: `TestTreasureService_HeartbeatKey_IncludesStatDate` catches rollback to cross-day shared key by requiring `treasure:hb:<userID>:<statDate>`.
+- Modified files: `backend/auction/service/treasure.go`, `backend/auction/service/treasure_test.go`, `docs/superpowers/sdd/runs/2026-06-09-2026-06-09-watch-treasure-coin-backend-state.md`.
+- Planned commit message: `fix(treasure): make heartbeat accrual atomic per day`.
+- Actual commit: `pending; to be filled after git commit creates the hash`.
+
 **Risks / Blockers**
 
-- `none`
+- `Heartbeat` depends on Redis Lua support; miniredis and Redis support `EVAL`, but deployments must not disable scripting.
+- `businessStatDate()` remains used by `GetStatus`/`Claim`; the review fix scope only required single-snapshot date derivation inside one `Heartbeat`.
 
 **Handoff**
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -30,15 +31,16 @@ func setupTreasureService(t *testing.T) (*TreasureService, *dao.TreasureDAO, *re
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	require.NoError(t, err)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	sqlDB.SetMaxOpenConns(1)
 	require.NoError(t, db.AutoMigrate(
 		&model.UserCoin{},
 		&model.UserWatchDuration{},
 		&model.TreasureClaim{},
 	))
 	t.Cleanup(func() {
-		if sqlDB, e := db.DB(); e == nil {
-			_ = sqlDB.Close()
-		}
+		_ = sqlDB.Close()
 	})
 
 	mr := miniredis.RunT(t)
@@ -62,6 +64,45 @@ func TestTreasureService_Heartbeat_FirstBeatRecords30s(t *testing.T) {
 	assert.Equal(t, 30, secs)
 }
 
+func TestTreasureService_Heartbeat_ConcurrentFirstBeatDoesNotMultiplyWindow(t *testing.T) {
+	svc, dd, _ := setupTreasureService(t)
+	ctx := context.Background()
+
+	const workers = 20
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	errs := make(chan error, workers)
+	wg.Add(workers)
+	for i := 0; i < workers; i++ {
+		go func() {
+			defer wg.Done()
+			<-start
+			_, err := svc.Heartbeat(ctx, 100)
+			errs <- err
+		}()
+	}
+
+	close(start)
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		require.NoError(t, err)
+	}
+	secs, err := dd.GetWatchSeconds(ctx, 100, businessStatDate())
+	require.NoError(t, err)
+	assert.LessOrEqual(t, secs, heartbeatCapSeconds)
+}
+
+func TestTreasureService_HeartbeatKey_IncludesStatDate(t *testing.T) {
+	const date = "2026-06-09"
+
+	key := heartbeatKey(100, date)
+
+	assert.Contains(t, key, date)
+	assert.Equal(t, fmt.Sprintf("treasure:hb:100:%s", date), key)
+}
+
 func TestTreasureService_Heartbeat_ShortIntervalDoesNotAddFullBeat(t *testing.T) {
 	svc, dd, rdb := setupTreasureService(t)
 	ctx := context.Background()
@@ -69,7 +110,7 @@ func TestTreasureService_Heartbeat_ShortIntervalDoesNotAddFullBeat(t *testing.T)
 	total, err := svc.Heartbeat(ctx, 100)
 	require.NoError(t, err)
 	require.Equal(t, 30, total)
-	require.NoError(t, rdb.Set(ctx, heartbeatKey(100), auctionBusinessNow().Add(10*time.Second).Unix(), 120*time.Second).Err())
+	require.NoError(t, rdb.Set(ctx, heartbeatKey(100, businessStatDate()), auctionBusinessNow().Add(10*time.Second).Unix(), 120*time.Second).Err())
 
 	total, err = svc.Heartbeat(ctx, 100)
 
@@ -87,7 +128,7 @@ func TestTreasureService_Heartbeat_CapsAt30sPerBeat(t *testing.T) {
 	total, err := svc.Heartbeat(ctx, 100)
 	require.NoError(t, err)
 	require.Equal(t, 30, total)
-	require.NoError(t, rdb.Set(ctx, heartbeatKey(100), auctionBusinessNow().Add(-500*time.Second).Unix(), 120*time.Second).Err())
+	require.NoError(t, rdb.Set(ctx, heartbeatKey(100, businessStatDate()), auctionBusinessNow().Add(-500*time.Second).Unix(), 120*time.Second).Err())
 
 	total, err = svc.Heartbeat(ctx, 100)
 
