@@ -109,6 +109,16 @@ assert_contains \
   'Skipping Docker-owned listener' \
   "deploy-dev.sh must explicitly skip Docker-owned port listeners when clearing published compose ports"
 
+assert_contains \
+  "$ROOT/scripts/start-local-backend.sh" \
+  'listener_pids_excluding_docker' \
+  "start-local-backend.sh stop must exclude Docker Desktop port proxy PIDs instead of killing the Docker engine"
+
+assert_contains \
+  "$ROOT/scripts/start-local-backend.sh" \
+  'Skipping Docker-owned backend listener' \
+  "start-local-backend.sh must explicitly skip Docker-owned backend port listeners"
+
 assert_not_contains \
   "$ROOT/scripts/start-local-backend.sh" \
   'nohup bash -lc' \

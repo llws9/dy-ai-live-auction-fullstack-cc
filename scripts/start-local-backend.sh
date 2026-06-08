@@ -27,6 +27,27 @@ port_owner() {
   lsof -nP -iTCP:"$port" -sTCP:LISTEN 2>/dev/null || true
 }
 
+is_docker_owned_pid() {
+  local pid=$1
+  local comm
+  comm="$(ps -p "$pid" -o comm= 2>/dev/null || true)"
+  [[ "$comm" == *com.docker* || "$comm" == *Docker* ]]
+}
+
+listener_pids_excluding_docker() {
+  local port=$1
+  local pid
+
+  while IFS= read -r pid; do
+    [[ -z "$pid" ]] && continue
+    if is_docker_owned_pid "$pid"; then
+      echo -e "${YELLOW}Skipping Docker-owned backend listener on port $port: $pid${NC}" >&2
+      continue
+    fi
+    echo "$pid"
+  done < <(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)
+}
+
 ensure_port_free() {
   local port=$1
   local service=$2
@@ -268,12 +289,12 @@ stop_service() {
 stop_backend_ports() {
   for port in 8080 8081 8082 8083; do
     local pids
-    pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
+    pids="$(listener_pids_excluding_docker "$port")"
     if [[ -n "$pids" ]]; then
       echo -e "${YELLOW}停止端口 $port 上的残留后端进程: $pids${NC}"
       kill $pids 2>/dev/null || true
       sleep 1
-      pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
+      pids="$(listener_pids_excluding_docker "$port")"
       if [[ -n "$pids" ]]; then
         kill -9 $pids 2>/dev/null || true
       fi
