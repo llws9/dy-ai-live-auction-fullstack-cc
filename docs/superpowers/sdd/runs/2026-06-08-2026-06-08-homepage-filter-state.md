@@ -42,7 +42,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `1` |
-| Last Updated | `2026-06-09 03:44` |
+| Last Updated | `2026-06-09 03:55` |
 
 ## Status Legend
 
@@ -74,7 +74,7 @@
 | `T003` | `后端 handler 解析筛选参数并透传` | `done` | `subagent-t003` | `W3` | `T002` | `GET /auctions query parsing and filter propagation` | `backend/auction/handler/auction.go; backend/auction/handler/auction_list.go` | `backend/auction/dao/auction.go; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd backend/auction && go build ./... && go test ./handler/ -v` | `none` |
 | `T004` | `前端 auctionApi.list 扩展查询参数` | `done` | `subagent-t004` | `W4` | `T003` | `H5 API client params` | `frontend/h5/src/services/api.ts` | `docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
 | `T005` | `前端价格底部抽屉组件 PriceFilterSheet` | `done` | `subagent-t005` | `W5` | `T004` | `bottom sheet component and styles` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css` | `frontend/h5/src/pages/Home/index.tsx; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx tsc --noEmit` | `none` |
-| `T006` | `前端 Home 集成筛选胶囊、状态与参数组装` | `changes_requested` | `subagent-t006` | `W6` | `T005` | `Home UI integration and interaction test` | `frontend/h5/src/pages/Home/index.tsx; frontend/h5/src/pages/Home/__tests__/Home.test.tsx` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css; frontend/h5/src/services/api.ts; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx -t '点击最热胶囊'` | `none` |
+| `T006` | `前端 Home 集成筛选胶囊、状态与参数组装` | `done` | `subagent-t006` | `W6` | `T005` | `Home UI integration and interaction test` | `frontend/h5/src/pages/Home/index.tsx; frontend/h5/src/pages/Home/__tests__/Home.test.tsx` | `frontend/h5/src/pages/Home/PriceFilterSheet.tsx; frontend/h5/src/pages/Home/Home.module.css; frontend/h5/src/services/api.ts; docs/superpowers/plans/2026-06-08-homepage-filter.md` | `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx -t '点击最热胶囊'` | `none` |
 | `T007` | `端到端验收与全量回归` | `pending` | `unassigned` | `W7` | `T006` | `verification only` | `docs/superpowers/sdd/runs/2026-06-08-2026-06-08-homepage-filter-state.md` | `STARTUP_GUIDE.md; frontend/h5/src/pages/Home/index.tsx; backend/auction` | `cd backend/auction && go test ./... && cd ../../frontend/h5 && npx jest` | `gateway-service; auction-service; h5 if browser verification runs` |
 
 ## Wave Plan
@@ -487,10 +487,10 @@
 
 | Key | Value |
 | --- | --- |
-| Status | `changes_requested` |
+| Status | `done` |
 | Owner | `subagent-t006` |
 | Started At | `2026-06-09 01:40` |
-| Completed At | `2026-06-09 03:44` |
+| Completed At | `2026-06-09 03:55` |
 | Branch | `feat/homepage-filter-sdd` |
 | Worktree | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-homepage-filter-sdd` |
 | Base Commit | `351a147089502bac70ae6d7ed5fafa4a303ab584` |
@@ -503,6 +503,9 @@
 - Red: add RTL test for clicking `最热`; expect failure because button does not exist.
 - Green: add `filterSort`, `filterPrice`, `priceSheetOpen`; render pills; pass list params; skip `sortAuctionsForHome` when hot.
 - Verify: targeted Home test and full Home test file.
+- T006-fix Red: add deferred-promise RTL regression for stale default request resolving after newer hot request; expect failure because stale list overwrites `热度结果` with `过期结果`.
+- T006-fix Green: add `auctionRequestSeqRef` guard in `fetchAuctions`; check request sequence before every post-await `setAuctions`, `setFavoriteLiveStreams`, and `setLoading(false)` in both auction and favorite branches.
+- T006-fix Verify: targeted stale-request test and full Home test file.
 
 **Write Set**
 
@@ -519,8 +522,10 @@
 **Regression Sentinels**
 
 - Automated sentinel: `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx -t '点击最热胶囊'`
+- Automated stale-request sentinel: `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx -t '忽略过期的筛选请求'`
 - Manual fallback: visual/browser check in T007
 - Rollback behavior caught: hot pill disappears, does not call list with `sort=hot`, or client-side sorting overrides backend hot order.
+- Stale rollback behavior caught: old default/favorite/list request resolving after a newer filter request can no longer overwrite the latest Home view.
 
 **Verification Evidence**
 
@@ -530,6 +535,9 @@
 | `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx -t '点击最热胶囊'` | Green: clicking hot pill calls `auctionApi.list` with `sort: 'hot'` | `PASS`; `1 passed, 26 skipped`; exit `0` | `pass` |
 | `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx` | Full Home regression passes | `PASS`; `27 passed`; exit `0` | `pass` |
 | `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx -t '已结束且无人中标|点击最热胶囊|点击分类 tab'` | Focused regression after dependency narrowing passes | `PASS`; `3 passed, 24 skipped`; exit `0` | `pass` |
+| `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx -t '忽略过期的筛选请求'` | T006-fix Red: stale default request must fail before sequence guard | `FAIL`; rendered `过期结果` and could not find heading `热度结果`; exit `1` | `red_confirmed` |
+| `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx -t '忽略过期的筛选请求'` | T006-fix Green: stale default request is ignored after newer hot request resolves | `PASS`; `1 passed, 27 skipped`; exit `0` | `pass` |
+| `cd frontend/h5 && npx jest src/pages/Home/__tests__/Home.test.tsx` | T006-fix full Home regression passes | `PASS`; `28 passed`; exit `0` | `pass` |
 
 **Modified Files**
 
@@ -540,6 +548,7 @@
 **Commits**
 
 - `2bb05b10b7d06dbac3f54f0318af14de83334f89` - `feat(h5): integrate filter pills and price sheet into Home`
+- `f27a392bc52882c44c53fc4c4fb720a316c791d5` - `fix(h5): ignore stale Home auction requests`
 
 **Review Notes**
 
@@ -549,11 +558,12 @@
 - Narrowed `fetchAuctions` dependency from the whole `categories` array to primitive `activeCategoryId`; this removed a default-tab refetch/loading race exposed by full Home regression.
 - Spec review: approved; Task 6 UI/params/sorting integration requirements met.
 - Code quality review: changes_requested; stale response guard missing, old filter/list request can overwrite newer view. Add request id/abort guard and regression test before T007.
+- T006-fix: changes_requested resolved; deferred-promise regression reproduces stale overwrite, and `fetchAuctions` now invalidates older requests via request sequence before any post-await Home list/favorite/loading state write.
 
 **Risks / Blockers**
 
-- H5 typecheck was not rerun because current branch has known task-external baseline failures (`LiveChat` implicit any and missing `zustand`); no changes were made to those files.
-- Runtime/browser verification not performed in T006; covered by T007 if local services are started.
+- H5 typecheck remains outside T006-fix verification because current branch has known task-external baseline failures (`LiveChat` implicit any and missing `zustand`); no changes were made to those files.
+- Runtime/browser verification not performed in T006-fix; covered by T007 if local services are started.
 
 **Handoff**
 
