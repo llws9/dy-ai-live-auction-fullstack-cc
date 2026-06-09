@@ -2,15 +2,13 @@
 
 .overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background-color: var(--bg-overlay, rgba(0, 0, 0, 0.6));
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 0 32px;
   animation: fadeIn var(--transition-fast, 0.2s) ease-out forwards;
 }
 
@@ -19,12 +17,15 @@
 }
 
 .modal {
-  background: var(--bg-surface);
-  border-radius: var(--radius-card, 16px);
-  width: 85%;
+  position: relative;
+  width: 100%;
   max-width: 320px;
-  overflow: hidden;
+  padding: 32px 24px 24px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 24px;
   box-shadow: var(--shadow-key);
+  text-align: center;
   animation: slideUp var(--transition-fast, 0.2s) ease-out forwards;
 }
 
@@ -33,64 +34,74 @@
 }
 
 .header {
-  padding: var(--spacing-5, 20px) var(--spacing-4, 16px) var(--spacing-2, 8px);
+  padding: 0;
   text-align: center;
 }
 
 .iconWrapper {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto var(--spacing-3, 12px);
-  background: var(--icon-tile-bg);
-  color: var(--text-brand);
+  position: absolute;
+  top: -32px;
+  left: 50%;
+  width: 64px;
+  height: 64px;
+  transform: translateX(-50%);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full, 9999px);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
-  animation: pulse 2s infinite;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.10);
+}
+
+.cameraIcon {
+  width: 32px;
+  height: 32px;
+  display: block;
 }
 
 .title {
-  font-size: var(--font-size-lg, 18px);
-  font-weight: var(--font-weight-bold, 700);
+  font-size: 20px;
+  font-weight: var(--font-weight-semibold, 600);
   color: var(--text-primary, #171717);
-  margin: 0;
+  margin: 16px 0 8px;
 }
 
 .content {
-  padding: 0 var(--spacing-4, 16px) var(--spacing-5, 20px);
+  padding: 0;
   text-align: center;
 }
 
 .message {
   font-size: var(--font-size-sm, 14px);
   color: var(--text-secondary, #525252);
-  margin: 0 0 var(--spacing-4, 16px);
+  margin: 0 0 24px;
   line-height: 1.5;
 }
 
 .streamInfo {
   display: flex;
   align-items: center;
-  gap: var(--spacing-3, 12px);
-  background: var(--surface-muted);
-  padding: var(--spacing-3, 12px);
-  border-radius: var(--radius-md, 8px);
+  gap: 12px;
+  background: var(--item-subtle-bg);
+  padding: 12px;
+  border-radius: 16px;
   text-align: left;
+  margin-bottom: 24px;
 }
 
 .streamAvatar {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: var(--radius-full, 9999px);
   object-fit: cover;
   background: var(--item-subtle-bg);
+  flex-shrink: 0;
 }
 
 .streamAvatarFallback {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: var(--radius-full, 9999px);
   display: inline-flex;
   align-items: center;
@@ -108,8 +119,8 @@
 }
 
 .streamName {
-  font-size: var(--font-size-sm, 14px);
-  font-weight: var(--font-weight-semibold, 600);
+  font-size: 15px;
+  font-weight: var(--font-weight-medium, 500);
   color: var(--text-primary, #171717);
   margin: 0 0 4px;
   white-space: nowrap;
@@ -119,7 +130,7 @@
 
 .streamStatus {
   font-size: var(--font-size-xs, 12px);
-  color: var(--color-success-600, #16a34a);
+  color: var(--color-success-500, #22c55e);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -136,23 +147,24 @@
 
 .footer {
   display: flex;
-  border-top: 1px solid var(--border-subtle);
+  gap: 12px;
+  border-top: 0;
 }
 
 .button {
   flex: 1;
-  padding: var(--spacing-3, 12px) 0;
-  font-size: var(--font-size-base, 16px);
-  font-weight: var(--font-weight-medium, 500);
+  padding: 12px 0;
   border: none;
-  background: transparent;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: var(--font-weight-medium, 500);
   cursor: pointer;
-  transition: background var(--transition-fast, 0.2s);
+  transition: transform var(--transition-fast, 0.2s), background var(--transition-fast, 0.2s), box-shadow var(--transition-fast, 0.2s);
 }
 
 .buttonCancel {
   color: var(--text-secondary, #525252);
-  border-right: 1px solid var(--border-subtle);
+  background: var(--item-subtle-bg);
 }
 
 .buttonCancel:active {
@@ -160,11 +172,17 @@
 }
 
 .buttonConfirm {
-  color: var(--text-brand);
+  color: var(--text-inverse, #fff);
+  background: var(--gradient-primary);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.30);
 }
 
 .buttonConfirm:active {
-  background: var(--icon-tile-bg);
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.24);
+}
+
+.button:active {
+  transform: scale(0.98);
 }
 
 /* Animations */
@@ -188,14 +206,20 @@
   to { opacity: 0; transform: translateY(20px) scale(0.95); }
 }
 
-@keyframes pulse {
-  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); }
-  70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(249, 115, 22, 0); }
-  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+@keyframes pulseDot {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.70); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
 }
 
-@keyframes pulseDot {
-  0% { opacity: 1; }
-  50% { opacity: 0.4; }
-  100% { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .modal,
+  .liveDot {
+    animation: none;
+  }
+
+  .button {
+    transition: none;
+  }
 }

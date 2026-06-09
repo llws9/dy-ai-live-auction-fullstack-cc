@@ -92,7 +92,49 @@ const LiveReminderModal: React.FC<LiveReminderModalProps> = ({ isOpen, onClose, 
       >
         <div className={styles.header}>
           <div className={styles.iconWrapper}>
-            🎥
+            <svg
+              className={styles.cameraIcon}
+              data-testid="live-reminder-camera-icon"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              <defs>
+                <linearGradient
+                  id="live-reminder-camera-gradient"
+                  x1="0"
+                  y1="0"
+                  x2="24"
+                  y2="24"
+                  gradientUnits="userSpaceOnUse"
+                >
+                  <stop offset="0" stopColor="var(--color-primary-500)" />
+                  <stop offset="1" stopColor="var(--color-primary-600)" />
+                </linearGradient>
+              </defs>
+              <path
+                d="m22 8-6 4 6 4V8Z"
+                stroke="url(#live-reminder-camera-gradient)"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <rect
+                width="14"
+                height="12"
+                x="2"
+                y="6"
+                rx="2"
+                ry="2"
+                stroke="url(#live-reminder-camera-gradient)"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </div>
           <h3 id="live-reminder-title" className={styles.title}>直播开播提醒</h3>
         </div>
