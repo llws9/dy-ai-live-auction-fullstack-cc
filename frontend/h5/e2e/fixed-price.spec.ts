@@ -1,6 +1,8 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 import { mockToken, mockUser, seedAuthenticatedUser } from './utils/new-ui-fixtures';
 
+const defaultAuctionCover = '/assets/default-auction-cover.svg';
+
 const auction = {
   id: 101,
   product_id: 201,
@@ -15,9 +17,7 @@ const auction = {
     name: '星河钻石腕表',
     category_name: '珠宝腕表',
     description: '一口价 E2E 直播间主拍商品',
-    images: [
-      'https://copilot-cn.bytedance.net/api/ide/v1/text_to_image?prompt=luxury%20diamond%20watch%20auction%20livestream%2C%20realistic%20product%20photo&image_size=landscape_4_3',
-    ],
+    images: [defaultAuctionCover],
     rules: { start_price: 12000, increment: 100, cap_price: 50000, trigger_delay_before: 30 },
   },
 };
@@ -32,7 +32,7 @@ const fixedPriceItem = {
   product_brief: {
     id: 5001,
     title: '一口价翡翠手串',
-    cover_image: 'https://copilot-cn.bytedance.net/api/ide/v1/text_to_image?prompt=jade%20bracelet%20on%20auction%20table%2C%20realistic%20product%20photo&image_size=square',
+    cover_image: defaultAuctionCover,
   },
 };
 

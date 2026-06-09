@@ -42,7 +42,8 @@ describe('BidDock', () => {
     const image = screen.getByRole('img', { name: '明代紫砂壶' }) as HTMLImageElement;
     fireEvent.error(image);
 
-    expect(image.src).toContain('/api/ide/v1/text_to_image');
+    expect(image).toHaveAttribute('src', '/assets/default-auction-cover.svg');
+    expect(image.src).not.toContain('copilot-cn.bytedance.net');
   });
 
   it('未登录点击出价触发登录引导而非打开抽屉', () => {

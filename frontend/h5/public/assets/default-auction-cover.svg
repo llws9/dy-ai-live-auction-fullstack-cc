@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480" role="img" aria-labelledby="title desc">
+  <title id="title">Default auction product cover</title>
+  <desc id="desc">Warm premium auction product placeholder with abstract jewelry and watch shapes.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff8ec"/>
+      <stop offset="0.5" stop-color="#f4e3c2"/>
+      <stop offset="1" stop-color="#241c17"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="38%" cy="30%" r="60%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.78"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#bg)"/>
+  <rect width="640" height="480" fill="url(#glow)"/>
+  <circle cx="450" cy="174" r="82" fill="#1d2433" opacity="0.9"/>
+  <circle cx="450" cy="174" r="55" fill="none" stroke="#c9a96e" stroke-width="12"/>
+  <circle cx="230" cy="252" r="68" fill="#2f7d6d" opacity="0.92"/>
+  <path d="M184 252c22-42 69-60 114-42-17 40-64 76-114 42Z" fill="#bce7d7" opacity="0.85"/>
+  <path d="M116 357h408" stroke="#7b5b2d" stroke-width="18" stroke-linecap="round" opacity="0.38"/>
+  <text x="320" y="410" text-anchor="middle" font-family="Inter, PingFang SC, Arial, sans-serif" font-size="34" font-weight="700" fill="#6f4f20">AUCTION</text>
+</svg>

@@ -124,8 +124,8 @@ func TestSDK_CreateProductAsAddsDefaultImageWhenMissing(t *testing.T) {
 	if len(captured.Images) != 1 {
 		t.Fatalf("default image count: want 1, got %d (%#v)", len(captured.Images), captured.Images)
 	}
-	if !strings.Contains(captured.Images[0], "text_to_image") {
-		t.Fatalf("default image should use generated website image URL, got %q", captured.Images[0])
+	if captured.Images[0] != "/assets/default-auction-cover.svg" {
+		t.Fatalf("default image should use same-origin H5 asset, got %q", captured.Images[0])
 	}
 	if captured.CategoryID == nil || *captured.CategoryID != DefaultFixtureProductCategoryID {
 		t.Fatalf("default category_id: want %d, got %v", DefaultFixtureProductCategoryID, captured.CategoryID)
