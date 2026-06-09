@@ -924,9 +924,9 @@
 .heatMarqueeContainer {
   width: 100%;
   overflow: hidden;
-  background: rgba(0,0,0,0.4);
-  padding: 4px 8px;
-  border-radius: 4px;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
   margin-top: 8px;
   display: flex;
 }

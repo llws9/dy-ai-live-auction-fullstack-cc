@@ -10,7 +10,7 @@ interface BidHeatBarProps {
 const HEAT_VIEW = {
   calm: {
     label: '战况冷静',
-    value: 24,
+    value: 100,
   },
   warming: {
     label: '战况升温',
@@ -27,7 +27,7 @@ export const BidHeatBar = ({ level, bidderCount, viewerCount }: BidHeatBarProps)
 
   return (
     <section
-      className={`${styles.bidHeatBar} ${styles[level]}`}
+      className={[styles.bidHeatBar, styles[level]].filter(Boolean).join(' ')}
       data-testid="bid-heat-bar"
       aria-label="竞拍战况热度"
     >
@@ -43,7 +43,7 @@ export const BidHeatBar = ({ level, bidderCount, viewerCount }: BidHeatBarProps)
         aria-valuemax={100}
         aria-valuenow={view.value}
       >
-        <span className={styles.fill} style={{ transform: `scaleX(${view.value / 100})` }} />
+        <span data-testid="bid-heat-fill" className={styles.fill} style={{ transform: `scaleX(${view.value / 100})` }} />
         {level === 'blazing' && <span className={styles.shimmer} aria-hidden="true" />}
       </div>
       <div className={styles.stats}>

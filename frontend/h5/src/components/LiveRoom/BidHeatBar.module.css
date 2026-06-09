@@ -3,8 +3,8 @@
   --heat-accent-strong: var(--color-info-600);
   --heat-glow: color-mix(in srgb, var(--heat-accent) 28%, transparent);
   display: grid;
-  gap: 8px;
-  padding: 12px 14px;
+  gap: 4px;
+  padding: 6px 10px;
   border: 1px solid color-mix(in srgb, var(--heat-accent) 42%, transparent);
   border-radius: var(--radius-xl);
   background:
@@ -51,7 +51,7 @@
 
 .meter {
   position: relative;
-  height: 8px;
+  height: 6px;
   border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--text-inverse) 18%, transparent);
   overflow: hidden;

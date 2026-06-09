@@ -119,6 +119,15 @@ describe('Live layout css', () => {
     expect(rankingBlockCss).toContain('padding: 16px;');
   });
 
+  it('lets the bid heat bar own its visual surface without an outer gray shell', () => {
+    const css = readLiveCss();
+    const heatMarqueeContainerCss = getClassBlock(css, 'heatMarqueeContainer');
+
+    expect(heatMarqueeContainerCss).toContain('background: transparent;');
+    expect(heatMarqueeContainerCss).toContain('padding: 0;');
+    expect(heatMarqueeContainerCss).toContain('border-radius: 0;');
+  });
+
   it('keeps the online viewers pill compact without a close affordance', () => {
     const css = readLiveCss();
     const viewersRowCss = getClassBlock(css, 'viewersRow');

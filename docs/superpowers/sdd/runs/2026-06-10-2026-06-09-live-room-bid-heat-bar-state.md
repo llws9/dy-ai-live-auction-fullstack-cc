@@ -42,7 +42,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-10 03:12` |
+| Last Updated | `2026-06-10 04:20` |
 
 ## Status Legend
 
@@ -110,6 +110,8 @@
 - `frontend/h5/src/components/LiveRoom/BidHeatBar.module.css`
 - `frontend/h5/src/components/LiveRoom/__tests__/BidHeatBar.test.tsx`
 - `frontend/h5/src/pages/Live/LiveRoomSlide.tsx`
+- `frontend/h5/src/pages/Live/Live.module.css`
+- `frontend/h5/src/pages/Live/__tests__/LiveLayoutCss.test.ts`
 - `docs/superpowers/sdd/runs/2026-06-10-2026-06-09-live-room-bid-heat-bar-state.md`
 
 **Read Set**
@@ -147,6 +149,11 @@
 | `cd frontend/h5 && npm run build` | production build passes after review fix | `tsc && vite build` passed, 149 modules transformed | `pass` |
 | `rg "#[0-9a-fA-F]{3,8}\\b" frontend/h5/src/components/LiveRoom/BidHeatBar.module.css` | no HEX in `BidHeatBar.module.css` | no matches found | `pass` |
 | `rg "heatMarqueeContainer\|<BidHeatBar" frontend/h5/src/pages/Live/LiveRoomSlide.tsx` | `BidHeatBar` wrapped by old container | `heatMarqueeContainer` line followed by `<BidHeatBar` | `pass` |
+| `cd frontend/h5 && npm test -- BidHeatBar.test.tsx LiveLayoutCss.test.ts` | RED for post-review UI tuning | failed on calm meter `24`, outer gray shell, and thick component CSS | `pass_red` |
+| `cd frontend/h5 && npm test -- BidHeatBar.test.tsx LiveLayoutCss.test.ts` | post-review UI tuning tests pass | 2 suites passed, 19 tests passed | `pass` |
+| `cd frontend/h5 && npm run build` | production build after post-review UI tuning | `tsc && vite build` passed, 149 modules transformed | `pass` |
+| `cd frontend/h5 && npm test -- BidHeatBar.test.tsx LiveLayoutCss.test.ts LiveRoomSlide.test.tsx` | broader A1 live-room regression after tuning | 3 suites passed, 57 tests passed | `pass` |
+| `git diff --check` | no whitespace errors | passed | `pass` |
 
 **Runtime Source Evidence**
 
@@ -162,6 +169,8 @@
 - `frontend/h5/src/components/LiveRoom/BidHeatBar.module.css`
 - `frontend/h5/src/components/LiveRoom/__tests__/BidHeatBar.test.tsx`
 - `frontend/h5/src/pages/Live/LiveRoomSlide.tsx`
+- `frontend/h5/src/pages/Live/Live.module.css`
+- `frontend/h5/src/pages/Live/__tests__/LiveLayoutCss.test.ts`
 - `docs/superpowers/sdd/runs/2026-06-10-2026-06-09-live-room-bid-heat-bar-state.md`
 
 **Integration Check**
@@ -177,6 +186,7 @@
 
 **Review Notes**
 
+- Post-review UI tuning: removed the outer `heatMarqueeContainer` gray shell, slimmed `BidHeatBar` vertical density, made calm state keep a full-length meter, and removed the accidental `undefined` class from the rendered section.
 - Main-agent final review: verified no hardcoded HEX in `BidHeatBar.module.css`; verified `BidHeatBar` remains inside `styles.heatMarqueeContainer`; reran targeted tests and H5 build successfully.
 - Main-agent review requested changes: replace hardcoded CSS colors in `BidHeatBar.module.css` with existing H5 design tokens (`--color-*`, `--bg-*`, `--surface-*`, `--text-*`); preserve old heat marquee layout position by wrapping `BidHeatBar` with `styles.heatMarqueeContainer` or otherwise explicitly retaining equivalent spacing semantics.
 - Fix pass started `2026-06-10`: adding regression tests before implementation for token-only CSS and preserved `heatMarqueeContainer` wrapper.
