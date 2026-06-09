@@ -228,7 +228,13 @@ html[data-theme="light"] .liveux-stage::before{background:
 .glitch-count{position:absolute;z-index:2;left:50%;top:46%;transform:translate(-50%,-50%);font-family:var(--disp);font-size:76px;font-weight:700;color:var(--coral);text-shadow:-3px 0 var(--teal),3px 0 var(--violet);animation:glitchFloat 1.6s ease-in-out infinite}
 .liveux-dock{position:absolute;z-index:2;left:14px;right:14px;bottom:16px;border-radius:20px;border:1px solid rgba(255,255,255,.14);background:rgba(15,17,24,.78);backdrop-filter:blur(18px);padding:14px;color:#fff}
 .lead-capsule{display:inline-flex;align-items:center;gap:7px;margin-bottom:9px;padding:5px 10px;border-radius:999px;background:rgba(255,179,71,.18);color:var(--amber);font-size:11px;font-family:var(--mono);border:1px solid rgba(255,179,71,.34)}
-.dock-row{display:flex;align-items:center;justify-content:space-between;gap:12px}.dock-price{font-family:var(--disp);font-size:26px;font-weight:700;color:#fff}.dock-heat{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.66);white-space:nowrap;overflow:hidden}
+.dock-row{display:flex;align-items:center;justify-content:space-between;gap:12px}.dock-price{font-family:var(--disp);font-size:26px;font-weight:700;color:#fff}
+.dock-heatbar{position:relative;margin-top:4px;width:178px;height:24px;border-radius:999px;overflow:hidden;border:1px solid rgba(255,179,71,.26);background:rgba(255,255,255,.07);box-shadow:inset 0 0 18px rgba(255,255,255,.04),0 0 18px rgba(255,59,92,.10);font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.88);display:flex;align-items:center;justify-content:space-between;padding:0 9px}
+.dock-heatbar::before{content:"";position:absolute;inset:0;transform-origin:left;transform:scaleX(.66);background:linear-gradient(90deg,rgba(255,179,71,.82),rgba(255,59,92,.88),rgba(255,107,130,.74));border-radius:999px;filter:drop-shadow(0 0 12px rgba(255,59,92,.35));animation:heatPulse 1.9s ease-in-out infinite}
+.dock-heatbar::after{content:"";position:absolute;inset:-48% -30%;background:linear-gradient(110deg,transparent 34%,rgba(255,255,255,.44) 48%,transparent 62%);transform:translateX(-72%);animation:heatSweep 2.4s ease-in-out infinite;opacity:.42}
+.dock-heatbar span{position:relative;z-index:2;text-shadow:0 1px 8px rgba(0,0,0,.38);white-space:nowrap}
+.dock-heatbar .heat-level{font-weight:700;letter-spacing:.02em;color:#fff}
+.dock-heatbar .heat-meta{color:rgba(255,255,255,.72);transform:scale(.92);transform-origin:right center}
 .quick-chat{margin-top:11px;display:flex;gap:7px;overflow:hidden}.quick-chat span{font-size:10px;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.12);white-space:nowrap}
 .liveux-points{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 .liveux-points .fcard{margin:0}.liveux-points .ic{color:var(--teal)}
@@ -236,6 +242,8 @@ html[data-theme="light"] .liveux-stage::before{background:
 @keyframes floatIn{0%,100%{transform:translateX(0);opacity:.9}50%{transform:translateX(18px);opacity:1}}
 @keyframes heartPop{0%{transform:scale(.5) translateY(12px);opacity:0}35%{opacity:1}100%{transform:scale(1.25) translateY(-54px);opacity:0}}
 @keyframes glitchFloat{0%{opacity:0;transform:translate(-50%,8%) scale(.72)}35%{opacity:1;transform:translate(-50%,-50%) scale(1)}70%{opacity:1;filter:none}100%{opacity:0;transform:translate(-50%,-58%) scale(1.08);filter:blur(6px)}}
+@keyframes heatPulse{50%{filter:drop-shadow(0 0 18px rgba(255,59,92,.55));transform:scaleX(.72)}}
+@keyframes heatSweep{0%,18%{transform:translateX(-72%)}72%,100%{transform:translateX(72%)}}
 @keyframes skillShine{0%,18%{transform:translateX(-70%)}70%,100%{transform:translateX(70%)}}
 @media(prefers-reduced-motion:reduce){.liveux-stage *,.skill-demo *{animation:none!important}}
 .foot{padding:50px 0 70px;color:var(--text-3);font-size:13px;max-width:var(--maxw)}
@@ -379,6 +387,16 @@ html[data-theme="light"] .liveux-stage::before{background:
         <div class="fcard"><div class="ic">LD</div><h4>压测链路工程化</h4><p>执行器基于 <b>goroutine 池 + 连接池复用</b>，请求指标通过原子计数器和固定桶直方图聚合，实时产出 QPS/分位延迟/错误码分布，并经 WebSocket 节流回传前端。</p></div>
         <div class="fcard"><div class="ic">CH</div><h4>混沌测试可量化</h4><p>进程内 <code>RoundTripper</code> 注入 latency、jitter、error_rate、disconnect、redis_flap、mq_pause 等故障，输出三段曲线并量化检测延迟与恢复延迟。</p></div>
       </div>
+      <div class="fcard" style="margin-top:14px"><div class="ic">C1</div><h4>剧场模式：把混沌实验变成一键叙事</h4>
+        <p>测试平台不只提供手动填参和曲线展示，还沉淀了面向评审演示的剧场模式：一键跑 <code>baseline → inject → recover</code>，用阶段旁白解释系统正在经历什么，并把关键事件锚点叠加到韧性曲线上。</p>
+        <div class="flow" style="margin-top:14px">
+          <div class="fcell"><div class="fk">Script</div><div class="ft">一键剧本并存</div><div class="fd">保留手动模式，同时提供标准 error_rate 剧本；启动前复用现有 <code>startChaos</code> 与后端 <code>RecoverAll()</code> 前置恢复。</div></div>
+          <div class="farr">→</div>
+          <div class="fcell"><div class="fk">Narration</div><div class="ft">阶段旁白</div><div class="fd">基于 WS <code>step</code>、<code>progress</code> 与 <code>report</code> 生成“基线采集 / 故障注入 / 恢复中 / 实验完成”的可读字幕。</div></div>
+          <div class="farr">→</div>
+          <div class="fcell"><div class="fk">Evidence</div><div class="ft">锚点 + 指标卡</div><div class="fd"><code>ReferenceLine</code> 标出注入时刻、SLA 击穿、恢复拐点；指标卡补齐恢复耗时、峰值错误率与损失 QPS。</div></div>
+        </div>
+      </div>
       <div class="takeaway">这部分说明项目不是「功能做完就结束」，而是具备对复杂链路做回归验证和压力验证的能力。</div>
     </section>
 
@@ -465,7 +483,10 @@ html[data-theme="light"] .liveux-stage::before{background:
             <div class="dock-row">
               <div>
                 <div class="dock-price">¥12,800</div>
-                <div class="dock-heat">已有 8 人出价 · 1,246 人围观 · 即将结拍</div>
+                <div class="dock-heatbar" aria-label="战况热度条">
+                  <span class="heat-level">战况升温</span>
+                  <span class="heat-meta">8 出价 · 1.2k 围观</span>
+                </div>
               </div>
               <div class="liveux-pill">VIBE ON</div>
             </div>
@@ -485,6 +506,16 @@ html[data-theme="light"] .liveux-stage::before{background:
         <div class="pc p"><div class="pl">Problem</div><div class="pt">传统竞拍 UI 只给价格和按钮，用户需要自己推断“我领先吗”“还剩多久”“这场热不热”，最后几秒的决策成本过高。</div></div>
         <div class="pc s"><div class="pl">Solution</div><div class="pt">把领先状态、热度、倒计时、出价事件、社交反馈拆成互不抢焦点的视觉层；高频动效只用 <code>transform</code>/<code>opacity</code>，并支持 <code>prefers-reduced-motion</code> 降级。</div></div>
         <div class="pc v"><div class="pl">Value</div><div class="pt">体验从“能出价”升级为“看得懂局势、感受到氛围、知道何时行动”。这是前端交互能力，也是竞拍业务转化能力。</div></div>
+      </div>
+      <div class="fcard" style="margin-top:14px"><div class="ic">A1</div><h4>战况热度条：把出价频率变成可感知氛围</h4>
+        <p>正式功能不是新增一条主画面装饰，而是升级抽屉内原有 <code>heatMarqueeContainer</code>：用 <code>BidHeatBar</code> 接管“已有 N 人出价 · M 人围观”的位置，避免出现两个“热度”语义，也不破坏直播间主画面对齐约束。</p>
+        <div class="flow" style="margin-top:14px">
+          <div class="fcell"><div class="fk">Signals</div><div class="ft">三路事件喂入</div><div class="fd"><code>bid_placed</code>、本地 <code>handleBid</code> 成功分支、<code>sky_lamp_auto_bid</code> 均调用 <code>markBid()</code>，避免漏算自己出价和点天灯自动跟价。</div></div>
+          <div class="farr">→</div>
+          <div class="fcell"><div class="fk">Window</div><div class="ft">10s 滑动窗口</div><div class="fd">近 10 秒出价频率映射为 <code>calm / warming / blazing</code> 三档；无新出价时平滑回落，不做精确统计型去重。</div></div>
+          <div class="farr">→</div>
+          <div class="fcell"><div class="fk">Feedback</div><div class="ft">冷静 / 升温 / 白热</div><div class="fd">热度文案、填充比例、流光速度随档位变化；完整三版视觉评审过程保留在 <code>/ui-design-trio</code> 示例中。</div></div>
+        </div>
       </div>
       <div class="takeaway coral"><b>工程边界清晰：</b>交互优化主要收敛在 <code>LiveRoomSlide</code>、<code>BidDock</code>、<code>ChatPanel</code> 与独立动效组件内；不改 API/WS 契约，不新增外部依赖，日/夜主题继续走现有 token 体系。</div>
     </section>
