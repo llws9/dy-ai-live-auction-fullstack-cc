@@ -830,7 +830,7 @@ describe('LiveRoomSlide', () => {
     await waitFor(() => expect(screen.getByTestId('location-search')).not.toHaveTextContent('sheet'));
   });
 
-  it('shows an ended summary instead of the bid dock when an active-status auction has reached end_time', async () => {
+  it('shows a pending settlement summary when an active-status auction has reached end_time', async () => {
     mockedAuctionApi.get.mockResolvedValue({
       id: 5,
       product_id: 7,
@@ -857,7 +857,8 @@ describe('LiveRoomSlide', () => {
     renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
 
     expect(await screen.findByText('本场竞拍已结束')).toBeInTheDocument();
-    expect(screen.getByText('流拍')).toBeInTheDocument();
+    expect(screen.getByText('结算中...')).toBeInTheDocument();
+    expect(screen.queryByText('流拍')).not.toBeInTheDocument();
     expect(screen.queryByText(/成交价/)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: '查看竞拍结果' })).toHaveAttribute('href', '/result?id=5');
     expect(screen.queryByTestId('bid-dock')).not.toBeInTheDocument();
@@ -931,7 +932,7 @@ describe('LiveRoomSlide', () => {
     expect(screen.queryByText(/成交价/)).not.toBeInTheDocument();
   });
 
-  it('renders UnsoldAnimation as soon as the local countdown reaches zero without waiting for backend end event', async () => {
+  it('does not infer unsold state when the local countdown reaches zero before backend end event', async () => {
     jest.useFakeTimers();
     const baseNow = new Date('2026-06-06T00:00:00.000Z').getTime();
     let nowMs = baseNow;
@@ -959,8 +960,10 @@ describe('LiveRoomSlide', () => {
         jest.advanceTimersByTime(1000);
       });
 
-      expect(await screen.findByTestId('unsold-animation')).toBeInTheDocument();
-      expect(screen.getByText('流拍')).toBeInTheDocument();
+      expect(screen.queryByTestId('unsold-animation')).not.toBeInTheDocument();
+      expect(screen.getByText('结算中...')).toBeInTheDocument();
+      expect(screen.queryByText('流拍')).not.toBeInTheDocument();
+      expect(screen.queryByText(/成交价/)).not.toBeInTheDocument();
     } finally {
       dateNowSpy.mockRestore();
       jest.useRealTimers();

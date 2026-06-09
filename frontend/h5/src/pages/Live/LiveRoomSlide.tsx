@@ -240,8 +240,6 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const bidFlairHideTimerRef = useRef<number | null>(null);
   const currentPriceRef = useRef(0);
   const lastBidFlairKeyRef = useRef('');
-  const previousEndTimeStateRef = useRef({ auctionId: 0, reached: false });
-  const localUnsoldAnimationAuctionIdRef = useRef<number | null>(null);
   const wonAnimationDataRef = useRef<WonAnimationState>({
     productName: '竞拍商品',
     price: 0,
@@ -263,7 +261,20 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     return Math.max(0, Math.floor((new Date(auction.end_time).getTime() - now) / 1000));
   }, [auction?.end_time, now]);
   const hasReachedEndTime = Boolean(auction?.end_time && timeLeft <= 0);
-  const isConfirmedUnsold = (auction?.status === 3 || hasReachedEndTime) && winnerId <= 0;
+  const hasBackendEnded = auction?.status === 3;
+  const settlementState: 'pending' | 'sold' | 'unsold' | null = hasBackendEnded
+    ? winnerId > 0
+      ? 'sold'
+      : 'unsold'
+    : hasReachedEndTime
+      ? 'pending'
+      : null;
+  const isConfirmedUnsold = settlementState === 'unsold';
+  const endedSummaryText = settlementState === 'pending'
+    ? '结算中...'
+    : isConfirmedUnsold
+      ? '流拍'
+      : `成交价 ¥${formatMoney(currentPrice || startPrice)}`;
   const isActive = (auction?.status === 1 || auction?.status === 2) && !hasReachedEndTime;
   const effectiveLiveStreamId = liveStreamId || auction?.live_stream_id || liveStream?.id || 0;
   const effectiveAuctionId = currentAuctionId || auction?.id || urlAuctionId || 0;
@@ -280,7 +291,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const hostAvatar = liveStream?.host_avatar || liveStream?.avatar || '';
   const viewerCount = presence?.viewer_count ?? liveStream?.viewer_count ?? 0;
   const presenceViewers = useMemo(() => (presence?.viewers ?? []).slice(0, 3), [presence?.viewers]);
-  const hasEnded = auction?.status === 3 || hasReachedEndTime;
+  const hasEnded = hasBackendEnded || hasReachedEndTime;
   const myRankIndex = useMemo(
     () => (isAuthenticated ? ranking.findIndex((r) => r.user_id === user?.id) : -1),
     [isAuthenticated, ranking, user?.id],
@@ -679,26 +690,6 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, []);
-
-  useEffect(() => {
-    const auctionId = Number(auction?.id || 0);
-    const previousEndTimeState = previousEndTimeStateRef.current;
-    const crossedEndTime =
-      auctionId > 0 &&
-      hasReachedEndTime &&
-      previousEndTimeState.auctionId === auctionId &&
-      !previousEndTimeState.reached;
-
-    previousEndTimeStateRef.current = { auctionId, reached: hasReachedEndTime };
-
-    if (!crossedEndTime) return;
-    if (auction?.status === 3 || winnerId > 0) return;
-    if (ranking.length > 0 || currentPrice > startPrice) return;
-    if (localUnsoldAnimationAuctionIdRef.current === auctionId) return;
-
-    localUnsoldAnimationAuctionIdRef.current = auctionId;
-    setShowUnsoldAnimation(true);
-  }, [auction?.id, auction?.status, currentPrice, hasReachedEndTime, ranking.length, startPrice, winnerId]);
 
   useEffect(() => {
     if (!active) return;
@@ -1163,7 +1154,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           <span className={styles.endedEyebrow}>AUCTION CLOSED</span>
           <h1>本场竞拍已结束</h1>
           <p>{productName}</p>
-          <strong>{isConfirmedUnsold ? '流拍' : `成交价 ¥${formatMoney(currentPrice || startPrice)}`}</strong>
+          <strong>{endedSummaryText}</strong>
           <Link className={styles.endedResultButton} to={`/result?id=${auctionId}`}>
             查看竞拍结果
           </Link>

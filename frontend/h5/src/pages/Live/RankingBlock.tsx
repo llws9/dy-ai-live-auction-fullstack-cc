@@ -40,6 +40,13 @@ const RankingBlock: React.FC<RankingBlockProps> = ({
           const isSecond = index === 1;
           const isEmpty = !item;
           const isMe = isAuthenticated && item?.user_id === userId;
+          const displayName = item
+            ? isMe
+              ? isFirst
+                ? '我自己 (当前领先)'
+                : '我自己'
+              : item.user_name
+            : '虚位以待';
 
           return (
             <div
@@ -56,7 +63,7 @@ const RankingBlock: React.FC<RankingBlockProps> = ({
                   {index + 1}
                 </span>
                 <span className={`${styles.rankingName} ${isEmpty ? styles.rankingNameEmpty : ''} ${isMe ? styles.rankingNameMe : ''}`}>
-                  {item ? (isMe ? '我自己 (当前领先)' : item.user_name) : '虚位以待'}
+                  {displayName}
                 </span>
               </div>
               <strong className={`${styles.rankingAmount} ${isFirst && !isEmpty ? styles.rankingAmountFirst : ''} ${isEmpty ? styles.rankingAmountEmpty : ''} ${isMe && !isFirst ? styles.rankingAmountMe : ''}`}>
