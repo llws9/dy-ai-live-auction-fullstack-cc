@@ -16,12 +16,13 @@ import (
 
 // 业务错误（handler 据此映射 HTTP 状态码）。
 var (
-	ErrInvalidRequest  = errors.New("copywriting: invalid request")
-	ErrRateLimited     = errors.New("copywriting: rate limited")
-	ErrNotConfigured   = errors.New("copywriting: not configured")
-	ErrUpstreamFailed  = errors.New("copywriting: upstream failed")
-	ErrUpstreamTimeout = errors.New("copywriting: upstream timeout")
-	ErrInvalidOutput   = errors.New("copywriting: invalid llm output")
+	ErrInvalidRequest   = errors.New("copywriting: invalid request")
+	ErrRateLimited      = errors.New("copywriting: rate limited")
+	ErrNotConfigured    = errors.New("copywriting: not configured")
+	ErrUpstreamFailed   = errors.New("copywriting: upstream failed")
+	ErrUpstreamTimeout  = errors.New("copywriting: upstream timeout")
+	ErrImageUnavailable = errors.New("copywriting: image unavailable")
+	ErrInvalidOutput    = errors.New("copywriting: invalid llm output")
 )
 
 const (
@@ -88,6 +89,9 @@ func (s *CopywritingService) Generate(ctx context.Context, userID int64, req *Co
 		}
 		if errors.Is(err, sharedllm.ErrUpstreamTimeout) {
 			return nil, fmt.Errorf("%w: %v", ErrUpstreamTimeout, err)
+		}
+		if errors.Is(err, sharedllm.ErrImageUnavailable) {
+			return nil, fmt.Errorf("%w: %v", ErrImageUnavailable, err)
 		}
 		return nil, fmt.Errorf("%w: %v", ErrUpstreamFailed, err)
 	}

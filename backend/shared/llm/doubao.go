@@ -116,6 +116,9 @@ func (p *DoubaoProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatRespo
 	}
 	if resp.StatusCode >= 400 {
 		log.Printf("provider=doubao event=response_error category=client status=%d elapsed_ms=%d body=%q", resp.StatusCode, elapsed.Milliseconds(), snippet(respBody))
+		if isImageUnavailableError(respBody) {
+			return nil, fmt.Errorf("%w: status=%d body=%s", ErrImageUnavailable, resp.StatusCode, snippet(respBody))
+		}
 		return nil, fmt.Errorf("%w: status=%d body=%s", ErrUpstreamClient, resp.StatusCode, snippet(respBody))
 	}
 
@@ -142,4 +145,21 @@ func snippet(b []byte) string {
 		return string(b)
 	}
 	return string(b[:max]) + "..."
+}
+
+func isImageUnavailableError(b []byte) bool {
+	body := strings.ToLower(string(b))
+	patterns := []string{
+		"timeout while downloading url",
+		"download image",
+		"downloading image",
+		"image url",
+		"image_url",
+	}
+	for _, pattern := range patterns {
+		if strings.Contains(body, pattern) {
+			return true
+		}
+	}
+	return false
 }

@@ -123,6 +123,24 @@ func TestCopyHandler_Upstream_502(t *testing.T) {
 	}
 }
 
+func TestCopyHandler_ImageUnavailable_422(t *testing.T) {
+	svc := &stubCopySvc{err: service.ErrImageUnavailable}
+	h := setupCopyRouter(t, svc)
+	body := mustBody(t, service.CopywritingRequest{Images: []string{"https://encrypted-tbn0.gstatic.com/images?q=demo"}})
+	w := ut.PerformRequest(h.Engine, http.MethodPost, "/api/v1/products/ai/copywriting",
+		&ut.Body{Body: bytes.NewReader(body), Len: len(body)},
+		ut.Header{Key: "Content-Type", Value: "application/json"},
+		ut.Header{Key: "X-User-ID", Value: "100"},
+		ut.Header{Key: "X-User-Role", Value: "admin"},
+	)
+	if w.Result().StatusCode() != http.StatusUnprocessableEntity {
+		t.Fatalf("status want=422 got=%d body=%s", w.Result().StatusCode(), w.Result().Body())
+	}
+	if !bytes.Contains(w.Result().Body(), []byte("图片无法被 AI 服务访问")) {
+		t.Fatalf("body should explain image accessibility, got=%s", w.Result().Body())
+	}
+}
+
 func TestCopyHandler_NotConfigured_503(t *testing.T) {
 	svc := &stubCopySvc{err: service.ErrNotConfigured}
 	h := setupCopyRouter(t, svc)

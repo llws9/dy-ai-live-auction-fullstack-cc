@@ -129,6 +129,15 @@ func TestCopywriting_Generate_UpstreamFail_502(t *testing.T) {
 	}
 }
 
+func TestCopywriting_Generate_ImageUnavailable_422(t *testing.T) {
+	fp := &fakeProvider{err: sharedllm.ErrImageUnavailable}
+	svc := NewCopywritingService(fp, &fakeCategoryResolver{}, newRedis(t), "m")
+	_, err := svc.Generate(context.Background(), 1, &CopywritingRequest{Images: []string{"https://encrypted-tbn0.gstatic.com/images?q=demo"}})
+	if !errors.Is(err, ErrImageUnavailable) {
+		t.Fatalf("want ErrImageUnavailable, got %v", err)
+	}
+}
+
 func TestCopywriting_Generate_MissingCredentials_503(t *testing.T) {
 	fp := &fakeProvider{err: sharedllm.ErrMissingCredentials}
 	svc := NewCopywritingService(fp, &fakeCategoryResolver{}, newRedis(t), "m")

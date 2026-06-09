@@ -56,6 +56,8 @@ export function getCopywritingErrorMessage(error: CopywritingErrorLike): string 
       return '图片或关键词不符合要求，请检查后重试'
     case 403:
       return '当前账号没有使用 AI 文案的权限'
+    case 422:
+      return '图片无法被 AI 服务访问，请更换稳定公网图片 URL 后重试'
     case 429:
       return 'AI 使用过于频繁，请稍后再试'
     case 503:

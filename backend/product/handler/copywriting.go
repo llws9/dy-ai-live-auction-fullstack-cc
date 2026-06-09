@@ -69,6 +69,8 @@ func mapCopywritingError(c *app.RequestContext, err error) {
 		c.JSON(429, map[string]interface{}{"code": "rate_limited", "message": err.Error()})
 	case errors.Is(err, service.ErrNotConfigured):
 		c.JSON(503, map[string]interface{}{"code": "ai_not_configured", "message": "AI 服务未配置，请注入 ARK_API_KEY 后重启 product-service"})
+	case errors.Is(err, service.ErrImageUnavailable):
+		c.JSON(422, map[string]interface{}{"code": "image_unavailable", "message": "图片无法被 AI 服务访问，请更换稳定公网图片 URL 后重试"})
 	case errors.Is(err, service.ErrUpstreamTimeout):
 		c.JSON(504, map[string]interface{}{"code": "upstream_timeout", "message": err.Error()})
 	case errors.Is(err, service.ErrInvalidOutput):

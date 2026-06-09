@@ -141,6 +141,21 @@ func TestDoubao_Chat_4xx(t *testing.T) {
 	}
 }
 
+func TestDoubao_Chat_ImageDownloadTimeout(t *testing.T) {
+	_, p := newDoubaoTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = io.WriteString(w, `{"error":{"code":"InvalidParameter","message":"Timeout while downloading url: https://encrypted-tbn0.gstatic.com/images?q=demo"}}`)
+	})
+
+	_, err := p.Chat(context.Background(), &ChatRequest{Messages: []ChatMessage{{Role: "user"}}})
+	if err == nil || !errors.Is(err, ErrImageUnavailable) {
+		t.Fatalf("want ErrImageUnavailable, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "Timeout while downloading url") {
+		t.Fatalf("err should retain upstream reason, got %v", err)
+	}
+}
+
 func TestDoubao_Chat_5xx(t *testing.T) {
 	logs := captureLogs(t)
 	_, p := newDoubaoTestServer(t, func(w http.ResponseWriter, r *http.Request) {

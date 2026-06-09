@@ -10,6 +10,7 @@ var (
 	ErrUpstreamTimeout    = errors.New("llm upstream timeout")
 	ErrUpstreamClient     = errors.New("llm upstream client error")
 	ErrUpstreamServer     = errors.New("llm upstream server error")
+	ErrImageUnavailable   = errors.New("llm image unavailable")
 	ErrInvalidResponse    = errors.New("llm invalid response")
 	ErrMissingCredentials = errors.New("llm missing credentials")
 )

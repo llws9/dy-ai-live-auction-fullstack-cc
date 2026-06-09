@@ -55,6 +55,7 @@ describe('goodsEditAi helpers', () => {
 
   it('maps known API status codes to user-safe messages', () => {
     expect(getCopywritingErrorMessage({ status: 429 })).toBe('AI 使用过于频繁，请稍后再试')
+    expect(getCopywritingErrorMessage({ status: 422 })).toBe('图片无法被 AI 服务访问，请更换稳定公网图片 URL 后重试')
     expect(getCopywritingErrorMessage({ status: 503 })).toBe('AI 服务未配置，请联系管理员注入 ARK_API_KEY 后重启服务')
     expect(getCopywritingErrorMessage({ status: 504 })).toBe('AI 生成超时，请换一张更稳定的公网图片或稍后重试')
     expect(getCopywritingErrorMessage({ status: 502 })).toBe('AI 服务暂时不可用，请稍后重试或手动填写')
