@@ -425,6 +425,11 @@ assert_contains \
   'rebind_legacy_demo_user_ids' \
   "init-demo-users.sh must migrate legacy demo users from old ids to fixed ids"
 
+assert_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
+  'SET FOREIGN_KEY_CHECKS = 0' \
+  "init-demo-users.sh legacy id migration must handle immediate foreign-key checks while rebinding parent ids"
+
 assert_not_contains \
   "$ROOT/scripts/init-demo-users.sh" \
   'SET phone = NULL' \

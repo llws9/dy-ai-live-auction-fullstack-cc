@@ -171,6 +171,7 @@ INSERT INTO expected_demo_users VALUES
   (9104, '13800138003', 'admin@example.com');
 
 START TRANSACTION;
+SET FOREIGN_KEY_CHECKS = 0;
 
 UPDATE auctions a
 JOIN users u ON u.id = a.winner_id
@@ -213,6 +214,7 @@ SET u.id = e.id
 WHERE u.id <> e.id
   AND target.id IS NULL;
 
+SET FOREIGN_KEY_CHECKS = 1;
 COMMIT;
 SQL
 }
