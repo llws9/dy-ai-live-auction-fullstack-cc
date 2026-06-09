@@ -141,6 +141,8 @@
 | `cd frontend/test-dashboard && npm test -- Chaos.test.ts` | `main-agent final rerun after displayedReport narration fix` | `passed: 13 tests / 1 file` | `pass` |
 | `cd frontend/test-dashboard && npm run build` | `main-agent final build after displayedReport narration fix` | `passed: tsc && vite build; Vite emitted existing chunk-size warning only` | `pass` |
 | `git diff --check` | `no whitespace errors` | `passed` | `pass` |
+| `cd frontend/test-dashboard && npm test -- Chaos.test.ts` | `post-handoff visual label overlap regression` | `passed: 14 tests / 1 file` | `pass` |
+| `cd frontend/test-dashboard && npm run build` | `post-handoff visual label overlap build` | `passed: tsc && vite build; Vite chunk-size warning only` | `pass` |
 
 **Runtime Source Evidence**
 
@@ -169,6 +171,7 @@
 
 **Review Notes**
 
+- Post-handoff visual bugfix: chart ReferenceLine labels overlapped because long default labels shared the same chart layer. Fixed by using compact labels plus explicit label positions (`insideTopLeft`, `insideBottomLeft`, `insideTopRight`) and added regression test `builds compact non-overlapping ReferenceLine label props`. Browser screenshot evidence: `/var/folders/r4/sz9jkd_s4vx_yhrz1yn42cfm0000gn/T/trae/screenshots/chaos-theater-label-fix.png`.
 - Main-agent final review: changed narration input to `displayedReport` so terminal progress with live report can still produce closing narration before final poll report arrives; reran Chaos tests, build, and `git diff --check`.
 - Main-agent review requested changes: make selected方案三视觉更贴合。ReferenceLine labels must carry inline metrics (e.g. SLA peak error, recover duration/lost QPS) instead of plain `inject/SLA/recover`; new C1 styles/colors should prefer existing test-dashboard CSS variables (`--color-*`, `--radius-*`) instead of new hardcoded HEX where feasible.
 - Changes requested fixed: `buildReferenceLineLabels` now returns metric-bearing labels (`inject: t+0s`, `SLA: peak ...`, `recover: ... / -... QPS`); C1 new theater styles and chart colors are centralized in `theaterStyles` and use existing CSS variables.

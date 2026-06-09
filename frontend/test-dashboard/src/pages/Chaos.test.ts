@@ -5,6 +5,7 @@ import {
   buildDemoMetrics,
   buildNarration,
   buildReferenceLineLabels,
+  buildReferenceLineLabelProps,
   buildResilienceSeries,
   describeFaultImplementation,
   describeChaosStartButton,
@@ -157,11 +158,28 @@ describe('Chaos resilience presentation', () => {
         recoveryMs: 1400,
       }),
     ).toEqual({
-      inject: 'inject: t+0s',
-      sla: 'SLA: peak 60.0%',
-      recover: 'recover: 1400ms / -12.0 QPS',
+      inject: 'inject',
+      sla: 'peak 60.0%',
+      recover: 'recover 1400ms / -12.0QPS',
     });
-    expect(buildReferenceLineLabels({ recoveryMs: 1400 }).recover).toBe('recover: 1400ms / lost QPS -');
+    expect(buildReferenceLineLabels({ recoveryMs: 1400 }).recover).toBe('recover 1400ms / lost QPS -');
+  });
+
+
+
+  it('builds compact non-overlapping ReferenceLine label props', () => {
+    const labels = buildReferenceLineLabels({ peakErrorRatePct: 60, lostQps: 10.8, recoveryMs: 0 });
+    expect(labels).toEqual({
+      inject: 'inject',
+      sla: 'peak 60.0%',
+      recover: 'recover 0ms / -10.8QPS',
+    });
+
+    expect(buildReferenceLineLabelProps(labels)).toEqual({
+      inject: { value: 'inject', position: 'insideTopLeft', offset: 8, fill: 'var(--color-error-500)' },
+      sla: { value: 'peak 60.0%', position: 'insideBottomLeft', offset: 24, fill: 'var(--color-warn-500)' },
+      recover: { value: 'recover 0ms / -10.8QPS', position: 'insideTopRight', offset: 8, fill: 'var(--color-primary-500)' },
+    });
   });
 
   it('uses test-dashboard css variables for new theater styles and colors', () => {

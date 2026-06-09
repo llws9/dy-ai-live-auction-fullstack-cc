@@ -240,6 +240,13 @@ export interface ReferenceLineLabels {
   recover: string;
 }
 
+export interface ReferenceLineLabelProps {
+  value: string;
+  position: 'insideTopLeft' | 'insideBottomLeft' | 'insideTopRight';
+  offset: number;
+  fill: string;
+}
+
 export interface ChaosLifecycleState {
   running: boolean;
   testID?: string | null;
@@ -319,11 +326,34 @@ export function buildDemoMetrics(report?: Report | null): DemoMetrics {
 
 export function buildReferenceLineLabels(metrics?: DemoMetrics): ReferenceLineLabels {
   return {
-    inject: 'inject: t+0s',
-    sla: `SLA: peak ${pctFromNumber(metrics?.peakErrorRatePct)}`,
+    inject: 'inject',
+    sla: `peak ${pctFromNumber(metrics?.peakErrorRatePct)}`,
     recover: metrics?.lostQps == null
-      ? `recover: ${fmtMs(metrics?.recoveryMs)} / lost QPS -`
-      : `recover: ${fmtMs(metrics?.recoveryMs)} / -${fmtMetric(metrics.lostQps)} QPS`,
+      ? `recover ${fmtMs(metrics?.recoveryMs)} / lost QPS -`
+      : `recover ${fmtMs(metrics?.recoveryMs)} / -${fmtMetric(metrics.lostQps)}QPS`,
+  };
+}
+
+export function buildReferenceLineLabelProps(labels: ReferenceLineLabels): Record<keyof ReferenceLineLabels, ReferenceLineLabelProps> {
+  return {
+    inject: {
+      value: labels.inject,
+      position: 'insideTopLeft',
+      offset: 8,
+      fill: theaterStyles.errorColor,
+    },
+    sla: {
+      value: labels.sla,
+      position: 'insideBottomLeft',
+      offset: 24,
+      fill: theaterStyles.warnColor,
+    },
+    recover: {
+      value: labels.recover,
+      position: 'insideTopRight',
+      offset: 8,
+      fill: theaterStyles.primaryColor,
+    },
   };
 }
 
@@ -438,6 +468,7 @@ function ResilienceCurve({
   const series = useMemo(() => buildResilienceSeries(buckets), [buckets]);
   const spans = useMemo(() => buildPhaseSpans(series), [series]);
   const referenceLabels = useMemo(() => buildReferenceLineLabels(demoMetrics), [demoMetrics]);
+  const referenceLabelProps = useMemo(() => buildReferenceLineLabelProps(referenceLabels), [referenceLabels]);
 
   if (series.length === 0) return null;
 
@@ -480,13 +511,13 @@ function ResilienceCurve({
             <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
             <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
             {anchors?.injectIndex != null && (
-              <ReferenceLine yAxisId="left" x={anchors.injectIndex} stroke={theaterStyles.errorColor} strokeDasharray="4 4" label={referenceLabels.inject} />
+              <ReferenceLine yAxisId="left" x={anchors.injectIndex} stroke={theaterStyles.errorColor} strokeDasharray="4 4" label={referenceLabelProps.inject} />
             )}
             {anchors?.slaBreachIndex != null && (
-              <ReferenceLine yAxisId="left" x={anchors.slaBreachIndex} stroke={theaterStyles.warnColor} strokeDasharray="4 4" label={referenceLabels.sla} />
+              <ReferenceLine yAxisId="left" x={anchors.slaBreachIndex} stroke={theaterStyles.warnColor} strokeDasharray="4 4" label={referenceLabelProps.sla} />
             )}
             {anchors?.recoverIndex != null && (
-              <ReferenceLine yAxisId="left" x={anchors.recoverIndex} stroke={theaterStyles.primaryColor} strokeDasharray="4 4" label={referenceLabels.recover} />
+              <ReferenceLine yAxisId="left" x={anchors.recoverIndex} stroke={theaterStyles.primaryColor} strokeDasharray="4 4" label={referenceLabelProps.recover} />
             )}
             <Tooltip
               formatter={(value, name) => {
