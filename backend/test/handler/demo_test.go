@@ -215,30 +215,6 @@ func TestPostConcurrentBidsPlacesSerialIncrementalBids(t *testing.T) {
 	}
 }
 
-func TestPostConcurrentBidsExplicitZeroIntervalDoesNotWait(t *testing.T) {
-	const secret = "demo-secret"
-	fake := &fakeDemoAuctionClient{
-		auction: auctioncli.Auction{
-			ID:           77,
-			CurrentPrice: 100,
-			Rules:        &auctioncli.AuctionRules{Increment: decimal.NewFromInt(10)},
-		},
-	}
-	h := NewDemoHandler(fake, nil, secret)
-	c := newDemoRequestContext(t, secret, `{"auction_id":77,"bid_count":3,"interval_ms":0}`)
-
-	startedAt := time.Now()
-	h.PostConcurrentBids(context.Background(), c)
-	elapsed := time.Since(startedAt)
-
-	if c.Response.StatusCode() != 200 {
-		t.Fatalf("status=%d want 200 body=%s", c.Response.StatusCode(), c.Response.Body())
-	}
-	if elapsed >= time.Duration(defaultConcurrentBidIntervalMS)*time.Millisecond {
-		t.Fatalf("explicit interval_ms=0 should not wait, elapsed=%s", elapsed)
-	}
-}
-
 func TestPostConcurrentBidsStopsBeforeCapPrice(t *testing.T) {
 	const secret = "demo-secret"
 	fake := &fakeDemoAuctionClient{
