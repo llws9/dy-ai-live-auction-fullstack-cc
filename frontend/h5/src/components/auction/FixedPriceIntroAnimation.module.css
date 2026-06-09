@@ -1,9 +1,6 @@
 .container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: absolute;
+  inset: 0;
   z-index: 100;
   pointer-events: none;
 }
@@ -44,7 +41,7 @@
   }
   100% { 
     opacity: 0; 
-    transform: translate3d(calc(50vw - 80px), calc(60vh - 120px), 0) scale(0.2); 
+    transform: translate3d(var(--fly-to-x, 0px), var(--fly-to-y, 0px), 0) scale(0.2); 
   }
 }
 
