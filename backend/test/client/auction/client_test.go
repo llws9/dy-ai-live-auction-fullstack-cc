@@ -621,6 +621,25 @@ func TestSDK_GetAuctionParsesRuleIncrement(t *testing.T) {
 	}
 }
 
+func TestSDK_GetAuctionParsesRuleCapPrice(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"id":7,"status":1,"current_price":"150.50","rules":{"increment":"20.00","cap_price":"300.00"}}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	a, step := c.GetAuction(context.Background(), 7)
+	if !step.OK {
+		t.Fatalf("GetAuction failed: %s err=%v", step.Message, step.Err)
+	}
+	if a.Rules == nil {
+		t.Fatalf("rules must be parsed")
+	}
+	if got := a.Rules.CapPrice.StringFixed(2); got != "300.00" {
+		t.Fatalf("cap_price: want 300.00, got %s", got)
+	}
+}
+
 // TestSDK_WaitAuctionStarted 轮询直到 status >= 1（Ongoing）
 func TestSDK_WaitAuctionStarted(t *testing.T) {
 	var calls int32

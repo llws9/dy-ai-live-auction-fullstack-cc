@@ -69,7 +69,8 @@ func TestSDK_GetAuctionParsesRuleCapPrice(t *testing.T) {
 Run:
 
 ```bash
-go test ./backend/test/client/auction -run TestSDK_GetAuctionParsesRuleCapPrice -count=1
+cd backend/test
+go test ./client/auction -run TestSDK_GetAuctionParsesRuleCapPrice -count=1
 ```
 
 Expected: FAIL with compile error similar to `a.Rules.CapPrice undefined`.
@@ -91,7 +92,8 @@ type AuctionRules struct {
 Run:
 
 ```bash
-go test ./backend/test/client/auction -run 'TestSDK_GetAuctionParsesRule(Increment|CapPrice)|TestSDK_GetAuctionParsesStringCurrentPrice' -count=1
+cd backend/test
+go test ./client/auction -run 'TestSDK_GetAuctionParsesRule(Increment|CapPrice)|TestSDK_GetAuctionParsesStringCurrentPrice' -count=1
 ```
 
 Expected: PASS.
@@ -323,7 +325,8 @@ func TestPostConcurrentBidsReturnsBadRequestWhenAllFailed(t *testing.T) {
 Run:
 
 ```bash
-go test ./backend/test/handler -run 'TestPostConcurrentBids|TestPostFollowBid' -count=1
+cd backend/test
+go test ./handler -run 'TestPostConcurrentBids|TestPostFollowBid' -count=1
 ```
 
 Expected: FAIL with compile error `h.PostConcurrentBids undefined`.
@@ -529,7 +532,8 @@ func (h *DemoHandler) PostConcurrentBids(ctx context.Context, c *app.RequestCont
 Run:
 
 ```bash
-go test ./backend/test/handler -run 'TestPostConcurrentBids|TestPostFollowBid|TestComputeFollowBidAmount' -count=1
+cd backend/test
+go test ./handler -run 'TestPostConcurrentBids|TestPostFollowBid|TestComputeFollowBidAmount' -count=1
 ```
 
 Expected: PASS.
@@ -566,7 +570,8 @@ demo.POST("/auctions/shorten", demoHandler.PostShortenAuction)
 Run:
 
 ```bash
-go test ./backend/test/... -run 'TestPostConcurrentBids|TestSDK_GetAuctionParsesRuleCapPrice' -count=1
+cd backend/test
+go test ./... -run 'TestPostConcurrentBids|TestSDK_GetAuctionParsesRuleCapPrice' -count=1
 ```
 
 Expected: PASS.
@@ -895,7 +900,8 @@ git commit -m "feat: wire demo console concurrent bids"
 Run:
 
 ```bash
-go test ./backend/test/client/auction ./backend/test/handler -run 'TestSDK_GetAuctionParsesRuleCapPrice|TestPostConcurrentBids|TestPostFollowBid|TestComputeFollowBidAmount' -count=1
+cd backend/test
+go test ./client/auction ./handler -run 'TestSDK_GetAuctionParsesRuleCapPrice|TestPostConcurrentBids|TestPostFollowBid|TestComputeFollowBidAmount' -count=1
 ```
 
 Expected: PASS.
@@ -916,7 +922,8 @@ Expected: PASS.
 Run:
 
 ```bash
-go test ./backend/test/... -count=1
+cd backend/test
+go test ./... -count=1
 ```
 
 Expected: PASS.

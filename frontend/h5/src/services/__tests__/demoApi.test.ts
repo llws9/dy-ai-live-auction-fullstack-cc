@@ -3,6 +3,7 @@ import {
   createDemoMerchantAuction,
   rechargeDemoUser,
   shortenDemoAuction,
+  triggerConcurrentBids,
   triggerOtherSkyLamp,
   triggerFollowBid,
 } from '../demoApi';
@@ -154,6 +155,26 @@ describe('demoApi', () => {
     expect(JSON.parse(init.body as string)).toEqual({
       auction_id: 456,
       remaining_seconds: 10,
+    });
+  });
+
+  it('posts concurrent bids request to the demo endpoint with snake_case fields', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true, highest_amount: '160' }),
+    } as Response);
+    global.fetch = fetchMock;
+
+    await triggerConcurrentBids({ auctionId: 456, bidCount: 6, intervalMs: 80, increment: '10' });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/test/demo/concurrent-bids');
+    expect(JSON.parse(init.body as string)).toEqual({
+      auction_id: 456,
+      bid_count: 6,
+      interval_ms: 80,
+      increment: '10',
     });
   });
 });

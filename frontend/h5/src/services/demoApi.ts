@@ -10,6 +10,23 @@ export type TriggerFollowBidInput = {
   increment?: MoneyInput;
 };
 
+export type TriggerConcurrentBidsInput = {
+  auctionId: number;
+  bidCount?: number;
+  intervalMs?: number;
+  increment?: MoneyInput;
+};
+
+export type TriggerConcurrentBidsResponse = {
+  ok: boolean;
+  auction_id: number;
+  buyer_user_id?: number;
+  success_count: number;
+  failure_count: number;
+  highest_amount: string;
+  last_error?: string;
+};
+
 export type RechargeDemoUserInput = {
   userId: number;
   amount: MoneyInput;
@@ -101,6 +118,24 @@ export function triggerFollowBid(input: TriggerFollowBidInput) {
   }
 
   return postDemo('/follow-bid', body);
+}
+
+export function triggerConcurrentBids(input: TriggerConcurrentBidsInput) {
+  const body: Record<string, unknown> = {
+    auction_id: input.auctionId,
+  };
+
+  if (input.bidCount !== undefined) {
+    body.bid_count = input.bidCount;
+  }
+  if (input.intervalMs !== undefined) {
+    body.interval_ms = input.intervalMs;
+  }
+  if (input.increment !== undefined) {
+    body.increment = toMoneyString(input.increment);
+  }
+
+  return postDemo<TriggerConcurrentBidsResponse>('/concurrent-bids', body);
 }
 
 export function rechargeDemoUser(input: RechargeDemoUserInput) {
