@@ -63,6 +63,8 @@ assert_contains 'sync_nginx_config' "deploy-prod.sh apply must sync the repo Ngi
 assert_contains 'deploy/demo/nginx-ip.conf' "deploy-prod.sh must use the versioned demo Nginx config as the source of truth"
 assert_contains 'ensure_basic_auth_file' "deploy-prod.sh apply must create the Basic Auth password file required by protected demo routes"
 assert_contains 'openssl passwd -apr1' "deploy-prod.sh must generate an htpasswd-compatible hash without storing hashes in git"
+assert_contains 'init_demo_users' "deploy-prod.sh apply must initialize unified demo users on the remote stack"
+assert_contains 'scripts/init-demo-users.sh' "deploy-prod.sh must delegate demo user seeding to the shared seed script"
 assert_contains 'http_basic_expect\(\)' "deploy-prod.sh verify must prove protected routes are reachable with Basic Auth"
 assert_contains 'http_body_contains\(\)' "deploy-prod.sh verify must validate endpoint bodies when a 200 fallback could mask routing bugs"
 assert_contains 'ws_url' "deploy-prod.sh verify must prove test-dashboard WS discovery returns JSON, not an HTML fallback"

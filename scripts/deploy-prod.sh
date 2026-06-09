@@ -255,6 +255,7 @@ plan() {
   echo "- 创建或更新演示入口 Basic Auth 文件 $REMOTE_BASIC_AUTH_FILE"
   echo "- 执行 docker compose --project-name $COMPOSE_PROJECT_NAME --env-file $REMOTE_ENV_FILE -f docker-compose.demo.yml up -d --build --remove-orphans，覆盖全量服务:"
   echo "  $(demo_full_stack_services)"
+  echo "- 执行 scripts/init-demo-users.sh 初始化统一演示账号"
   echo "- 执行 nginx -t && systemctl reload nginx"
   echo ""
   echo "验证:"
@@ -325,6 +326,14 @@ restart_remote() {
   env_file="$(shell_quote "$REMOTE_ENV_FILE")"
   compose="$(compose_cmd "$env_file")"
   ssh_base "cd $app_dir && $compose up -d --build --remove-orphans && nginx -t && systemctl reload nginx"
+}
+
+init_demo_users() {
+  local app_dir env_file project
+  app_dir="$(shell_quote "$REMOTE_APP_DIR")"
+  env_file="$(shell_quote "$REMOTE_ENV_FILE")"
+  project="$(shell_quote "$COMPOSE_PROJECT_NAME")"
+  ssh_base "cd $app_dir && COMPOSE_PROJECT_NAME=$project COMPOSE_FILE=docker-compose.demo.yml COMPOSE_ENV_FILE=$env_file ./scripts/init-demo-users.sh" | redact_sensitive
 }
 
 http_expect() {
@@ -464,6 +473,7 @@ apply() {
   ensure_basic_auth_file
   restart_remote
   wait_for_remote_http_ready
+  init_demo_users
   verify_prod
 }
 

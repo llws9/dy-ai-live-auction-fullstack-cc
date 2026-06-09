@@ -420,6 +420,11 @@ assert_contains \
   'assert_seeded_users' \
   "init-demo-users.sh must verify final seeded user bindings after upsert"
 
+assert_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
+  'rebind_legacy_demo_user_ids' \
+  "init-demo-users.sh must migrate legacy demo users from old ids to fixed ids"
+
 assert_not_contains \
   "$ROOT/scripts/init-demo-users.sh" \
   'SET phone = NULL' \

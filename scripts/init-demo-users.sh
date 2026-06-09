@@ -4,6 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+export INTERNAL_API_TOKEN="${INTERNAL_API_TOKEN:-dev}"
 
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -12,13 +13,22 @@ NC='\033[0m'
 mysql_exec() {
   cd "$PROJECT_ROOT"
   local mysql_container
-  mysql_container="$(INTERNAL_API_TOKEN=dev docker compose ps -q mysql 2>/dev/null || true)"
+  local compose_cmd=(docker compose)
+  if [[ -n "${COMPOSE_PROJECT_NAME:-}" ]]; then
+    compose_cmd+=(--project-name "$COMPOSE_PROJECT_NAME")
+  fi
+  if [[ -n "${COMPOSE_ENV_FILE:-}" ]]; then
+    compose_cmd+=(--env-file "$COMPOSE_ENV_FILE")
+  fi
+  mysql_container="$("${compose_cmd[@]}" ps -q mysql 2>/dev/null || true)"
   if [[ -n "$mysql_container" ]] && [[ "$(docker inspect -f '{{.State.Running}}' "$mysql_container" 2>/dev/null || true)" == "true" ]]; then
-    INTERNAL_API_TOKEN=dev docker compose exec -T mysql mysql -uroot -proot auction "$@"
+    local mysql_password
+    mysql_password="$(docker exec "$mysql_container" sh -lc 'printf "%s" "${MYSQL_ROOT_PASSWORD:-root}"')"
+    docker exec -i "$mysql_container" mysql -uroot -p"$mysql_password" auction "$@"
     return
   fi
 
-  mysql -h127.0.0.1 -P3306 -uroot -proot auction "$@"
+  mysql -h127.0.0.1 -P3306 -uroot -p"${MYSQL_ROOT_PASSWORD:-root}" auction "$@"
 }
 
 mysql_scalar() {
@@ -145,6 +155,68 @@ DROP PROCEDURE IF EXISTS fail_demo_user_seed_on_conflict;
 SQL
 }
 
+rebind_legacy_demo_user_ids() {
+  mysql_exec <<'SQL'
+DROP TEMPORARY TABLE IF EXISTS expected_demo_users;
+CREATE TEMPORARY TABLE expected_demo_users (
+  id BIGINT PRIMARY KEY,
+  phone VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  email VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL
+);
+
+INSERT INTO expected_demo_users VALUES
+  (9101, '13800138001', NULL),
+  (9102, '13800138004', NULL),
+  (9103, '13800138002', 'merchant@example.com'),
+  (9104, '13800138003', 'admin@example.com');
+
+START TRANSACTION;
+
+UPDATE auctions a
+JOIN users u ON u.id = a.winner_id
+JOIN expected_demo_users e ON e.phone = u.phone
+LEFT JOIN users target ON target.id = e.id
+SET a.winner_id = e.id
+WHERE u.id <> e.id
+  AND target.id IS NULL;
+
+UPDATE bids b
+JOIN users u ON u.id = b.user_id
+JOIN expected_demo_users e ON e.phone = u.phone
+LEFT JOIN users target ON target.id = e.id
+SET b.user_id = e.id
+WHERE u.id <> e.id
+  AND target.id IS NULL;
+
+UPDATE orders o
+JOIN users u ON u.id = o.winner_id
+JOIN expected_demo_users e ON e.phone = u.phone
+LEFT JOIN users target ON target.id = e.id
+SET o.winner_id = e.id
+WHERE u.id <> e.id
+  AND target.id IS NULL;
+
+UPDATE user_balances b
+JOIN users u ON u.id = b.user_id
+JOIN expected_demo_users e ON e.phone = u.phone
+LEFT JOIN users target ON target.id = e.id
+LEFT JOIN user_balances target_balance ON target_balance.user_id = e.id
+SET b.user_id = e.id
+WHERE u.id <> e.id
+  AND target.id IS NULL
+  AND target_balance.user_id IS NULL;
+
+UPDATE users u
+JOIN expected_demo_users e ON e.phone = u.phone
+LEFT JOIN users target ON target.id = e.id
+SET u.id = e.id
+WHERE u.id <> e.id
+  AND target.id IS NULL;
+
+COMMIT;
+SQL
+}
+
 assert_seeded_users() {
   mysql_exec <<SQL
 DROP TEMPORARY TABLE IF EXISTS expected_demo_users;
@@ -233,6 +305,7 @@ ensure_column role "TINYINT DEFAULT 0"
 ensure_column status "TINYINT DEFAULT 1"
 ensure_column last_login_at "TIMESTAMP NULL"
 
+rebind_legacy_demo_user_ids
 validate_no_conflicts
 ensure_index idx_users_email "CREATE UNIQUE INDEX idx_users_email ON users (email);"
 ensure_index idx_users_phone "CREATE UNIQUE INDEX idx_users_phone ON users (phone);"
