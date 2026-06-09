@@ -113,7 +113,7 @@ describe('Profile migration', () => {
     expect(historyLinks.length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByRole('link', { name: /2\s*中标/ })).not.toBeInTheDocument();
     expect(screen.getByText('玉石夜拍')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /钱包/ })).toHaveAttribute('href', '/orders');
+    expect(screen.getByRole('link', { name: /钱包/ })).toHaveAttribute('href', '/wallet');
     expect(screen.getByRole('link', { name: /个人卖家申请/ })).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', { name: /企业商家入驻/ })).toHaveAttribute('href', '/');
 
@@ -154,9 +154,13 @@ describe('Profile migration', () => {
 
     expect(await screen.findByLabelText('1 条待处理提醒')).toHaveTextContent('1');
     expect(mockedNotificationApi.getTouchpointSummary).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('link', { name: /1 件中标待支付/ })).toHaveAttribute('href', '/history');
-    expect(screen.getByRole('link', { name: /我的收藏/ })).toHaveAttribute('href', '/following');
-    expect(screen.getByRole('link', { name: /消息通知/ })).toHaveAttribute('href', '/notifications');
+    expect(screen.getByRole('link', { name: /1 件中标待支付/ })).toHaveAttribute('href', '/orders');
+    expect(screen.getByRole('link', { name: /设置（暂未开放）/ })).toHaveAttribute('href', '/');
+    const notificationLinks = screen.getAllByRole('link', { name: /消息通知/ });
+    expect(notificationLinks).toHaveLength(1);
+    expect(notificationLinks[0]).toHaveAttribute('href', '/notifications');
+    expect(notificationLinks[0].closest('section')).toHaveAttribute('aria-label', '我的竞拍');
+    expect(screen.queryByLabelText('中标数量')).not.toBeInTheDocument();
     const addressLinks = screen.getAllByRole('link').filter((el) => el.getAttribute('href') === '/addresses');
     expect(addressLinks.length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole('link', { name: /收货地址/ })).toHaveAttribute('href', '/addresses');
@@ -183,6 +187,11 @@ describe('Profile migration', () => {
     );
 
     expect(await screen.findByText('林见山')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /消息通知/ })).toHaveAttribute('href', '/notifications');
+    expect(screen.getByRole('link', { name: /消息通知/ }).closest('section')).toHaveAttribute(
+      'aria-label',
+      '我的竞拍'
+    );
     expect(screen.getByRole('link', { name: /消息通知/ })).toContainElement(
       screen.getByLabelText('1 条待处理提醒')
     );

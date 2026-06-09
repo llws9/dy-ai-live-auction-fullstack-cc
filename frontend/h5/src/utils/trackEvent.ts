@@ -23,6 +23,7 @@ export type TouchpointEntry =
   | 'notification_bell'
   | 'profile_tab'
   | 'auction_history'
+  | 'orders'
   | 'notification_center'
   | 'notification_item'
   | 'mark_all_read'

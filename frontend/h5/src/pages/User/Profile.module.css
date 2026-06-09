@@ -123,6 +123,16 @@
   display: block;
 }
 
+.primaryAuctionCta strong {
+  color: var(--text-inverse);
+}
+
+.primaryAuctionCta:hover,
+.primaryAuctionCta:focus-visible,
+.primaryAuctionCta:active {
+  color: var(--text-inverse);
+}
+
 .primaryAuctionCta span {
   margin-top: 4px;
   color: rgba(255, 255, 255, 0.78);
@@ -157,8 +167,26 @@
 }
 
 .metricBadge {
-  top: -8px;
-  right: -7px;
+  --touchpoint-danger: #dc2626;
+  --touchpoint-border: var(--bg-surface);
+  --touchpoint-badge-text: #ffffff;
+
+  top: -11px;
+  right: -9px;
+  min-width: 28px;
+  height: 24px;
+  padding: 0 8px;
+  border-width: 2px;
+  color: var(--touchpoint-badge-text);
+  font-size: 13px;
+  font-weight: var(--font-weight-bold);
+  line-height: 20px;
+  letter-spacing: -0.02em;
+  text-shadow: none;
+  box-shadow:
+    0 0 0 3px var(--bg-surface),
+    inset 0 -1px 0 rgba(127, 29, 29, 0.42),
+    0 8px 18px rgba(220, 38, 38, 0.52);
 }
 
 .metricCard strong {
@@ -170,6 +198,10 @@
   margin-top: 2px;
   color: var(--text-secondary);
   font-size: 11px;
+}
+
+.metricCard .metricBadge {
+  color: #ffffff;
 }
 
 .footprintList {

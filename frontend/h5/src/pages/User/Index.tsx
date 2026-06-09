@@ -135,6 +135,15 @@ const UserCenter: React.FC = () => {
     }
   };
 
+  const trackPendingPaymentClick = () => {
+    trackEvent('entry_clicked', {
+      source: 'profile',
+      entry: 'orders',
+      type: 'pending_payment',
+      result: 'clicked',
+    });
+  };
+
   const trackAuctionHistoryClick = () => {
     trackEvent('entry_clicked', {
       source: 'profile',
@@ -201,10 +210,10 @@ const UserCenter: React.FC = () => {
           </div>
           <span>记录含中标</span>
         </div>
-        <Link to="/history" className={styles.primaryAuctionCta} onClick={trackAuctionHistoryClick}>
+        <Link to="/orders" className={styles.primaryAuctionCta} onClick={trackPendingPaymentClick}>
           <div>
             <strong>{pendingAuctionCount > 0 ? `${pendingAuctionCount} 件中标待支付` : '查看竞拍记录'}</strong>
-            <span>从竞拍记录查看全部中标与出价</span>
+            <span>去我的订单完成支付</span>
           </div>
           <b>›</b>
         </Link>
@@ -214,10 +223,11 @@ const UserCenter: React.FC = () => {
             <strong>{statValue(stats?.auction_history_count)}</strong>
             <span>竞拍记录</span>
           </Link>
-          <div className={styles.metricCard} aria-label="中标数量">
-            <strong>{statValue(stats?.won_count)}</strong>
-            <span>中标</span>
-          </div>
+          <Link to="/notifications" className={styles.metricCard} onClick={trackNotificationCenterClick}>
+            <BadgeDot count={unreadTotal} className={styles.metricBadge} />
+            <strong>{statValue(unreadTotal)}</strong>
+            <span>消息通知</span>
+          </Link>
           <Link to="/following" className={styles.metricCard}>
             <strong>{statValue(stats?.following_count)}</strong>
             <span>收藏</span>
@@ -256,7 +266,7 @@ const UserCenter: React.FC = () => {
       </section>
 
       <section className={styles.serviceGrid} aria-label="账户与服务">
-        <Link to="/orders" className={styles.serviceItem}>
+        <Link to="/wallet" className={styles.serviceItem}>
           <span className={styles.serviceIcon}>¥</span>
           <span className={styles.serviceText}>
             <strong>钱包</strong>
@@ -289,15 +299,8 @@ const UserCenter: React.FC = () => {
       </section>
 
       <nav className={styles.secondaryMenu} aria-label="个人中心功能">
-        <Link to="/following" className={styles.secondaryItem}>
-          我的收藏
-          <b>›</b>
-        </Link>
-        <Link to="/notifications" className={styles.secondaryItem} onClick={trackNotificationCenterClick}>
-          <span className={styles.notificationLabel}>
-            消息通知
-            <BadgeDot count={unreadTotal} className={styles.notificationBadge} />
-          </span>
+        <Link to="/" className={styles.secondaryItem}>
+          设置（暂未开放）
           <b>›</b>
         </Link>
       </nav>

@@ -22,4 +22,16 @@ describe('Profile phase 2 theme tokens', () => {
     expect(css).not.toContain('background: rgba(26, 26, 26, 0.64);');
     expect(css).not.toContain('color: #f87171;');
   });
+
+  it('keeps primary CTA text inverse during link interaction states', () => {
+    expect(css).toMatch(
+      /\.primaryAuctionCta:hover,\s*\.primaryAuctionCta:focus-visible,\s*\.primaryAuctionCta:active\s*\{[\s\S]*?color: var\(--text-inverse\);[\s\S]*?\}/,
+    );
+    expect(css).toMatch(/\.primaryAuctionCta strong\s*\{[\s\S]*?color: var\(--text-inverse\);[\s\S]*?\}/);
+  });
+
+  it('keeps metric badge count text pure white for contrast', () => {
+    expect(css).toMatch(/\.metricBadge\s*\{[\s\S]*?--touchpoint-badge-text: #ffffff;[\s\S]*?\}/);
+    expect(css).toMatch(/\.metricCard \.metricBadge\s*\{[\s\S]*?color: #ffffff;[\s\S]*?\}/);
+  });
 });
