@@ -31,18 +31,18 @@
 | State Template | `docs/superpowers/sdd/state-template.md` | yes | yes |
 | Plan | `docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md` | yes | yes |
 | Tasks | `docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md` | yes | yes |
-| Scope | `Task 1, Task 3` | no | yes |
+| Scope | `Task 1, Task 3, Task 4` | no | yes |
 
 ## Execution Summary
 
 | Metric | Value |
 | --- | --- |
-| Total Tasks | `2` |
-| Done | `2` |
+| Total Tasks | `3` |
+| Done | `3` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-10 05:53` |
+| Last Updated | `2026-06-10 05:58` |
 
 ## Status Legend
 
@@ -71,6 +71,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `Auction SDK CapPrice Contract` | `done` | `main-agent` | `W1` | `-` | `Task 1` | `backend/test/client/auction/client.go; backend/test/client/auction/client_test.go` | `docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md` | `cd backend/test && go test ./client/auction -run 'TestSDK_GetAuctionParsesRule(Increment|CapPrice)|TestSDK_GetAuctionParsesStringCurrentPrice' -count=1` | `none` |
 | `T003` | `Demo Handler Implementation` | `done` | `main-agent` | `W3` | `T001,T002` | `Task 3` | `backend/test/handler/demo.go` | `backend/test/handler/demo_test.go; docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md` | `cd backend/test && go test ./handler -run 'TestPostConcurrentBids|TestPostFollowBid|TestComputeFollowBidAmount' -count=1` | `none` |
+| `T004` | `Test-Service Route Registration` | `done` | `main-agent` | `W4` | `T003` | `Task 4` | `backend/test/main.go` | `docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md; backend/test/handler/demo.go` | `cd backend/test && go test ./... -run 'TestPostConcurrentBids|TestSDK_GetAuctionParsesRuleCapPrice' -count=1` | `none` |
 
 ## Wave Plan
 
@@ -78,6 +79,7 @@
 | --- | --- | --- | --- | --- |
 | `W1` | `Execute imported tasks with TDD evidence` | `T001` | `state file initialized` | `all tasks done or blocked with reason` |
 | `W3` | `Implement demo concurrent bids handler` | `T003` | `Task 2 failing tests present` | `target handler tests pass and implementation is committed` |
+| `W4` | `Register demo concurrent bids route` | `T004` | `Task 3 handler exists` | `test-service compiles and targeted regressions pass` |
 
 ## Task Records
 
@@ -274,6 +276,78 @@
 - Remaining work: `Task 4 route registration and frontend tasks are outside this execution scope.`
 - First response line used: `当前分支/worktree：feat/h5-demo-concurrent-bids @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-h5-demo-concurrent-bids`
 
+### T004 - `Test-Service Route Registration`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-10 05:57` |
+| Completed At | `2026-06-10 05:58` |
+| Branch | `feat/h5-demo-concurrent-bids` |
+| Worktree | `/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-h5-demo-concurrent-bids` |
+| Base Commit | `bd7f57568a3a0dfcfa0b56e26a794670e8555a5f` |
+| Target Branch | `main` |
+| Depends On | `T003` |
+| Parallel Group | `W4` |
+
+**TDD Plan**
+
+- Red: route registration has no existing focused automated route-table test in scope; use plan-specified compile/regression command as sentinel.
+- Green: register `POST /api/test/demo/concurrent-bids` in the existing demo route group.
+- Verify: run the plan-specified backend test command across `backend/test`.
+
+**Write Set**
+
+- `backend/test/main.go`
+- `docs/superpowers/sdd/runs/2026-06-10-2026-06-10-h5-demo-concurrent-bids-state.md`
+
+**Read Set**
+
+- `docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md`
+- `backend/test/handler/demo.go`
+- `AGENTS.md`
+- `docs/superpowers/sdd/RUNBOOK.md`
+
+**Scope Expansion Requests**
+
+| Time | Requested Files | Reason | Decision |
+| --- | --- | --- | --- |
+| `2026-06-10 05:58` | `docs/superpowers/sdd/runs/2026-06-10-2026-06-10-h5-demo-concurrent-bids-state.md` | `SDD requires task evidence before handoff` | `accepted` |
+
+**Regression Sentinels**
+
+- Automated sentinel: `cd backend/test && go test ./... -run 'TestPostConcurrentBids|TestSDK_GetAuctionParsesRuleCapPrice' -count=1`
+- Manual fallback: route diff review confirms `demo.POST("/concurrent-bids", demoHandler.PostConcurrentBids)` is registered under `/api/test/demo`.
+- Rollback behavior caught: test-service no longer compiles against missing handler dependencies and targeted handler/SDK regressions continue to pass; route registration itself is covered by diff review.
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `cd backend/test && go test ./... -run 'TestPostConcurrentBids|TestSDK_GetAuctionParsesRuleCapPrice' -count=1` | PASS | `ok test-service ...; ok test-service/client/auction 0.879s; ok test-service/handler 1.933s; all packages passed or had no matching tests` | `passed` |
+| `GetDiagnostics backend/test/main.go` | No new errors | `only pre-existing rangeint hints at lines 331 and 345` | `passed_with_existing_hints` |
+
+**Modified Files**
+
+- `backend/test/main.go`
+- `docs/superpowers/sdd/runs/2026-06-10-2026-06-10-h5-demo-concurrent-bids-state.md`
+
+**Review Notes**
+
+- Route is registered inside the existing `resultDAO != nil` demo route group, consistent with other demo endpoints.
+- No runtime service was started; verification used Go tests only.
+
+**Risks / Blockers**
+
+- No blocker. Automated tests do not introspect the Hertz route table, so route registration rollback is additionally guarded by diff review.
+
+**Handoff**
+
+- Completion summary: `Registered POST /api/test/demo/concurrent-bids to DemoHandler.PostConcurrentBids and verified backend/test targeted regressions.`
+- Remaining work: `Frontend tasks are outside this execution scope.`
+- First response line used: `当前分支/worktree：feat/h5-demo-concurrent-bids @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-h5-demo-concurrent-bids`
+
 
 ## Cross-Task Decisions
 
@@ -286,6 +360,7 @@
 | API / Field | Change | Frontend Impact | Backend Impact | Docs Updated |
 | --- | --- | --- | --- | --- |
 | `AuctionRules.CapPrice` | `Add SDK field mapped from rules.cap_price` | `Enables later demo handler cap-price guard` | `Test SDK can read backend auction rule cap price` | `plan already documents Task 1` |
+| `POST /api/test/demo/concurrent-bids` | `Register demo test-service route` | `Enables H5 demo console to trigger concurrent-bid simulation via test-service` | `Routes request to DemoHandler.PostConcurrentBids` | `plan already documents Task 4` |
 
 ## Test Commands
 
@@ -294,6 +369,7 @@
 | Backend Gateway | `cd backend/gateway && go test ./...` | no | `not_run` | `-` |
 | Backend Product | `cd backend/product && go test ./...` | no | `not_run` | `-` |
 | Backend Auction | `cd backend/auction && go test ./...` | no | `not_run` | `-` |
+| Backend Test | `cd backend/test && go test ./... -run 'TestPostConcurrentBids|TestSDK_GetAuctionParsesRuleCapPrice' -count=1` | yes | `passed` | `Task 4 route registration verification` |
 | Frontend Admin | `cd frontend/admin && npm test -- --runInBand` | no | `not_run` | `-` |
 | Frontend Admin Build | `cd frontend/admin && npm run build` | no | `not_run` | `-` |
 | Frontend H5 | `cd frontend/h5 && npm test -- --runInBand` | no | `not_run` | `-` |

@@ -135,6 +135,7 @@ func main() {
 		api.POST("/cancel/:id", th.PostCancel)
 		demo := api.Group("/demo")
 		demo.POST("/follow-bid", demoHandler.PostFollowBid)
+		demo.POST("/concurrent-bids", demoHandler.PostConcurrentBids)
 		demo.POST("/sky-lamp", demoHandler.PostSkyLamp)
 		demo.POST("/recharge", demoHandler.PostRecharge)
 		demo.POST("/auctions/shorten", demoHandler.PostShortenAuction)
