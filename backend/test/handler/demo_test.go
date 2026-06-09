@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -122,6 +123,147 @@ func TestDecimalToBidAmountRejectsUnsupportedRange(t *testing.T) {
 	_, err := decimalToBidAmount(decimal.New(1, 400))
 	if err == nil {
 		t.Fatalf("decimalToBidAmount() expected range error")
+	}
+}
+
+func TestPostConcurrentBidsRejectsMissingAuctionID(t *testing.T) {
+	const secret = "demo-secret"
+	h := NewDemoHandler(&fakeDemoAuctionClient{}, nil, secret)
+	c := newDemoRequestContext(t, secret, `{"bid_count":3}`)
+
+	h.PostConcurrentBids(context.Background(), c)
+
+	if c.Response.StatusCode() != 400 {
+		t.Fatalf("status=%d want 400 body=%s", c.Response.StatusCode(), c.Response.Body())
+	}
+}
+
+func TestPostConcurrentBidsPlacesSerialIncrementalBids(t *testing.T) {
+	const secret = "demo-secret"
+	fake := &fakeDemoAuctionClient{
+		auction: auctioncli.Auction{
+			ID:           77,
+			CurrentPrice: 100,
+			Rules: &auctioncli.AuctionRules{
+				StartPrice: decimal.NewFromInt(80),
+				Increment:  decimal.NewFromInt(10),
+			},
+		},
+	}
+	h := NewDemoHandler(fake, nil, secret)
+	c := newDemoRequestContext(t, secret, `{"auction_id":77,"bid_count":3,"interval_ms":0}`)
+
+	h.PostConcurrentBids(context.Background(), c)
+
+	if c.Response.StatusCode() != 200 {
+		t.Fatalf("status=%d want 200 body=%s", c.Response.StatusCode(), c.Response.Body())
+	}
+	wantAmounts := []float64{110, 120, 130}
+	if len(fake.bidCalls) != len(wantAmounts) {
+		t.Fatalf("bid calls=%d want %d", len(fake.bidCalls), len(wantAmounts))
+	}
+	for i, want := range wantAmounts {
+		if fake.bidCalls[i].userID != buyerBUserID {
+			t.Fatalf("call %d user_id=%d want %d", i, fake.bidCalls[i].userID, buyerBUserID)
+		}
+		if fake.bidCalls[i].auctionID != 77 {
+			t.Fatalf("call %d auction_id=%d want 77", i, fake.bidCalls[i].auctionID)
+		}
+		if fake.bidCalls[i].amount != want {
+			t.Fatalf("call %d amount=%f want %f", i, fake.bidCalls[i].amount, want)
+		}
+	}
+}
+
+func TestPostConcurrentBidsStopsBeforeCapPrice(t *testing.T) {
+	const secret = "demo-secret"
+	fake := &fakeDemoAuctionClient{
+		auction: auctioncli.Auction{
+			ID:           77,
+			CurrentPrice: 100,
+			Rules: &auctioncli.AuctionRules{
+				StartPrice: decimal.NewFromInt(80),
+				Increment:  decimal.NewFromInt(10),
+				CapPrice:   decimal.NewFromInt(125),
+			},
+		},
+	}
+	h := NewDemoHandler(fake, nil, secret)
+	c := newDemoRequestContext(t, secret, `{"auction_id":77,"bid_count":5,"interval_ms":0}`)
+
+	h.PostConcurrentBids(context.Background(), c)
+
+	if c.Response.StatusCode() != 200 {
+		t.Fatalf("status=%d want 200 body=%s", c.Response.StatusCode(), c.Response.Body())
+	}
+	wantAmounts := []float64{110, 120}
+	if len(fake.bidCalls) != len(wantAmounts) {
+		t.Fatalf("bid calls=%d want %d", len(fake.bidCalls), len(wantAmounts))
+	}
+	for i, want := range wantAmounts {
+		if fake.bidCalls[i].amount != want {
+			t.Fatalf("call %d amount=%f want %f", i, fake.bidCalls[i].amount, want)
+		}
+	}
+}
+
+func TestPostConcurrentBidsReturnsOKWhenPartiallyFailed(t *testing.T) {
+	const secret = "demo-secret"
+	fake := &fakeDemoAuctionClient{
+		auction: auctioncli.Auction{
+			ID:           77,
+			CurrentPrice: 100,
+			Rules:        &auctioncli.AuctionRules{Increment: decimal.NewFromInt(10)},
+		},
+		bidResults: []auctioncli.StepResult{
+			{Step: "bid", OK: false, StatusCode: 400, Message: "出价过于频繁，请稍后再试"},
+			{Step: "bid", OK: true, StatusCode: 200},
+		},
+	}
+	h := NewDemoHandler(fake, nil, secret)
+	c := newDemoRequestContext(t, secret, `{"auction_id":77,"bid_count":2,"interval_ms":0}`)
+
+	h.PostConcurrentBids(context.Background(), c)
+
+	if c.Response.StatusCode() != 200 {
+		t.Fatalf("status=%d want 200 body=%s", c.Response.StatusCode(), c.Response.Body())
+	}
+	var body map[string]any
+	if err := json.Unmarshal(c.Response.Body(), &body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	if body["ok"] != true || int(body["success_count"].(float64)) != 1 || int(body["failure_count"].(float64)) != 1 {
+		t.Fatalf("unexpected response: %+v", body)
+	}
+}
+
+func TestPostConcurrentBidsReturnsBadRequestWhenAllFailed(t *testing.T) {
+	const secret = "demo-secret"
+	fake := &fakeDemoAuctionClient{
+		auction: auctioncli.Auction{
+			ID:           77,
+			CurrentPrice: 100,
+			Rules:        &auctioncli.AuctionRules{Increment: decimal.NewFromInt(10)},
+		},
+		bidResults: []auctioncli.StepResult{
+			{Step: "bid", OK: false, StatusCode: 400, Message: "竞拍已结束，无法出价"},
+			{Step: "bid", OK: false, StatusCode: 400, Message: "竞拍已结束，无法出价"},
+		},
+	}
+	h := NewDemoHandler(fake, nil, secret)
+	c := newDemoRequestContext(t, secret, `{"auction_id":77,"bid_count":2,"interval_ms":0}`)
+
+	h.PostConcurrentBids(context.Background(), c)
+
+	if c.Response.StatusCode() != 400 {
+		t.Fatalf("status=%d want 400 body=%s", c.Response.StatusCode(), c.Response.Body())
+	}
+	var body map[string]any
+	if err := json.Unmarshal(c.Response.Body(), &body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	if body["ok"] != false || int(body["success_count"].(float64)) != 0 || body["last_error"] != "竞拍已结束，无法出价" {
+		t.Fatalf("unexpected response: %+v", body)
 	}
 }
 
@@ -415,9 +557,17 @@ type fakeDemoAuctionClient struct {
 	liveStreamReqs       []auctioncli.CreateLiveStreamReq
 	auctionReqs          []auctioncli.CreateAuctionReq
 	fixedReqs            []auctioncli.CreateFixedPriceItemReq
-	skyLampUserID        int64
-	skyLampAuctionID     int64
-	followCalls          []struct {
+	auction              auctioncli.Auction
+	getStep              auctioncli.StepResult
+	bidResults           []auctioncli.StepResult
+	bidCalls             []struct {
+		userID    int64
+		auctionID int64
+		amount    float64
+	}
+	skyLampUserID    int64
+	skyLampAuctionID int64
+	followCalls      []struct {
 		userID       int64
 		liveStreamID int64
 	}
@@ -438,10 +588,26 @@ func (f *fakeDemoAuctionClient) ok(step string, refID int64) auctioncli.StepResu
 }
 
 func (f *fakeDemoAuctionClient) GetAuction(_ context.Context, auctionID int64) (auctioncli.Auction, auctioncli.StepResult) {
+	if f.getStep.Step != "" {
+		return f.auction, f.getStep
+	}
+	if f.auction.ID != 0 {
+		return f.auction, f.ok("get_auction", f.auction.ID)
+	}
 	return auctioncli.Auction{ID: auctionID, CurrentPrice: 100, Rules: &auctioncli.AuctionRules{Increment: decimal.NewFromInt(10)}}, f.ok("get_auction", auctionID)
 }
 
-func (f *fakeDemoAuctionClient) PlaceBid(_ context.Context, _ int64, auctionID int64, _ float64) auctioncli.StepResult {
+func (f *fakeDemoAuctionClient) PlaceBid(_ context.Context, userID int64, auctionID int64, amount float64) auctioncli.StepResult {
+	f.bidCalls = append(f.bidCalls, struct {
+		userID    int64
+		auctionID int64
+		amount    float64
+	}{userID: userID, auctionID: auctionID, amount: amount})
+	if len(f.bidResults) > 0 {
+		result := f.bidResults[0]
+		f.bidResults = f.bidResults[1:]
+		return result
+	}
 	return f.ok("place_bid", auctionID)
 }
 
