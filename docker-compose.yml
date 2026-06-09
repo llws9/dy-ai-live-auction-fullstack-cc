@@ -330,7 +330,7 @@ services:
 
   # Promtail - 日志采集
   promtail:
-    image: grafana/promtail:2.9.4
+    image: grafana/promtail:3.5.1
     container_name: promtail
     volumes:
       - ./observability/promtail/promtail-config.yaml:/etc/promtail/config.yaml

@@ -317,6 +317,9 @@ func main() {
 	)
 	h.Use(gatewayIdentityMiddleware())
 	httpMetrics := middleware.NewHTTPMetrics("auction", prometheus.DefaultRegisterer)
+	h.Use(middleware.RequestLogger(middleware.LoggerConfig{
+		ServiceName: "auction",
+	}))
 	h.Use(middleware.MetricsMiddleware("auction", httpMetrics))
 
 	// 注册路由

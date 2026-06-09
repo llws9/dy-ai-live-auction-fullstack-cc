@@ -6,6 +6,11 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCRIPT="$ROOT/scripts/deploy-prod.sh"
 DEMO_NGINX="$ROOT/deploy/demo/nginx-ip.conf"
 DEPLOY_QUICKSTART="$ROOT/deploy/demo/MAIN_DEPLOY_QUICKSTART.md"
+DEMO_COMPOSE="$ROOT/docker-compose.demo.yml"
+MICROSERVICES_LOGS_DASHBOARD="$ROOT/observability/grafana/provisioning/dashboards/microservices-logs.json"
+PROMTAIL_CONFIG="$ROOT/observability/promtail/promtail-config.yaml"
+PRODUCT_MAIN="$ROOT/backend/product/main.go"
+AUCTION_MAIN="$ROOT/backend/auction/main.go"
 
 fail() {
   echo "FAIL: $*" >&2
@@ -93,6 +98,14 @@ assert_file_contains "$DEMO_NGINX" 'location \^~ /@vite/' "demo Nginx must not r
 assert_file_contains "$DEMO_NGINX" 'Cache-Control "no-cache, no-store, must-revalidate"' "demo Nginx must prevent stale index.html after prod deployments"
 assert_file_contains "$DEPLOY_QUICKSTART" 'test-dashboard' "deploy quickstart must document the protected Test Dashboard public entry"
 assert_file_contains "$DEPLOY_QUICKSTART" 'grafana' "deploy quickstart must document the protected Grafana public entry"
+assert_file_contains "$DEMO_COMPOSE" 'grafana/promtail:3\.' "demo Promtail image must use a 3.x release compatible with Docker API 1.44+"
+assert_file_contains "$MICROSERVICES_LOGS_DASHBOARD" '"stream": "\{service_name=~' "microservices logs dashboard service variable must query streams that actually expose service_name"
+assert_file_contains "$PROMTAIL_CONFIG" '__meta_docker_container_label_service_name' "Promtail must promote Docker service_name labels so non-JSON product/auction logs appear in Loki"
+assert_file_contains "$PROMTAIL_CONFIG" 'target_label: service_name' "Promtail Docker discovery must write the service_name Loki label"
+assert_file_contains "$PRODUCT_MAIN" 'RequestLogger\(middleware\.LoggerConfig\{' "product service must mount the structured access logger"
+assert_file_contains "$PRODUCT_MAIN" 'ServiceName: "product"' "product service must emit structured access logs with service_name=product"
+assert_file_contains "$AUCTION_MAIN" 'RequestLogger\(middleware\.LoggerConfig\{' "auction service must mount the structured access logger"
+assert_file_contains "$AUCTION_MAIN" 'ServiceName: "auction"' "auction service must emit structured access logs with service_name=auction"
 
 assert_not_contains 'cat .*\$REMOTE_ENV_FILE' "deploy-prod.sh must not print remote .env.demo"
 assert_not_contains 'git rev-parse HEAD 2>/dev/null' "deploy-prod.sh must not depend on remote .git metadata after rsync deploy"
@@ -100,5 +113,6 @@ assert_not_contains 'grep .*ARK_API_KEY' "deploy-prod.sh must not grep or print 
 assert_not_contains 'grep .*JWT_SECRET' "deploy-prod.sh must not grep or print JWT_SECRET"
 assert_not_contains 'grep .*INTERNAL_API_TOKEN' "deploy-prod.sh must not grep or print INTERNAL_API_TOKEN"
 assert_file_not_contains "$DEPLOY_QUICKSTART" '暂不部署.*test-service.*grafana.*prometheus.*growthbook' "deploy quickstart must not claim mature demo services are not deployed"
+assert_file_not_contains "$DEMO_COMPOSE" 'grafana/promtail:2\.9\.' "demo Promtail must not use the Docker API 1.42-limited 2.9.x image"
 
 echo "deploy prod script checks passed"

@@ -175,6 +175,9 @@ func main() {
 		server.WithHostPorts(cfg.Server.Port),
 	)
 	httpMetrics := middleware.NewHTTPMetrics("product", prometheus.DefaultRegisterer)
+	h.Use(middleware.RequestLogger(middleware.LoggerConfig{
+		ServiceName: "product",
+	}))
 	h.Use(middleware.MetricsMiddleware("product", httpMetrics))
 
 	// 注册路由
