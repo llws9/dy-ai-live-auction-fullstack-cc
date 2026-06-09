@@ -138,6 +138,22 @@ func TestPostConcurrentBidsRejectsMissingAuctionID(t *testing.T) {
 	}
 }
 
+func TestPostConcurrentBidsRejectsBidCountAboveLimit(t *testing.T) {
+	const secret = "demo-secret"
+	fake := &fakeDemoAuctionClient{}
+	h := NewDemoHandler(fake, nil, secret)
+	c := newDemoRequestContext(t, secret, `{"auction_id":77,"bid_count":21,"interval_ms":0}`)
+
+	h.PostConcurrentBids(context.Background(), c)
+
+	if c.Response.StatusCode() != 400 {
+		t.Fatalf("status=%d want 400 body=%s", c.Response.StatusCode(), c.Response.Body())
+	}
+	if len(fake.bidCalls) != 0 {
+		t.Fatalf("invalid bid_count must not place bids, got calls=%+v", fake.bidCalls)
+	}
+}
+
 func TestPostConcurrentBidsPlacesSerialIncrementalBids(t *testing.T) {
 	const secret = "demo-secret"
 	fake := &fakeDemoAuctionClient{
@@ -228,11 +244,8 @@ func TestPostConcurrentBidsReturnsOKWhenPartiallyFailed(t *testing.T) {
 	if c.Response.StatusCode() != 200 {
 		t.Fatalf("status=%d want 200 body=%s", c.Response.StatusCode(), c.Response.Body())
 	}
-	var body map[string]any
-	if err := json.Unmarshal(c.Response.Body(), &body); err != nil {
-		t.Fatalf("decode body: %v", err)
-	}
-	if body["ok"] != true || int(body["success_count"].(float64)) != 1 || int(body["failure_count"].(float64)) != 1 {
+	body := decodeConcurrentBidsResponse(t, c.Response.Body())
+	if !body.OK || body.SuccessCount != 1 || body.FailureCount != 1 {
 		t.Fatalf("unexpected response: %+v", body)
 	}
 }
@@ -258,13 +271,26 @@ func TestPostConcurrentBidsReturnsBadRequestWhenAllFailed(t *testing.T) {
 	if c.Response.StatusCode() != 400 {
 		t.Fatalf("status=%d want 400 body=%s", c.Response.StatusCode(), c.Response.Body())
 	}
-	var body map[string]any
-	if err := json.Unmarshal(c.Response.Body(), &body); err != nil {
-		t.Fatalf("decode body: %v", err)
-	}
-	if body["ok"] != false || int(body["success_count"].(float64)) != 0 || body["last_error"] != "竞拍已结束，无法出价" {
+	body := decodeConcurrentBidsResponse(t, c.Response.Body())
+	if body.OK || body.SuccessCount != 0 || body.LastError != "竞拍已结束，无法出价" {
 		t.Fatalf("unexpected response: %+v", body)
 	}
+}
+
+type concurrentBidsResponseBody struct {
+	OK           bool   `json:"ok"`
+	SuccessCount int    `json:"success_count"`
+	FailureCount int    `json:"failure_count"`
+	LastError    string `json:"last_error"`
+}
+
+func decodeConcurrentBidsResponse(t *testing.T, raw []byte) concurrentBidsResponseBody {
+	t.Helper()
+	var body concurrentBidsResponseBody
+	if err := json.Unmarshal(raw, &body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	return body
 }
 
 func TestMerchantDemoValidateAuctionMode(t *testing.T) {
