@@ -255,7 +255,7 @@
 **Commits**
 
 - `b6667259ada99c5b316e2db6c44888b7db3e96bd` - `feat: add demo concurrent bids handler`
-- `pending` - `fix: tighten demo concurrent bids semantics`
+- `e50705b4674afecbeb08d12500362f00e9f40a3e` - `fix: tighten demo concurrent bids semantics`
 
 **Review Notes**
 
