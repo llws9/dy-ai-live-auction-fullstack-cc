@@ -486,6 +486,7 @@ verify_prod() {
   http_basic_expect "http://$DEPLOY_HOST/grafana/" '^(2|3)[0-9][0-9]$' || failed=1
   http_expect "http://$DEPLOY_HOST/api/v1/products" '^200$' || failed=1
   http_body_contains "http://$DEPLOY_HOST/ws/test/progress?test_id=verify" 'ws_url' || failed=1
+  http_body_contains "http://$DEPLOY_HOST/ws/test/progress?test_id=verify" "/test-ws/ws/test/progress" || failed=1
   verify_remote_deploy_ref || failed=1
 
   if [[ "$failed" -ne 0 ]]; then

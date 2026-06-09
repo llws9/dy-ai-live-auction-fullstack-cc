@@ -161,6 +161,8 @@ const toEndTimeIso = (value: unknown): string | undefined => {
   return new Date(parsed).toISOString();
 };
 
+const isUnreachablePlaceholderImage = (url?: string) => /^https?:\/\/(?:www\.)?example\.com\//i.test((url || '').trim());
+
 const formatTimeLeft = (seconds: number) => {
   const safeSeconds = Math.max(0, seconds);
   const minutes = Math.floor(safeSeconds / 60);
@@ -255,6 +257,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const [purchasedFixedPriceItemIds, setPurchasedFixedPriceItemIds] = useState<Set<number>>(() => new Set());
   const [animatingFixedPriceItems, setAnimatingFixedPriceItems] = useState<FixedPriceItem[]>([]);
   const [pulsingItemId, setPulsingItemId] = useState<number | null>(null);
+  const [hostAvatarFailed, setHostAvatarFailed] = useState(false);
   const fixedPricePulseTimerRef = useRef<number | null>(null);
 
   const auctionRules = auction?.rules ?? auction?.rule ?? auction?.auction_rule;
@@ -292,11 +295,12 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   );
   const { level: heatLevel, markBid, reset: resetBidHeat } = useBidHeat();
   const productImage = getFirstImage(product || auction?.product);
-  const hostName = liveStream?.host_name || liveStream?.creator_name || '拍卖师';
+  const hostName = repairUtf8Mojibake(liveStream?.host_name || liveStream?.creator_name) || '拍卖师';
   const roomName = repairUtf8Mojibake(liveStream?.name) || '竞拍直播间';
   const productName = repairUtf8Mojibake(product?.name || auction?.product?.name) || '竞拍商品';
   const liveCoverImage = productImage || liveStream?.cover_image || '';
-  const hostAvatar = liveStream?.host_avatar || liveStream?.avatar || '';
+  const rawHostAvatar = liveStream?.host_avatar || liveStream?.avatar || '';
+  const hostAvatar = hostAvatarFailed || isUnreachablePlaceholderImage(rawHostAvatar) ? '' : rawHostAvatar;
   const viewerCount = presence?.viewer_count ?? liveStream?.viewer_count ?? 0;
   const presenceViewers = useMemo(() => (presence?.viewers ?? []).slice(0, 3), [presence?.viewers]);
   const hasEnded = hasBackendEnded || hasReachedEndTime;
@@ -325,6 +329,12 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     [animatingFixedPriceItemIds, fixedPriceItems],
   );
   const currentUserDisplayName = useMemo(() => repairUtf8Mojibake(user?.name) || '当前用户', [user?.name]);
+  useEffect(() => {
+    setHostAvatarFailed(false);
+  }, [rawHostAvatar]);
+  const handleHostAvatarError = useCallback(() => {
+    setHostAvatarFailed(true);
+  }, []);
   const showSkyLampNotice = useCallback((message: string) => {
     setSkyLampNotice((previous) => ({
       id: (previous?.id ?? 0) + 1,
@@ -1101,7 +1111,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
             <Link className={styles.backLink} to="/">‹</Link>
             <div className={styles.avatar}>
               {hostAvatar ? (
-                <img src={hostAvatar} alt={hostName} />
+                <img src={hostAvatar} alt={hostName} onError={handleHostAvatarError} />
               ) : (
                 <span>{hostName.slice(0, 1)}</span>
               )}
@@ -1131,7 +1141,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
                     ))
                   ) : (
                     <span className={styles.viewerAvatar}>
-                      {hostAvatar ? <img src={hostAvatar} alt="" /> : hostName.slice(0, 1)}
+                      {hostAvatar ? <img src={hostAvatar} alt="" onError={handleHostAvatarError} /> : hostName.slice(0, 1)}
                     </span>
                   )}
                 </div>

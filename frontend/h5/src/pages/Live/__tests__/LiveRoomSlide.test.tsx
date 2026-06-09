@@ -1021,6 +1021,26 @@ describe('LiveRoomSlide', () => {
     expect(screen.queryByText(/æ|å|ç|è/)).not.toBeInTheDocument();
   });
 
+  it('repairs mojibake host name and suppresses unreachable placeholder host avatar', async () => {
+    mockedLiveStreamApi.get.mockResolvedValue({
+      id: 3,
+      name: '瓷器珍藏夜场',
+      host_name: toUtf8Mojibake('Demo商家'),
+      host_avatar: 'https://example.com/avatar-demo-merchant.jpg',
+      viewer_count: 128,
+      is_following: false,
+      followers_count: 12,
+    });
+
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect(await screen.findByText('Demo商家')).toBeInTheDocument();
+    expect(screen.queryByText(/Demoå/)).not.toBeInTheDocument();
+    expect(
+      Array.from(document.querySelectorAll('img')).some((img) => img.getAttribute('src')?.includes('example.com')),
+    ).toBe(false);
+  });
+
   it('repairs mojibake ranking user names before rendering', async () => {
     mockedBidApi.getRanking.mockResolvedValue([
       { rank: 1, user_id: 9102, user_name: toUtf8Mojibake('演示买家B'), amount: 1200 },

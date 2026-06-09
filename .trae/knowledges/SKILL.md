@@ -49,6 +49,7 @@ description: >
   - [ ] 确认目标 project 名称（`auction-demo`）与脚本期望一致
   - [ ] 确认命名卷映射关系（`app_*` → `auction-demo_*`），避免数据丢失
 - **迁移后验证要点**：`scripts/deploy-prod.sh verify` 会检查远端 `.deploy-ref` 与本地 HEAD 是否一致；若迁移过程中该文件未更新或版本不一致，verify 会报错阻断
+- **独立测试平台的 WebSocket 访问必须通过 Nginx 反向代理**。公网环境下严禁浏览器直连微服务私有端口（如 `ws://ip:18092`），应统一通过 Nginx 路径（如 `/test-ws`）转发，避免 WS 连接挂起（`deploy/demo/nginx-ip.conf`, `scripts/deploy-prod.sh`）
 
 ## Architecture
 - 前端按 H5、Admin、Test Dashboard 拆分，各自独立构建，但 API/WS 公共入口统一由 Gateway 与 Nginx 代理承载（`deploy/demo/MAIN_DEPLOY_QUICKSTART.md`）
@@ -103,14 +104,26 @@ description: >
 2. **模块取舍**：完整版约 5-6 分钟覆盖全部亮点，精华版 3 分钟只保留核心模块（完整闭环、并发控制、混沌工程、收尾升华）
 3. **台词结构**：统一为「钩子句 → 操作旁白/画面指引 → 考量维度金句」
 4. **口吻风格**：采用亲近、自然的聊天式叙述，避免演讲腔和刻意对比句式
+   - 去掉"这里不是…而是""我最想展示"等演讲腔，改用"…后，会有…""大家可以注意一下"等聊天式叙述
+   - 开场/收尾加"大家好""谢谢大家"，更像当面讲解
+   - 技术内容、参数和考量金句保留，不影响拿分点
 5. **交付物**：分镜脚本表（画面+口播+操作提示+时间戳）+ 纯口播稿两份合一
+
+**来源**：session:6a2875380bfcee1b04fc33e8
 
 ### 竞赛提交文档生成流程
 生成比赛交卷文档时采用以下流程：
 1. **交付方式**：先在仓库 `docs/` 下生成完整 markdown，review 后再导入飞书
 2. **内容分工**：AI 填写技术细节（核心功能、架构、AI能力、工程难点等），用户补全个人/项目基础信息
 3. **表现力增强**：对于架构图、压测报告等表现力要求高的部分，制作独立 HTML 专题页部署至公网，在文档中深链引用
+   - 压测/混沌报告页：`perf.html`，复用主站设计 token 和双主题系统
+   - 架构图专题页：独立页面展示五层架构与调用关系
 4. **架构图生成**：使用 `mindai-chart-generation` Skill 生成专业架构图，通过飞书画板插入文档
+   - 使用 `lark-cli` + `whiteboard-cli` 将 MindAI 生成的图插入飞书文档
+   - 需确保 lark-cli 已登录且有 docs/board 权限
+5. **飞书权限处理**：向外部模板文档直接写入可能因权限不足失败，应新建个人文档后导入内容
+
+**来源**：session:6a2875380bfcee1b04fc33e8
 
 ### 飞书文档权限处理
 - **权限错误**：向比赛方提供的模板文档直接写入会因权限不足（code=1770032 forbidden）失败
@@ -118,6 +131,28 @@ description: >
 - **工具链**：使用 `feishu-cli` 导入 markdown 内容，使用 `lark-cli` + `whiteboard-cli` 插入画板/图表
 
 来源：session:6a25c5830bfcee1b04fb1c9e, session:6a25c5830bfcee1b04fb1c9e, session:6a2875380bfcee1b04fc33e8
+
+### LLM 供应商抽象层 (Shared LLM Provider)
+
+**设计目标**：为后端服务提供统一的 LLM 调用抽象，支持不同供应商（Doubao/Ark、OpenAI 等）的切换和扩展。
+
+**目录结构**：
+- `backend/shared/llm/provider.go` — Provider 接口定义
+- `backend/shared/llm/doubao_provider.go` — Doubao/Ark 实现
+- `backend/shared/llm/factory.go` — Provider 工厂
+
+**关键约束**：
+- **环境变量注入**：API Key 通过环境变量注入，禁止硬编码或从配置文件读取后提交到 Git
+- **超时控制**：LLM 调用需设置合理超时（如 30s），避免阻塞业务请求
+- **错误处理**：区分网络错误、配额超限、内容审核等不同错误类型，返回有意义的错误信息
+
+**使用模式**：
+```go
+provider := llm.NewProvider(cfg)
+response, err := provider.Generate(ctx, prompt)
+```
+
+**来源**：session:6a2879d10bfcee1b04fc3745
 
 ## Child Knowledge Nodes
 - `./frontend/h5/SKILL.md` — H5 用户端：首页、直播间、个人中心、图片兜底策略、足迹功能、移动端布局约束，以及直播间战况热度条 (BidHeatBar) 的 UX 增强决策。

@@ -11,7 +11,7 @@ services:
       - PRODUCT_SERVICE_URL=http://product:8081
       - AUCTION_SERVICE_URL=http://auction:8082
       - TEST_SERVICE_URL=http://test-service:18090
-      - TEST_SERVICE_WS_URL=ws://${APP_PUBLIC_HOST:-127.0.0.1}:18092
+      - TEST_SERVICE_WS_URL=ws://${APP_PUBLIC_HOST:-127.0.0.1}/test-ws
       - REDIS_ADDR=redis:6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - INTERNAL_API_TOKEN=${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}
@@ -204,7 +204,8 @@ services:
       - "127.0.0.1:18090:18090"
       - "127.0.0.1:18091:18091"
       # Browser-side test progress websocket uses endpoint discovery from gateway.
-      - "18092:18092"
+      # Public traffic enters through Nginx /test-ws/ instead of exposing this port directly.
+      - "127.0.0.1:18092:18092"
     environment:
       - TEST_HTTP_PORT=:18090
       - TEST_WS_PORT=:18092
