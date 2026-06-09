@@ -63,7 +63,7 @@
 
 | Service | Command | Branch | Worktree | Commit | Dirty | Ports | Owner |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `h5-vite-dev` | `feat/h5-bottom-nav-shared-indicator` | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-bottom-nav-shared-indicator` | `de1210c1` | `yes` | `npm run dev -- --host 127.0.0.1 --port 5176` | `valid: preview on 5176` | `-` |
+| `h5-vite-dev` | `feat/h5-bottom-nav-shared-indicator` | `/Users/bytedance/.config/superpowers/worktrees/dy-ai-live-auction-fullstack-cc/feat-h5-bottom-nav-shared-indicator` | `d6f5f7a0` | `yes` | `npm run dev -- --host 127.0.0.1 --port 5176` | `valid: preview on 5176` | `-` |
 
 ## Task Matrix
 
@@ -158,7 +158,7 @@
 
 **Commits**
 
-- `pending_commit`
+- `d6f5f7a0 feat(h5): add shared bottom nav indicator`
 
 **Review Notes**
 
