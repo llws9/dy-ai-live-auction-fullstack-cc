@@ -157,7 +157,7 @@
 
 **Commits**
 
-- `not_committed`
+- `eb42e6817b8954bfe27ae1a86459af7283a81cf5` - `test: parse demo auction cap price`
 
 **Review Notes**
 
