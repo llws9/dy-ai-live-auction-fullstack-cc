@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { repairUtf8Mojibake } from '@/utils/textEncoding';
+import { replaceBrokenImageWithFallback } from '@/utils/imageFallback';
 import styles from './Live.module.css';
 
 const SHEET_TRANSITION_MS = 350;
@@ -108,7 +109,7 @@ const BidDock = ({
         <div className={styles.dockProduct}>
           {productImage ? (
             <span className={styles.dockImageWrap}>
-              <img src={productImage} alt={productName} />
+              <img src={productImage} alt={productName} onError={replaceBrokenImageWithFallback} />
               {skyLampActive && (
                 <i className={`${styles.skyLampIcon} ${styles.dockSkyLampIcon}`} data-testid="dock-sky-lamp-icon" aria-hidden="true">
                   <span />

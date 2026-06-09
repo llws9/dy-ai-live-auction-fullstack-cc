@@ -36,6 +36,15 @@ describe('BidDock', () => {
     expect(onOpen).toHaveBeenCalledWith('bid');
   });
 
+  it('商品图加载失败时切换到稳定兜底图，避免显示浏览器破图', () => {
+    render(<BidDock {...baseProps} productImage="https://example.com/broken.jpg" />);
+
+    const image = screen.getByRole('img', { name: '明代紫砂壶' }) as HTMLImageElement;
+    fireEvent.error(image);
+
+    expect(image.src).toContain('/api/ide/v1/text_to_image');
+  });
+
   it('未登录点击出价触发登录引导而非打开抽屉', () => {
     const onOpen = jest.fn();
     const onRequireLogin = jest.fn();

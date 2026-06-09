@@ -68,6 +68,23 @@ describe('FixedPriceCard', () => {
     expect(screen.getByRole('img', { name: '无图商品' })).toBeInTheDocument();
   });
 
+  it('封面图加载失败时切换到稳定兜底图，避免显示浏览器破图', () => {
+    render(
+      <FixedPriceCard
+        item={{
+          ...item,
+          product_brief: { id: 5001, title: '破图商品', cover_image: 'https://example.com/broken.jpg' },
+        }}
+        onPurchase={() => {}}
+      />
+    );
+
+    const image = screen.getByRole('img', { name: '破图商品' }) as HTMLImageElement;
+    fireEvent.error(image);
+
+    expect(image.src).toContain('/api/ide/v1/text_to_image');
+  });
+
   it('优先展示接口返回的 product_title，避免降级成泛化标题', () => {
     render(
       <FixedPriceCard

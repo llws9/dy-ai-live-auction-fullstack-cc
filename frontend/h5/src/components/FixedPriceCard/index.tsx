@@ -1,4 +1,5 @@
 import type { FixedPriceItem, ProductBrief } from '../../api/fixedPrice';
+import { replaceBrokenImageWithFallback } from '../../utils/imageFallback';
 import styles from './index.module.css';
 
 interface FixedPriceCardProps {
@@ -41,7 +42,7 @@ export default function FixedPriceCard({ item, purchased = false, isPulsing = fa
       <div className={styles.badge}>限时一口价</div>
 
       {product.cover_image ? (
-        <img className={styles.cover} src={product.cover_image} alt={product.title} />
+        <img className={styles.cover} src={product.cover_image} alt={product.title} onError={replaceBrokenImageWithFallback} />
       ) : (
         <div className={styles.coverFallback} role="img" aria-label={product.title}>
           无图

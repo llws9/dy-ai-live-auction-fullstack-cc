@@ -89,6 +89,8 @@ assert_contains 'cd "\$PROJECT_ROOT/frontend/admin"' "deploy-prod.sh must build 
 assert_contains 'npm ci' "deploy-prod.sh must install frontend dependencies in a clean worktree before building"
 assert_file_contains "$DEMO_NGINX" 'location \^~ /ws/' "demo Nginx must expose test-dashboard WS discovery instead of falling back to H5 index"
 assert_file_contains "$DEMO_NGINX" 'proxy_pass http://127\.0\.0\.1:8080/ws/' "demo Nginx /ws/ route must proxy to gateway /ws/"
+assert_file_contains "$DEMO_NGINX" 'location \^~ /@vite/' "demo Nginx must not rewrite stale Vite dev-client module requests to index.html"
+assert_file_contains "$DEMO_NGINX" 'Cache-Control "no-cache, no-store, must-revalidate"' "demo Nginx must prevent stale index.html after prod deployments"
 assert_file_contains "$DEPLOY_QUICKSTART" 'test-dashboard' "deploy quickstart must document the protected Test Dashboard public entry"
 assert_file_contains "$DEPLOY_QUICKSTART" 'grafana' "deploy quickstart must document the protected Grafana public entry"
 
