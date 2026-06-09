@@ -29,15 +29,15 @@ const (
 
 // Config 场景参数
 type Config struct {
-	ProbeURL      string  `json:"probe_url"`        // 默认 gateway /health
-	ProbeQPS      int     `json:"probe_qps"`        // 默认 20
-	BaselineSec   int     `json:"baseline_sec"`     // 默认 3
-	InjectSec     int     `json:"inject_sec"`       // 默认 8
-	RecoverSec    int     `json:"recover_sec"`      // 默认 5
-	FaultType     string  `json:"fault_type"`       // latency|jitter|error_rate|disconnect|redis_flap|mq_pause
-	LatencyMs     int     `json:"latency_ms"`
-	JitterMs      int     `json:"jitter_ms"`
-	ErrorRate     float64 `json:"error_rate"`
+	ProbeURL    string  `json:"probe_url"`    // 默认 gateway /health
+	ProbeQPS    int     `json:"probe_qps"`    // 默认 20
+	BaselineSec int     `json:"baseline_sec"` // 默认 3
+	InjectSec   int     `json:"inject_sec"`   // 默认 8
+	RecoverSec  int     `json:"recover_sec"`  // 默认 5
+	FaultType   string  `json:"fault_type"`   // latency|jitter|error_rate|disconnect|redis_flap|mq_pause
+	LatencyMs   int     `json:"latency_ms"`
+	JitterMs    int     `json:"jitter_ms"`
+	ErrorRate   float64 `json:"error_rate"`
 }
 
 // Bucket 一秒桶
@@ -51,14 +51,14 @@ type Bucket struct {
 
 // Report 输出
 type Report struct {
-	Profile             chaos.Profile `json:"profile"`
-	Buckets             []Bucket      `json:"buckets"`
-	BaselineErrorRate   float64       `json:"baseline_error_rate"`
-	InjectErrorRate     float64       `json:"inject_error_rate"`
-	RecoverErrorRate    float64       `json:"recover_error_rate"`
-	DetectionLatencyMs  int64         `json:"detection_latency_ms"`
-	RecoveryLatencyMs   int64         `json:"recovery_latency_ms"`
-	AllOK               bool          `json:"all_ok"`
+	Profile            chaos.Profile `json:"profile"`
+	Buckets            []Bucket      `json:"buckets"`
+	BaselineErrorRate  float64       `json:"baseline_error_rate"`
+	InjectErrorRate    float64       `json:"inject_error_rate"`
+	RecoverErrorRate   float64       `json:"recover_error_rate"`
+	DetectionLatencyMs int64         `json:"detection_latency_ms"`
+	RecoveryLatencyMs  int64         `json:"recovery_latency_ms"`
+	AllOK              bool          `json:"all_ok"`
 }
 
 // Scenario 实现 runner.Scenario
@@ -96,6 +96,7 @@ func (s *Scenario) Run(ctx context.Context, raw json.RawMessage, p runner.Progre
 		return nil, err
 	}
 
+	chaos.Default().RecoverAll()
 	rep := &Report{Profile: profile, Buckets: make([]Bucket, 0, 64)}
 
 	totalSec := cfg.BaselineSec + cfg.InjectSec + cfg.RecoverSec
@@ -138,8 +139,8 @@ func (s *Scenario) runPhase(
 		if p != nil {
 			progress := (secOffset + i + 1) * 100 / total
 			p.Emit(progress, phase, map[string]any{
-				"ok":   bucket.OKCount,
-				"fail": bucket.FailCount,
+				"ok":             bucket.OKCount,
+				"fail":           bucket.FailCount,
 				"avg_latency_ms": bucket.AvgLatency,
 			})
 		}
@@ -218,9 +219,33 @@ func finalize(rep *Report, injectStart, recoverStart time.Time) {
 		}
 	}
 
-	// 通过条件：注入阶段错误率高于基线，恢复阶段错误率回落
-	rep.AllOK = rep.InjectErrorRate > rep.BaselineErrorRate &&
-		rep.RecoverErrorRate <= rep.InjectErrorRate
+	switch rep.Profile.Type {
+	case chaos.FaultLatency, chaos.FaultJitter:
+		baselineLatency := phaseAvgLatency(rep.Buckets, PhaseBaseline)
+		injectLatency := phaseAvgLatency(rep.Buckets, PhaseInject)
+		recoverLatency := phaseAvgLatency(rep.Buckets, PhaseRecover)
+		rep.AllOK = injectLatency > baselineLatency && recoverLatency < injectLatency
+		if rep.DetectionLatencyMs == 0 {
+			for _, b := range rep.Buckets {
+				if b.Phase == PhaseInject && b.AvgLatency > baselineLatency {
+					rep.DetectionLatencyMs = b.TS.Sub(injectStart).Milliseconds()
+					break
+				}
+			}
+		}
+		if rep.RecoveryLatencyMs == 0 {
+			for _, b := range rep.Buckets {
+				if b.Phase == PhaseRecover && b.AvgLatency < injectLatency && b.OKCount > 0 {
+					rep.RecoveryLatencyMs = b.TS.Sub(recoverStart).Milliseconds()
+					break
+				}
+			}
+		}
+	default:
+		// 错误率、断连、Redis/MQ 语义故障都以失败率抬升与恢复作为通过条件。
+		rep.AllOK = rep.InjectErrorRate > rep.BaselineErrorRate &&
+			rep.RecoverErrorRate <= rep.InjectErrorRate
+	}
 }
 
 func phaseErrRate(bs []Bucket, phase string) float64 {
@@ -236,6 +261,22 @@ func phaseErrRate(bs []Bucket, phase string) float64 {
 		return 0
 	}
 	return float64(fail) / float64(ok+fail)
+}
+
+func phaseAvgLatency(bs []Bucket, phase string) int64 {
+	var sum int64
+	var n int64
+	for _, b := range bs {
+		if b.Phase != phase {
+			continue
+		}
+		sum += b.AvgLatency
+		n++
+	}
+	if n == 0 {
+		return 0
+	}
+	return sum / n
 }
 
 func applyDefaults(c *Config, defaultURL string) {

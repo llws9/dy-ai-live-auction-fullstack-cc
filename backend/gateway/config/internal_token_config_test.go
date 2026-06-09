@@ -37,3 +37,22 @@ func TestInjectRuntimeSecretsLoadsInternalTokenFromEnvironment(t *testing.T) {
 
 	require.Equal(t, "runtime-secret", cfg.Services.InternalToken)
 }
+
+func TestInjectRuntimeSecretsBackfillsEmptyNacosRuntimeFieldsFromEnvironment(t *testing.T) {
+	t.Setenv("GATEWAY_PORT", ":8080")
+	t.Setenv("PRODUCT_SERVICE_URL", "http://product:8081")
+	t.Setenv("AUCTION_SERVICE_URL", "http://auction:8082")
+	t.Setenv("TEST_SERVICE_URL", "http://test-service:18090")
+	t.Setenv("TEST_SERVICE_WS_URL", "ws://localhost:18092")
+	t.Setenv("JWT_SECRET", "runtime-jwt-secret")
+
+	cfg := &Config{}
+	injectRuntimeSecrets(cfg)
+
+	require.Equal(t, ":8080", cfg.Server.Port)
+	require.Equal(t, "http://product:8081", cfg.Services.ProductURL)
+	require.Equal(t, "http://auction:8082", cfg.Services.AuctionURL)
+	require.Equal(t, "http://test-service:18090", cfg.Services.TestURL)
+	require.Equal(t, "ws://localhost:18092", cfg.Services.TestWSURL)
+	require.Equal(t, "runtime-jwt-secret", cfg.JWT.Secret)
+}

@@ -59,7 +59,10 @@ type fakeAuctionAPI struct {
 	clock *fakeClock
 
 	// 出价时间轴
-	bidLog []bidLogEntry
+	bidLog                        []bidLogEntry
+	suppressDelayUsed             bool
+	deferExtensionUntilNextSample bool
+	pendingExtension              time.Duration
 }
 
 type bidLogEntry struct {
@@ -110,6 +113,17 @@ func (f *fakeAuctionAPI) PlaceBid(ctx context.Context, userID, auctionID int64, 
 			if usedDur+grant > f.maxDelay {
 				grant = f.maxDelay - usedDur
 			}
+			if f.deferExtensionUntilNextSample {
+				f.pendingExtension = grant
+				f.auction.Status = 2
+				f.bidLog = append(f.bidLog, bidLogEntry{
+					at: f.clock.Now(), userID: userID,
+					delayUsed: f.auction.DelayUsed, endTime: f.auction.EndTime, ok: true,
+				})
+				f.auction.CurrentPrice = amount
+				f.auction.WinnerID = userID
+				return auction.StepResult{Step: "bid", OK: true, RefID: userID, StatusCode: 200}
+			}
 			f.auction.EndTime = f.auction.EndTime.Add(grant)
 			f.auction.DelayUsed += int(grant / time.Second)
 			f.auction.Status = 2 // Delayed
@@ -130,6 +144,14 @@ func (f *fakeAuctionAPI) GetAuction(ctx context.Context, auctionID int64) (aucti
 	defer f.mu.Unlock()
 	f.getCalls++
 	a := f.auction
+	if f.pendingExtension > 0 {
+		f.auction.EndTime = f.auction.EndTime.Add(f.pendingExtension)
+		f.auction.DelayUsed += int(f.pendingExtension / time.Second)
+		f.pendingExtension = 0
+	}
+	if f.suppressDelayUsed {
+		a.DelayUsed = 0
+	}
 	return a, auction.StepResult{Step: "get_auction", OK: true, StatusCode: 200}
 }
 
@@ -174,6 +196,62 @@ func TestSimulator_LastSecondBidsTriggerDelay(t *testing.T) {
 	}
 	if len(report.Timeline) == 0 {
 		t.Fatalf("Timeline should not be empty")
+	}
+}
+
+func TestSimulator_DetectsTriggerFromEndTimeWhenDelayUsedMissing(t *testing.T) {
+	clock := &fakeClock{now: time.Date(2026, 5, 30, 10, 0, 0, 0, time.UTC)}
+	originalEnd := clock.Now().Add(10 * time.Second)
+	api := newFakeAPI(clock, originalEnd)
+	api.suppressDelayUsed = true
+
+	report, err := NewSimulator(api, Config{
+		AuctionID:       8001,
+		BidderIDs:       []int64{1001},
+		BidIntervalMs:   500,
+		EndingWindowSec: 5,
+		StartPrice:      100,
+		Increment:       10,
+		Now:             clock.Now,
+		Sleep:           func(d time.Duration) { clock.advance(d) },
+	}).RunSimulation(context.Background())
+	if err != nil {
+		t.Fatalf("RunSimulation err: %v", err)
+	}
+
+	if report.TriggeredCount == 0 {
+		t.Fatalf("expected trigger inferred from end_time extension")
+	}
+	if report.DelayUsedMs == 0 {
+		t.Fatalf("expected delay_used_ms inferred from end_time delta")
+	}
+}
+
+func TestSimulator_DetectsTriggerFromObservedTimelineExtension(t *testing.T) {
+	clock := &fakeClock{now: time.Date(2026, 5, 30, 10, 0, 0, 0, time.UTC)}
+	originalEnd := clock.Now().Add(10 * time.Second)
+	api := newFakeAPI(clock, originalEnd)
+	api.deferExtensionUntilNextSample = true
+
+	report, err := NewSimulator(api, Config{
+		AuctionID:       8001,
+		BidderIDs:       []int64{1001},
+		BidIntervalMs:   500,
+		EndingWindowSec: 5,
+		StartPrice:      100,
+		Increment:       10,
+		Now:             clock.Now,
+		Sleep:           func(d time.Duration) { clock.advance(d) },
+	}).RunSimulation(context.Background())
+	if err != nil {
+		t.Fatalf("RunSimulation err: %v", err)
+	}
+
+	if !report.ActualEndTime.After(report.OriginalEndTime) {
+		t.Fatalf("expected end_time extension")
+	}
+	if report.TriggeredCount == 0 {
+		t.Fatalf("expected trigger inferred from observed timeline extension")
 	}
 }
 

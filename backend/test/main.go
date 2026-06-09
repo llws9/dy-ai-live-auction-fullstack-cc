@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
@@ -30,6 +31,8 @@ import (
 	"test-service/service/cron"
 	"test-service/ws"
 )
+
+var pressureFixtureRunSeq atomic.Int64
 
 func main() {
 	// 日志级别（环境变量 LOG_LEVEL=debug|info|warn|error，默认 info）
@@ -206,10 +209,6 @@ func (f pressureClientFactory) PrepareFixture(ctx context.Context, cfg pressure.
 	if f.db == nil {
 		return pressure.Fixture{}, fmt.Errorf("database is required for pressure fixture")
 	}
-	if err := f.ensurePressureUsers(ctx, cfg.ConcurrentUsers); err != nil {
-		return pressure.Fixture{}, err
-	}
-
 	auctionCount := 1
 	if cfg.Scenario == "throughput" {
 		auctionCount = cfg.ConcurrentUsers
@@ -220,12 +219,16 @@ func (f pressureClientFactory) PrepareFixture(ctx context.Context, cfg pressure.
 	if auctionCount < 1 {
 		auctionCount = 1
 	}
+	merchantBaseID := pressureFixtureMerchantBaseID(time.Now())
+	if err := f.ensurePressureUsers(ctx, cfg.ConcurrentUsers, merchantBaseID, auctionCount); err != nil {
+		return pressure.Fixture{}, err
+	}
 
 	cli := auction.NewClient(f.gatewayURL, 10*time.Second)
 	cli.SetJWTSecret(f.jwtSecret)
 
-	seller := auction.Actor{UserID: 9001, Username: "pressure_merchant_9001", Role: auction.RoleMerchant}
 	if auctionCount == 1 {
+		seller := pressureFixtureSellerForIndex(cfg, merchantBaseID, 0)
 		auctionID, err := f.createPressureAuction(ctx, cli, seller, cfg, 0)
 		if err != nil {
 			return pressure.Fixture{}, err
@@ -244,6 +247,7 @@ func (f pressureClientFactory) PrepareFixture(ctx context.Context, cfg pressure.
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
+			seller := pressureFixtureSellerForIndex(cfg, merchantBaseID, i)
 			auctionID, err := f.createPressureAuction(ctx, cli, seller, cfg, i)
 			if err != nil {
 				errs <- err
@@ -301,10 +305,41 @@ func (f pressureClientFactory) createPressureAuction(ctx context.Context, cli *a
 	return auctionStep.RefID, nil
 }
 
-func (f pressureClientFactory) ensurePressureUsers(ctx context.Context, concurrentUsers int) error {
+func pressureFixtureMerchantBaseID(now time.Time) int64 {
+	seq := pressureFixtureRunSeq.Add(1) % 1000
+	return 900000000000 + now.UnixMilli()*1000 + seq
+}
+
+func pressureFixtureSellerForIndex(cfg pressure.Config, baseID int64, index int) auction.Actor {
+	userID := baseID
+	if cfg.Scenario == "throughput" {
+		userID += int64(index)
+	}
+	return auction.Actor{
+		UserID:   userID,
+		Username: fmt.Sprintf("pressure_merchant_%d", userID),
+		Role:     auction.RoleMerchant,
+	}
+}
+
+func (f pressureClientFactory) ensurePressureUsers(ctx context.Context, concurrentUsers int, merchantBaseID int64, merchantCount int) error {
 	const passwordHash = "$2a$10$BNzNS6qrCs4z0zPrTB01m.OlGPNBYq5o3d.8JlTrz2O5laOi6gxWy"
 	now := time.Now()
-	users := make([]map[string]any, 0, concurrentUsers)
+	users := make([]map[string]any, 0, concurrentUsers+merchantCount)
+	for i := 0; i < merchantCount; i++ {
+		userID := merchantBaseID + int64(i)
+		users = append(users, map[string]any{
+			"id":         userID,
+			"name":       fmt.Sprintf("压测商家 %d", userID),
+			"avatar":     "",
+			"email":      nil,
+			"phone":      nil,
+			"password":   passwordHash,
+			"role":       1,
+			"status":     1,
+			"created_at": now,
+		})
+	}
 	for i := 0; i < concurrentUsers; i++ {
 		userID := int64(100000 + i)
 		users = append(users, map[string]any{

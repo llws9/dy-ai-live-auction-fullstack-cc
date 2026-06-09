@@ -3,6 +3,7 @@ package user_journey
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"regexp"
@@ -208,10 +209,11 @@ func (o *Orchestrator) prepare(ctx context.Context, rep *Report, p runner.Progre
 	}
 
 	auctionStep := o.biz.CreateAuctionAs(ctx, merchant, auction.CreateAuctionReq{
-		ProductID:  rep.ProductID,
-		StartPrice: 100,
-		Increment:  10,
-		Duration:   o.cfg.AuctionDurationSec,
+		ProductID:    rep.ProductID,
+		LiveStreamID: rep.LiveStreamID,
+		StartPrice:   100,
+		Increment:    10,
+		Duration:     o.cfg.AuctionDurationSec,
 	})
 	if !auctionStep.OK {
 		return o.recordAndError(rep, p, 10, "prepare", auctionStep, "prepare create_auction failed")
@@ -219,17 +221,31 @@ func (o *Orchestrator) prepare(ctx context.Context, rep *Report, p runner.Progre
 	rep.AuctionID = auctionStep.RefID
 	o.addSeed(ctx, rep, "auction", rep.AuctionID)
 
-	fixed := o.biz.CreateFixedPriceItem(ctx, merchant, auction.CreateFixedPriceItemReq{
-		LiveStreamID: rep.LiveStreamID,
-		ProductID:    rep.ProductID,
-		Price:        o.cfg.FixedPriceItemPrice,
-		Stock:        rep.StockBefore,
-	})
-	if !fixed.OK {
-		return o.recordAndError(rep, p, 10, "prepare", fixed, "prepare create_fixed_price_item failed")
+	if o.cfg.includeFixedPrice() {
+		fixedProduct := o.biz.CreateProductAs(ctx, merchant, auction.CreateProductReq{
+			Name:        fmt.Sprintf("TEST_USER_JOURNEY_%s 一口价商品", o.cfg.TestID),
+			Description: "TEST_USER_JOURNEY_FIXED_PRICE_" + o.cfg.TestID,
+			Status:      1,
+		})
+		if !fixedProduct.OK {
+			return o.recordAndError(rep, p, 10, "prepare", fixedProduct, "prepare create_fixed_price_product failed")
+		}
+		fixedProductID := fixedProduct.RefID
+		o.addSeed(ctx, rep, "product", fixedProductID)
+
+		fixed := o.biz.CreateFixedPriceItem(ctx, merchant, auction.CreateFixedPriceItemReq{
+			AuctionID:    rep.AuctionID,
+			LiveStreamID: rep.LiveStreamID,
+			ProductID:    fixedProductID,
+			Price:        o.cfg.FixedPriceItemPrice,
+			Stock:        rep.StockBefore,
+		})
+		if !fixed.OK {
+			return o.recordAndError(rep, p, 10, "prepare", fixed, "prepare create_fixed_price_item failed")
+		}
+		rep.FixedPriceItemID = fixed.RefID
+		o.addSeed(ctx, rep, "fixed_price_item", rep.FixedPriceItemID)
 	}
-	rep.FixedPriceItemID = fixed.RefID
-	o.addSeed(ctx, rep, "fixed_price_item", rep.FixedPriceItemID)
 
 	_, topUp := o.internal.TopUpUserBalance(ctx, buyer.UserID, o.cfg.BalanceTopUpAmount)
 	if !topUp.OK {
@@ -249,9 +265,11 @@ func (o *Orchestrator) enterLive(ctx context.Context, rep *Report, p runner.Prog
 	if !liveStep.OK || live.ID == 0 {
 		return o.recordAndError(rep, p, 25, "enter_live", liveStep, "enter_live get_live_stream failed")
 	}
-	items, itemStep := o.biz.ListFixedPriceItemsByLiveStream(ctx, buyer, rep.LiveStreamID)
-	if !itemStep.OK || len(items) == 0 {
-		return o.recordAndError(rep, p, 25, "enter_live", itemStep, "enter_live list_fixed_price_items failed")
+	if o.cfg.includeFixedPrice() {
+		items, itemStep := o.biz.ListFixedPriceItemsByLiveStream(ctx, buyer, rep.LiveStreamID)
+		if !itemStep.OK || len(items) == 0 {
+			return o.recordAndError(rep, p, 25, "enter_live", itemStep, "enter_live list_fixed_price_items failed")
+		}
 	}
 	o.record(rep, p, 25, auction.StepResult{Step: "enter_live", OK: true, RefID: rep.LiveStreamID})
 	return nil
@@ -416,10 +434,10 @@ func applyDefaults(c *Config) {
 		c.TestID = "user_journey"
 	}
 	if c.BuyerID == 0 {
-		c.BuyerID = 2001
+		c.BuyerID = defaultActorID(2001, c.TestID, 2_000_000)
 	}
 	if c.MerchantID == 0 {
-		c.MerchantID = 9001
+		c.MerchantID = defaultActorID(9001, c.TestID, 9_000_000)
 	}
 	if c.AuctionDurationSec == 0 {
 		c.AuctionDurationSec = 30
@@ -433,6 +451,14 @@ func applyDefaults(c *Config) {
 	if c.FixedPriceItemPrice == "" {
 		c.FixedPriceItemPrice = "100.00"
 	}
+}
+
+func defaultActorID(fallback int64, testID string, base int64) int64 {
+	if !uuidRe.MatchString(testID) {
+		return fallback
+	}
+	sum := sha256.Sum256([]byte(testID))
+	return base + int64(binary.BigEndian.Uint32(sum[:4])%900_000)
 }
 
 func (c Config) includeReminder() bool {

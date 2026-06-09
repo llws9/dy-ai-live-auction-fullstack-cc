@@ -421,6 +421,44 @@ func TestSDK_GetAuctionResultParsesDataEnvelope(t *testing.T) {
 	}
 }
 
+func TestSDK_GetAuctionResultParsesWonBidObject(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/auctions/7/result" || r.Method != http.MethodGet {
+			t.Fatalf("path/method: %s %s", r.Method, r.URL.Path)
+		}
+		_, _ = w.Write([]byte(`{"code":200,"data":{"auction_id":7,"product_id":42,"status":3,"final_price":110,"winner_id":2001,"won_bid":{"id":88,"user_id":2001,"amount":110,"created_at":"2026-06-09T10:00:00Z"}}}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	result, step := c.GetAuctionResult(context.Background(), 7)
+	if !step.OK {
+		t.Fatalf("GetAuctionResult failed: %s err=%v", step.Message, step.Err)
+	}
+	if result.WonBid != 110 {
+		t.Fatalf("won_bid amount: want 110, got %#v", result.WonBid)
+	}
+}
+
+func TestSDK_GetAuctionResultParsesTopLevelWonBidObject(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/auctions/7/result" || r.Method != http.MethodGet {
+			t.Fatalf("path/method: %s %s", r.Method, r.URL.Path)
+		}
+		_, _ = w.Write([]byte(`{"auction_id":7,"product_id":42,"status":3,"final_price":110,"winner_id":2001,"won_bid":{"id":88,"user_id":2001,"amount":110,"created_at":"2026-06-09T10:00:00Z"}}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient(srv.URL, 3*time.Second)
+	result, step := c.GetAuctionResult(context.Background(), 7)
+	if !step.OK {
+		t.Fatalf("GetAuctionResult failed: %s err=%v", step.Message, step.Err)
+	}
+	if result.WonBid != 110 {
+		t.Fatalf("top-level won_bid amount: want 110, got %#v", result.WonBid)
+	}
+}
+
 func TestSDK_GetAuctionResultRejectsBusinessErrorEnvelope(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/v1/auctions/7/result" || r.Method != http.MethodGet {

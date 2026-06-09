@@ -135,6 +135,10 @@ func (r *Runner) run(ctx context.Context, id string, s Scenario, cfg json.RawMes
 	}
 	if err != nil {
 		hlog.Errorf("[runner] failed test_id=%s cost=%s err=%v", id, cost, err)
+		r.emit(id, 100, "failed", map[string]any{
+			"error":  err.Error(),
+			"status": model.StatusFailed,
+		})
 		_ = r.resultDAO.UpdateStatus(context.Background(), id, model.StatusFailed, "", err.Error(), &now)
 		return
 	}

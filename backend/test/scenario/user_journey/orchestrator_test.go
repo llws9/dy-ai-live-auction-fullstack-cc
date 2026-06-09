@@ -3,6 +3,7 @@ package user_journey
 import (
 	"context"
 	"errors"
+	"strconv"
 	"testing"
 	"time"
 
@@ -50,7 +51,7 @@ func TestRunHappyPathProducesEvidenceReport(t *testing.T) {
 		"fixed_price_purchase",
 		"verify",
 	})
-	assert.Equal(t, []string{"product:101", "live_stream:201", "auction:301", "fixed_price_item:401", "order:501"}, rec.added)
+	assert.Equal(t, []string{"product:101", "live_stream:201", "auction:301", "product:102", "fixed_price_item:401", "order:501"}, rec.added)
 	assert.False(t, rec.deleteCalled, "user_journey must keep evidence by default")
 	assert.Equal(t, "verify", emitter.lastStep())
 }
@@ -226,12 +227,58 @@ func TestPrepareCreatesFastAuctionRuleForUserJourney(t *testing.T) {
 	assert.Equal(t, 1, biz.lastRuleReq.TriggerDelayBefore)
 }
 
+func TestPrepareBindsFixedPriceItemToCreatedAuction(t *testing.T) {
+	ctx := context.Background()
+	biz := newFakeBiz()
+
+	_, err := New(biz, &fakeInternalClient{}, &fakeSeedRecorder{}, Config{
+		TestID: "tj_fixed_price_auction",
+	}).Run(ctx, nil)
+	require.NoError(t, err)
+
+	assert.Equal(t, int64(301), biz.lastFixedPriceReq.AuctionID)
+	assert.Equal(t, int64(201), biz.lastFixedPriceReq.LiveStreamID)
+	assert.Positive(t, biz.lastFixedPriceReq.ProductID)
+	assert.NotEqual(t, biz.lastAuctionReq.ProductID, biz.lastFixedPriceReq.ProductID)
+}
+
+func TestRunSkipsFixedPriceWhenDisabled(t *testing.T) {
+	ctx := context.Background()
+	biz := newFakeBiz()
+	rec := &fakeSeedRecorder{}
+	includeFixedPrice := false
+
+	report, err := New(biz, &fakeInternalClient{}, rec, Config{
+		TestID:            "tj_without_fixed_price",
+		IncludeFixedPrice: &includeFixedPrice,
+	}).Run(ctx, nil)
+	require.NoError(t, err)
+
+	assert.True(t, report.AllOK)
+	assert.NotContains(t, biz.calls, "create_fixed_price_item")
+	assert.NotContains(t, biz.calls, "list_fixed_price_items")
+	assert.NotContains(t, biz.calls, "purchase_fixed_price_item")
+	assert.NotContains(t, rec.added, "fixed_price_item:401")
+}
+
+func TestApplyDefaultsDerivesIsolatedActorsForRuntimeUUID(t *testing.T) {
+	cfg := Config{TestID: "18300435-b9a3-49d5-8e7c-f1d6de821391"}
+
+	applyDefaults(&cfg)
+
+	assert.NotEqual(t, int64(2001), cfg.BuyerID)
+	assert.NotEqual(t, int64(9001), cfg.MerchantID)
+	assert.NotEqual(t, cfg.BuyerID, cfg.MerchantID)
+}
+
 func TestFixedPricePurchaseUsesUUIDIdempotencyKey(t *testing.T) {
 	ctx := context.Background()
 	biz := newFakeBiz()
 
 	_, err := New(biz, &fakeInternalClient{}, &fakeSeedRecorder{}, Config{
-		TestID: "18300435-b9a3-49d5-8e7c-f1d6de821391",
+		TestID:     "18300435-b9a3-49d5-8e7c-f1d6de821391",
+		BuyerID:    2001,
+		MerchantID: 9001,
 	}).Run(ctx, nil)
 	require.NoError(t, err)
 
@@ -241,16 +288,21 @@ func TestFixedPricePurchaseUsesUUIDIdempotencyKey(t *testing.T) {
 type fakeBiz struct {
 	calls               []string
 	lastRuleReq         auction.CreateAuctionRuleReq
+	lastAuctionReq      auction.CreateAuctionReq
+	lastFixedPriceReq   auction.CreateFixedPriceItemReq
 	lastPurchaseIdemKey string
+	nextProductID       int64
 }
 
-func newFakeBiz() *fakeBiz { return &fakeBiz{calls: make([]string, 0, 16)} }
+func newFakeBiz() *fakeBiz { return &fakeBiz{calls: make([]string, 0, 16), nextProductID: 101} }
 
 func (f *fakeBiz) call(name string) { f.calls = append(f.calls, name) }
 
 func (f *fakeBiz) CreateProductAs(_ context.Context, _ auction.Actor, _ auction.CreateProductReq) auction.StepResult {
 	f.call("create_product")
-	return okStep("create_product", 101)
+	id := f.nextProductID
+	f.nextProductID++
+	return okStep("create_product", id)
 }
 
 func (f *fakeBiz) CreateLiveStream(_ context.Context, _ auction.Actor, _ auction.CreateLiveStreamReq) auction.StepResult {
@@ -264,8 +316,9 @@ func (f *fakeBiz) CreateAuctionRule(_ context.Context, _ auction.Actor, _ int64,
 	return okStep("create_auction_rule", 0)
 }
 
-func (f *fakeBiz) CreateAuctionAs(_ context.Context, _ auction.Actor, _ auction.CreateAuctionReq) auction.StepResult {
+func (f *fakeBiz) CreateAuctionAs(_ context.Context, _ auction.Actor, req auction.CreateAuctionReq) auction.StepResult {
 	f.call("create_auction")
+	f.lastAuctionReq = req
 	return okStep("create_auction", 301)
 }
 
@@ -291,8 +344,9 @@ func (f *fakeBiz) GetAuctionResult(_ context.Context, auctionID int64) (auction.
 	}, okStep("get_auction_result", auctionID)
 }
 
-func (f *fakeBiz) CreateFixedPriceItem(_ context.Context, _ auction.Actor, _ auction.CreateFixedPriceItemReq) auction.StepResult {
+func (f *fakeBiz) CreateFixedPriceItem(_ context.Context, _ auction.Actor, req auction.CreateFixedPriceItemReq) auction.StepResult {
 	f.call("create_fixed_price_item")
+	f.lastFixedPriceReq = req
 	return okStep("create_fixed_price_item", 401)
 }
 
@@ -453,18 +507,5 @@ func indexOfCall(calls []string, name string) int {
 }
 
 func itoa(v int64) string {
-	switch v {
-	case 101:
-		return "101"
-	case 201:
-		return "201"
-	case 301:
-		return "301"
-	case 401:
-		return "401"
-	case 501:
-		return "501"
-	default:
-		return "0"
-	}
+	return strconv.FormatInt(v, 10)
 }

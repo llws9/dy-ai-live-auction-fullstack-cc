@@ -94,8 +94,11 @@ export default function Pressure() {
     [metrics.error_codes, metrics.failure],
   );
   const wsStatus = describeWSStatus(connected, progress, step);
+  const failureMessage = failureMessageFromMetrics(metrics);
+  const startDisabled = isPressureStartDisabled(running, testID, progress, step);
 
   const handleStart = async () => {
+    if (startDisabled) return;
     setError(null);
     setRunning(true);
     try {
@@ -170,8 +173,8 @@ export default function Pressure() {
           压测开始前会自动创建有效拍卖 fixture，并为每个压测用户注入合法 JWT。吞吐压测默认按并发用户数创建拍卖分片。
         </div>
         <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-          <button type="button" disabled={running} onClick={handleStart} style={primaryBtn(running)}>
-            {running ? '启动中...' : '启动压测'}
+          <button type="button" disabled={startDisabled} onClick={handleStart} style={primaryBtn(startDisabled)}>
+            {describePressureStartButton(running, testID, progress, step)}
           </button>
           <button type="button" disabled={!testID} onClick={handleCancel} style={secondaryBtn(!testID)}>
             取消
@@ -186,6 +189,11 @@ export default function Pressure() {
           test_id: <code>{testID || '-'}</code> · WS: {wsStatus} · 步骤: {step || '-'}
         </div>
         <ProgressBar value={progress} label={`${progress}%`} />
+        {failureMessage && (
+          <div style={{ color: '#ef4444', marginTop: 10, fontSize: 13 }}>
+            错误：{failureMessage}
+          </div>
+        )}
       </section>
 
       <section style={cardStyle}>
@@ -382,9 +390,31 @@ function explainErrorCode(code: string): Omit<ErrorCodeExplanation, 'code' | 'co
   }
 }
 
-function describeWSStatus(connected: boolean, progress: number, step: string): string {
+export function describeWSStatus(connected: boolean, progress: number, step: string): string {
+  if (step === 'failed') return '压测失败，实时连接已结束';
   if (progress >= 100 || step === 'done') return '压测已完成，实时连接已结束';
   return connected ? '已连接' : '等待连接';
+}
+
+export function failureMessageFromMetrics(metrics: Record<string, unknown>): string | null {
+  const error = metrics.error;
+  return typeof error === 'string' && error.trim() ? error : null;
+}
+
+export function isPressureStartDisabled(running: boolean, testID: string | null, progress: number, step: string): boolean {
+  if (running) return true;
+  if (!testID) return false;
+  return !isPressureTerminal(progress, step);
+}
+
+export function describePressureStartButton(running: boolean, testID: string | null, progress: number, step: string): string {
+  if (running) return '启动中...';
+  if (isPressureStartDisabled(running, testID, progress, step)) return '压测进行中';
+  return '启动压测';
+}
+
+function isPressureTerminal(progress: number, step: string): boolean {
+  return step === 'failed' || step === 'done' || progress >= 100;
 }
 
 function fmt(v: unknown, digits = 0): string {

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	tchaos "test-service/chaos"
 )
@@ -61,6 +62,63 @@ func TestChaosScenario_RunWithErrorRateInjection(t *testing.T) {
 	}
 	if got := len(rep.Buckets); got != 3 {
 		t.Errorf("expected 3 buckets, got %d", got)
+	}
+}
+
+func TestChaosScenario_RunStartsFromCleanBroker(t *testing.T) {
+	tchaos.Default().RecoverAll()
+	tchaos.Default().Inject(tchaos.Profile{
+		ID:        "stale-profile",
+		Type:      tchaos.FaultErrorRate,
+		ErrorRate: 1,
+	})
+	defer tchaos.Default().RecoverAll()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	cfg := Config{
+		ProbeURL:    srv.URL,
+		ProbeQPS:    5,
+		BaselineSec: 1,
+		InjectSec:   1,
+		RecoverSec:  1,
+		FaultType:   string(tchaos.FaultErrorRate),
+		ErrorRate:   1,
+	}
+	raw, _ := json.Marshal(cfg)
+
+	out, err := NewScenario(srv.URL).Run(context.Background(), raw, nil)
+	if err != nil {
+		t.Fatalf("run err: %v", err)
+	}
+	rep := out.(*Report)
+	if rep.BaselineErrorRate > 0 {
+		t.Fatalf("baseline should ignore stale profiles, got %.2f", rep.BaselineErrorRate)
+	}
+	if !rep.AllOK {
+		t.Fatalf("expected all_ok=true after clean baseline, got baseline=%.2f inject=%.2f recover=%.2f",
+			rep.BaselineErrorRate, rep.InjectErrorRate, rep.RecoverErrorRate)
+	}
+}
+
+func TestFinalize_LatencyFaultPassesWhenLatencyRisesAndRecovers(t *testing.T) {
+	start := time.Unix(100, 0)
+	rep := &Report{
+		Profile: tchaos.Profile{Type: tchaos.FaultLatency},
+		Buckets: []Bucket{
+			{TS: start, Phase: PhaseBaseline, OKCount: 10, AvgLatency: 10},
+			{TS: start.Add(time.Second), Phase: PhaseInject, OKCount: 10, AvgLatency: 150},
+			{TS: start.Add(2 * time.Second), Phase: PhaseRecover, OKCount: 10, AvgLatency: 12},
+		},
+	}
+
+	finalize(rep, start.Add(time.Second), start.Add(2*time.Second))
+
+	if !rep.AllOK {
+		t.Fatalf("expected latency fault to pass when latency rises then recovers")
 	}
 }
 

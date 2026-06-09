@@ -184,6 +184,65 @@ type AuctionResult struct {
 	WonBid     float64 `json:"won_bid"`
 }
 
+func (r *AuctionResult) UnmarshalJSON(data []byte) error {
+	var aux struct {
+		AuctionID  int64           `json:"auction_id"`
+		ProductID  int64           `json:"product_id"`
+		Status     int             `json:"status"`
+		FinalPrice float64         `json:"final_price"`
+		WinnerID   int64           `json:"winner_id"`
+		WonBid     json.RawMessage `json:"won_bid"`
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	r.AuctionID = aux.AuctionID
+	r.ProductID = aux.ProductID
+	r.Status = aux.Status
+	r.FinalPrice = aux.FinalPrice
+	r.WinnerID = aux.WinnerID
+	r.WonBid = 0
+	if len(aux.WonBid) == 0 || string(aux.WonBid) == "null" {
+		return nil
+	}
+	if amount, ok := parseJSONFloat(aux.WonBid); ok {
+		r.WonBid = amount
+		return nil
+	}
+	if amount, ok := parseWonBidAmount(aux.WonBid); ok {
+		r.WonBid = amount
+	}
+	return nil
+}
+
+func parseWonBidAmount(raw json.RawMessage) (float64, bool) {
+	var bid struct {
+		Amount json.RawMessage `json:"amount"`
+	}
+	if err := json.Unmarshal(raw, &bid); err != nil {
+		return 0, false
+	}
+	return parseJSONFloat(bid.Amount)
+}
+
+func parseJSONFloat(raw json.RawMessage) (float64, bool) {
+	if len(raw) == 0 || string(raw) == "null" {
+		return 0, false
+	}
+	var numeric float64
+	if err := json.Unmarshal(raw, &numeric); err == nil {
+		return numeric, true
+	}
+	var text string
+	if err := json.Unmarshal(raw, &text); err == nil {
+		parsed, parseErr := strconv.ParseFloat(text, 64)
+		if parseErr == nil {
+			return parsed, true
+		}
+	}
+	return 0, false
+}
+
 func (a *Auction) UnmarshalJSON(data []byte) error {
 	type auctionAlias Auction
 	var aux struct {
@@ -424,10 +483,15 @@ func (c *Client) GetAuction(ctx context.Context, auctionID int64) (Auction, Step
 
 func (c *Client) GetAuctionResult(ctx context.Context, auctionID int64) (AuctionResult, StepResult) {
 	var resp struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-		AuctionResult
-		Data AuctionResult `json:"data"`
+		Code       int             `json:"code"`
+		Message    string          `json:"message"`
+		AuctionID  int64           `json:"auction_id"`
+		ProductID  int64           `json:"product_id"`
+		Status     int             `json:"status"`
+		FinalPrice float64         `json:"final_price"`
+		WinnerID   int64           `json:"winner_id"`
+		WonBid     json.RawMessage `json:"won_bid"`
+		Data       *AuctionResult  `json:"data"`
 	}
 	path := "/api/v1/auctions/" + strconv.FormatInt(auctionID, 10) + "/result"
 	step := c.doAs(ctx, "get_auction_result", http.MethodGet, path, Actor{}, nil, nil, &resp)
@@ -436,9 +500,20 @@ func (c *Client) GetAuctionResult(ctx context.Context, auctionID int64) (Auction
 		step.Message = firstNonEmpty(resp.Message, fmt.Sprintf("business code %d", resp.Code))
 		return AuctionResult{}, step
 	}
-	result := resp.AuctionResult
-	if result.AuctionID == 0 {
-		result = resp.Data
+	if resp.Data != nil && resp.Data.AuctionID != 0 {
+		return *resp.Data, step
+	}
+	result := AuctionResult{
+		AuctionID:  resp.AuctionID,
+		ProductID:  resp.ProductID,
+		Status:     resp.Status,
+		FinalPrice: resp.FinalPrice,
+		WinnerID:   resp.WinnerID,
+	}
+	if amount, ok := parseJSONFloat(resp.WonBid); ok {
+		result.WonBid = amount
+	} else if amount, ok := parseWonBidAmount(resp.WonBid); ok {
+		result.WonBid = amount
 	}
 	return result, step
 }

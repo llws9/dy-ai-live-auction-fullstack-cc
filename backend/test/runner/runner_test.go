@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -41,6 +42,32 @@ func (r *recordingEmitter) Emit(p int, _ string, _ map[string]any) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.progress = append(r.progress, p)
+}
+
+type emittedEvent struct {
+	progress int
+	step     string
+	metrics  map[string]any
+}
+
+type recordingRunnerEmitter struct {
+	mu     sync.Mutex
+	events []emittedEvent
+}
+
+func (r *recordingRunnerEmitter) Emit(_ string, progress int, step string, metrics map[string]any) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.events = append(r.events, emittedEvent{progress: progress, step: step, metrics: metrics})
+}
+
+func (r *recordingRunnerEmitter) Last() (emittedEvent, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.events) == 0 {
+		return emittedEvent{}, false
+	}
+	return r.events[len(r.events)-1], true
 }
 
 // fakeScenario：固定 emit 5 次，每次 +20%
@@ -92,6 +119,35 @@ func TestRunner_UnknownScenario(t *testing.T) {
 
 	_, err := r.Submit(context.Background(), "nope", json.RawMessage(`{}`))
 	require.Error(t, err)
+}
+
+type failingBeforeEmitScenario struct{}
+
+func (failingBeforeEmitScenario) Type() string { return "fail-before-emit" }
+func (failingBeforeEmitScenario) Run(context.Context, json.RawMessage, ProgressEmitter) (any, error) {
+	return nil, errors.New("fixture prepare failed")
+}
+
+func TestRunner_EmitsFailureWhenScenarioFailsBeforeFirstProgress(t *testing.T) {
+	db := newDB(t)
+	r := New(dao.NewResultDAO(db))
+	rec := &recordingRunnerEmitter{}
+	r.SetEmitter(rec.Emit)
+	r.Register(failingBeforeEmitScenario{})
+
+	id, err := r.Submit(context.Background(), "fail-before-emit", json.RawMessage(`{}`))
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		got, err := dao.NewResultDAO(db).GetByID(context.Background(), id)
+		return err == nil && got.Status == model.StatusFailed
+	}, 2*time.Second, 20*time.Millisecond)
+
+	last, ok := rec.Last()
+	require.True(t, ok)
+	assert.Equal(t, 100, last.progress)
+	assert.Equal(t, "failed", last.step)
+	assert.Equal(t, "fixture prepare failed", last.metrics["error"])
 }
 
 // 取消正在运行的任务

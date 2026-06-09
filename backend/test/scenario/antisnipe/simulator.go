@@ -35,18 +35,18 @@ type Config struct {
 	SafePeriodOnly bool `json:"safe_period_only,omitempty"`
 
 	// 钩子：可注入用于测试加速；nil 时使用真实 time
-	Now   func() time.Time         `json:"-"`
-	Sleep func(d time.Duration)    `json:"-"`
+	Now   func() time.Time      `json:"-"`
+	Sleep func(d time.Duration) `json:"-"`
 }
 
 // TimelineEvent 时间轴单点（出价后采样）
 type TimelineEvent struct {
-	At         time.Time `json:"at"`
-	UserID     int64     `json:"user_id"`
-	BidOK      bool      `json:"bid_ok"`
-	DelayUsed  int       `json:"delay_used_sec"`
-	EndTime    time.Time `json:"end_time"`
-	Triggered  bool      `json:"triggered"` // 此次出价是否使 DelayUsed 增加
+	At        time.Time `json:"at"`
+	UserID    int64     `json:"user_id"`
+	BidOK     bool      `json:"bid_ok"`
+	DelayUsed int       `json:"delay_used_sec"`
+	EndTime   time.Time `json:"end_time"`
+	Triggered bool      `json:"triggered"` // 此次出价是否使 DelayUsed 增加
 }
 
 // Report 模拟器报告
@@ -145,6 +145,9 @@ func (s *Simulator) RunSimulation(ctx context.Context) (*Report, error) {
 	final, _ := s.cli.GetAuction(ctx, s.cfg.AuctionID)
 	rep.ActualEndTime = final.EndTime
 	rep.DelayUsedMs = int64(final.DelayUsed) * 1000
+	if rep.DelayUsedMs == 0 && rep.ActualEndTime.After(rep.OriginalEndTime) {
+		rep.DelayUsedMs = rep.ActualEndTime.Sub(rep.OriginalEndTime).Milliseconds()
+	}
 	return rep, nil
 }
 
@@ -159,12 +162,17 @@ func (s *Simulator) placeOne(ctx context.Context, bidderIdx int, rep *Report) {
 	// 读出价前的 DelayUsed，用于判断本次是否触发延时
 	beforeAuction, _ := s.cli.GetAuction(ctx, s.cfg.AuctionID)
 	beforeDelay := beforeAuction.DelayUsed
+	beforeEnd := beforeAuction.EndTime
 
 	amount := s.cfg.StartPrice + s.cfg.Increment*float64(rep.BidCount)
 	step := s.cli.PlaceBid(ctx, uid, s.cfg.AuctionID, amount)
 
 	afterAuction, _ := s.cli.GetAuction(ctx, s.cfg.AuctionID)
-	triggered := afterAuction.DelayUsed > beforeDelay
+	triggered := afterAuction.DelayUsed > beforeDelay || afterAuction.EndTime.After(beforeEnd)
+	if !triggered && len(rep.Timeline) > 0 {
+		prev := rep.Timeline[len(rep.Timeline)-1]
+		triggered = afterAuction.DelayUsed > prev.DelayUsed || afterAuction.EndTime.After(prev.EndTime)
+	}
 	if triggered {
 		rep.TriggeredCount++
 	}

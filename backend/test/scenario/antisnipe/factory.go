@@ -4,6 +4,7 @@ package antisnipe
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"test-service/client/auction"
@@ -11,9 +12,9 @@ import (
 
 // SDKAuctionFactory 通过 auction SDK 创建短倒计时拍卖
 type SDKAuctionFactory struct {
-	cli      *auction.Client
-	sellerID int64
-	duration int // 单位 秒
+	cli        *auction.Client
+	duration   int // 单位 秒
+	nextSeller int64
 }
 
 // NewSDKAuctionFactory 构造
@@ -24,15 +25,17 @@ func NewSDKAuctionFactory(cli *auction.Client, seller int64, dur int) *SDKAuctio
 	if dur <= 0 {
 		dur = 30
 	}
-	return &SDKAuctionFactory{cli: cli, sellerID: seller, duration: dur}
+	seed := seller*1_000_000 + time.Now().UnixNano()%1_000_000
+	return &SDKAuctionFactory{cli: cli, duration: dur, nextSeller: seed}
 }
 
 // Prepare 创建一个商品、竞拍规则和拍卖。
 // 每次调用必须创建独立商品：auction-service 对同一 product_id 只允许一条 Pending/Ongoing/Delayed 活跃竞拍。
 func (f *SDKAuctionFactory) Prepare(ctx context.Context, name string) (int64, error) {
+	sellerID := atomic.AddInt64(&f.nextSeller, 1)
 	seller := auction.Actor{
-		UserID:   f.sellerID,
-		Username: fmt.Sprintf("merchant_%d", f.sellerID),
+		UserID:   sellerID,
+		Username: fmt.Sprintf("merchant_%d", sellerID),
 		Role:     auction.RoleMerchant,
 	}
 

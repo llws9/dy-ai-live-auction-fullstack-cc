@@ -67,3 +67,48 @@ func TestSDKAuctionFactory_PrepareUsesMerchantRuleThenAuction(t *testing.T) {
 		}
 	}
 }
+
+func TestSDKAuctionFactory_PrepareUsesIsolatedSellerPerAuction(t *testing.T) {
+	var sellerIDs []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost && r.URL.Path == "/api/v1/auctions" {
+			sellerIDs = append(sellerIDs, r.Header.Get("X-User-ID"))
+		}
+		switch r.Method + " " + r.URL.Path {
+		case "POST /api/v1/admin/products":
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"code":201,"data":{"id":42}}`))
+		case "POST /api/v1/products/42/publish":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"code":200,"data":{"id":42,"status":1}}`))
+		case "POST /api/v1/products/42/rules":
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"code":201}`))
+		case "POST /api/v1/auctions":
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"id":77}`))
+		case "GET /api/v1/auctions/77":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"id":77,"status":1}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+
+	fac := NewSDKAuctionFactory(auction.NewClient(srv.URL, 3*time.Second), 9001, 30)
+
+	if _, err := fac.Prepare(context.Background(), CaseLastSecond); err != nil {
+		t.Fatalf("first Prepare failed: %v", err)
+	}
+	if _, err := fac.Prepare(context.Background(), CaseDelayCap); err != nil {
+		t.Fatalf("second Prepare failed: %v", err)
+	}
+
+	if len(sellerIDs) != 2 {
+		t.Fatalf("sellerIDs: want 2, got %v", sellerIDs)
+	}
+	if sellerIDs[0] == sellerIDs[1] {
+		t.Fatalf("expected isolated sellers, got %v", sellerIDs)
+	}
+}

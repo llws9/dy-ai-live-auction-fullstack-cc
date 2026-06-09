@@ -158,8 +158,16 @@ func LoadFromYAML(content string) (*Config, error) {
 }
 
 func injectRuntimeSecrets(cfg *Config) {
+	cfg.Server.Port = getEnvOrDefault("GATEWAY_PORT", cfg.Server.Port)
+	cfg.Services.ProductURL = getEnvOrDefault("PRODUCT_SERVICE_URL", cfg.Services.ProductURL)
+	cfg.Services.AuctionURL = getEnvOrDefault("AUCTION_SERVICE_URL", cfg.Services.AuctionURL)
+	cfg.Services.TestURL = getEnvOrDefault("TEST_SERVICE_URL", cfg.Services.TestURL)
+	cfg.Services.TestWSURL = getEnvOrDefault("TEST_SERVICE_WS_URL", cfg.Services.TestWSURL)
 	if token := os.Getenv("INTERNAL_API_TOKEN"); token != "" {
 		cfg.Services.InternalToken = token
+	}
+	if secret := os.Getenv("JWT_SECRET"); secret != "" {
+		cfg.JWT.Secret = secret
 	}
 	cfg.Database.Host = getEnvOrDefault("DB_HOST", cfg.Database.Host)
 	cfg.Database.Port = getEnvOrDefault("DB_PORT", cfg.Database.Port)
