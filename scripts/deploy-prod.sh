@@ -248,6 +248,7 @@ plan() {
   echo "- 同步 H5 到 $REMOTE_H5_DIR"
   echo "- 同步 Admin 到 $REMOTE_ADMIN_DIR"
   echo "- 同步仓库源码到 $REMOTE_APP_DIR"
+  echo "- 同步 Nginx 配置到 $REMOTE_NGINX_CONF"
   echo "- 执行 docker compose --project-name $COMPOSE_PROJECT_NAME --env-file $REMOTE_ENV_FILE -f docker-compose.demo.yml up -d --build --remove-orphans，覆盖全量服务:"
   echo "  $(demo_full_stack_services)"
   echo "- 执行 nginx -t && systemctl reload nginx"
@@ -300,6 +301,10 @@ sync_backend() {
   app_dir="$(shell_quote "$REMOTE_APP_DIR")"
   target="$(local_sha)"
   ssh_base "cd $app_dir && echo $(shell_quote "$target") > .deploy-ref"
+}
+
+sync_nginx_config() {
+  scp_base "$PROJECT_ROOT/deploy/demo/nginx-ip.conf" "$(ssh_dest):$REMOTE_NGINX_CONF"
 }
 
 restart_remote() {
@@ -392,6 +397,8 @@ verify_prod() {
 
   http_expect "http://$DEPLOY_HOST/" '^(2|3)[0-9][0-9]$' || failed=1
   http_expect "http://$DEPLOY_HOST/admin/" '^(2|3)[0-9][0-9]$' || failed=1
+  http_expect "http://$DEPLOY_HOST/test-dashboard/" '^401$' || failed=1
+  http_expect "http://$DEPLOY_HOST/grafana/" '^401$' || failed=1
   http_expect "http://$DEPLOY_HOST/api/v1/products" '^200$' || failed=1
 
   if [[ "$failed" -ne 0 ]]; then
@@ -416,6 +423,7 @@ apply() {
   backup_remote
   sync_frontend
   sync_backend
+  sync_nginx_config
   restart_remote
   wait_for_remote_http_ready
   verify_prod
