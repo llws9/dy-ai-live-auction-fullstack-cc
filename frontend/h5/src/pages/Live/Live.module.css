@@ -116,6 +116,12 @@
   box-shadow: var(--shadow-key);
 }
 
+.feedShell {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .upcomingHeader {
   margin-top: var(--spacing-6);
   color: var(--text-primary);
@@ -1725,6 +1731,13 @@
   }
 }
 
+
+@media (min-width: 431px) and (hover: hover) and (pointer: fine) {
+  .page {
+    height: 100%;
+    min-height: 0;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .skyLampNotice,

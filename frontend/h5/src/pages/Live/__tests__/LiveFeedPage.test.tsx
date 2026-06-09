@@ -89,6 +89,13 @@ describe('LiveFeedPage feed 骨架', () => {
     expect(slide).toHaveTextContent('slide:3:11:undefined:true');
   });
 
+  it('用有高度的 feed 容器承载直播间，避免绝对定位内容把父级撑成 0 高度', async () => {
+    renderFeed('/live');
+    const slide = await screen.findByTestId('live-room-slide');
+
+    expect(slide.parentElement).toHaveClass('feedShell');
+  });
+
   it('无 id 时跳过没有当前竞拍的直播间，展示推荐竞拍房间', async () => {
     mockedLiveStreamApi.list.mockResolvedValue({
       list: [

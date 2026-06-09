@@ -3,6 +3,9 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchMyPurchase, type FixedPriceItem } from '@/api/fixedPrice';
 import { BidSuccessAnimation } from '@/components/auction/BidSuccessAnimation';
 import { BidFlairOverlay, type BidEvent } from '../../components/LiveRoom/BidFlairOverlay';
+import { TapBurstHearts } from '../../components/LiveRoom/TapBurstHearts';
+import { GlitchCountdown } from '../../components/LiveRoom/GlitchCountdown';
+import { UnsoldAnimation } from '../../components/LiveRoom/UnsoldAnimation';
 import FixedPriceCard from '@/components/FixedPriceCard';
 import FixedPriceFlair from '@/components/FixedPriceFlair';
 import FixedPricePurchaseModal from '@/components/FixedPricePurchaseModal';
@@ -18,6 +21,7 @@ import { useLiveChatStore } from '../../store/liveChatStore';
 import { trackBusinessEvent } from '../../utils/businessEvent';
 import { repairUtf8Mojibake } from '../../utils/textEncoding';
 import BidDock from './BidDock';
+import RankingBlock from './RankingBlock';
 import { TreasureProgressBar } from './TreasureProgressBar';
 import styles from './Live.module.css';
 
@@ -97,10 +101,6 @@ interface SkyLampNoticeState {
   id: number;
   message: string;
 }
-
-import { TapBurstHearts } from '../../components/LiveRoom/TapBurstHearts';
-import { GlitchCountdown } from '../../components/LiveRoom/GlitchCountdown';
-import { UnsoldAnimation } from '../../components/LiveRoom/UnsoldAnimation';
 
 export interface LiveRoomSlideProps {
   liveStreamId: number;
@@ -281,6 +281,21 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const viewerCount = presence?.viewer_count ?? liveStream?.viewer_count ?? 0;
   const presenceViewers = useMemo(() => (presence?.viewers ?? []).slice(0, 3), [presence?.viewers]);
   const hasEnded = auction?.status === 3 || hasReachedEndTime;
+  const myRankIndex = useMemo(
+    () => (isAuthenticated ? ranking.findIndex((r) => r.user_id === user?.id) : -1),
+    [isAuthenticated, ranking, user?.id],
+  );
+  const myBid = useMemo(
+    () => (myRankIndex > -1 ? ranking[myRankIndex] : undefined),
+    [myRankIndex, ranking],
+  );
+  const myBidStatus: 'leading' | 'outbid' | null = !isAuthenticated
+    ? null
+    : myRankIndex === 0
+      ? 'leading'
+      : myRankIndex > 0
+        ? 'outbid'
+        : null;
   const fixedPriceItemIds = useMemo(() => fixedPriceItems.map((item) => item.id), [fixedPriceItems]);
   const animatingFixedPriceItemIds = useMemo(
     () => new Set(animatingFixedPriceItems.map((item) => item.id)),
@@ -1164,7 +1179,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           bidDisabled={!isActive}
           bidDisabledText="不可出价"
           skyLampActive={skyLampActive}
-          myBidStatus={isAuthenticated ? (ranking.findIndex(r => r.user_id === user?.id) === 0 ? 'leading' : (ranking.findIndex(r => r.user_id === user?.id) > 0 ? 'outbid' : null)) : null}
+          myBidStatus={myBidStatus}
           onOpen={openSheet}
           onClose={closeSheet}
           onRequireLogin={() => showToast('请先登录后出价')}
@@ -1190,72 +1205,14 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           <em>{connected ? '实时同步中' : '实时连接中'}</em>
         </div>
 
-        <section className={styles.rankingBlock}>
-          <div className={styles.rankingGlow}></div>
-          <h2 className={styles.rankingBlockTitle}>
-            <span className={styles.rankingTrophy}>🏆</span> 出价排行
-          </h2>
-          <div className={styles.rankingList}>
-            {[0, 1, 2].map((index) => {
-              const item = ranking[index];
-              const isFirst = index === 0;
-              const isSecond = index === 1;
-              const isEmpty = !item;
-              const isMe = isAuthenticated && item?.user_id === user?.id;
-
-              return (
-                <div
-                  className={`${styles.rankingItem} ${isFirst && !isEmpty ? styles.rankingItemFirst : ''} ${isEmpty ? styles.rankingItemEmpty : ''} ${isMe ? styles.rankingItemMe : ''}`}
-                  key={item ? `${item.user_id ?? item.id}-${index}` : `empty-${index}`}
-                >
-                  <div className={styles.rankingItemLeft}>
-                    <span className={`${styles.rank} ${
-                      isFirst && !isEmpty ? styles.rankFirst :
-                      isSecond && !isEmpty ? styles.rankSecond :
-                      !isEmpty ? styles.rankThird :
-                      styles.rankEmpty
-                    }`}>
-                      {index + 1}
-                    </span>
-                    <span className={`${styles.rankingName} ${isEmpty ? styles.rankingNameEmpty : ''} ${isMe ? styles.rankingNameMe : ''}`}>
-                      {item ? (isMe ? '我自己 (当前领先)' : item.user_name) : '虚位以待'}
-                    </span>
-                  </div>
-                  <strong className={`${styles.rankingAmount} ${isFirst && !isEmpty ? styles.rankingAmountFirst : ''} ${isEmpty ? styles.rankingAmountEmpty : ''} ${isMe && !isFirst ? styles.rankingAmountMe : ''}`}>
-                    {item ? `¥${formatMoney(item.amount)}` : '-'}
-                  </strong>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* 我的出价状态 - 方案A 悬浮轻量卡片 */}
-          <div className={styles.myBidSection}>
-            <div className={styles.myBidCard}>
-              <div className={styles.myBidLeft}>
-                {isAuthenticated ? (
-                  <>
-                    <div className={styles.myBidRankCircle}>
-                      <span className={styles.myBidRank}>
-                        {ranking.findIndex(r => r.user_id === user?.id) > -1
-                          ? ranking.findIndex(r => r.user_id === user?.id) + 1
-                          : '-'}
-                      </span>
-                    </div>
-                    <span className={styles.myBidLabel}>当前我的排位</span>
-                  </>
-                ) : (
-                  <span className={styles.myBidLabel}>请登录后查看出价状态</span>
-                )}
-              </div>
-              <strong className={styles.myBidAmount}>
-                {isAuthenticated
-                  ? `¥${formatMoney(ranking.find(r => r.user_id === user?.id)?.amount || 0)}`
-                  : '-'}
-              </strong>
-            </div>
-          </div>
-        </section>
+        <RankingBlock
+          ranking={ranking}
+          isAuthenticated={isAuthenticated}
+          userId={user?.id}
+          myRankIndex={myRankIndex}
+          myBidAmount={myBid?.amount}
+          formatMoney={formatMoney}
+        />
 
         <section className={styles.bidBox}>
           <label htmlFor="live-bid-input">输入出价金额</label>

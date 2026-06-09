@@ -7,6 +7,7 @@ import { useToast } from '../../components/Toast';
 import LiveEmptyState, { UpcomingAuctionItem } from './LiveEmptyState';
 import LiveRoomSlide from './LiveRoomSlide';
 import { FEED_PAGE_SIZE, LIVE_STREAM_STATUS, SWIPE_THRESHOLD_PX } from './constants';
+import styles from './Live.module.css';
 
 interface LiveStreamFeedItem {
   id: number;
@@ -321,6 +322,7 @@ const LiveFeedPage: React.FC = () => {
 
   return (
     <div
+      className={styles.feedShell}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onMouseDown={handleMouseDown}

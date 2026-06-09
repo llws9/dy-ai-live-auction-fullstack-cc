@@ -50,6 +50,24 @@ describe('Live layout css', () => {
     expect(sheetCss).toContain('box-sizing: border-box;');
   });
 
+  it('uses the framed live container height on desktop previews so bottom overlays stay visible', () => {
+    const css = readLiveCss();
+    const desktopLivePageCss = css.match(/@media \(min-width: 431px\) and \(hover: hover\) and \(pointer: fine\) \{[\s\S]*?\.page\s*\{[\s\S]*?\n  \}[\s\S]*?\n\}/)?.[0] ?? '';
+
+    expect(desktopLivePageCss).toContain('.page');
+    expect(desktopLivePageCss).toContain('height: 100%;');
+    expect(desktopLivePageCss).toContain('min-height: 0;');
+  });
+
+  it('keeps the live feed wrapper height definite for percentage-based live room layout', () => {
+    const css = readLiveCss();
+    const feedShellCss = getClassBlock(css, 'feedShell');
+
+    expect(feedShellCss).toContain('height: 100%;');
+    expect(feedShellCss).toContain('min-height: 0;');
+    expect(feedShellCss).toContain('overflow: hidden;');
+  });
+
   it('uses warm glass styling for the ranking block in dark mode', () => {
     const css = readLiveCss();
     const darkRankingBlockCss = css.match(/:global\(:root\[data-theme='dark'\]\) \.rankingBlock,[\s\S]*?\n\}/)?.[0] ?? '';
