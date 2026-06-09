@@ -113,6 +113,42 @@ code,.mono{font-family:var(--mono);color:var(--teal);font-size:.92em}
 .fcard p{font-size:13px;color:var(--text-2);line-height:1.6;text-wrap:pretty}
 .fcard p b{color:var(--text)}
 .fcard code{font-size:12px}
+.skill-demo{margin-top:20px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,var(--bg-elev2),var(--bg-elev));overflow:hidden;box-shadow:var(--shadow)}
+.skill-demo .demo-head{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:16px 18px;border-bottom:1px solid var(--line-soft)}
+.skill-demo .demo-title{font-family:var(--disp);font-weight:600;font-size:16px}
+.skill-demo .demo-meta{font-family:var(--mono);font-size:11px;color:var(--text-3)}
+.trio-controls{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:18px;border-bottom:1px solid var(--line-soft)}
+.trio-control-group{background:var(--bg);border:1px solid var(--line-soft);border-radius:14px;padding:13px}
+.trio-control-group b{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px}
+.trio-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.trio-btn{appearance:none;border:1px solid var(--line);background:var(--bg-elev);color:var(--text-2);border-radius:999px;padding:7px 11px;font-family:var(--mono);font-size:11px;cursor:pointer;transition:.2s}
+.trio-btn:hover{color:var(--text);border-color:var(--coral)}
+.trio-btn.active{background:var(--coral);border-color:var(--coral);color:#fff;box-shadow:0 0 18px rgba(255,59,92,.22)}
+.trio-stage{display:grid;grid-template-columns:300px 1fr;gap:18px;padding:18px;align-items:stretch}
+.trio-phone{border-radius:24px;background:linear-gradient(180deg,#171923,#0c0d12);border:1px solid var(--line);padding:10px;box-shadow:var(--shadow)}
+.trio-screen{min-height:420px;border-radius:17px;overflow:hidden;position:relative;background:radial-gradient(circle at 50% 20%,rgba(255,59,92,.18),transparent 32%),linear-gradient(180deg,#1a1d28,#0d0f16 52%,#090a0e)}
+.trio-room-top{position:absolute;left:12px;right:12px;top:12px;display:flex;justify-content:space-between;align-items:center;color:#fff;font-family:var(--mono);font-size:10px}
+.trio-room-top .host{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.12)}
+.trio-room-top .av{width:22px;height:22px;border-radius:50%;background:var(--grad-line)}
+.trio-dock{position:absolute;left:12px;right:12px;bottom:12px;border-radius:18px;background:rgba(12,14,20,.86);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(18px);padding:14px;color:#fff}
+.trio-price-row{display:flex;justify-content:space-between;align-items:end;margin-bottom:12px}.trio-price-row strong{font-family:var(--disp);font-size:25px}.trio-price-row span{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.56)}
+.trio-heatbar{position:relative;height:34px;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:space-between;padding:0 13px;font-family:var(--mono);font-size:11px;color:#fff;background:rgba(255,255,255,.06)}
+.trio-heatbar::before{content:"";position:absolute;inset:0;transform-origin:left;transform:scaleX(var(--heat-fill,.34));transition:transform .45s ease,background .35s ease,filter .35s ease;border-radius:999px}
+.trio-heatbar::after{content:"";position:absolute;inset:-42% -26%;opacity:var(--shine-opacity,0);background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.44) 48%,transparent 62%);transform:translateX(-70%);animation:skillShine 2.1s ease-in-out infinite}
+.trio-heatbar span{position:relative;z-index:2;text-shadow:0 1px 10px rgba(0,0,0,.38)}
+.trio-preview[data-heat="calm"]{--heat-fill:.32;--shine-opacity:0;--beat:3.4s}
+.trio-preview[data-heat="warming"]{--heat-fill:.62;--shine-opacity:.28;--beat:1.8s}
+.trio-preview[data-heat="blazing"]{--heat-fill:.95;--shine-opacity:.88;--beat:.9s}
+.trio-preview[data-variant="minimal"] .trio-heatbar::before{background:linear-gradient(90deg,rgba(82,82,82,.62),rgba(249,115,22,.72),rgba(239,68,68,.82));filter:none}
+.trio-preview[data-variant="minimal"] .trio-heatbar{box-shadow:none}
+.trio-preview[data-variant="cyber"] .trio-heatbar::before{background:linear-gradient(90deg,rgba(249,115,22,.88),rgba(239,68,68,.98),rgba(255,179,71,.92));filter:drop-shadow(0 0 16px rgba(255,59,92,.38))}
+.trio-preview[data-variant="cyber"] .trio-heatbar{box-shadow:0 0 24px rgba(255,59,92,.16),inset 0 0 22px rgba(255,255,255,.05)}
+.trio-preview[data-variant="bionic"] .trio-heatbar::before{background:radial-gradient(circle at 18% 50%,rgba(255,179,71,.95),transparent 20%),linear-gradient(90deg,rgba(239,68,68,.70),rgba(255,59,92,.90));filter:drop-shadow(0 0 16px rgba(255,179,71,.30))}
+.trio-preview[data-variant="bionic"] .trio-heatbar{animation:bionicBeat var(--beat,2.6s) ease-in-out infinite}
+.trio-notes{background:var(--bg);border:1px solid var(--line-soft);border-radius:15px;padding:18px}
+.trio-notes h4{font-family:var(--disp);font-size:17px;margin-bottom:8px}.trio-notes p{font-size:13px;color:var(--text-2);line-height:1.65}
+.trio-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}.trio-stat{background:var(--bg-elev);border:1px solid var(--line-soft);border-radius:12px;padding:11px}.trio-stat b{display:block;font-family:var(--disp);font-size:19px}.trio-stat span{font-size:10px;color:var(--text-3);font-family:var(--mono)}
+@keyframes bionicBeat{50%{transform:scale(1.018);filter:saturate(1.18)}}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:20px}
 .stat{background:var(--bg-elev);border:1px solid var(--line-soft);border-radius:14px;padding:20px 16px}
 .stat .sv{font-family:var(--disp);font-weight:700;font-size:30px;letter-spacing:-.02em;line-height:1}
@@ -200,7 +236,8 @@ html[data-theme="light"] .liveux-stage::before{background:
 @keyframes floatIn{0%,100%{transform:translateX(0);opacity:.9}50%{transform:translateX(18px);opacity:1}}
 @keyframes heartPop{0%{transform:scale(.5) translateY(12px);opacity:0}35%{opacity:1}100%{transform:scale(1.25) translateY(-54px);opacity:0}}
 @keyframes glitchFloat{0%{opacity:0;transform:translate(-50%,8%) scale(.72)}35%{opacity:1;transform:translate(-50%,-50%) scale(1)}70%{opacity:1;filter:none}100%{opacity:0;transform:translate(-50%,-58%) scale(1.08);filter:blur(6px)}}
-@media(prefers-reduced-motion:reduce){.liveux-stage *{animation:none!important}}
+@keyframes skillShine{0%,18%{transform:translateX(-70%)}70%,100%{transform:translateX(70%)}}
+@media(prefers-reduced-motion:reduce){.liveux-stage *,.skill-demo *{animation:none!important}}
 .foot{padding:50px 0 70px;color:var(--text-3);font-size:13px;max-width:var(--maxw)}
 .foot .ft-line{font-family:var(--mono);font-size:11px;margin-top:8px}
 @media(max-width:920px){
@@ -212,6 +249,8 @@ html[data-theme="light"] .liveux-stage::before{background:
   .psv,.cards,.cards.c3{grid-template-columns:1fr}
   .stats{grid-template-columns:1fr 1fr}
   .mock-wrap{grid-template-columns:1fr}
+  .trio-controls,.trio-stage{grid-template-columns:1fr}
+  .trio-phone{max-width:300px;margin:0 auto;width:100%;box-sizing:border-box}
   .phone{max-width:300px;margin:0 auto}
   .liveux-grid{grid-template-columns:1fr}.liveux-stage{max-width:320px;margin:0 auto}.liveux-points{grid-template-columns:1fr}
 }
@@ -238,15 +277,16 @@ html[data-theme="light"] .liveux-stage::before{background:
     <a class="navlink" href="#theme"><span class="ix">08</span>主题系统</a>
     <a class="navlink" href="#liveux"><span class="ix">09</span>直播间互动体验</a>
     <div class="nav-group">工程难点</div>
-    <a class="navlink" href="#difficulties"><span class="ix">10</span>五大难点</a>
+    <a class="navlink" href="#difficulties"><span class="ix">10</span>六大难点</a>
     <div class="nav-group">能力与质量</div>
     <a class="navlink" href="#ai"><span class="ix">11</span>AI 能力落地</a>
     <a class="navlink" href="#observe"><span class="ix">12</span>可观测性</a>
     <a class="navlink" href="#metrics"><span class="ix">13</span>业务指标体系</a>
     <a class="navlink" href="#quality"><span class="ix">14</span>工程质量</a>
+    <a class="navlink" href="#skills"><span class="ix">15</span>自创 Skills</a>
     <div class="nav-group">设计 &amp; 边界</div>
-    <a class="navlink" href="#homeredesign"><span class="ix">15</span>首页维度重构</a>
-    <a class="navlink" href="#boundary"><span class="ix">16</span>如实边界说明</a>
+    <a class="navlink" href="#homeredesign"><span class="ix">16</span>首页维度重构</a>
+    <a class="navlink" href="#boundary"><span class="ix">17</span>如实边界说明</a>
   </nav>
 
   <main>
@@ -274,7 +314,7 @@ html[data-theme="light"] .liveux-stage::before{background:
         <div class="arch-row">
           <div class="node"><div class="nt">用户端 H5</div><div class="nd">frontend/h5</div></div>
           <div class="node"><div class="nt">管理端 Admin</div><div class="nd">frontend/admin</div></div>
-          <div class="node"><div class="nt">测试编排平台</div><div class="nd">test-dashboard</div></div>
+          <div class="node"><div class="nt">测试编排平台</div><div class="nd">test-dashboard · chaos/control plane</div></div>
           <div class="node"><div class="nt">日志端</div><div class="nd">Loki+Promtail</div></div>
           <div class="node"><div class="nt">大盘端</div><div class="nd">Grafana</div></div>
         </div>
@@ -282,13 +322,14 @@ html[data-theme="light"] .liveux-stage::before{background:
         <div class="arch-row" style="grid-template-columns:1fr">
           <div class="node gw"><div class="nt">gateway-service · 8080</div><div class="nd">JWT 鉴权 / 路由 / 限流 / 实验预评估</div></div>
         </div>
+        <div class="arch-band">↘ &nbsp; 故障注入控制面：Test Dashboard → test-service / chaos scenario → RoundTripper probe → Gateway/API &nbsp; ↙</div>
         <div class="svc-row">
           <div class="svc"><div class="nt">product</div><div class="nd">8081 · 商品/统计</div></div>
           <div class="svc"><div class="nt">auction</div><div class="nd">8082 · 竞拍/一口价</div></div>
           <div class="svc"><div class="nt">auction-ws</div><div class="nd">8083 · 实时同步</div></div>
         </div>
       </div>
-      <div class="takeaway">课题基线只要求两端闭环，本项目交付的是一套含独立测试编排平台（自带 1920×1080 演示大屏）与 Loki+Grafana 可观测栈的生产级微服务系统。</div>
+      <div class="takeaway">课题基线只要求两端闭环，本项目交付的是一套含独立测试编排平台（自带 1920×1080 演示大屏）与 Loki+Grafana 可观测栈的生产级微服务系统。<b>故障注入不侵入业务服务主路径</b>，而是在 <code>test-service</code> 的 <code>chaos scenario</code> 中通过进程内 probe / <code>RoundTripper</code> 模拟错误率、延迟与断连，再把基线-注入-恢复三段结果回流到测试大屏。</div>
     </section>
 
     <!-- 02 CONCURRENCY -->
@@ -452,8 +493,8 @@ html[data-theme="light"] .liveux-stage::before{background:
     <section id="difficulties">
       <div class="sec-head">
         <div class="sec-num">10 / 关键工程难点</div>
-        <h2>五大难点与解决方案</h2>
-        <p class="sec-desc">竞拍系统的复杂度集中在状态正确性、防狙击吞吐、外部依赖降级、自动代理出价，以及直播间真实在线 Presence 的可信表达。</p>
+        <h2>六大难点与解决方案</h2>
+        <p class="sec-desc">竞拍系统的复杂度集中在状态正确性、防狙击吞吐、外部依赖降级、自动代理出价、直播间真实在线 Presence，以及看直播领宝箱的可信计时与幂等发币。</p>
       </div>
 
       <div class="fcard" style="margin-top:18px"><h4 style="font-size:16px;color:var(--coral-soft)">难点一 · 竞拍规则复杂且状态转换必须可验证</h4>
@@ -496,6 +537,22 @@ html[data-theme="light"] .liveux-stage::before{background:
           <div class="pc p"><div class="pl">Problem</div><div class="pt">连接数、用户数、头像展示是三个不同问题；若按连接数展示，会被多 Tab/重连放大；若信任 query user_id，会产生伪造在线和隐私风险。</div></div>
           <div class="pc s"><div class="pl">Solution</div><div class="pt">在线人数以 WebSocket Hub 内的 presence 为权威，HTTP <code>viewer_count</code> 只做首屏兜底；头像仅展示已鉴权用户，最多返回 3 个展示字段。</div></div>
           <div class="pc v"><div class="pl">Value</div><div class="pt">把一个 UI 小组件升级成可讲清楚的实时状态系统：可信人数、隐私最小化、断线清理、历史隔离和前端增量覆盖形成闭环。</div></div>
+        </div>
+      </div>
+
+      <div class="fcard" style="margin-top:14px"><h4 style="font-size:16px;color:var(--amber)">难点六 · 看直播领宝箱：时长可信、资产隔离、幂等发币</h4>
+        <p style="margin-top:6px">“看直播领宝箱”不能做成前端倒计时奖励，否则刷新页面、篡改本地状态或重复点击都可能刷币。真正难点是把观看时长、宝箱解锁和金币发放都收敛到后端可信状态中：前端只负责心跳、展示和动画，能不能领、领多少、是否重复领取全部由服务端裁决。</p>
+        <div class="flow" style="margin-top:14px">
+          <div class="fcell"><div class="fk">观看心跳</div><div class="ft">POST /watch/heartbeat</div><div class="fd">前端每 30s 上报一次直播间心跳；服务端校验直播间存在且 <code>status=1</code>，单次累计封顶，隐藏页不计后台时长。</div></div>
+          <div class="farr">→</div>
+          <div class="fcell"><div class="fk">每日分桶</div><div class="ft">user_watch_duration</div><div class="fd">按 <code>user_id + stat_date</code> 聚合今日观看秒数；每日 0 点自然重置，避免跨天状态污染。</div></div>
+          <div class="farr">→</div>
+          <div class="fcell"><div class="fk">幂等领取</div><div class="ft">treasure_claims</div><div class="fd">领取用 <code>user_id + stat_date + tier</code> 唯一键兜底；重复点击、重试和并发请求只能成功一次。</div></div>
+        </div>
+        <div class="psv" style="margin-top:14px">
+          <div class="pc p"><div class="pl">Problem</div><div class="pt">观看奖励天然容易被前端计时、重复提交和跨天状态绕过；如果金币和现金余额混用，还会把娱乐积分风险扩散到支付域。</div></div>
+          <div class="pc s"><div class="pl">Solution</div><div class="pt">新增独立 <code>user_coins</code>、<code>user_watch_duration</code>、<code>treasure_claims</code> 模型；金币仅作为娱乐积分展示/累积，不抵扣订单、不进入 <code>user_balances</code> 资金账。</div></div>
+          <div class="pc v"><div class="pl">Value</div><div class="pt">把一个留存玩法做成可审计的资产闭环：可信计时、失败关闭、每日重置、幂等防重和资产域隔离同时成立，前端动画无法刷币。</div></div>
         </div>
       </div>
     </section>
@@ -582,10 +639,83 @@ error_codes={<span class="grn">"400":7095</span>}  <span class="dim"># 仅余业
       </div>
     </section>
 
-    <!-- 15 HOME REDESIGN -->
+    <!-- 15 SKILLS -->
+    <section id="skills">
+      <div class="sec-head">
+        <div class="sec-num">15 / 自创 Skills 与开发流程资产</div>
+        <h2>把高频人工经验，沉淀成可复用的开发协议</h2>
+        <p class="sec-desc">项目不只沉淀业务代码，也把反复发生的开发、部署、设计与协作流程固化为可复用 agent skill。价值不是“命令别名”，而是把安全门禁、状态记录、验证证据和交付口径标准化。</p>
+      </div>
+      <div class="cards c3">
+        <div class="fcard"><div class="ic">DEV</div><h4><code>/dp-dev</code> · 本地强重启</h4><p>把本地 macOS 开发环境重启流程产品化：固定从 <code>origin/main</code> 拉起，统一清理旧进程、检查端口和容器状态，并避免为绕过本机问题修改主干配置。</p></div>
+        <div class="fcard"><div class="ic">PRO</div><h4><code>/dp-prod</code> · Demo 线上部署</h4><p>线上变更前必须先输出部署计划、目标提交、风险和回滚点；只有用户明确确认后才执行 apply，并通过 H5/Admin/API/容器状态完成验证。</p></div>
+        <div class="fcard"><div class="ic">SDD</div><h4><code>/sdd-run</code> · 状态驱动开发</h4><p>把复杂开发拆成 plan/tasks/state 三件套：状态文件是 SSOT，任务声明 write-set、依赖、验证命令和 regression sentinel，防止并行开发互相回滚。</p></div>
+        <div class="fcard"><div class="ic">UI3</div><h4><code>/ui-design-trio</code> · 三版 UI 决策</h4><p>把 UI 设计评审流程标准化：先扫描主题与真实 token，再产出三版差异化方案；预览 URL 必须探活，且保留同源单文件 HTML 兜底，避免“服务不可用”。</p></div>
+      </div>
+      <div class="skill-demo trio-preview" id="trioPreview" data-variant="cyber" data-heat="blazing">
+        <div class="demo-head">
+          <div>
+            <div class="demo-title"><code>/ui-design-trio</code> 示例效果：三版直播间战况热度条评审器</div>
+            <div class="demo-meta">source: localhost:8088 · click to compare variants and heat levels</div>
+          </div>
+          <div class="demo-meta">interactive preview</div>
+        </div>
+        <div class="trio-controls">
+          <div class="trio-control-group">
+            <b>设计版本</b>
+            <div class="trio-buttons" role="group" aria-label="选择热度条设计版本">
+              <button class="trio-btn" type="button" data-trio-variant="minimal">01 极简几何</button>
+              <button class="trio-btn active" type="button" data-trio-variant="cyber">02 赛博流光</button>
+              <button class="trio-btn" type="button" data-trio-variant="bionic">03 仿生呼吸</button>
+            </div>
+          </div>
+          <div class="trio-control-group">
+            <b>热度状态</b>
+            <div class="trio-buttons" role="group" aria-label="选择竞拍热度状态">
+              <button class="trio-btn" type="button" data-trio-heat="calm">冷静</button>
+              <button class="trio-btn" type="button" data-trio-heat="warming">升温</button>
+              <button class="trio-btn active" type="button" data-trio-heat="blazing">白热化</button>
+            </div>
+          </div>
+        </div>
+        <div class="trio-stage">
+          <div class="trio-phone">
+            <div class="trio-screen">
+              <div class="trio-room-top">
+                <div class="host"><span class="av"></span><span>瑾瑜珠宝行</span></div>
+                <div>LIVE · 128</div>
+              </div>
+              <div class="trio-dock">
+                <div class="trio-price-row"><strong>¥ 12,800</strong><span>当前价 · 8 人出价</span></div>
+                <div class="trio-heatbar"><span id="trioHeatLabel">白热化 · 流光加速</span><span id="trioHeatPct">92%</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="trio-notes">
+            <h4 id="trioVariantTitle">方案 2：赛博流光 Cyber Glow</h4>
+            <p id="trioVariantDesc">用渐变、发光和扫光动画制造强演示冲击力。适合评委场景：一眼能感知竞拍进入白热阶段，但仍限制在 BidDock 内，不影响主画面信息层级。</p>
+            <div class="trio-stats">
+              <div class="trio-stat"><b id="trioMetricIntensity">High</b><span>视觉强度</span></div>
+              <div class="trio-stat"><b id="trioMetricMotion">Shine</b><span>动效特征</span></div>
+              <div class="trio-stat"><b id="trioMetricFit">Demo</b><span>最适场景</span></div>
+            </div>
+            <div class="takeaway coral"><b>评审方式：</b>点击上方版本与热度按钮，比较同一个直播间热度条在三套视觉语言和三档状态下的差异，然后选择最终落地风格。</div>
+          </div>
+        </div>
+      </div>
+      <div class="flow">
+        <div class="fcell"><div class="fk">经验出现</div><div class="ft">重复排障 / 重复评审</div><div class="fd">部署、SDD 执行、三版 UI 选择都是高频人工流程，靠口头记忆会产生遗漏。</div></div>
+        <div class="farr">→</div>
+        <div class="fcell"><div class="fk">协议固化</div><div class="ft">Skill + Runbook + State</div><div class="fd">把前置检查、用户确认、任务边界、验证证据和失败处理写入 skill。</div></div>
+        <div class="farr">→</div>
+        <div class="fcell"><div class="fk">复用收益</div><div class="ft">稳定交付 / 可审计</div><div class="fd">新任务不再从零组织流程，交付过程可复盘、可验证、可持续改进。</div></div>
+      </div>
+    </section>
+
+    <!-- 16 HOME REDESIGN -->
     <section id="homeredesign">
       <div class="sec-head">
-        <div class="sec-num">15 / 设计亮点</div>
+        <div class="sec-num">16 / 设计亮点</div>
         <h2>H5 首页维度重构：从「竞拍维度」到「直播间维度」</h2>
         <p class="sec-desc">一次以第一性原理驱动的信息架构重构：不打补丁，而是追问「首页到底该回答用户什么问题」，从根上修正列表维度错配。</p>
       </div>
@@ -632,10 +762,10 @@ error_codes={<span class="grn">"400":7095</span>}  <span class="dim"># 仅余业
       <div class="takeaway coral"><b>低成本高收益：</b>复用既有 RPC 批量回填模式（参照 <code>GetCurrentByLiveStreamIDs</code>），不跨库 JOIN；feed 形态零改动，改造成本集中在首页。</div>
     </section>
 
-    <!-- 16 BOUNDARY -->
+    <!-- 17 BOUNDARY -->
     <section id="boundary">
       <div class="sec-head">
-        <div class="sec-num">16 / 如实边界说明</div>
+        <div class="sec-num">17 / 如实边界说明</div>
         <h2>主动界定已完成与未完成的边界</h2>
         <p class="sec-desc">以下属于「能力已部分实现但主流程未接通」或「当前确实不存在」的范围，答辩与文档中按现状描述，避免把局部实现表述成完整闭环。</p>
       </div>
@@ -672,6 +802,32 @@ const links=[...document.querySelectorAll('nav.side a.navlink')];
 const secs=links.map(l=>document.querySelector(l.getAttribute('href'))).filter(Boolean);
 const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));const a=links.find(l=>l.getAttribute('href')==='#'+e.target.id);if(a)a.classList.add('active');}});},{rootMargin:'-35% 0px -60% 0px'});
 secs.forEach(s=>io.observe(s));
+const trioCopy={
+  minimal:{title:'方案 1：极简几何 Minimal Geometry',desc:'用克制的色块比例和低饱和过渡表达热度。优点是稳定、不抢主画面；适合真实产品常态运行，但评审场冲击力较弱。',intensity:'Low',motion:'Pulse',fit:'Prod'},
+  cyber:{title:'方案 2：赛博流光 Cyber Glow',desc:'用渐变、发光和扫光动画制造强演示冲击力。适合评委场景：一眼能感知竞拍进入白热阶段，但仍限制在 BidDock 内，不影响主画面信息层级。',intensity:'High',motion:'Shine',fit:'Demo'},
+  bionic:{title:'方案 3：仿生呼吸 Bionic Breathing',desc:'用类似心跳的呼吸节奏表达竞拍情绪，热度越高呼吸越快。更情绪化、有生命感，但需要控制动效强度，避免直播间过度躁动。',intensity:'Mid+',motion:'Breath',fit:'Mood'}
+};
+const heatCopy={
+  calm:{label:'冷静中 · 低频出价',pct:'32%'},
+  warming:{label:'战况升温 · 连续竞价',pct:'62%'},
+  blazing:{label:'白热化 · 流光加速',pct:'92%'}
+};
+const trio=document.getElementById('trioPreview');
+function setTrio(kind,value){
+  if(!trio)return;
+  trio.dataset[kind]=value;
+  document.querySelectorAll(`[data-trio-${kind}]`).forEach(b=>b.classList.toggle('active',b.dataset[`trio${kind[0].toUpperCase()+kind.slice(1)}`]===value));
+  const v=trio.dataset.variant,h=trio.dataset.heat,vc=trioCopy[v],hc=heatCopy[h];
+  document.getElementById('trioVariantTitle').textContent=vc.title;
+  document.getElementById('trioVariantDesc').textContent=vc.desc;
+  document.getElementById('trioMetricIntensity').textContent=vc.intensity;
+  document.getElementById('trioMetricMotion').textContent=vc.motion;
+  document.getElementById('trioMetricFit').textContent=vc.fit;
+  document.getElementById('trioHeatLabel').textContent=hc.label;
+  document.getElementById('trioHeatPct').textContent=hc.pct;
+}
+document.querySelectorAll('[data-trio-variant]').forEach(b=>b.addEventListener('click',()=>setTrio('variant',b.dataset.trioVariant)));
+document.querySelectorAll('[data-trio-heat]').forEach(b=>b.addEventListener('click',()=>setTrio('heat',b.dataset.trioHeat)));
 </script>
 </body>
 </html>
