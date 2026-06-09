@@ -62,22 +62,54 @@ Token 来源：
 - `inactive`：非当前路由 Tab。
 - `pressed`：用户点击瞬间，Tab 自身允许轻微 `scale(0.98)`。
 
-### 切换
+### 位置计算（固定宽度胶囊）
+
+P1 决策：胶囊采用**固定视觉宽度** `--nav-indicator-width`（建议 `72px`），切换时只做 `translateX`，**宽度恒定不形变**。这是“一体滑行”稳定感的核心。
 
 当路由或 active Tab 变化时：
 
-1. 根据 active Tab 的 DOM 位置计算指示器目标位置。
-2. 写入 CSS 变量：
-   - `--nav-indicator-x`
-   - `--nav-indicator-width`
-3. `.navIndicator` 使用 `transform: translate3d(var(--nav-indicator-x), 0, 0)` 移动。
-4. `.navIndicatorLine` 使用同源 `--nav-indicator-x` 计算居中位置，与胶囊同步移动。
+1. 测量 active Tab 与 `nav` 的 DOM 矩形：`tabRect`、`navRect`。
+2. 固定胶囊宽度记为 `W`（= `--nav-indicator-width`）。
+3. 计算胶囊左边界（Tab 内水平居中）：
+
+   ```
+   x = (tabRect.left - navRect.left) + (tabRect.width - W) / 2
+   ```
+
+4. 写入 CSS 变量：
+   - `--nav-indicator-x`：胶囊左边界 `x`。
+   - `--nav-indicator-width`：固定值 `W`，**不随 Tab 宽度变化**。
+5. `.navIndicator` 使用 `transform: translate3d(var(--nav-indicator-x), 0, 0)`，`width` 恒为 `W`。
+6. `.navIndicatorLine` 金线中心 = `x + W / 2`，即金线用 `transform: translate3d(calc(var(--nav-indicator-x) + var(--nav-indicator-width) / 2 - 金线半宽), 0, 0)` 与胶囊同步，且金线居中恒定依赖固定 `W`，不会因 Tab 宽度变化而偏移。
+
+固定宽度的好处：
+
+- 胶囊永不一边平移一边变宽/变窄，符合“稳定克制”的目标。
+- 金线居中公式只依赖固定 `W`，恒定可靠。
+- `(tabRect.width - W) / 2` 居中项保证：即使某个 Tab 因文案或 `43` 角标被撑宽，胶囊仍视觉居中于该 Tab。
 
 不采用纯 CSS 乘法计算位置，原因：
 
 - `calc(var(--index) * var(--step))` 可读性和兼容性不如 DOM 测量稳定。
-- 实际 Tab 宽度、字体渲染、角标尺寸和响应式布局会影响真实位置。
-- DOM 测量能保证胶囊左边界与 active Tab 左边界对齐。
+- 实际 Tab 宽度、字体渲染、角标尺寸和响应式布局会影响 Tab 左边界与宽度。
+- DOM 测量 + Tab 内居中能保证胶囊在每个 Tab 下视觉居中，且与 active Tab 严格对应。
+
+### React 测量实现要点
+
+- 为每个 Tab 绑定 `ref`，维护 `tabRefs` 数组；`nav` 自身也需 `ref`。
+- 使用 `useLayoutEffect`（**非** `useEffect`）在 DOM 布局后、绘制前完成首次测量，避免首帧胶囊位置闪烁。
+- 依赖项必须包含**当前路由 / active index**，路由变化时重新测量并写入 CSS 变量。
+- `resize` 监听中对 active Tab 重新测量（无动画），保证响应式下重新对齐。
+
+### 初始测量时机
+
+- 首次测量除 `useLayoutEffect` 外，还需在 `document.fonts.ready` resolve 后**重测一次**：web font 加载完成会改变 Tab 文案宽度，导致 `tabRect.width` 变化，若不重测会出现初始错位。
+- 首次定位（含字体重测、resize 重测）必须**禁用过渡**（临时 `transition: none` + `requestAnimationFrame` 恢复），避免页面加载或缩放时胶囊从原点滑入的突兀动画。
+
+### 定位基准约束
+
+- 公式 `tabRect.left - navRect.left` 成立的前提是 `nav` **左右无 border**（当前仅有 `border-top`），此时 border box 左边与 padding box 左边一致。
+- 约束：后续不得给 `bottomNav` 添加左/右 border，否则需改用 padding-box 基准重新推导，否则胶囊会整体横向偏移。
 
 ## 结构设计
 
@@ -125,6 +157,8 @@ Token 来源：
 - 文字与图标颜色：`160ms ease`
 - active 图标：`translateY(-1px) scale(1.06)`
 - active label：`translateY(-1px)`
+- 固定胶囊只过渡 `transform`，**不过渡 `width`**（宽度恒定，无需过渡）。
+- 以指示器位移 `260ms` 为唯一权威时长；预览中的 `switching` 辅助态计时需与之对齐，落地不保留 `460ms` 旧值。
 
 降级：
 
@@ -166,13 +200,15 @@ Token 来源：
 视觉验证：
 
 - 在 `dark` 和 `light` 两套 UI 下切换：首页、直播间、我的。
-- 胶囊左边界应与 active Tab 左边界对齐。
+- 胶囊左边界经 Tab 内居中后，应使胶囊视觉居中于 active Tab。
+- 胶囊宽度在三个入口间切换时**保持恒定**，不得出现变宽/变窄。
 - 顶部金线应始终居中于胶囊。
 - 角标不得被胶囊或金线遮挡。
 
 技术验证：
 
 - 路由直达 `/`、`/live`、`/profile` 时，初始指示器位置正确。
+- web font 加载完成（`document.fonts.ready`）后指示器重新对齐，无初始错位。
 - 浏览器 resize 或移动端横竖尺寸变化后，指示器重新对齐 active Tab。
 - `prefers-reduced-motion` 下无滑行动画但状态正确。
 - 现有底部导航隐藏路径仍不渲染导航。
@@ -190,3 +226,4 @@ Token 来源：
 - 静态方案：`A · 典藏印章`。
 - 动效方案：`A · 一体滑行`。
 - 实现策略：共享指示器 + DOM 测量定位。
+- 胶囊宽度（P1）：固定视觉宽度 `--nav-indicator-width`（建议 `72px`），切换只 `translateX` 不变宽。
