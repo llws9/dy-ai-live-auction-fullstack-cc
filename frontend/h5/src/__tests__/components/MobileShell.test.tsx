@@ -56,6 +56,20 @@ function createDeferred<T>() {
   return { promise, resolve, reject };
 }
 
+function createRect(left: number, width: number): DOMRect {
+  return {
+    x: left,
+    y: 0,
+    width,
+    height: 48,
+    top: 0,
+    right: left + width,
+    bottom: 48,
+    left,
+    toJSON: () => ({}),
+  } as DOMRect;
+}
+
 const authenticatedAuthState = {
   isAuthenticated: true,
   user: { id: 1, email: 'buyer@example.com', name: '测试用户', role: 0 },
@@ -126,6 +140,38 @@ describe('MobileShell', () => {
     expect(screen.getByRole('link', { name: /我的/ })).toHaveAttribute('data-state', 'active');
     expect(screen.getByRole('link', { name: /首页/ })).toHaveAttribute('data-state', 'inactive');
     expect(await screen.findByLabelText('8 条待处理提醒')).toHaveTextContent('8');
+  });
+
+  it('centers a fixed-width shared indicator under the active tab when routes change', async () => {
+    const rectSpy = jest.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function () {
+      const element = this as HTMLElement;
+      if (element.getAttribute('aria-label') === '底部导航') return createRect(10, 430);
+      if (element.getAttribute('href') === '/') return createRect(42, 72);
+      if (element.getAttribute('href') === '/live') return createRect(178, 88);
+      if (element.getAttribute('href') === '/profile') return createRect(318, 96);
+      return createRect(0, 0);
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/profile']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <BottomNav />
+      </MemoryRouter>,
+    );
+
+    const nav = screen.getByRole('navigation', { name: '底部导航' });
+    expect(screen.getByTestId('bottom-nav-indicator')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByTestId('bottom-nav-indicator-line')).toHaveAttribute('aria-hidden', 'true');
+
+    await waitFor(() => expect(nav).toHaveStyle('--nav-indicator-x: 320px'));
+    expect(nav).toHaveStyle('--nav-indicator-width: 72px');
+
+    fireEvent.click(screen.getByRole('link', { name: /直播间/ }));
+
+    await waitFor(() => expect(nav).toHaveStyle('--nav-indicator-x: 176px'));
+    expect(nav).toHaveStyle('--nav-indicator-width: 72px');
+    expect(screen.getByRole('link', { name: /直播间/ })).toHaveAttribute('aria-current', 'page');
+
+    rectSpy.mockRestore();
   });
 
   it('uses a live-safe content layout on live routes so the room stops above the bottom navigation', async () => {

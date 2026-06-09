@@ -46,6 +46,10 @@
   border-top: 1px solid var(--border-subtle);
   backdrop-filter: blur(16px);
   transform: translateX(-50%);
+  isolation: isolate;
+  --nav-indicator-width: 72px;
+  --nav-indicator-line-width: 24px;
+  --nav-indicator-x: 0px;
   --nav-active-bg: rgba(201, 169, 110, 0.14);
   --nav-active-ring: rgba(201, 169, 110, 0.26);
   --nav-active-shadow: 0 10px 28px rgba(0, 0, 0, 0.22), 0 0 18px rgba(201, 169, 110, 0.12);
@@ -57,8 +61,50 @@
   --nav-active-shadow: 0 12px 24px rgba(138, 106, 42, 0.16), 0 0 18px rgba(255, 255, 255, 0.72);
 }
 
+.navIndicator,
+.navIndicatorLine {
+  position: absolute;
+  left: 0;
+  z-index: 0;
+  pointer-events: none;
+  transition: transform 260ms cubic-bezier(0.22, 0.9, 0.25, 1);
+}
+
+.navIndicator {
+  top: 8px;
+  width: var(--nav-indicator-width);
+  height: 48px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 0, rgba(255, 255, 255, 0.22), transparent 58%),
+    var(--nav-active-bg);
+  border: 1px solid var(--nav-active-ring);
+  box-shadow: var(--nav-active-shadow);
+  transform: translate3d(var(--nav-indicator-x), 0, 0);
+}
+
+.navIndicatorLine {
+  top: 1px;
+  width: var(--nav-indicator-line-width);
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--text-brand), transparent);
+  box-shadow: 0 0 16px var(--nav-active-ring);
+  transform: translate3d(
+    calc(var(--nav-indicator-x) + var(--nav-indicator-width) / 2 - var(--nav-indicator-line-width) / 2),
+    0,
+    0
+  );
+}
+
+.bottomNav[data-measuring='true'] .navIndicator,
+.bottomNav[data-measuring='true'] .navIndicatorLine {
+  transition: none;
+}
+
 .navItem {
   position: relative;
+  z-index: 1;
   min-width: 72px;
   min-height: 48px;
   padding: 5px 10px 4px;
@@ -77,24 +123,6 @@
     transform var(--transition-fast);
 }
 
-.navItem::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background:
-    radial-gradient(circle at 50% 0, rgba(255, 255, 255, 0.22), transparent 58%),
-    var(--nav-active-bg);
-  border: 1px solid var(--nav-active-ring);
-  box-shadow: var(--nav-active-shadow);
-  opacity: 0;
-  transform: scale(0.88) translateY(4px);
-  transition:
-    opacity var(--transition-fast),
-    transform var(--transition-fast);
-}
-
 .navItem:hover,
 .navItemActive {
   color: var(--text-brand);
@@ -106,11 +134,6 @@
 
 .navItemActive {
   font-weight: 600;
-}
-
-.navItemActive::before {
-  opacity: 1;
-  transform: scale(1) translateY(0);
 }
 
 .navIconWrap {
@@ -127,9 +150,15 @@
 }
 
 .navIcon {
-  font-size: 22px;
-  line-height: 1;
+  width: 22px;
+  height: 22px;
   transition: transform var(--transition-fast);
+}
+
+.navIcon svg {
+  display: block;
+  width: 22px;
+  height: 22px;
 }
 
 .navItemActive .navIconWrap {
@@ -153,8 +182,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .navIndicator,
+  .navIndicatorLine,
   .navItem,
-  .navItem::before,
   .navIconWrap,
   .navIcon,
   .navLabel {
