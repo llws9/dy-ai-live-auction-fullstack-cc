@@ -223,6 +223,12 @@ x = (tabRect.left - navRect.left) + (tabRect.width - W) / 2
 
 **来源**：session:6a28703b0bfcee1b04fc2ec6
 
+**迁移执行经验**（从本次会话沉淀）：
+- 远端 Compose Project 迁移需先备份数据和静态资源，再停止旧 project 容器（不删卷），复制命名卷到新 project，最后启动新 project
+- 卷复制时使用国内镜像源（如 `docker.m.daocloud.io/library/alpine:3.19`）避免拉取失败
+- 迁移后需运行 `scripts/init-demo-users.sh` 初始化演示账号
+- 必须保留旧 project 的命名卷作为回滚点，严禁执行 `down -v`
+
 ### H5 首页直播间维度重构 (Homepage LiveRoom Dimension)
 
 **决策背景**：原首页查询的是「竞拍维度」卡片，但业务设定是一个商家只能有一个直播间，一个直播间同一时间只能有一个正在竞拍和一个即将开始；这导致首页和直播间 feed 数据重叠但形态不同，需要明确心智区分。
