@@ -1,0 +1,26 @@
+scripts/test-deploy-prod-scripts.sh
+  s_9395e5f42a7f29::t_098ef1611df9ae 7,32-41,74-75
+  s_9395e5f42a7f29::t_20cfff1611824e 67-68
+deploy/demo/nginx-ip.conf
+  s_9395e5f42a7f29::t_f428ae46566d70 84-96
+scripts/deploy-prod.sh
+  s_9395e5f42a7f29::t_79d4765461a165 348-360,439
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ffe949947e5c3c6beb5825c6d021edfa53e241d3",
+  "prompts": {},
+  "sessions": {
+    "s_9395e5f42a7f29": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a2803850bfcee1b04fbc9c6",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
