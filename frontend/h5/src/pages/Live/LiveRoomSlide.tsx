@@ -10,6 +10,8 @@ import FixedPriceCard from '@/components/FixedPriceCard';
 import FixedPriceFlair from '@/components/FixedPriceFlair';
 import FixedPricePurchaseModal from '@/components/FixedPricePurchaseModal';
 import { FixedPriceIntroAnimation } from '@/components/auction/FixedPriceIntroAnimation';
+import { BidHeatBar } from '@/components/LiveRoom/BidHeatBar';
+import { useBidHeat } from '@/hooks/useBidHeat';
 import { useFixedPriceItems } from '@/hooks/useFixedPriceItems';
 import { auctionApi, bidApi, followApi, liveStreamApi, productApi, skyLampApi } from '@/services/api';
 import WebSocketService from '@/services/websocket';
@@ -284,6 +286,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     effectiveLiveStreamId,
     token,
   );
+  const { level: heatLevel, markBid, reset: resetBidHeat } = useBidHeat();
   const productImage = getFirstImage(product || auction?.product);
   const hostName = liveStream?.host_name || liveStream?.creator_name || '拍卖师';
   const roomName = repairUtf8Mojibake(liveStream?.name) || '竞拍直播间';
@@ -331,6 +334,10 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   useEffect(() => {
     currentPriceRef.current = currentPrice;
   }, [currentPrice]);
+
+  useEffect(() => {
+    resetBidHeat();
+  }, [auctionId, resetBidHeat]);
 
   useEffect(() => {
     setLikeCount(toAmount(liveStream?.like_count ?? liveStream?.likes_count));
@@ -767,6 +774,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     });
     ws.on('bid_placed', (data) => {
       if (!belongsToThisRoom(data)) return;
+      markBid();
       const nextPrice = toAmount(data?.current_price ?? data?.amount);
       if (nextPrice > 0) {
         setAuction((previous) => previous ? { ...previous, current_price: nextPrice } : previous);
@@ -782,6 +790,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
     });
     const onSkyLampAutoBid = (data: any) => {
       if (!belongsToThisRoom(data)) return;
+      markBid();
 
       const userID = Number(data?.user_id || 0);
       const amount = toAmount(data?.amount);
@@ -880,7 +889,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       useLiveChatStore.getState().reset();
       setConnected(false);
     };
-  }, [auctionId, active, liveStreamId, normalizeRanking, token, showGlobalToast, navigate, user?.id, currentUserDisplayName, showSkyLampNotice, applyRealtimeBid, applyRealtimeRanking, showRemoteBidFlair]);
+  }, [auctionId, active, liveStreamId, normalizeRanking, token, showGlobalToast, navigate, user?.id, currentUserDisplayName, showSkyLampNotice, applyRealtimeBid, applyRealtimeRanking, showRemoteBidFlair, markBid]);
 
   const handleBid = async () => {
     if (!isAuthenticated) {
@@ -910,6 +919,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
         await loadRanking(auctionId);
       }
       setBidAmount(String(nextPrice + increment));
+      markBid();
       showToast('出价成功');
       closeSheet();
       showBidSuccessFlair(nextPrice, currentUserDisplayName, user?.id || 0);
@@ -1184,6 +1194,9 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           onOpen={openSheet}
           onClose={closeSheet}
           onRequireLogin={() => showToast('请先登录后出价')}
+          topAddon={
+            <BidHeatBar level={heatLevel} bidderCount={ranking.length} viewerCount={viewerCount} />
+          }
         >
         <div className={styles.priceBlock}>
           <span className={styles.priceLabel}>当前最高价</span>
@@ -1191,12 +1204,6 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           <div className={styles.priceMeta}>
             <span>起拍价 ¥{formatMoney(startPrice)}</span>
             <span>加价幅度 ¥{formatMoney(increment)}</span>
-          </div>
-        </div>
-
-        <div className={styles.heatMarqueeContainer}>
-          <div className={styles.heatMarqueeText}>
-            🔥 已有 {ranking.length} 人出价 · {viewerCount} 人围观
           </div>
         </div>
 

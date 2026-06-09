@@ -119,6 +119,31 @@ describe('Live layout css', () => {
     expect(rankingBlockCss).toContain('padding: 16px;');
   });
 
+  it('lets the bid heat bar own its visual surface without an outer gray shell', () => {
+    const css = readLiveCss();
+    const heatMarqueeContainerCss = getClassBlock(css, 'heatMarqueeContainer');
+
+    expect(heatMarqueeContainerCss).toContain('background: transparent;');
+    expect(heatMarqueeContainerCss).toContain('padding: 0;');
+    expect(heatMarqueeContainerCss).toContain('border-radius: 0;');
+  });
+
+  it('half-embeds the bid heat bar into the bid sheet top edge', () => {
+    const css = readLiveCss();
+    const sheetDockAddonCss = getClassBlock(css, 'sheetDockAddon');
+    const sheetDockAddonOpenCss = getClassBlock(css, 'sheetDockAddonOpen');
+    const sheetCss = getClassBlock(css, 'sheet');
+
+    expect(sheetDockAddonCss).toContain('position: absolute;');
+    expect(sheetDockAddonCss).toContain('bottom: 50dvh;');
+    expect(sheetDockAddonCss).toContain('transform: translateY(calc(50dvh + 50%));');
+    expect(sheetDockAddonCss).toContain('transition: transform 0.35s ease;');
+    expect(sheetDockAddonOpenCss).toContain('transform: translateY(50%);');
+    expect(sheetDockAddonCss).toContain('z-index: 10;');
+    expect(sheetDockAddonCss).toContain('pointer-events: none;');
+    expect(sheetCss).toContain('padding: calc(var(--spacing-3) + 32px) var(--spacing-5) calc(24px + env(safe-area-inset-bottom, 0px));');
+  });
+
   it('keeps the online viewers pill compact without a close affordance', () => {
     const css = readLiveCss();
     const viewersRowCss = getClassBlock(css, 'viewersRow');

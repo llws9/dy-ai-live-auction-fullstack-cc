@@ -4,6 +4,7 @@ import {
   Legend,
   Line,
   LineChart,
+  ReferenceLine,
   ReferenceArea,
   ResponsiveContainer,
   Tooltip,
@@ -49,6 +50,17 @@ const defaults: ChaosConfig = {
   jitter_ms: 0,
 };
 
+export const theaterPreset: ChaosConfig = {
+  fault_type: 'error_rate',
+  probe_qps: 20,
+  baseline_sec: 3,
+  inject_sec: 8,
+  recover_sec: 5,
+  error_rate: 0.5,
+  latency_ms: 0,
+  jitter_ms: 0,
+};
+
 export default function Chaos() {
   const [form, setForm] = useState<ChaosConfig>(defaults);
   const [running, setRunning] = useState(false);
@@ -62,16 +74,21 @@ export default function Chaos() {
     [report, liveBuckets],
   );
   const faultImplementation = describeFaultImplementation(form.fault_type);
+  const startDisabled = isChaosStartDisabled({ running, testID, progress, step });
+  const narration = buildNarration({ step, progress, form, report: displayedReport });
+  const anchors = useMemo(() => buildCurveAnchors(displayedReport?.buckets ?? []), [displayedReport]);
+  const demoMetrics = useMemo(() => buildDemoMetrics(displayedReport), [displayedReport]);
 
   // 卸载时清理 WS 与全局 store
   useEffect(() => () => disconnect(), [disconnect]);
 
-  const start = async () => {
+  const start = async (override?: ChaosConfig) => {
+    const config = override ?? form;
     setError(null);
     setReport(null);
     setRunning(true);
     try {
-      const id = await startChaos(form);
+      const id = await startChaos(config);
       const wsURL = await discoverWS(id);
       connect(wsURL, id);
       poll.start(id, setReport);
@@ -80,6 +97,11 @@ export default function Chaos() {
     } finally {
       setRunning(false);
     }
+  };
+
+  const startTheaterMode = async () => {
+    setForm(theaterPreset);
+    await start(theaterPreset);
   };
 
   const handleCancel = async () => {
@@ -132,9 +154,12 @@ export default function Chaos() {
           <strong>系统实现方式：</strong>{faultImplementation}
         </div>
 
-        <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-          <button type="button" disabled={running} onClick={start} style={btnP(running)}>
-            {running ? '启动中...' : '启动'}
+        <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
+          <button type="button" disabled={startDisabled} onClick={() => start()} style={btnP(startDisabled)}>
+            {describeChaosStartButton({ mode: 'manual', disabled: startDisabled, running })}
+          </button>
+          <button type="button" disabled={startDisabled} onClick={startTheaterMode} style={btnP(startDisabled)}>
+            {describeChaosStartButton({ mode: 'theater', disabled: startDisabled, running })}
           </button>
           <button type="button" disabled={!testID} onClick={handleCancel} style={btnS(!testID)}>
             取消
@@ -161,8 +186,11 @@ export default function Chaos() {
             <Metric label="检测延迟(ms)" value={String(displayedReport.detection_latency_ms ?? '-')} />
             <Metric label="恢复延迟(ms)" value={String(displayedReport.recovery_latency_ms ?? '-')} />
             <Metric label="结论" value={displayedReport.all_ok == null ? '-' : displayedReport.all_ok ? 'PASS' : 'FAIL'} ok={displayedReport.all_ok} />
+            <Metric label="峰值错误率" value={pctFromNumber(demoMetrics.peakErrorRatePct)} bad={(demoMetrics.peakErrorRatePct ?? 0) > 5} />
+            <Metric label="损失 QPS" value={demoMetrics.lostQps == null ? '-' : demoMetrics.lostQps.toFixed(1)} bad={(demoMetrics.lostQps ?? 0) > 0} />
+            <Metric label="恢复耗时(ms)" value={String(demoMetrics.recoveryMs ?? '-')} />
           </div>
-          <ResilienceCurve report={displayedReport} />
+          <ResilienceCurve report={displayedReport} anchors={anchors} narration={narration} demoMetrics={demoMetrics} />
         </section>
       )}
     </div>
@@ -172,6 +200,11 @@ export default function Chaos() {
 function pct(v?: number): string {
   if (v === undefined || v === null || Number.isNaN(v)) return '-';
   return `${(v * 100).toFixed(1)}%`;
+}
+
+function pctFromNumber(v?: number): string {
+  if (v === undefined || v === null || Number.isNaN(v)) return '-';
+  return `${v.toFixed(1)}%`;
 }
 
 interface ResiliencePoint {
@@ -187,6 +220,38 @@ interface PhaseSpan {
   phase: Bucket['phase'];
   start: number;
   end: number;
+}
+
+export interface CurveAnchors {
+  injectIndex?: number;
+  slaBreachIndex?: number;
+  recoverIndex?: number;
+}
+
+export interface DemoMetrics {
+  peakErrorRatePct?: number;
+  lostQps?: number;
+  recoveryMs?: number;
+}
+
+export interface ReferenceLineLabels {
+  inject: string;
+  sla: string;
+  recover: string;
+}
+
+export interface ReferenceLineLabelProps {
+  value: string;
+  position: 'insideTopLeft' | 'insideBottomLeft' | 'insideTopRight';
+  offset: number;
+  fill: string;
+}
+
+export interface ChaosLifecycleState {
+  running: boolean;
+  testID?: string | null;
+  progress: number;
+  step?: string | null;
 }
 
 export function buildResilienceSeries(buckets: Bucket[]): ResiliencePoint[] {
@@ -205,6 +270,111 @@ export function buildResilienceSeries(buckets: Bucket[]): ResiliencePoint[] {
 
 export function summarizeResilienceReport(report: Report): string {
   return `故障注入后错误率从 ${pct(report.baseline_error_rate)} 上升到 ${pct(report.inject_error_rate)}，恢复阶段回落到 ${pct(report.recover_error_rate)}，检测延迟 ${fmtMs(report.detection_latency_ms)}，恢复延迟 ${fmtMs(report.recovery_latency_ms)}。`;
+}
+
+export function buildNarration({
+  step,
+  progress,
+  form,
+  report,
+}: {
+  step?: string | null;
+  progress: number;
+  form: Partial<ChaosConfig>;
+  report?: Report | null;
+}): string {
+  if (report && (step === 'done' || step === 'failed' || progress >= 100)) {
+    return summarizeResilienceReport(report);
+  }
+  if (step === 'baseline') return '正在采集基线指标，建立健康水位...';
+  if (step === 'inject') {
+    const rate = Math.round((form.error_rate ?? theaterPreset.error_rate ?? 0) * 100);
+    return `正在注入约 ${rate}% 错误率，观察系统反应...`;
+  }
+  if (step === 'recover') return '故障已移除，正在观测系统自愈...';
+  return '等待启动韧性剧本，系统观测台就绪。';
+}
+
+export function buildCurveAnchors(buckets: Bucket[], slaThreshold = 0.05): CurveAnchors {
+  const anchors: CurveAnchors = {};
+  const injectIndex = buckets.findIndex((bucket) => bucket.phase === 'inject');
+  const recoverIndex = buckets.findIndex((bucket) => bucket.phase === 'recover');
+  const slaBreachIndex = buckets.findIndex((bucket) => bucketErrorRate(bucket) > slaThreshold);
+
+  if (injectIndex >= 0) anchors.injectIndex = injectIndex;
+  if (slaBreachIndex >= 0) anchors.slaBreachIndex = slaBreachIndex;
+  if (recoverIndex >= 0) anchors.recoverIndex = recoverIndex;
+  return anchors;
+}
+
+export function buildDemoMetrics(report?: Report | null): DemoMetrics {
+  const buckets = report?.buckets ?? [];
+  const injectBuckets = buckets.filter((bucket) => bucket.phase === 'inject');
+  const peakErrorRatePct = injectBuckets.length
+    ? Number((Math.max(...injectBuckets.map(bucketErrorRate)) * 100).toFixed(1))
+    : undefined;
+  const baselineQps = averageSuccessQps(buckets, 'baseline');
+  const injectQps = averageSuccessQps(buckets, 'inject');
+  const lostQps = baselineQps == null || injectQps == null ? undefined : Math.max(0, Number((baselineQps - injectQps).toFixed(1)));
+
+  return {
+    peakErrorRatePct,
+    lostQps,
+    recoveryMs: report?.recovery_latency_ms,
+  };
+}
+
+export function buildReferenceLineLabels(metrics?: DemoMetrics): ReferenceLineLabels {
+  return {
+    inject: 'inject',
+    sla: `peak ${pctFromNumber(metrics?.peakErrorRatePct)}`,
+    recover: metrics?.lostQps == null
+      ? `recover ${fmtMs(metrics?.recoveryMs)} / lost QPS -`
+      : `recover ${fmtMs(metrics?.recoveryMs)} / -${fmtMetric(metrics.lostQps)}QPS`,
+  };
+}
+
+export function buildReferenceLineLabelProps(labels: ReferenceLineLabels): Record<keyof ReferenceLineLabels, ReferenceLineLabelProps> {
+  return {
+    inject: {
+      value: labels.inject,
+      position: 'insideTopLeft',
+      offset: 8,
+      fill: theaterStyles.errorColor,
+    },
+    sla: {
+      value: labels.sla,
+      position: 'insideBottomLeft',
+      offset: 24,
+      fill: theaterStyles.warnColor,
+    },
+    recover: {
+      value: labels.recover,
+      position: 'insideTopRight',
+      offset: 8,
+      fill: theaterStyles.primaryColor,
+    },
+  };
+}
+
+export function isChaosStartDisabled({ running, testID, progress, step }: ChaosLifecycleState): boolean {
+  if (running) return true;
+  if (!testID) return false;
+  return !(step === 'done' || step === 'failed' || progress >= 100);
+}
+
+export function describeChaosStartButton({
+  mode,
+  disabled,
+  running,
+}: {
+  mode: 'manual' | 'theater';
+  disabled: boolean;
+  running: boolean;
+}): string {
+  if (running) return '启动中...';
+  if (disabled) return mode === 'theater' ? '演示进行中...' : '实验进行中...';
+  return mode === 'theater' ? './start_theater.sh' : '启动';
 }
 
 export function buildBucketsFromProgressHistory<T extends { step: string; metrics?: Record<string, unknown>; ts: number }>(
@@ -260,6 +430,17 @@ function phaseErrorRate(buckets: Bucket[], phase: Bucket['phase']): number | und
   return total > 0 ? totals.fail / total : undefined;
 }
 
+function bucketErrorRate(bucket: Bucket): number {
+  const total = bucket.ok_count + bucket.fail_count;
+  return total > 0 ? bucket.fail_count / total : 0;
+}
+
+function averageSuccessQps(buckets: Bucket[], phase: Bucket['phase']): number | undefined {
+  const phaseBuckets = buckets.filter((bucket) => bucket.phase === phase);
+  if (phaseBuckets.length === 0) return undefined;
+  return phaseBuckets.reduce((sum, bucket) => sum + bucket.ok_count, 0) / phaseBuckets.length;
+}
+
 function isChaosPhase(step: string): step is Bucket['phase'] {
   return step === 'baseline' || step === 'inject' || step === 'recover';
 }
@@ -268,19 +449,47 @@ function fmtMs(v?: number): string {
   return v == null || Number.isNaN(v) ? '-' : `${v}ms`;
 }
 
-function ResilienceCurve({ report }: { report: Report }) {
+function fmtMetric(v?: number): string {
+  return v == null || Number.isNaN(v) ? '-' : v.toFixed(1);
+}
+
+function ResilienceCurve({
+  report,
+  anchors,
+  narration,
+  demoMetrics,
+}: {
+  report: Report;
+  anchors?: CurveAnchors;
+  narration?: string;
+  demoMetrics?: DemoMetrics;
+}) {
   const buckets = report.buckets ?? [];
   const series = useMemo(() => buildResilienceSeries(buckets), [buckets]);
   const spans = useMemo(() => buildPhaseSpans(series), [series]);
+  const referenceLabels = useMemo(() => buildReferenceLineLabels(demoMetrics), [demoMetrics]);
+  const referenceLabelProps = useMemo(() => buildReferenceLineLabelProps(referenceLabels), [referenceLabels]);
 
   if (series.length === 0) return null;
 
   return (
     <div>
-      <div style={{ marginBottom: 10, color: '#0f172a', fontSize: 14, fontWeight: 700 }}>
+      <div style={theaterStyles.curveTitle}>
         系统韧性曲线
       </div>
-      <div style={{ marginBottom: 12, color: '#475569', fontSize: 13, lineHeight: 1.6 }}>
+      {narration && (
+        <div style={theaterStyles.narration}>
+          <span style={theaterStyles.prompt}>{'>'}</span> {narration}
+        </div>
+      )}
+      {demoMetrics && (
+        <div style={theaterStyles.inlineMetrics}>
+          <span>peak_error={pctFromNumber(demoMetrics.peakErrorRatePct)}</span>
+          <span>lost_qps={demoMetrics.lostQps == null ? '-' : demoMetrics.lostQps.toFixed(1)}</span>
+          <span>recover_ms={demoMetrics.recoveryMs ?? '-'}</span>
+        </div>
+      )}
+      <div style={theaterStyles.summary}>
         {summarizeResilienceReport(report)}
       </div>
       <div style={{ width: '100%', height: 300 }}>
@@ -301,6 +510,15 @@ function ResilienceCurve({ report }: { report: Report }) {
             <XAxis dataKey="index" tickFormatter={(v: number) => String(v + 1)} tick={{ fontSize: 12 }} />
             <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
             <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
+            {anchors?.injectIndex != null && (
+              <ReferenceLine yAxisId="left" x={anchors.injectIndex} stroke={theaterStyles.errorColor} strokeDasharray="4 4" label={referenceLabelProps.inject} />
+            )}
+            {anchors?.slaBreachIndex != null && (
+              <ReferenceLine yAxisId="left" x={anchors.slaBreachIndex} stroke={theaterStyles.warnColor} strokeDasharray="4 4" label={referenceLabelProps.sla} />
+            )}
+            {anchors?.recoverIndex != null && (
+              <ReferenceLine yAxisId="left" x={anchors.recoverIndex} stroke={theaterStyles.primaryColor} strokeDasharray="4 4" label={referenceLabelProps.recover} />
+            )}
             <Tooltip
               formatter={(value, name) => {
                 const n = Number(value ?? 0);
@@ -315,13 +533,13 @@ function ResilienceCurve({ report }: { report: Report }) {
               }}
             />
             <Legend />
-            <Line yAxisId="left" type="monotone" dataKey="errorRatePct" stroke="#ef4444" strokeWidth={2} name="错误率" dot={false} />
-            <Line yAxisId="right" type="monotone" dataKey="avgLatencyMs" stroke="#8b5cf6" strokeWidth={2} name="平均延迟" dot={false} />
-            <Line yAxisId="left" type="monotone" dataKey="successQps" stroke="#2563eb" strokeWidth={2} name="成功 QPS" dot={false} />
+            <Line yAxisId="left" type="monotone" dataKey="errorRatePct" stroke={theaterStyles.errorColor} strokeWidth={2} name="错误率" dot={false} />
+            <Line yAxisId="right" type="monotone" dataKey="avgLatencyMs" stroke={theaterStyles.warnColor} strokeWidth={2} name="平均延迟" dot={false} />
+            <Line yAxisId="left" type="monotone" dataKey="successQps" stroke={theaterStyles.primaryColor} strokeWidth={2} name="成功 QPS" dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <div style={{ marginTop: 8, color: '#64748b', fontSize: 12 }}>
+      <div style={theaterStyles.legendHint}>
         背景：绿色 baseline / 红色 inject / 蓝色 recover；红线看故障冲击，紫线看延迟抬升，蓝线看有效吞吐恢复。
       </div>
     </div>
@@ -345,9 +563,9 @@ function buildPhaseSpans(series: ResiliencePoint[]): PhaseSpan[] {
 }
 
 function phaseColor(phase: Bucket['phase']): string {
-  if (phase === 'baseline') return '#10b981';
-  if (phase === 'inject') return '#ef4444';
-  return '#3b82f6';
+  if (phase === 'baseline') return theaterStyles.successColor;
+  if (phase === 'inject') return theaterStyles.errorColor;
+  return theaterStyles.primaryColor;
 }
 
 function phaseLabel(phase: Bucket['phase']): string {
@@ -396,4 +614,62 @@ const faultExplanationStyle: React.CSSProperties = {
   color: '#334155',
   fontSize: 13,
   lineHeight: 1.6,
+};
+
+export const theaterStyles: {
+  errorColor: string;
+  primaryColor: string;
+  successColor: string;
+  warnColor: string;
+  curveTitle: React.CSSProperties;
+  narration: React.CSSProperties;
+  prompt: React.CSSProperties;
+  inlineMetrics: React.CSSProperties;
+  summary: React.CSSProperties;
+  legendHint: React.CSSProperties;
+} = {
+  errorColor: 'var(--color-error-500)',
+  primaryColor: 'var(--color-primary-500)',
+  successColor: 'var(--color-success-500)',
+  warnColor: 'var(--color-warn-500)',
+  curveTitle: {
+    marginBottom: 10,
+    color: 'var(--color-text-1)',
+    fontSize: 14,
+    fontWeight: 700,
+  },
+  narration: {
+    marginBottom: 10,
+    padding: '10px 12px',
+    border: '1px solid var(--color-text-1)',
+    borderRadius: 'var(--radius-md)',
+    background: 'var(--color-text-1)',
+    color: 'var(--color-bg-2)',
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    fontSize: 13,
+    lineHeight: 1.6,
+  },
+  prompt: {
+    color: 'var(--color-success-500)',
+  },
+  inlineMetrics: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+    color: 'var(--color-text-2)',
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    fontSize: 12,
+  },
+  summary: {
+    marginBottom: 12,
+    color: 'var(--color-text-2)',
+    fontSize: 13,
+    lineHeight: 1.6,
+  },
+  legendHint: {
+    marginTop: 8,
+    color: 'var(--color-text-3)',
+    fontSize: 12,
+  },
 };

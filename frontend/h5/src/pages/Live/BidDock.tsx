@@ -19,6 +19,7 @@ interface BidDockProps {
   onOpen: (sheet: 'bid' | 'info') => void;
   onClose: () => void;
   onRequireLogin: () => void;
+  topAddon?: ReactNode;
   children?: ReactNode;
 }
 
@@ -41,6 +42,7 @@ const BidDock = ({
   onOpen,
   onClose,
   onRequireLogin,
+  topAddon,
   children,
 }: BidDockProps) => {
   const productName = repairUtf8Mojibake(product?.name) || '竞拍商品';
@@ -137,6 +139,14 @@ const BidDock = ({
             data-testid="bid-dock-mask"
             onClick={onClose}
           />
+          {topAddon && (
+            <div
+              className={`${styles.sheetDockAddon} ${isSheetOpen ? styles.sheetDockAddonOpen : ''}`}
+              data-testid="bid-dock-top-addon"
+            >
+              {topAddon}
+            </div>
+          )}
           <div
             className={`${styles.sheet} ${isSheetOpen ? styles.sheetOpen : ''}`}
             onClick={(event) => event.stopPropagation()}

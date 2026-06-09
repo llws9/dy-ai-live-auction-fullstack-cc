@@ -1,0 +1,116 @@
+.bidHeatBar {
+  --heat-accent: var(--color-info-500);
+  --heat-accent-strong: var(--color-info-600);
+  --heat-glow: color-mix(in srgb, var(--heat-accent) 28%, transparent);
+  display: grid;
+  width: 100%;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--heat-accent) 42%, transparent);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at 12% 0%, var(--heat-glow), transparent 36%),
+    linear-gradient(135deg, var(--surface-glass), var(--surface-muted));
+  box-shadow: var(--shadow-key), 0 0 22px var(--heat-glow);
+  color: var(--text-inverse);
+  overflow: hidden;
+}
+
+.warming {
+  --heat-accent: var(--color-secondary-500);
+  --heat-accent-strong: var(--color-primary-500);
+  --heat-glow: color-mix(in srgb, var(--heat-accent-strong) 32%, transparent);
+}
+
+.blazing {
+  --heat-accent: var(--color-accent-500);
+  --heat-accent-strong: var(--color-secondary-400);
+  --heat-glow: color-mix(in srgb, var(--heat-accent) 38%, transparent);
+}
+
+.header,
+.stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+}
+
+.pulseDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--heat-accent-strong);
+  box-shadow: 0 0 14px var(--heat-accent-strong);
+}
+
+.meter {
+  position: relative;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--text-inverse) 18%, transparent);
+  overflow: hidden;
+}
+
+.fill,
+.shimmer {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.fill {
+  transform-origin: left center;
+  background: linear-gradient(90deg, var(--heat-accent), var(--heat-accent-strong));
+  box-shadow: 0 0 18px var(--heat-glow);
+  transition: transform 280ms ease;
+}
+
+.shimmer {
+  background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--text-inverse) 62%, transparent) 48%, transparent 100%);
+  opacity: 0.72;
+  transform: translateX(-100%);
+  animation: heatShimmer 1.4s ease-in-out infinite;
+}
+
+.stats {
+  color: color-mix(in srgb, var(--text-inverse) 76%, transparent);
+  font-size: var(--font-size-xs);
+}
+
+:global(:root[data-theme='light']) .bidHeatBar {
+  background:
+    radial-gradient(circle at 12% 0%, var(--heat-glow), transparent 36%),
+    linear-gradient(135deg, var(--bg-elevated), var(--surface-glass));
+  color: var(--text-primary);
+}
+
+:global(:root[data-theme='light']) .stats {
+  color: var(--text-secondary);
+}
+
+@keyframes heatShimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+
+  .shimmer {
+    display: none;
+    animation: none;
+  }
+}
