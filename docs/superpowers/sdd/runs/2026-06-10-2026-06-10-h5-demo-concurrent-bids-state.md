@@ -251,7 +251,7 @@
 
 **Commits**
 
-- `b6667259d90b66287ab0bbe6e5856ca451d285df` - `feat: add demo concurrent bids handler`
+- `b6667259ada99c5b316e2db6c44888b7db3e96bd` - `feat: add demo concurrent bids handler`
 
 **Review Notes**
 
