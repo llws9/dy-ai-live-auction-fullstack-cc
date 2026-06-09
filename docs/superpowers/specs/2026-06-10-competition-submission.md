@@ -81,7 +81,7 @@
 
 - **主仓库**：https://github.com/llws9/dy-ai-live-auction-fullstack-cc
 - **主分支**：`main`（评委请以 `main` 为准）
-- **最后提交**：`96bc99ba` — `docs: add concurrent bid stale price postmortem`（2026-06-10）
+- **最后提交**：`0cabd1d8` — `fix: harden demo ws and h5 live fallbacks`（2026-06-10）
 - 仓库当前为 private，**提交后将转为 public**；若评审时无法访问，请联系团队开启权限。
 
 ---
