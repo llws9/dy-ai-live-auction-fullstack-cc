@@ -80,7 +80,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "max by (service) (up{job=\"local-services\",service!=\"\"})",
+          "expr": "max by (service) (label_replace(up{job=~\"gateway|product|auction\"}, \"service\", \"$1\", \"job\", \"(.*)\"))",
           "legendFormat": "{{service}}",
           "refId": "A"
         }
