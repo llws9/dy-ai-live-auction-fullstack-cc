@@ -294,6 +294,16 @@ assert_contains \
   "frontend-h5 nginx must rewrite /api/v1/ws to auction /ws and preserve query params"
 
 assert_contains \
+  "$ROOT/frontend/h5/nginx/default.conf" \
+  'location \^~ /@vite/' \
+  "frontend-h5 nginx must not rewrite stale Vite dev-client module requests to index.html"
+
+assert_contains \
+  "$ROOT/frontend/h5/nginx/default.conf" \
+  'Cache-Control "no-cache, no-store, must-revalidate"' \
+  "frontend-h5 nginx must prevent stale index.html after local rebuilds"
+
+assert_contains \
   "$ROOT/frontend/admin/nginx/default.conf" \
   'resolver 127\.0\.0\.11' \
   "frontend-admin nginx must use Docker DNS so gateway container recreation does not leave a stale upstream IP"
