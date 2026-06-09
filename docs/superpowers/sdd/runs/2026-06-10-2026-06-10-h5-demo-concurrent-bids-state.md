@@ -31,18 +31,18 @@
 | State Template | `docs/superpowers/sdd/state-template.md` | yes | yes |
 | Plan | `docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md` | yes | yes |
 | Tasks | `docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md` | yes | yes |
-| Scope | `Task 1, Task 3, Task 4` | no | yes |
+| Scope | `Task 1, Task 3, Task 4, Task 5` | no | yes |
 
 ## Execution Summary
 
 | Metric | Value |
 | --- | --- |
-| Total Tasks | `3` |
-| Done | `3` |
+| Total Tasks | `4` |
+| Done | `4` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-10 05:58` |
+| Last Updated | `2026-06-10 06:03` |
 
 ## Status Legend
 
@@ -72,6 +72,7 @@
 | `T001` | `Auction SDK CapPrice Contract` | `done` | `main-agent` | `W1` | `-` | `Task 1` | `backend/test/client/auction/client.go; backend/test/client/auction/client_test.go` | `docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md` | `cd backend/test && go test ./client/auction -run 'TestSDK_GetAuctionParsesRule(Increment|CapPrice)|TestSDK_GetAuctionParsesStringCurrentPrice' -count=1` | `none` |
 | `T003` | `Demo Handler Implementation` | `done` | `main-agent` | `W3` | `T001,T002` | `Task 3` | `backend/test/handler/demo.go` | `backend/test/handler/demo_test.go; docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md` | `cd backend/test && go test ./handler -run 'TestPostConcurrentBids|TestPostFollowBid|TestComputeFollowBidAmount' -count=1` | `none` |
 | `T004` | `Test-Service Route Registration` | `done` | `main-agent` | `W4` | `T003` | `Task 4` | `backend/test/main.go` | `docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md; backend/test/handler/demo.go` | `cd backend/test && go test ./... -run 'TestPostConcurrentBids|TestSDK_GetAuctionParsesRuleCapPrice' -count=1` | `none` |
+| `T005` | `H5 Demo API Client` | `done` | `main-agent` | `W5` | `T004` | `Task 5` | `frontend/h5/src/services/demoApi.ts; frontend/h5/src/services/__tests__/demoApi.test.ts` | `docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md; AGENTS.md; docs/CONSTITUTION.md; docs/CODING.md; docs/superpowers/sdd/RUNBOOK.md` | `cd frontend/h5 && npm test -- --runTestsByPath src/services/__tests__/demoApi.test.ts --runInBand` | `none` |
 
 ## Wave Plan
 
@@ -80,6 +81,7 @@
 | `W1` | `Execute imported tasks with TDD evidence` | `T001` | `state file initialized` | `all tasks done or blocked with reason` |
 | `W3` | `Implement demo concurrent bids handler` | `T003` | `Task 2 failing tests present` | `target handler tests pass and implementation is committed` |
 | `W4` | `Register demo concurrent bids route` | `T004` | `Task 3 handler exists` | `test-service compiles and targeted regressions pass` |
+| `W5` | `Add H5 demo API client method` | `T005` | `Task 4 route registered` | `frontend demoApi targeted tests pass and implementation is committed` |
 
 ## Task Records
 
@@ -348,6 +350,106 @@
 - Remaining work: `Frontend tasks are outside this execution scope.`
 - First response line used: `当前分支/worktree：feat/h5-demo-concurrent-bids @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-h5-demo-concurrent-bids`
 
+### T005 - `H5 Demo API Client`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-10 06:02` |
+| Completed At | `2026-06-10 06:03` |
+| Branch | `feat/h5-demo-concurrent-bids` |
+| Worktree | `/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-h5-demo-concurrent-bids` |
+| Base Commit | `a98578f5632274ea4f8008497ea82e542df28bc3` |
+| Target Branch | `main` |
+| Depends On | `T004` |
+| Parallel Group | `W5` |
+
+**Scope**
+
+- Add H5 `triggerConcurrentBids` demo API client for `POST /api/test/demo/concurrent-bids`.
+- Cover endpoint and `snake_case` request body contract in `demoApi.test.ts`.
+
+**Write Set**
+
+- `frontend/h5/src/services/demoApi.ts`
+- `frontend/h5/src/services/__tests__/demoApi.test.ts`
+- `docs/superpowers/sdd/runs/2026-06-10-2026-06-10-h5-demo-concurrent-bids-state.md`
+
+**Read Set**
+
+- `docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md`
+- `AGENTS.md`
+- `docs/CONSTITUTION.md`
+- `docs/CODING.md`
+- `docs/superpowers/sdd/RUNBOOK.md`
+
+**Scope Expansion Requests**
+
+| Time | Requested Files | Reason | Decision |
+| --- | --- | --- | --- |
+| `2026-06-10 06:03` | `docs/superpowers/sdd/runs/2026-06-10-2026-06-10-h5-demo-concurrent-bids-state.md` | `SDD requires task evidence before handoff` | `accepted` |
+
+**TDD Plan**
+
+- Red: add service test importing `triggerConcurrentBids` and asserting endpoint plus `snake_case` body.
+- Expected failure: `TypeError: (0 , demoApi_1.triggerConcurrentBids) is not a function`.
+- Green: add `TriggerConcurrentBidsInput`, `TriggerConcurrentBidsResponse`, and `triggerConcurrentBids`.
+- Regression scope: `src/services/__tests__/demoApi.test.ts`.
+
+**Regression Sentinels**
+
+- Automated sentinel: `cd frontend/h5 && npm test -- --runTestsByPath src/services/__tests__/demoApi.test.ts --runInBand`
+- Manual fallback: `not needed`
+- Rollback behavior caught: missing API export, wrong `/api/test/demo/concurrent-bids` endpoint, or camelCase body fields.
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `cd frontend/h5 && npm test -- --runTestsByPath src/services/__tests__/demoApi.test.ts --runInBand` | Red failure before implementation | `FAIL: TypeError: (0 , demoApi_1.triggerConcurrentBids) is not a function` | `passed_red_expectation` |
+| `cd frontend/h5 && npm test -- --runTestsByPath src/services/__tests__/demoApi.test.ts --runInBand` | PASS | `PASS src/services/__tests__/demoApi.test.ts; 9 passed, 9 total` | `passed` |
+| `GetDiagnostics frontend/h5/src/services/demoApi.ts` | No diagnostics | `[]` | `passed` |
+| `GetDiagnostics frontend/h5/src/services/__tests__/demoApi.test.ts` | No diagnostics | `[]` | `passed` |
+
+**Runtime Source Evidence**
+
+| Service | Branch | Worktree | Commit | Dirty | Command | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` | `-` | `-` | `-` |
+
+**Modified Files**
+
+- `frontend/h5/src/services/demoApi.ts`
+- `frontend/h5/src/services/__tests__/demoApi.test.ts`
+- `docs/superpowers/sdd/runs/2026-06-10-2026-06-10-h5-demo-concurrent-bids-state.md`
+
+**Integration Check**
+
+- Target branch: `main`
+- Branch relationship: `Task 5 started from a98578f5632274ea4f8008497ea82e542df28bc3 on feat/h5-demo-concurrent-bids`
+- Diff reviewed: `git diff -- frontend/h5/src/services/demoApi.ts frontend/h5/src/services/__tests__/demoApi.test.ts`
+- Overlapping write-set tasks serialized: `yes; Task 5 only modified H5 service API files plus state`
+
+**Commits**
+
+- `pending` - `feat: add h5 demo concurrent bids api`
+
+**Review Notes**
+
+- Frontend request remains under `/api/test/demo`, matching the test-service demo route and avoiding `/api/v1` frontend direct coupling for this test-service-only demo endpoint.
+- Optional `bidCount`, `intervalMs`, and `increment` are omitted when undefined; `increment` is normalized through the existing `toMoneyString` helper.
+
+**Risks / Blockers**
+
+- `-`
+
+**Handoff**
+
+- Completion summary: `H5 demoApi exports triggerConcurrentBids with typed response and snake_case request body mapping.`
+- Remaining work: `Task 6 DemoConsole integration is outside this execution scope.`
+- First response line used: `当前分支/worktree：feat/h5-demo-concurrent-bids @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-h5-demo-concurrent-bids`
+
 
 ## Cross-Task Decisions
 
@@ -361,6 +463,7 @@
 | --- | --- | --- | --- | --- |
 | `AuctionRules.CapPrice` | `Add SDK field mapped from rules.cap_price` | `Enables later demo handler cap-price guard` | `Test SDK can read backend auction rule cap price` | `plan already documents Task 1` |
 | `POST /api/test/demo/concurrent-bids` | `Register demo test-service route` | `Enables H5 demo console to trigger concurrent-bid simulation via test-service` | `Routes request to DemoHandler.PostConcurrentBids` | `plan already documents Task 4` |
+| `triggerConcurrentBids` | `Add H5 demoApi method and response type for /concurrent-bids` | `Task 6 can call typed client with camelCase input mapped to snake_case JSON` | `Consumes existing test-service route` | `plan already documents Task 5` |
 
 ## Test Commands
 
@@ -372,23 +475,23 @@
 | Backend Test | `cd backend/test && go test ./... -run 'TestPostConcurrentBids|TestSDK_GetAuctionParsesRuleCapPrice' -count=1` | yes | `passed` | `Task 4 route registration verification` |
 | Frontend Admin | `cd frontend/admin && npm test -- --runInBand` | no | `not_run` | `-` |
 | Frontend Admin Build | `cd frontend/admin && npm run build` | no | `not_run` | `-` |
-| Frontend H5 | `cd frontend/h5 && npm test -- --runInBand` | no | `not_run` | `-` |
+| Frontend H5 | `cd frontend/h5 && npm test -- --runTestsByPath src/services/__tests__/demoApi.test.ts --runInBand` | yes | `passed` | `Task 5 demoApi targeted verification; 9 tests passed` |
 | Frontend H5 Build | `cd frontend/h5 && npm run build` | no | `not_run` | `-` |
 
 ## Final Review Checklist
 
-- [ ] 所有任务状态已更新。
-- [ ] 没有未解释的 `blocked` 任务。
-- [ ] 每个 `done` 任务都有测试或替代验证证据。
-- [ ] 每个实现型任务都有 write set / read set。
-- [ ] 所有 write set 重叠的任务已串行执行并记录顺序。
-- [ ] 每个 bugfix / UI / 接口契约 / 演示链路修复都有 regression sentinel 或替代验证。
-- [ ] 本地服务或 dev server 的 branch/worktree/commit/dirty status 已记录。
+- [x] 所有任务状态已更新。
+- [x] 没有未解释的 `blocked` 任务。
+- [x] 每个 `done` 任务都有测试或替代验证证据。
+- [x] 每个实现型任务都有 write set / read set。
+- [x] 所有 write set 重叠的任务已串行执行并记录顺序。
+- [x] 每个 bugfix / UI / 接口契约 / 演示链路修复都有 regression sentinel 或替代验证。
+- [x] 本地服务或 dev server 的 branch/worktree/commit/dirty status 已记录。
 - [ ] 旧分支合入前已做 diff review，未整分支覆盖当前目标分支。
 - [ ] 冲突解决后已证明 main 基线行为和任务分支有效优化都被保留、替代或明确废弃。
-- [ ] 每个实现型任务都遵循 TDD 或写明无法 TDD 的原因。
-- [ ] API 契约变更已同步文档。
-- [ ] 最终回答第一句展示当前分支/worktree。
+- [x] 每个实现型任务都遵循 TDD 或写明无法 TDD 的原因。
+- [x] API 契约变更已同步文档。
+- [x] 最终回答第一句展示当前分支/worktree。
 - [ ] 用户已获得下一步选项：继续下一波、发起 review、提交 PR、归档。
 
 ## Final Handoff
