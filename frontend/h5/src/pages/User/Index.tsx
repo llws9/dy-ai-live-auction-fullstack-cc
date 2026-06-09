@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { orderApi, userApi } from '../../services/api';
+import { liveStreamApi, orderApi, userApi } from '../../services/api';
 import { useAuth } from '../../store/authContext';
 import BadgeDot from '../../components/BadgeDot';
 import { useTouchpointNotifications } from '../../hooks/useTouchpointNotifications';
@@ -60,6 +60,15 @@ function roleLabel(role?: number) {
   if (role === 2) return '管理员';
   if (role === 1) return '商家/主播';
   return '普通用户';
+}
+
+function liveStreamStatusLabel(status: unknown) {
+  const normalized = String(status ?? '').toLowerCase();
+  if (status === 0 || normalized === '0' || normalized === 'not_started' || normalized === 'pending') return '预告中';
+  if (status === 1 || normalized === '1' || normalized === 'live' || normalized === 'active') return '直播中';
+  if (status === 2 || normalized === '2' || normalized === 'ended') return '已结束';
+  if (status === 3 || normalized === '3' || normalized === 'banned') return '暂不可用';
+  return '状态未知';
 }
 
 const UserCenter: React.FC = () => {
@@ -123,7 +132,40 @@ const UserCenter: React.FC = () => {
     };
   }, [authUser, profile]);
   const footprints = useMemo(() => getLiveRoomFootprints(), []);
+  const [footprintStatuses, setFootprintStatuses] = useState<Record<number, string>>({});
   const pendingAuctionCount = wonNotPaid;
+
+  useEffect(() => {
+    if (footprints.length === 0) {
+      setFootprintStatuses({});
+      return;
+    }
+
+    let alive = true;
+    const liveStreamIDs = Array.from(new Set(footprints.map((item) => item.live_stream_id)));
+
+    async function loadFootprintStatuses() {
+      const entries = await Promise.all(
+        liveStreamIDs.map(async (liveStreamID) => {
+          try {
+            const detail = await liveStreamApi.get(liveStreamID);
+            return [liveStreamID, liveStreamStatusLabel(detail?.status)] as const;
+          } catch {
+            return [liveStreamID, '状态未知'] as const;
+          }
+        })
+      );
+
+      if (!alive) return;
+      setFootprintStatuses(Object.fromEntries(entries));
+    }
+
+    loadFootprintStatuses();
+
+    return () => {
+      alive = false;
+    };
+  }, [footprints]);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -254,7 +296,13 @@ const UserCenter: React.FC = () => {
                 <div
                   className={styles.footprintCover}
                   style={item.cover ? { backgroundImage: `url(${item.cover})` } : undefined}
-                />
+                >
+                  {footprintStatuses[item.live_stream_id] && (
+                    <span className={styles.footprintStatusBadge}>
+                      {footprintStatuses[item.live_stream_id]}
+                    </span>
+                  )}
+                </div>
                 <strong>{repairUtf8Mojibake(item.name)}</strong>
                 <span>最近浏览</span>
               </Link>

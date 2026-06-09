@@ -34,4 +34,14 @@ describe('Profile phase 2 theme tokens', () => {
     expect(css).toMatch(/\.metricBadge\s*\{[\s\S]*?--touchpoint-badge-text: #ffffff;[\s\S]*?\}/);
     expect(css).toMatch(/\.metricCard \.metricBadge\s*\{[\s\S]*?color: #ffffff;[\s\S]*?\}/);
   });
+
+  it('places footprint status badge at top-left with profile theme tokens', () => {
+    const badgeCss = css.match(/\.footprintStatusBadge\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+
+    expect(badgeCss).toContain('left: 6px;');
+    expect(badgeCss).not.toContain('right: 6px;');
+    expect(badgeCss).toContain('border: 1px solid var(--card-border-accent);');
+    expect(badgeCss).toContain('background: color-mix(in srgb, var(--bg-surface) 84%, var(--text-brand));');
+    expect(badgeCss).toContain('color: var(--text-brand);');
+  });
 });

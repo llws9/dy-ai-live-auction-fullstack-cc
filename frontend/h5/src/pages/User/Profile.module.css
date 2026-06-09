@@ -218,6 +218,8 @@
 }
 
 .footprintCover {
+  position: relative;
+  overflow: hidden;
   height: 62px;
   border-radius: 16px;
   background:
@@ -225,6 +227,22 @@
     var(--item-subtle-bg);
   background-position: center;
   background-size: cover;
+}
+
+.footprintStatusBadge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 2px 6px;
+  border: 1px solid var(--card-border-accent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-surface) 84%, var(--text-brand));
+  color: var(--text-brand);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.3;
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--text-brand) 18%, transparent);
+  backdrop-filter: blur(8px);
 }
 
 .footprintItem strong {

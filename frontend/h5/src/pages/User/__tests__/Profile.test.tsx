@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Profile from '../Index';
-import { orderApi, userApi } from '../../../services/api';
+import { liveStreamApi, orderApi, userApi } from '../../../services/api';
 import { notificationApi } from '../../../services/notification';
 import { getLiveRoomFootprints } from '../../../utils/liveRoomFootprints';
 
@@ -23,6 +23,9 @@ jest.mock('../../../services/api', () => ({
   },
   orderApi: {
     list: jest.fn(),
+  },
+  liveStreamApi: {
+    get: jest.fn(),
   },
 }));
 
@@ -48,6 +51,7 @@ jest.mock('../../../store/authContext', () => ({
 
 const mockedUserApi = userApi as jest.Mocked<typeof userApi>;
 const mockedOrderApi = orderApi as jest.Mocked<typeof orderApi>;
+const mockedLiveStreamApi = liveStreamApi as jest.Mocked<typeof liveStreamApi>;
 const mockedNotificationApi = notificationApi as jest.Mocked<typeof notificationApi>;
 const mockedGetLiveRoomFootprints = getLiveRoomFootprints as jest.MockedFunction<typeof getLiveRoomFootprints>;
 
@@ -84,6 +88,10 @@ describe('Profile migration', () => {
         created_at: '2026-05-29T12:00:00Z',
       },
     ]);
+    mockedLiveStreamApi.get.mockResolvedValue({
+      id: 3,
+      status: 1,
+    });
     mockedNotificationApi.getTouchpointSummary.mockResolvedValue({
       unreadTotal: 7,
       pendingPayment: 2,
@@ -121,6 +129,18 @@ describe('Profile migration', () => {
     expect(mockedUserApi.getBalance).toHaveBeenCalledTimes(1);
     expect(mockedUserApi.getStats).toHaveBeenCalledTimes(1);
     expect(mockedOrderApi.list).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders live room footprint status from the latest live-stream detail', async () => {
+    render(
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+        <Profile />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('玉石夜拍')).toBeInTheDocument();
+    expect(await screen.findByText('直播中')).toBeInTheDocument();
+    expect(mockedLiveStreamApi.get).toHaveBeenCalledWith(3);
   });
 
   it('repairs mojibake profile names before rendering the heading', async () => {
