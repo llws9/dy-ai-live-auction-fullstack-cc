@@ -345,6 +345,19 @@ http_basic_expect() {
   [[ "$code" =~ $expected_regex ]]
 }
 
+http_body_contains() {
+  local url=$1
+  local expected=$2
+  local body
+  body="$(curl -s --max-time 10 "$url" || true)"
+  if [[ "$body" == *"$expected"* ]]; then
+    echo "$url contains $expected"
+    return 0
+  fi
+  echo "$url missing $expected"
+  return 1
+}
+
 wait_for_remote_http_ready() {
   echo -e "${BLUE}等待线上服务 HTTP 就绪...${NC}"
 
@@ -423,6 +436,7 @@ verify_prod() {
   http_basic_expect "http://$DEPLOY_HOST/test-dashboard/" '^(2|3)[0-9][0-9]$' || failed=1
   http_basic_expect "http://$DEPLOY_HOST/grafana/" '^(2|3)[0-9][0-9]$' || failed=1
   http_expect "http://$DEPLOY_HOST/api/v1/products" '^200$' || failed=1
+  http_body_contains "http://$DEPLOY_HOST/ws/test/progress?test_id=verify" 'ws_url' || failed=1
 
   if [[ "$failed" -ne 0 ]]; then
     print_remote_logs_hint >&2
