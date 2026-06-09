@@ -371,10 +371,31 @@
   gap: 6px;
 }
 
+.topDataIsland {
+  display: flex;
+  box-sizing: border-box;
+  height: 44px;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.topActionRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
 .viewersRow {
   display: flex;
   box-sizing: border-box;
-  height: 42px;
+  height: 34px;
   align-items: center;
   gap: 6px;
   padding: 4px 10px 4px 4px;
@@ -418,6 +439,28 @@
   color: rgba(255, 255, 255, 0.9);
   font-size: 11px;
   font-weight: var(--font-weight-bold);
+}
+
+.likesPill {
+  display: flex;
+  box-sizing: border-box;
+  height: 34px;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--live-pill-bg);
+  color: var(--live-pill-text);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+  backdrop-filter: blur(16px);
+}
+
+.likesPill span {
+  color: #ef4444;
+  font-size: 13px;
+  line-height: 1;
 }
 
 .productDetailBtn {

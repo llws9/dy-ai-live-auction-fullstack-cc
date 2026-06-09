@@ -3,7 +3,11 @@ import styles from './TapBurstHearts.module.css';
 
 interface Heart { id: number; x: number; y: number; tx: string; ty: string; tx2: string; ty2: string; rot: string; rot2: string; }
 
-export const TapBurstHearts: React.FC = () => {
+interface TapBurstHeartsProps {
+  onBurst?: () => void;
+}
+
+export const TapBurstHearts: React.FC<TapBurstHeartsProps> = ({ onBurst }) => {
   const [hearts, setHearts] = useState<Heart[]>([]);
 
   const handleDoubleClick = useCallback((e: MouseEvent) => {
@@ -22,8 +26,9 @@ export const TapBurstHearts: React.FC = () => {
       rot2: `${(Math.random() - 0.5) * 120}deg`,
     }));
     setHearts(prev => [...prev.slice(-20), ...newHearts]);
+    onBurst?.();
     // TODO: Need WS event to broadcast like
-  }, []);
+  }, [onBurst]);
 
   useEffect(() => {
     window.addEventListener('dblclick', handleDoubleClick);

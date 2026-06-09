@@ -101,15 +101,37 @@ describe('Live layout css', () => {
     expect(rankingBlockCss).toContain('padding: 16px;');
   });
 
-  it('keeps the online viewers pill aligned to the host pill height without a close affordance', () => {
+  it('keeps the online viewers pill compact without a close affordance', () => {
     const css = readLiveCss();
     const viewersRowCss = getClassBlock(css, 'viewersRow');
 
     expect(css).not.toContain('--live-header-pill-width');
     expect(viewersRowCss).not.toContain('width:');
-    expect(viewersRowCss).toContain('height: 42px;');
+    expect(viewersRowCss).toContain('height: 34px;');
     expect(viewersRowCss).toContain('box-sizing: border-box;');
     expect(css).not.toContain('.closeBtn');
+  });
+
+  it('groups viewer and like counts into a weak data island separate from primary actions', () => {
+    const css = readLiveCss();
+    const rightActionsCss = getClassBlock(css, 'rightActions');
+    const dataIslandCss = getClassBlock(css, 'topDataIsland');
+    const actionRowCss = getClassBlock(css, 'topActionRow');
+    const viewersRowCss = getClassBlock(css, 'viewersRow');
+    const likesPillCss = getClassBlock(css, 'likesPill');
+    const likesPillIconCss = getClassBlock(css, 'likesPill span');
+
+    expect(rightActionsCss).toContain('flex-direction: column;');
+    expect(rightActionsCss).toContain('align-items: flex-end;');
+    expect(dataIslandCss).toContain('display: flex;');
+    expect(dataIslandCss).toContain('box-sizing: border-box;');
+    expect(dataIslandCss).toContain('height: 44px;');
+    expect(dataIslandCss).toContain('background: rgba(0, 0, 0, 0.2);');
+    expect(dataIslandCss).toContain('backdrop-filter: blur(12px);');
+    expect(viewersRowCss).toContain('height: 34px;');
+    expect(likesPillCss).toContain('height: 34px;');
+    expect(actionRowCss).toContain('display: flex;');
+    expect(likesPillIconCss).toContain('color: #ef4444;');
   });
 
   it('keeps the auction ended summary in the luxury shimmer treatment', () => {

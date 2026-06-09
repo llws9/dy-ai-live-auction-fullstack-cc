@@ -58,6 +58,8 @@ interface LiveStream {
   host_avatar?: string;
   avatar?: string;
   viewer_count?: number;
+  like_count?: number;
+  likes_count?: number;
   followers_count?: number;
   is_following?: boolean;
   cover_image?: string;
@@ -159,19 +161,6 @@ const formatTimeLeft = (seconds: number) => {
   return `${String(minutes).padStart(2, '0')}:${String(restSeconds).padStart(2, '0')}`;
 };
 
-const getStatusText = (status?: number) => {
-  if (status === 1) return '正在竞拍';
-  if (status === 2) return '延时竞拍';
-  if (status === 3) return '已结束';
-  if (status === 4) return '已取消';
-  return '即将开始';
-};
-
-const getEffectiveStatusText = (status: number | undefined, expired: boolean) => {
-  if (expired && (status === 1 || status === 2)) return '已结束';
-  return getStatusText(status);
-};
-
 const isAlreadyActiveSkyLampError = (error: any) =>
   typeof error?.message === 'string' && error.message.includes('已有活跃的点天灯订阅');
 
@@ -235,6 +224,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   const [following, setFollowing] = useState(false);
   const [, setFollowersCount] = useState(0);
   const [presence, setPresence] = useState<LivePresence | null>(null);
+  const [likeCount, setLikeCount] = useState(0);
   const [followingPending, setFollowingPending] = useState(false);
   const [connected, setConnected] = useState(false);
   const [toast, setToast] = useState('');
@@ -307,10 +297,17 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
       message,
     }));
   }, []);
+  const handleLikeBurst = useCallback(() => {
+    setLikeCount((count) => count + 1);
+  }, []);
 
   useEffect(() => {
     currentPriceRef.current = currentPrice;
   }, [currentPrice]);
+
+  useEffect(() => {
+    setLikeCount(toAmount(liveStream?.like_count ?? liveStream?.likes_count));
+  }, [liveStream?.like_count, liveStream?.likes_count]);
 
   useEffect(() => {
     wonAnimationDataRef.current = {
@@ -1045,7 +1042,7 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           <div className={styles.videoFallback}>暂无直播画面</div>
         )}
         <div className={styles.videoGradient} />
-        <TapBurstHearts />
+        <TapBurstHearts onBurst={handleLikeBurst} />
         {sheet === null && <GlitchCountdown timeLeft={timeLeft} />}
         <header className={styles.topBar}>
           <div className={styles.hostPill}>
@@ -1071,31 +1068,35 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
             </button>
           </div>
           <div className={styles.rightActions}>
-            <div className={styles.audioTogglePill} onClick={() => setHapticsEnabled(!hapticsEnabled)}>
-              🎵 {hapticsEnabled ? 'ON' : 'OFF'}
-            </div>
-            <div className={styles.viewersRow} aria-label="在线人数">
-              <div className={styles.avatarsGroup} aria-hidden="true">
-                {presenceViewers.length > 0 ? (
-                  presenceViewers.map((viewer) => (
-                    <span className={styles.viewerAvatar} key={viewer.user_id}>
-                      {viewer.avatar_url ? <img src={viewer.avatar_url} alt="" /> : viewer.name.slice(0, 1)}
+            <div className={styles.topDataIsland}>
+              <div className={styles.viewersRow} aria-label="在线人数">
+                <div className={styles.avatarsGroup} aria-hidden="true">
+                  {presenceViewers.length > 0 ? (
+                    presenceViewers.map((viewer) => (
+                      <span className={styles.viewerAvatar} key={viewer.user_id}>
+                        {viewer.avatar_url ? <img src={viewer.avatar_url} alt="" /> : viewer.name.slice(0, 1)}
+                      </span>
+                    ))
+                  ) : (
+                    <span className={styles.viewerAvatar}>
+                      {hostAvatar ? <img src={hostAvatar} alt="" /> : hostName.slice(0, 1)}
                     </span>
-                  ))
-                ) : (
-                  <span className={styles.viewerAvatar}>
-                    {hostAvatar ? <img src={hostAvatar} alt="" /> : hostName.slice(0, 1)}
-                  </span>
-                )}
+                  )}
+                </div>
+                <span className={styles.viewerCountPill}>{viewerCount.toLocaleString()}</span>
               </div>
-              <span className={styles.viewerCountPill}>{viewerCount.toLocaleString()}</span>
+              <div className={styles.likesPill} aria-label="点赞数">
+                <span aria-hidden="true">♥</span>
+                {likeCount.toLocaleString()}
+              </div>
             </div>
-            <Link className={styles.productDetailBtn} to={`/detail?id=${auctionId}`} state={{ from: 'live' }}>
-              商品详情 ›
-            </Link>
-            <div className={styles.statusPill}>
-              <span className={isActive ? styles.liveDot : styles.statusDot} />
-              {getEffectiveStatusText(auction.status, hasReachedEndTime)}
+            <div className={styles.topActionRow}>
+              <div className={styles.audioTogglePill} onClick={() => setHapticsEnabled(!hapticsEnabled)}>
+                🎵 {hapticsEnabled ? 'ON' : 'OFF'}
+              </div>
+              <Link className={styles.productDetailBtn} to={`/detail?id=${auctionId}`} state={{ from: 'live' }}>
+                商品详情 ›
+              </Link>
             </div>
           </div>
         </header>

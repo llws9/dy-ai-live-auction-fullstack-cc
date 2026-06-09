@@ -268,13 +268,13 @@ describe('LiveRoomSlide', () => {
     expect(header).toBeInTheDocument();
     expect(within(header as HTMLElement).getByRole('button', { name: '收藏' })).toBeInTheDocument();
     const viewersRow = within(header as HTMLElement).getByLabelText('在线人数');
+    const likesPill = within(header as HTMLElement).getByLabelText('点赞数');
     const productDetailLink = within(header as HTMLElement).getByRole('link', { name: /商品详情/ });
-    const statusPill = within(header as HTMLElement).getByText('正在竞拍');
     expect(viewersRow).toHaveTextContent('128');
+    expect(likesPill).toHaveTextContent('0');
     expect(within(header as HTMLElement).queryByLabelText('退出直播间')).not.toBeInTheDocument();
+    expect(within(header as HTMLElement).queryByText('正在竞拍')).not.toBeInTheDocument();
     expect(productDetailLink).toHaveAttribute('href', '/detail?id=5');
-    expect(productDetailLink.previousElementSibling).toBe(viewersRow);
-    expect(statusPill.previousElementSibling).toBe(productDetailLink);
   });
 
   it('uses live presence updates as the authoritative online viewers state', async () => {
@@ -1057,6 +1057,20 @@ describe('LiveRoomSlide', () => {
 
     await waitFor(() => {
       expect(tapContainer?.children.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('shows likes in the top-right data island and increments them on double click without showing auction status', async () => {
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('点赞数')).toHaveTextContent('0');
+    expect(screen.queryByText('正在竞拍')).not.toBeInTheDocument();
+
+    fireEvent.doubleClick(document.body);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('点赞数')).toHaveTextContent('1');
     });
   });
 
