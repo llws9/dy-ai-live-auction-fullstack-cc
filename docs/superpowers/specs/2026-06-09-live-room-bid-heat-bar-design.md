@@ -16,7 +16,11 @@
 
 ## 3. 激烈度算法
 
-- 数据源: 直播间已订阅的 WS 事件 `bid_placed`（见 `LiveRoomSlide.tsx` 中 `ws.on('bid_placed', ...)`）。每收到一次计为一次出价。
+- 数据源（三处，缺一会漏算）:
+  - `ws.on('bid_placed', ...)`（`LiveRoomSlide.tsx` L752）——主要是他人出价。
+  - `handleBid` 成功分支（L888 附近）——本地用户走 REST 出价，不保证自身收到 `bid_placed` 回推，必须显式补记。
+  - `ws.on('sky_lamp_auto_bid', ...)`（L779）——点天灯自动跟价。
+  - 三处均调用 `markBid()` 记一次。不做去重：滑窗档位对偶尔重复计数不敏感，去重会增加复杂度（YAGNI）。
 - 窗口: 10 秒滑动窗口，统计窗口内出价事件数 `count`。
 - 分档（3 档）:
   - 冷静 (calm): `count <= 1`
