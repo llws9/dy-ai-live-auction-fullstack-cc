@@ -5,6 +5,7 @@ import {
   createDemoMerchantAuction,
   rechargeDemoUser,
   shortenDemoAuction,
+  triggerConcurrentBids,
   triggerOtherSkyLamp,
   triggerFollowBid,
 } from '../../services/demoApi';
@@ -132,6 +133,28 @@ export default function DemoConsole() {
     }
   };
 
+  const handleConcurrentBids = async () => {
+    if (!currentAuctionId) {
+      showToast('请先进入直播间', 'warning', TOAST_DURATION_MS);
+      return;
+    }
+
+    setRunningAction('concurrent-bids');
+    try {
+      const result = await runWithDemoAuthRetry(() => triggerConcurrentBids({ auctionId: currentAuctionId }));
+      if (result.highest_amount) {
+        showToast(`并发出价已抬到 ¥${result.highest_amount}，请尝试用旧价出价`, 'success', TOAST_DURATION_MS);
+      } else {
+        showToast('已触发并发出价', 'success', TOAST_DURATION_MS);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '请稍后重试';
+      showToast(`并发压测失败：${message}`, 'error', TOAST_DURATION_MS);
+    } finally {
+      setRunningAction(null);
+    }
+  };
+
   const handleOtherSkyLamp = async () => {
     if (!currentAuctionId) {
       showToast('请先进入直播间', 'warning', TOAST_DURATION_MS);
@@ -249,10 +272,6 @@ export default function DemoConsole() {
     }
   };
 
-  const showPromptOnlyAction = (message: string) => {
-    showToast(message, 'info', TOAST_DURATION_MS);
-  };
-
   return (
     <div className={`demo-console ${open ? 'demo-console--open' : ''}`} data-testid="demo-console">
       {open && (
@@ -320,8 +339,9 @@ export default function DemoConsole() {
               </button>
               <button
                 type="button"
-                className="demo-console__item demo-console__item--placeholder"
-                onClick={() => showPromptOnlyAction('并发压测暂未接入后端链路')}
+                className="demo-console__item"
+                onClick={handleConcurrentBids}
+                disabled={runningAction === 'concurrent-bids'}
               >
                 并发压测
               </button>

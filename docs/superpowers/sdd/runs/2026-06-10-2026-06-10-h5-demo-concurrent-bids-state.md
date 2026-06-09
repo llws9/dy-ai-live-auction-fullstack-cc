@@ -73,6 +73,7 @@
 | `T003` | `Demo Handler Implementation` | `done` | `main-agent` | `W3` | `T001,T002` | `Task 3` | `backend/test/handler/demo.go` | `backend/test/handler/demo_test.go; docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md` | `cd backend/test && go test ./handler -run 'TestPostConcurrentBids|TestPostFollowBid|TestComputeFollowBidAmount' -count=1` | `none` |
 | `T004` | `Test-Service Route Registration` | `done` | `main-agent` | `W4` | `T003` | `Task 4` | `backend/test/main.go` | `docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md; backend/test/handler/demo.go` | `cd backend/test && go test ./... -run 'TestPostConcurrentBids|TestSDK_GetAuctionParsesRuleCapPrice' -count=1` | `none` |
 | `T005` | `H5 Demo API Client` | `done` | `main-agent` | `W5` | `T004` | `Task 5` | `frontend/h5/src/services/demoApi.ts; frontend/h5/src/services/__tests__/demoApi.test.ts` | `docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md; AGENTS.md; docs/CONSTITUTION.md; docs/CODING.md; docs/superpowers/sdd/RUNBOOK.md` | `cd frontend/h5 && npm test -- --runTestsByPath src/services/__tests__/demoApi.test.ts --runInBand` | `none` |
+| `T006` | `DemoConsole Integration` | `done` | `main-agent` | `W6` | `T005` | `Task 6` | `frontend/h5/src/components/DemoConsole/index.tsx; frontend/h5/src/components/DemoConsole/__tests__/DemoConsole.test.tsx` | `docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md; frontend/h5/src/services/demoApi.ts; AGENTS.md` | `cd frontend/h5 && npm test -- --runTestsByPath src/components/DemoConsole/__tests__/DemoConsole.test.tsx --runInBand` | `none` |
 
 ## Wave Plan
 
@@ -500,4 +501,27 @@
 
 **状态**
 
-- `initialized`
+- `DONE`
+
+### Task 6 DemoConsole Integration
+
+**Scope**
+
+- Modified `frontend/h5/src/components/DemoConsole/index.tsx` to wire the `并发压测` button to `triggerConcurrentBids`.
+- Modified `frontend/h5/src/components/DemoConsole/__tests__/DemoConsole.test.tsx` to replace the placeholder-only assertion with concurrent-bids click/no-auction/failure-toast coverage.
+
+**TDD Evidence**
+
+- Red: `cd frontend/h5 && npm test -- --runTestsByPath src/components/DemoConsole/__tests__/DemoConsole.test.tsx --runInBand` failed because `triggerConcurrentBids` had `Number of calls: 0` and the button still showed `并发压测暂未接入后端链路`.
+- Green: implemented `handleConcurrentBids`, reused `runWithDemoAuthRetry`, set pending key `concurrent-bids`, and showed success toast from `highest_amount`.
+
+**Verification**
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| `cd frontend/h5 && npm test -- --runTestsByPath src/components/DemoConsole/__tests__/DemoConsole.test.tsx --runInBand` | `PASS` | `26 passed, 26 total` |
+| VS Code diagnostics for `DemoConsole/index.tsx` and `DemoConsole.test.tsx` | `PASS` | no diagnostics |
+
+**Risks**
+
+- Manual browser demo for real bid animation and stale-price failure remains in Task 7 cross-layer verification.

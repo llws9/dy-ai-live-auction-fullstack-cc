@@ -9,6 +9,7 @@ import {
   createDemoMerchantAuction,
   rechargeDemoUser,
   shortenDemoAuction,
+  triggerConcurrentBids,
   triggerOtherSkyLamp,
   triggerFollowBid,
 } from '../../../services/demoApi';
@@ -30,6 +31,7 @@ jest.mock('../../../services/demoApi', () => ({
   createDemoFixedPriceItem: jest.fn(),
   createDemoMerchantAuction: jest.fn(),
   shortenDemoAuction: jest.fn(),
+  triggerConcurrentBids: jest.fn(),
   triggerOtherSkyLamp: jest.fn(),
   triggerFollowBid: jest.fn(),
   rechargeDemoUser: jest.fn(),
@@ -57,6 +59,7 @@ const mockedUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockedUseDemo = useDemo as jest.MockedFunction<typeof useDemo>;
 const mockedUseToast = useToast as jest.MockedFunction<typeof useToast>;
 const mockedTriggerFollowBid = triggerFollowBid as jest.MockedFunction<typeof triggerFollowBid>;
+const mockedTriggerConcurrentBids = triggerConcurrentBids as jest.MockedFunction<typeof triggerConcurrentBids>;
 const mockedTriggerOtherSkyLamp = triggerOtherSkyLamp as jest.MockedFunction<typeof triggerOtherSkyLamp>;
 const mockedRechargeDemoUser = rechargeDemoUser as jest.MockedFunction<typeof rechargeDemoUser>;
 const mockedCreateDemoMerchantAuction = createDemoMerchantAuction as jest.MockedFunction<typeof createDemoMerchantAuction>;
@@ -98,6 +101,14 @@ describe('DemoConsole', () => {
     mockPathname = '/';
     mockLogin.mockResolvedValue(undefined);
     mockedTriggerFollowBid.mockResolvedValue({ ok: true });
+    mockedTriggerConcurrentBids.mockResolvedValue({
+      ok: true,
+      auction_id: 777,
+      success_count: 6,
+      failure_count: 0,
+      highest_amount: '160',
+      last_error: '',
+    });
     mockedTriggerOtherSkyLamp.mockResolvedValue({ ok: true });
     mockedRechargeDemoUser.mockResolvedValue({ ok: true });
     mockedCreateDemoMerchantAuction.mockResolvedValue({ ok: true });
@@ -490,18 +501,39 @@ describe('DemoConsole', () => {
     expect(mockShowToast).toHaveBeenCalledWith('竞拍延时失败：竞拍已结束', 'error', 2500);
   });
 
-  it('keeps pressure as a prompt-only demo action', async () => {
+  it('triggers concurrent bids for the current auction and reports the raised price', async () => {
     const user = userEvent.setup();
-    renderConsole();
+    renderConsole(777);
 
     await user.click(screen.getByTestId('demo-console-fab'));
     await user.click(screen.getByRole('button', { name: '演示' }));
     await user.click(screen.getByRole('button', { name: '并发压测' }));
 
-    expect(mockShowToast).toHaveBeenCalledWith('并发压测暂未接入后端链路', 'info', 2500);
-    expect(mockedTriggerFollowBid).not.toHaveBeenCalled();
-    expect(mockedTriggerOtherSkyLamp).not.toHaveBeenCalled();
-    expect(mockedShortenDemoAuction).not.toHaveBeenCalled();
-    expect(mockedRechargeDemoUser).not.toHaveBeenCalled();
+    expect(mockedTriggerConcurrentBids).toHaveBeenCalledWith({ auctionId: 777 });
+    expect(mockShowToast).toHaveBeenCalledWith('并发出价已抬到 ¥160，请尝试用旧价出价', 'success', 2500);
+  });
+
+  it('warns and skips concurrent bids when there is no current auction', async () => {
+    const user = userEvent.setup();
+    renderConsole(null);
+
+    await user.click(screen.getByTestId('demo-console-fab'));
+    await user.click(screen.getByRole('button', { name: '演示' }));
+    await user.click(screen.getByRole('button', { name: '并发压测' }));
+
+    expect(mockShowToast).toHaveBeenCalledWith('请先进入直播间', 'warning', 2500);
+    expect(mockedTriggerConcurrentBids).not.toHaveBeenCalled();
+  });
+
+  it('shows a short error toast when concurrent bids fail', async () => {
+    const user = userEvent.setup();
+    mockedTriggerConcurrentBids.mockRejectedValueOnce(new Error('竞拍已结束，无法出价'));
+    renderConsole(777);
+
+    await user.click(screen.getByTestId('demo-console-fab'));
+    await user.click(screen.getByRole('button', { name: '演示' }));
+    await user.click(screen.getByRole('button', { name: '并发压测' }));
+
+    expect(mockShowToast).toHaveBeenCalledWith('并发压测失败：竞拍已结束，无法出价', 'error', 2500);
   });
 });
