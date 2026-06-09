@@ -158,13 +158,14 @@
 **Integration Check**
 
 - Target branch: `main`
-- Branch relationship: `main...HEAD = 5 behind / 2 ahead after C1 commit`
+- Branch relationship: `main...HEAD included A1 + C1 implementation plus docs-only state finalization commits at handoff`
 - Diff reviewed: `working diff limited to approved C1 write set; existing branch contains prior A1 changes outside this C1 task`
 - Overlapping write-set tasks serialized: `yes; only T001 in W1`
 
 **Commits**
 
-- `95c2dc03 docs(sdd): update chaos theater run state` (state finalization); implementation commit `95c2dc03 feat(chaos): add theater mode`
+- `95c2dc03 feat(chaos): add theater mode`
+- docs-only state finalization commits after implementation; see `git log --oneline -3` for latest branch head
 
 **Review Notes**
 
