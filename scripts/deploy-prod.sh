@@ -19,6 +19,8 @@ COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-auction-demo}"
 DEMO_BASIC_AUTH_USER="${DEMO_BASIC_AUTH_USER:-ByteDance}"
 DEMO_BASIC_AUTH_PASSWORD="${DEMO_BASIC_AUTH_PASSWORD:-ByteDance}"
 REMOTE_BASIC_AUTH_FILE="${REMOTE_BASIC_AUTH_FILE:-/etc/nginx/.auction-demo.htpasswd}"
+SSH_CONNECT_TIMEOUT="${SSH_CONNECT_TIMEOUT:-10}"
+SSH_MAX_ATTEMPTS="${SSH_MAX_ATTEMPTS:-3}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -55,7 +57,7 @@ ssh_dest() {
 }
 
 ssh_opts() {
-  echo "-i $(shell_quote "$DEPLOY_KEY") -o BatchMode=yes -o StrictHostKeyChecking=accept-new"
+  echo "-i $(shell_quote "$DEPLOY_KEY") -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=$(shell_quote "$SSH_CONNECT_TIMEOUT")"
 }
 
 redact_sensitive() {
@@ -74,18 +76,36 @@ demo_full_stack_services() {
   echo "gateway product auction mysql redis rabbitmq nacos nacos-mysql test-service test-dashboard loki promtail prometheus grafana growthbook growthbook-db"
 }
 
+ssh_with_retry() {
+  local attempt exit_code
+
+  for attempt in $(seq 1 "$SSH_MAX_ATTEMPTS"); do
+    if "$@"; then
+      return 0
+    fi
+
+    exit_code=$?
+    if [[ "$attempt" -ge "$SSH_MAX_ATTEMPTS" ]]; then
+      return "$exit_code"
+    fi
+
+    echo -e "${YELLOW}远端命令失败，${attempt}/${SSH_MAX_ATTEMPTS} 次尝试后重试...${NC}" >&2
+    sleep "$attempt"
+  done
+}
+
 ssh_base() {
-  local ssh_opts=(-i "$DEPLOY_KEY" -o BatchMode=yes -o StrictHostKeyChecking=accept-new)
-  ssh "${ssh_opts[@]}" "$(ssh_dest)" "$@"
+  local ssh_opts=(-i "$DEPLOY_KEY" -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout="$SSH_CONNECT_TIMEOUT")
+  ssh_with_retry ssh "${ssh_opts[@]}" "$(ssh_dest)" "$@"
 }
 
 scp_base() {
-  local ssh_opts=(-i "$DEPLOY_KEY" -o BatchMode=yes -o StrictHostKeyChecking=accept-new)
-  scp "${ssh_opts[@]}" "$@"
+  local ssh_opts=(-i "$DEPLOY_KEY" -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout="$SSH_CONNECT_TIMEOUT")
+  ssh_with_retry scp "${ssh_opts[@]}" "$@"
 }
 
 rsync_base() {
-  rsync -az --delete -e "ssh $(ssh_opts)" "$@"
+  ssh_with_retry rsync -az --delete -e "ssh $(ssh_opts)" "$@"
 }
 
 assert_key() {
@@ -104,7 +124,7 @@ local_sha() {
 remote_sha() {
   local app_dir
   app_dir="$(shell_quote "$REMOTE_APP_DIR")"
-  ssh_base "cd $app_dir 2>/dev/null && { cat .deploy-ref 2>/dev/null || git rev-parse HEAD 2>/dev/null || true; }" | redact_sensitive
+  ssh_base "cat $app_dir/.deploy-ref 2>/dev/null || true" | redact_sensitive
 }
 
 paths_ignored() {
@@ -435,6 +455,26 @@ verify_remote_containers() {
   fi
 }
 
+verify_remote_deploy_ref() {
+  local expected actual
+  expected="$(local_sha)"
+  actual="$(remote_sha)"
+
+  if [[ -z "$actual" ]]; then
+    echo -e "${RED}错误: 远端缺少部署版本标记 $REMOTE_APP_DIR/.deploy-ref${NC}" >&2
+    return 1
+  fi
+
+  if [[ "$actual" != "$expected" ]]; then
+    echo -e "${RED}错误: 远端部署版本不匹配${NC}" >&2
+    echo "expected: $expected" >&2
+    echo "actual:   $actual" >&2
+    return 1
+  fi
+
+  echo "远端部署版本: $actual"
+}
+
 verify_prod() {
   local failed=0
 
@@ -446,6 +486,7 @@ verify_prod() {
   http_basic_expect "http://$DEPLOY_HOST/grafana/" '^(2|3)[0-9][0-9]$' || failed=1
   http_expect "http://$DEPLOY_HOST/api/v1/products" '^200$' || failed=1
   http_body_contains "http://$DEPLOY_HOST/ws/test/progress?test_id=verify" 'ws_url' || failed=1
+  verify_remote_deploy_ref || failed=1
 
   if [[ "$failed" -ne 0 ]]; then
     print_remote_logs_hint >&2
@@ -500,6 +541,7 @@ case "${1:-}" in
     apply
     ;;
   verify)
+    require_cmd git
     require_cmd curl
     require_cmd ssh
     assert_key

@@ -10,20 +10,24 @@
   - Admin：`http://<PUBLIC_IP>/admin/`
   - API：`http://<PUBLIC_IP>/api/v1`
   - WebSocket：`ws://<PUBLIC_IP>/api/v1/ws`
+  - Test Dashboard：`http://<PUBLIC_IP>/test-dashboard/`，外层 Basic Auth 保护
+  - Grafana：`http://<PUBLIC_IP>/grafana/`，外层 Basic Auth 保护，Grafana anonymous viewer 为 Viewer 权限
 - 前端：本地构建静态产物，Nginx 托管
-- 后端：`docker-compose.demo.yml`
+- 后端与演示支撑服务：`docker-compose.demo.yml` 全量编排，包括业务服务、`test-service`、`test-dashboard`、`grafana`、`prometheus`、`loki`、`growthbook` 等
 - 当前 demo 服务器：`14.103.53.55`
 - 登录用户：`root`
 - SSH 私钥路径：`/Users/bytedance/Downloads/dy-auction.pem`
 - 域名：无，当前通过公网 IP 访问
 - 部署文件：允许修改仓库生成 demo 部署文件
-- 暂不部署：`test-service`、`grafana`、`prometheus`、`growthbook`
+- 公网暴露策略：只开放业务入口、Test Dashboard 与 Grafana；Nacos、Prometheus、Loki、GrowthBook 控制面不公网裸开，评委查看监控统一走受保护的 Grafana 入口
 
 ## 2. 仓库内关键文件
 
 - 编排文件：`docker-compose.demo.yml`
 - Nginx 配置：`deploy/demo/nginx-ip.conf`
 - 环境变量模板：`.env.demo.example`
+- 线上部署脚本：`scripts/deploy-prod.sh`
+- 统一演示账号 seed：`scripts/init-demo-users.sh`
 - 后端镜像入口：
   - `backend/gateway/Dockerfile`
   - `backend/product/Dockerfile`
@@ -36,6 +40,7 @@
 - H5 静态文件：`/var/www/auction-h5`
 - Admin 静态文件：`/var/www/auction-admin`
 - Nginx 配置：`/etc/nginx/sites-available/auction-demo.conf`
+- Basic Auth 文件：`/etc/nginx/.auction-demo.htpasswd`
 
 ## 4. 首次部署
 
@@ -144,8 +149,9 @@ nginx -t
 systemctl reload nginx
 
 cd /srv/auction/app
-docker compose --env-file /srv/auction/env/.env.demo -f docker-compose.demo.yml up -d --build
-docker compose --env-file /srv/auction/env/.env.demo -f docker-compose.demo.yml ps
+docker compose --project-name auction-demo --env-file /srv/auction/env/.env.demo -f docker-compose.demo.yml up -d --build --remove-orphans
+COMPOSE_PROJECT_NAME=auction-demo COMPOSE_FILE=docker-compose.demo.yml COMPOSE_ENV_FILE=/srv/auction/env/.env.demo ./scripts/init-demo-users.sh
+docker compose --project-name auction-demo --env-file /srv/auction/env/.env.demo -f docker-compose.demo.yml ps
 ```
 
 ## 5. 日常增量发布
@@ -204,8 +210,9 @@ ssh -i <SSH_KEY> root@<PUBLIC_IP> '
   nginx -t &&
   systemctl reload nginx &&
   cd /srv/auction/app &&
-  docker compose --env-file /srv/auction/env/.env.demo -f docker-compose.demo.yml up -d --build &&
-  docker compose --env-file /srv/auction/env/.env.demo -f docker-compose.demo.yml ps
+  docker compose --project-name auction-demo --env-file /srv/auction/env/.env.demo -f docker-compose.demo.yml up -d --build --remove-orphans &&
+  COMPOSE_PROJECT_NAME=auction-demo COMPOSE_FILE=docker-compose.demo.yml COMPOSE_ENV_FILE=/srv/auction/env/.env.demo ./scripts/init-demo-users.sh &&
+  docker compose --project-name auction-demo --env-file /srv/auction/env/.env.demo -f docker-compose.demo.yml ps
 '
 ```
 
@@ -217,14 +224,20 @@ ssh -i <SSH_KEY> root@<PUBLIC_IP> '
 curl -I http://<PUBLIC_IP>/
 curl -I http://<PUBLIC_IP>/admin/
 curl http://<PUBLIC_IP>/api/v1/products | head -c 300
+curl -I http://<PUBLIC_IP>/test-dashboard/
+curl -I http://<PUBLIC_IP>/grafana/
+curl -u ByteDance:ByteDance -I http://<PUBLIC_IP>/test-dashboard/
+curl -u ByteDance:ByteDance -I http://<PUBLIC_IP>/grafana/
+curl http://<PUBLIC_IP>/ws/test/progress?test_id=verify
 ```
 
 服务器执行：
 
 ```bash
 cd /srv/auction/app
-docker compose --env-file /srv/auction/env/.env.demo -f docker-compose.demo.yml ps
-docker compose --env-file /srv/auction/env/.env.demo -f docker-compose.demo.yml logs --tail=100 gateway product auction
+cat .deploy-ref
+docker compose --project-name auction-demo --env-file /srv/auction/env/.env.demo -f docker-compose.demo.yml ps
+docker compose --project-name auction-demo --env-file /srv/auction/env/.env.demo -f docker-compose.demo.yml logs --tail=100 gateway product auction test-service test-dashboard grafana
 ```
 
 额外建议：
@@ -232,6 +245,8 @@ docker compose --env-file /srv/auction/env/.env.demo -f docker-compose.demo.yml 
 - 前端发布后检查首页是否已经引用新的资源 hash。
 - 不要用 `/api/v1/health` 作为唯一探针，当前线上路由不一定有这条接口。
 - 更稳妥的是直接验证业务 API，如 `/api/v1/products`。
+- 对测试平台这类 discovery 接口，必须校验响应体包含关键字段，例如 `/ws/test/progress` 需要包含 `ws_url`，不能只看 HTTP 200。
+- Test Dashboard 和 Grafana 的公网入口预期无认证返回 `401`，带 Basic Auth 后返回 `2xx/3xx`。
 
 ## 7. 回滚方法
 
@@ -252,7 +267,7 @@ rsync -av --delete \
 
 ssh -i <SSH_KEY> root@<PUBLIC_IP> '
   cd /srv/auction/app &&
-  docker compose --env-file /srv/auction/env/.env.demo -f docker-compose.demo.yml up -d --build
+  docker compose --project-name auction-demo --env-file /srv/auction/env/.env.demo -f docker-compose.demo.yml up -d --build --remove-orphans
 '
 ```
 
@@ -263,3 +278,4 @@ ssh -i <SSH_KEY> root@<PUBLIC_IP> '
 - 原则 3：`Admin` 继续使用 `/admin/` 子路径构建。
 - 原则 4：WebSocket 公开路径保持 `/api/v1/ws`，由 Nginx 转发到 `auction` 的 WS 端口。
 - 原则 5：真实环境变量只放 `/srv/auction/env/.env.demo`，不要把真实值提交到仓库。
+- 原则 6：远端源码目录由 `rsync` 同步，不依赖 `.git`；部署版本以 `/srv/auction/app/.deploy-ref` 为准。

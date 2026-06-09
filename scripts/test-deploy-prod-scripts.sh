@@ -5,6 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCRIPT="$ROOT/scripts/deploy-prod.sh"
 DEMO_NGINX="$ROOT/deploy/demo/nginx-ip.conf"
+DEPLOY_QUICKSTART="$ROOT/deploy/demo/MAIN_DEPLOY_QUICKSTART.md"
 
 fail() {
   echo "FAIL: $*" >&2
@@ -39,10 +40,23 @@ assert_file_contains() {
   fi
 }
 
+assert_file_not_contains() {
+  local file=$1
+  local pattern=$2
+  local message=$3
+
+  if rg -q -- "$pattern" "$file"; then
+    fail "$message"
+  fi
+}
+
 assert_contains 'shell_quote\(\)' "deploy-prod.sh must shell-quote dynamic SSH/rsync paths and arguments"
 assert_contains 'ssh_dest\(\)' "deploy-prod.sh must build SSH destination through a helper"
 assert_contains 'ssh_opts=\(' "deploy-prod.sh must keep SSH options in an argv array"
+assert_contains 'ConnectTimeout=' "deploy-prod.sh must bound SSH connection hangs"
+assert_contains 'ssh_with_retry\(\)' "deploy-prod.sh must retry transient SSH failures"
 assert_contains 'remote_precheck' "deploy-prod.sh must keep remote precheck as a first-class function"
+assert_contains 'verify_remote_deploy_ref' "deploy-prod.sh verify must check the remote .deploy-ref marker"
 assert_contains 'assert_clean_for_ref' "deploy-prod.sh plan/apply must check local ref and blocking changes"
 assert_contains 'redact_sensitive' "deploy-prod.sh must redact sensitive values from displayed output"
 assert_contains 'http_expect\(\)' "deploy-prod.sh verify must check expected HTTP status classes"
@@ -75,10 +89,14 @@ assert_contains 'cd "\$PROJECT_ROOT/frontend/admin"' "deploy-prod.sh must build 
 assert_contains 'npm ci' "deploy-prod.sh must install frontend dependencies in a clean worktree before building"
 assert_file_contains "$DEMO_NGINX" 'location \^~ /ws/' "demo Nginx must expose test-dashboard WS discovery instead of falling back to H5 index"
 assert_file_contains "$DEMO_NGINX" 'proxy_pass http://127\.0\.0\.1:8080/ws/' "demo Nginx /ws/ route must proxy to gateway /ws/"
+assert_file_contains "$DEPLOY_QUICKSTART" 'test-dashboard' "deploy quickstart must document the protected Test Dashboard public entry"
+assert_file_contains "$DEPLOY_QUICKSTART" 'grafana' "deploy quickstart must document the protected Grafana public entry"
 
 assert_not_contains 'cat .*\$REMOTE_ENV_FILE' "deploy-prod.sh must not print remote .env.demo"
+assert_not_contains 'git rev-parse HEAD 2>/dev/null' "deploy-prod.sh must not depend on remote .git metadata after rsync deploy"
 assert_not_contains 'grep .*ARK_API_KEY' "deploy-prod.sh must not grep or print ARK_API_KEY"
 assert_not_contains 'grep .*JWT_SECRET' "deploy-prod.sh must not grep or print JWT_SECRET"
 assert_not_contains 'grep .*INTERNAL_API_TOKEN' "deploy-prod.sh must not grep or print INTERNAL_API_TOKEN"
+assert_file_not_contains "$DEPLOY_QUICKSTART" '暂不部署.*test-service.*grafana.*prometheus.*growthbook' "deploy quickstart must not claim mature demo services are not deployed"
 
 echo "deploy prod script checks passed"
