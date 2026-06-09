@@ -4,6 +4,7 @@ import { orderApi, userApi } from '../../services/api';
 import { useAuth } from '../../store/authContext';
 import BadgeDot from '../../components/BadgeDot';
 import { useTouchpointNotifications } from '../../hooks/useTouchpointNotifications';
+import { getLiveRoomFootprints } from '../../utils/liveRoomFootprints';
 import { repairUtf8Mojibake } from '../../utils/textEncoding';
 import { trackEvent } from '../../utils/trackEvent';
 import styles from './Profile.module.css';
@@ -33,27 +34,6 @@ interface UserStats {
   won_count?: number | null;
 }
 
-interface OrderSummary {
-  id: number | string;
-  product_name?: string;
-  product?: {
-    name?: string;
-  };
-  final_price?: number | string;
-  status?: number | string;
-  created_at?: string;
-}
-
-function extractList<T>(response: any): T[] {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.list)) return response.list;
-  if (Array.isArray(response?.items)) return response.items;
-  if (Array.isArray(response?.orders)) return response.orders;
-  if (Array.isArray(response?.data?.items)) return response.data.items;
-  if (Array.isArray(response?.data?.list)) return response.data.list;
-  return [];
-}
-
 function toNumber(value: number | string | undefined, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -76,23 +56,10 @@ function pickAvailable(b: BalanceData | null) {
   return b.balance;
 }
 
-function pickFrozen(b: BalanceData | null) {
-  if (!b) return undefined;
-  return b.frozen_amount;
-}
-
 function roleLabel(role?: number) {
   if (role === 2) return '管理员';
   if (role === 1) return '商家/主播';
   return '普通用户';
-}
-
-function orderStatusLabel(status?: number | string) {
-  const normalized = String(status ?? '');
-  if (normalized === '1' || normalized === 'paid') return '已支付';
-  if (normalized === '2' || normalized === 'shipped') return '已发货';
-  if (normalized === '3' || normalized === 'completed') return '已完成';
-  return '待支付';
 }
 
 const UserCenter: React.FC = () => {
@@ -102,7 +69,6 @@ const UserCenter: React.FC = () => {
   const [profile, setProfile] = useState<ProfileUser | null>(authUser);
   const [balance, setBalance] = useState<BalanceData | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
-  const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -114,7 +80,7 @@ const UserCenter: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const [profileResult, balanceResult, statsResult, ordersResult] = await Promise.allSettled([
+      const [profileResult, balanceResult, statsResult] = await Promise.allSettled([
         userApi.getProfile(),
         userApi.getBalance(),
         userApi.getStats(),
@@ -138,10 +104,6 @@ const UserCenter: React.FC = () => {
         setStats(statsResult.value);
       }
 
-      if (ordersResult.status === 'fulfilled') {
-        setOrders(extractList<OrderSummary>(ordersResult.value).slice(0, 2));
-      }
-
       setLoading(false);
     }
 
@@ -160,6 +122,8 @@ const UserCenter: React.FC = () => {
       name: repairUtf8Mojibake(displayName),
     };
   }, [authUser, profile]);
+  const footprints = useMemo(() => getLiveRoomFootprints(), []);
+  const pendingAuctionCount = wonNotPaid;
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -229,93 +193,111 @@ const UserCenter: React.FC = () => {
         </div>
       </header>
 
-      <div className={styles.statsGrid} aria-label="个人统计入口">
-        <Link to="/following" className={styles.statCard}>
-          <strong>{statValue(stats?.following_count)}</strong>
-          <span>收藏</span>
-        </Link>
-        <Link to="/history" className={styles.statCard}>
-          <strong>{statValue(stats?.auction_history_count)}</strong>
-          <span>竞拍记录</span>
-        </Link>
-        <Link to="/history?filter=won" className={styles.statCard}>
-          <strong>{statValue(stats?.won_count)}</strong>
-          <span>中标</span>
-        </Link>
-      </div>
-
-      <section className={styles.walletCard} aria-label="钱包余额">
-        <div>
-          <p className={styles.cardLabel}>钱包余额</p>
-          <strong>{balance ? formatCurrency(pickAvailable(balance)) : '¥0'}</strong>
-          {pickFrozen(balance) !== undefined && (
-            <span>冻结 {formatCurrency(pickFrozen(balance))}</span>
-          )}
-        </div>
-        <Link to="/addresses" className={styles.disabledAction} aria-label="管理收货地址">
-          收货地址
-        </Link>
-      </section>
-
-      <section className={styles.orderCard}>
+      <section className={styles.auctionCommandCard} aria-label="我的竞拍">
         <div className={styles.sectionHeader}>
           <div>
-            <p className={styles.cardLabel}>Orders</p>
-            <h2>最近订单</h2>
+            <p className={styles.cardLabel}>Auction</p>
+            <h2>我的竞拍</h2>
           </div>
-          <Link to="/orders">全部</Link>
+          <span>记录含中标</span>
         </div>
+        <Link to="/history" className={styles.primaryAuctionCta} onClick={trackAuctionHistoryClick}>
+          <div>
+            <strong>{pendingAuctionCount > 0 ? `${pendingAuctionCount} 件中标待支付` : '查看竞拍记录'}</strong>
+            <span>从竞拍记录查看全部中标与出价</span>
+          </div>
+          <b>›</b>
+        </Link>
+        <div className={styles.auctionMetrics}>
+          <Link to="/history" className={styles.metricCard} onClick={trackAuctionHistoryClick}>
+            <BadgeDot count={pendingAuctionCount} className={styles.metricBadge} />
+            <strong>{statValue(stats?.auction_history_count)}</strong>
+            <span>竞拍记录</span>
+          </Link>
+          <div className={styles.metricCard} aria-label="中标数量">
+            <strong>{statValue(stats?.won_count)}</strong>
+            <span>中标</span>
+          </div>
+          <Link to="/following" className={styles.metricCard}>
+            <strong>{statValue(stats?.following_count)}</strong>
+            <span>收藏</span>
+          </Link>
+        </div>
+      </section>
 
-        {orders.length > 0 ? (
-          <div className={styles.orderList}>
-            {orders.map((order) => (
-              <Link key={order.id} to={`/order/${order.id}`} className={styles.orderItem}>
-                <div>
-                  <strong>{order.product_name || order.product?.name || `订单 #${order.id}`}</strong>
-                  <span>{order.created_at ? new Date(order.created_at).toLocaleDateString() : '待更新'}</span>
-                </div>
-                <div className={styles.orderMeta}>
-                  <strong>{formatCurrency(order.final_price)}</strong>
-                  <span>{orderStatusLabel(order.status)}</span>
-                </div>
+      <section className={styles.footprintCard} aria-label="最近浏览直播间">
+        <div className={styles.sectionHeader}>
+          <div>
+            <p className={styles.cardLabel}>Footprints</p>
+            <h2>足迹</h2>
+          </div>
+          <span>最近 10 个直播间</span>
+        </div>
+        {footprints.length > 0 ? (
+          <div className={styles.footprintList}>
+            {footprints.map((item) => (
+              <Link
+                key={item.live_stream_id}
+                to={`/live?live_stream_id=${item.live_stream_id}`}
+                className={styles.footprintItem}
+              >
+                <div
+                  className={styles.footprintCover}
+                  style={item.cover ? { backgroundImage: `url(${item.cover})` } : undefined}
+                />
+                <strong>{repairUtf8Mojibake(item.name)}</strong>
+                <span>最近浏览</span>
               </Link>
             ))}
           </div>
         ) : (
-          <p className={styles.emptyText}>暂无订单记录</p>
+          <p className={styles.emptyText}>暂无直播间浏览足迹</p>
         )}
       </section>
 
-      <nav className={styles.menu} aria-label="个人中心功能">
-        <Link to="/history" className={styles.menuItem} onClick={trackAuctionHistoryClick}>
-          <span className={styles.menuIcon}>A</span>
-          <span className={styles.menuLabel}>
-            我的竞拍
-            <BadgeDot count={wonNotPaid} className={styles.menuBadge} />
+      <section className={styles.serviceGrid} aria-label="账户与服务">
+        <Link to="/orders" className={styles.serviceItem}>
+          <span className={styles.serviceIcon}>¥</span>
+          <span className={styles.serviceText}>
+            <strong>钱包</strong>
+            <small>{balance ? `可用 ${formatCurrency(pickAvailable(balance))}` : '可用 ¥0'}</small>
           </span>
+        </Link>
+        <Link to="/addresses" className={styles.serviceItem}>
+          <span className={styles.serviceIcon}>D</span>
+          <span className={styles.serviceText}>
+            <strong>收货地址</strong>
+            <small>管理配送</small>
+          </span>
+        </Link>
+        <Link to="/" className={styles.serviceItem}>
+          <span className={styles.newBadge}>新</span>
+          <span className={styles.serviceIcon}>S</span>
+          <span className={styles.serviceText}>
+            <strong>个人卖家申请</strong>
+            <small>暂未开放</small>
+          </span>
+        </Link>
+        <Link to="/" className={styles.serviceItem}>
+          <span className={styles.newBadge}>新</span>
+          <span className={styles.serviceIcon}>B</span>
+          <span className={styles.serviceText}>
+            <strong>企业商家入驻</strong>
+            <small>暂未开放</small>
+          </span>
+        </Link>
+      </section>
+
+      <nav className={styles.secondaryMenu} aria-label="个人中心功能">
+        <Link to="/following" className={styles.secondaryItem}>
+          我的收藏
           <b>›</b>
         </Link>
-        <Link to="/following" className={styles.menuItem}>
-          <span className={styles.menuIcon}>F</span>
-          <span>我的收藏</span>
-          <b>›</b>
-        </Link>
-        <Link to="/notifications" className={styles.menuItem} onClick={trackNotificationCenterClick}>
-          <span className={styles.menuIcon}>N</span>
-          <span className={styles.menuLabel}>
+        <Link to="/notifications" className={styles.secondaryItem} onClick={trackNotificationCenterClick}>
+          <span className={styles.notificationLabel}>
             消息通知
-            <BadgeDot count={unreadTotal} className={styles.menuBadge} />
+            <BadgeDot count={unreadTotal} className={styles.notificationBadge} />
           </span>
-          <b>›</b>
-        </Link>
-        <Link to="/addresses" className={styles.menuItem}>
-          <span className={styles.menuIcon}>D</span>
-          <span>收货地址</span>
-          <b>›</b>
-        </Link>
-        <Link to="/" className={`${styles.menuItem} ${styles.mutedItem}`}>
-          <span className={styles.menuIcon}>S</span>
-          <span>设置 (暂未开放)</span>
           <b>›</b>
         </Link>
       </nav>

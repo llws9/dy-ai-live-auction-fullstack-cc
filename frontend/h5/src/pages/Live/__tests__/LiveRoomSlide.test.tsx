@@ -7,6 +7,7 @@ import WebSocketService from '../../../services/websocket';
 import { useFixedPriceItems } from '../../../hooks/useFixedPriceItems';
 import { trackBusinessEvent } from '../../../utils/businessEvent';
 import { useDemo } from '../../../store/demoContext';
+import { recordLiveRoomFootprint } from '../../../utils/liveRoomFootprints';
 
 const mockShowGlobalToast = jest.fn();
 const mockNavigate = jest.fn();
@@ -60,6 +61,10 @@ jest.mock('../../../hooks/useFixedPriceItems', () => ({
 
 jest.mock('../../../utils/businessEvent', () => ({
   trackBusinessEvent: jest.fn(),
+}));
+
+jest.mock('../../../utils/liveRoomFootprints', () => ({
+  recordLiveRoomFootprint: jest.fn(),
 }));
 
 jest.mock('../../../components/LiveChat/ChatPanel', () => ({
@@ -125,6 +130,7 @@ const MockedWebSocketService = WebSocketService as jest.MockedClass<typeof WebSo
 const mockedUseFixedPriceItems = useFixedPriceItems as jest.MockedFunction<typeof useFixedPriceItems>;
 const mockedTrackBusinessEvent = trackBusinessEvent as jest.MockedFunction<typeof trackBusinessEvent>;
 const mockedUseDemo = useDemo as jest.MockedFunction<typeof useDemo>;
+const mockedRecordLiveRoomFootprint = recordLiveRoomFootprint as jest.MockedFunction<typeof recordLiveRoomFootprint>;
 
 const LocationDisplay: React.FC = () => {
   const location = useLocation();
@@ -258,6 +264,19 @@ describe('LiveRoomSlide', () => {
       productId: 7,
     }));
     expect(mockedTrackBusinessEvent.mock.calls.filter(([event]) => event === 'live_room_enter')).toHaveLength(1);
+  });
+
+  it('records a local footprint when entering an active live room', async () => {
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    expect((await screen.findAllByText('明代紫砂壶')).length).toBeGreaterThan(0);
+    await waitFor(() =>
+      expect(mockedRecordLiveRoomFootprint).toHaveBeenCalledWith({
+        live_stream_id: 3,
+        name: '瓷器珍藏夜场',
+        cover: '/product.jpg',
+      })
+    );
   });
 
   it('renders top follow action, online viewers, and a product detail link in the header', async () => {

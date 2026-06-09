@@ -19,6 +19,7 @@ import { useToast } from '../../components/Toast';
 import { ChatPanel } from '../../components/LiveChat/ChatPanel';
 import { useLiveChatStore } from '../../store/liveChatStore';
 import { trackBusinessEvent } from '../../utils/businessEvent';
+import { recordLiveRoomFootprint } from '../../utils/liveRoomFootprints';
 import { repairUtf8Mojibake } from '../../utils/textEncoding';
 import BidDock from './BidDock';
 import RankingBlock from './RankingBlock';
@@ -334,6 +335,15 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   useEffect(() => {
     setLikeCount(toAmount(liveStream?.like_count ?? liveStream?.likes_count));
   }, [liveStream?.like_count, liveStream?.likes_count]);
+
+  useEffect(() => {
+    if (!active || effectiveLiveStreamId <= 0 || !liveStream) return;
+    recordLiveRoomFootprint({
+      live_stream_id: effectiveLiveStreamId,
+      name: roomName,
+      cover: liveCoverImage,
+    });
+  }, [active, effectiveLiveStreamId, liveCoverImage, liveStream, roomName]);
 
   useEffect(() => {
     wonAnimationDataRef.current = {

@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import Profile from '../Index';
 import { orderApi, userApi } from '../../../services/api';
 import { notificationApi } from '../../../services/notification';
+import { getLiveRoomFootprints } from '../../../utils/liveRoomFootprints';
 
 const mockNavigate = jest.fn();
 const mockLogout = jest.fn();
@@ -31,6 +32,10 @@ jest.mock('../../../services/notification', () => ({
   },
 }));
 
+jest.mock('../../../utils/liveRoomFootprints', () => ({
+  getLiveRoomFootprints: jest.fn(),
+}));
+
 jest.mock('../../../store/authContext', () => ({
   useAuth: () => ({
     isAuthenticated: true,
@@ -44,6 +49,7 @@ jest.mock('../../../store/authContext', () => ({
 const mockedUserApi = userApi as jest.Mocked<typeof userApi>;
 const mockedOrderApi = orderApi as jest.Mocked<typeof orderApi>;
 const mockedNotificationApi = notificationApi as jest.Mocked<typeof notificationApi>;
+const mockedGetLiveRoomFootprints = getLiveRoomFootprints as jest.MockedFunction<typeof getLiveRoomFootprints>;
 
 describe('Profile migration', () => {
   beforeEach(() => {
@@ -85,6 +91,14 @@ describe('Profile migration', () => {
       outbid: 3,
       endingSoon: 1,
     });
+    mockedGetLiveRoomFootprints.mockReturnValue([
+      {
+        live_stream_id: 3,
+        name: '玉石夜拍',
+        cover: 'https://example.com/live.jpg',
+        enteredAt: 1781020000000,
+      },
+    ]);
   });
 
   it('loads profile, balance and order entry from service wrappers', async () => {
@@ -95,12 +109,13 @@ describe('Profile migration', () => {
     );
 
     expect(await screen.findByText('林见山')).toBeInTheDocument();
-    expect(screen.getByText('¥12,288')).toBeInTheDocument();
-    expect(screen.getByText('冻结 ¥600')).toBeInTheDocument();
-    expect(screen.getByText('鎏金香炉')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /2\s*中标/ })).toHaveAttribute('href', '/history?filter=won');
-    expect(screen.getByRole('link', { name: '全部' })).toHaveAttribute('href', '/orders');
-    expect(screen.getByRole('link', { name: /鎏金香炉/ })).toHaveAttribute('href', '/order/56');
+    const historyLinks = screen.getAllByRole('link').filter((el) => el.getAttribute('href') === '/history');
+    expect(historyLinks.length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByRole('link', { name: /2\s*中标/ })).not.toBeInTheDocument();
+    expect(screen.getByText('玉石夜拍')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /钱包/ })).toHaveAttribute('href', '/orders');
+    expect(screen.getByRole('link', { name: /个人卖家申请/ })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: /企业商家入驻/ })).toHaveAttribute('href', '/');
 
     expect(mockedUserApi.getProfile).toHaveBeenCalledTimes(1);
     expect(mockedUserApi.getBalance).toHaveBeenCalledTimes(1);
@@ -139,12 +154,12 @@ describe('Profile migration', () => {
 
     expect(await screen.findByLabelText('1 条待处理提醒')).toHaveTextContent('1');
     expect(mockedNotificationApi.getTouchpointSummary).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('link', { name: /我的竞拍/ })).toHaveAttribute('href', '/history');
+    expect(screen.getByRole('link', { name: /1 件中标待支付/ })).toHaveAttribute('href', '/history');
     expect(screen.getByRole('link', { name: /我的收藏/ })).toHaveAttribute('href', '/following');
     expect(screen.getByRole('link', { name: /消息通知/ })).toHaveAttribute('href', '/notifications');
     const addressLinks = screen.getAllByRole('link').filter((el) => el.getAttribute('href') === '/addresses');
-    expect(addressLinks.length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByRole('link', { name: '管理收货地址' })).toHaveAttribute('href', '/addresses');
+    expect(addressLinks.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole('link', { name: /收货地址/ })).toHaveAttribute('href', '/addresses');
 
     fireEvent.click(screen.getByRole('button', { name: '退出登录' }));
 
