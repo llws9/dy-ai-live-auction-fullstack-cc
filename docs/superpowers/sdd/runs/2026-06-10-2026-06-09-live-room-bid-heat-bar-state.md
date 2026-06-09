@@ -42,7 +42,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-10 04:45` |
+| Last Updated | `2026-06-10 03:46` |
 
 ## Status Legend
 
@@ -98,8 +98,12 @@
 
 - Red: created `useBidHeat.test.ts` and `BidHeatBar.test.tsx` before implementation; first run failed because `../useBidHeat` and `../BidHeatBar` modules were missing.
 - Red (review fix): added sentinel assertions for no HEX in `BidHeatBar.module.css` and retained `heatMarqueeContainer`; first run failed on hardcoded HEX and missing wrapper / stale marquee expectation.
+- Red (sheet half-embed): updated `LiveLayoutCss.test.ts` before CSS implementation; first run failed because `sheetDockAddon` still used `bottom: calc(50dvh - 1px)` and lacked half-height translation / sheet top reserve.
+- Red (sheet close animation): added `BidDock.test.tsx` and `LiveLayoutCss.test.ts` assertions before implementation; first run failed because `sheetDockAddon` lacked an open/close class and transition, so it stayed fixed until unmount.
 - Green: implemented `useBidHeat`, `BidHeatBar`, CSS, and `LiveRoomSlide` integration with the minimum behavior required by A1.
 - Green (review fix): replaced `BidHeatBar.module.css` HEX colors with H5 tokens and restored `styles.heatMarqueeContainer` wrapper around `BidHeatBar`.
+- Green (sheet half-embed): changed `sheetDockAddon` to `bottom: 50dvh` plus `transform: translateY(50%)`, and increased `.sheet` top padding so the embedded half does not cover the drawer content.
+- Green (sheet close animation): reused `isSheetOpen` to apply `sheetDockAddonOpen`; base addon now transitions to `translateY(calc(50dvh + 50%))`, while the open state remains half-embedded at `translateY(50%)`.
 - Verify: targeted tests passed, then H5 production build passed after restoring the lockfile-declared missing dependency in local `node_modules`.
 
 **Write Set**
@@ -161,6 +165,16 @@
 | `cd frontend/h5 && npm run build` | production build after sheet-rim dock change | `tsc && vite build` passed, 149 modules transformed | `pass` |
 | `git diff --check` | no whitespace errors | passed | `pass` |
 | `curl -s http://localhost:5173/src/pages/Live/BidDock.tsx ...` | dev server source contains `topAddon`/`sheetDockAddon`; `BidHeatBar` contains `value: 24` | source markers present | `pass` |
+| `cd frontend/h5 && npm test -- LiveLayoutCss.test.ts` | RED for half-embedded sheet dock before CSS implementation | failed on old `bottom: calc(50dvh - 1px)` and missing `transform: translateY(50%)` / sheet top reserve | `pass_red` |
+| `cd frontend/h5 && npm test -- LiveLayoutCss.test.ts` | half-embedded sheet dock CSS test passes | 1 suite passed, 15 tests passed | `pass` |
+| `cd frontend/h5 && npm test -- BidHeatBar.test.tsx BidDock.test.tsx LiveLayoutCss.test.ts LiveRoomSlide.test.tsx` | live-room dock regression remains green | 4 suites passed, 66 tests passed | `pass` |
+| `cd frontend/h5 && npm run build` | production build after half-embedded dock tuning | `tsc && vite build` passed, 149 modules transformed | `pass` |
+| `git diff --check` | no whitespace errors | passed | `pass` |
+| `cd frontend/h5 && npm test -- BidDock.test.tsx LiveLayoutCss.test.ts` | RED for addon following sheet close animation | failed on missing `sheetDockAddonOpen` class and missing close-state transform / transition | `pass_red` |
+| `cd frontend/h5 && npm test -- BidDock.test.tsx LiveLayoutCss.test.ts` | addon close animation tests pass | 2 suites passed, 24 tests passed | `pass` |
+| `cd frontend/h5 && npm test -- BidHeatBar.test.tsx BidDock.test.tsx LiveLayoutCss.test.ts LiveRoomSlide.test.tsx` | live-room dock regression remains green after close-animation fix | 4 suites passed, 67 tests passed | `pass` |
+| `cd frontend/h5 && npm run build` | production build after close-animation fix | `tsc && vite build` passed, 149 modules transformed | `pass` |
+| `git diff --check` | no whitespace errors | passed | `pass` |
 
 **Runtime Source Evidence**
 
@@ -194,6 +208,8 @@
 **Review Notes**
 
 - Sheet-rim dock tuning: moved `BidHeatBar` from sheet scroll content into `BidDock.topAddon` rendered as `sheetDockAddon` on the sheet rim; restored calm fill to the original live value `24` while keeping the track width full.
+- Sheet half-embed tuning: centered `sheetDockAddon` on the `.sheet` top edge with `translateY(50%)` and added sheet top padding reserve to prevent the embedded dock from colliding with the handle / price block.
+- Sheet close-animation fix: root cause was `sheetDockAddon` being a sibling of `.sheet` with static transform; it now receives the same `isSheetOpen` state and transitions down during the 350ms close lifecycle before unmount.
 - Post-review UI tuning: removed the outer `heatMarqueeContainer` gray shell, slimmed `BidHeatBar` vertical density, made calm state keep a full-length meter, and removed the accidental `undefined` class from the rendered section.
 - Main-agent final review: verified no hardcoded HEX in `BidHeatBar.module.css`; verified `BidHeatBar` remains inside `styles.heatMarqueeContainer`; reran targeted tests and H5 build successfully.
 - Main-agent review requested changes: replace hardcoded CSS colors in `BidHeatBar.module.css` with existing H5 design tokens (`--color-*`, `--bg-*`, `--surface-*`, `--text-*`); preserve old heat marquee layout position by wrapping `BidHeatBar` with `styles.heatMarqueeContainer` or otherwise explicitly retaining equivalent spacing semantics.

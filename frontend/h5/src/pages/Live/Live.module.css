@@ -830,11 +830,17 @@
 .sheetDockAddon {
   position: absolute;
   right: calc(var(--spacing-5) + 40px);
-  bottom: calc(50dvh - 1px);
+  bottom: 50dvh;
   left: calc(var(--spacing-5) + 40px);
   z-index: 10;
   display: flex;
   pointer-events: none;
+  transform: translateY(calc(50dvh + 50%));
+  transition: transform 0.35s ease;
+}
+
+.sheetDockAddonOpen {
+  transform: translateY(50%);
 }
 
 .sheet {
@@ -845,7 +851,7 @@
   z-index: 9;
   height: 50dvh;
   box-sizing: border-box;
-  padding: var(--spacing-3) var(--spacing-5) calc(24px + env(safe-area-inset-bottom, 0px));
+  padding: calc(var(--spacing-3) + 32px) var(--spacing-5) calc(24px + env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   border-radius: 28px 28px 0 0;
   background: var(--bg-page);

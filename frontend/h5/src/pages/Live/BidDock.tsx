@@ -140,7 +140,10 @@ const BidDock = ({
             onClick={onClose}
           />
           {topAddon && (
-            <div className={styles.sheetDockAddon} data-testid="bid-dock-top-addon">
+            <div
+              className={`${styles.sheetDockAddon} ${isSheetOpen ? styles.sheetDockAddonOpen : ''}`}
+              data-testid="bid-dock-top-addon"
+            >
               {topAddon}
             </div>
           )}

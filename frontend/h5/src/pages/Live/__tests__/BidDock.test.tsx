@@ -92,6 +92,42 @@ describe('BidDock', () => {
     expect(sheet).not.toContainElement(heatBar);
   });
 
+  it('关闭抽屉时让 topAddon 保留在 DOM 并进入同步收回动画态', () => {
+    jest.useFakeTimers();
+    const requestAnimationFrameSpy = jest
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback) => {
+        callback(16);
+        return 1;
+      });
+
+    const { rerender } = render(
+      <BidDock {...baseProps} sheet="bid" topAddon={<section aria-label="竞拍战况热度">热度条</section>}>
+        <div>出价表单</div>
+      </BidDock>
+    );
+
+    expect(screen.getByTestId('bid-dock-top-addon')).toHaveClass('sheetDockAddonOpen');
+
+    rerender(
+      <BidDock {...baseProps} sheet={null} topAddon={<section aria-label="竞拍战况热度">热度条</section>}>
+        <div>出价表单</div>
+      </BidDock>
+    );
+
+    const addonDuringClose = screen.getByTestId('bid-dock-top-addon');
+    expect(addonDuringClose).toBeInTheDocument();
+    expect(addonDuringClose).not.toHaveClass('sheetDockAddonOpen');
+
+    act(() => {
+      jest.advanceTimersByTime(350);
+    });
+
+    expect(screen.queryByTestId('bid-dock-top-addon')).not.toBeInTheDocument();
+    requestAnimationFrameSpy.mockRestore();
+    jest.useRealTimers();
+  });
+
   it('打开抽屉时先挂载闭合态，再进入滑入态', () => {
     const rafCallbacks: FrameRequestCallback[] = [];
     const requestAnimationFrameSpy = jest
