@@ -88,6 +88,20 @@
   background: var(--item-subtle-bg);
 }
 
+.streamAvatarFallback {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full, 9999px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--gradient-primary);
+  color: var(--text-inverse, #fff);
+  font-size: var(--font-size-lg, 18px);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
 .streamDetails {
   flex: 1;
   overflow: hidden;

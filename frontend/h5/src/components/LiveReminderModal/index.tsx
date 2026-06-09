@@ -75,6 +75,9 @@ const LiveReminderModal: React.FC<LiveReminderModalProps> = ({ isOpen, onClose, 
     navigate(`/live?id=${stream.id}`);
   };
 
+  const avatarUrl = stream.avatarUrl.trim();
+  const avatarInitial = stream.name.trim().slice(0, 1).toUpperCase() || '播';
+
   return (
     <div 
       className={`${styles.overlay} ${!isOpen ? styles.fadeOut : ''}`} 
@@ -100,11 +103,17 @@ const LiveReminderModal: React.FC<LiveReminderModalProps> = ({ isOpen, onClose, 
           </p>
           
           <div className={styles.streamInfo}>
-            <img 
-              src={stream.avatarUrl} 
-              alt={stream.name} 
-              className={styles.streamAvatar} 
-            />
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={stream.name}
+                className={styles.streamAvatar}
+              />
+            ) : (
+              <div className={styles.streamAvatarFallback} aria-hidden="true">
+                {avatarInitial}
+              </div>
+            )}
             <div className={styles.streamDetails}>
               <h4 className={styles.streamName}>{stream.name}</h4>
               <div className={styles.streamStatus}>
