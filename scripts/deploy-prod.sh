@@ -16,6 +16,9 @@ REMOTE_ADMIN_DIR="${REMOTE_ADMIN_DIR:-/var/www/auction-admin}"
 REMOTE_NGINX_CONF="${REMOTE_NGINX_CONF:-/etc/nginx/sites-available/auction-demo.conf}"
 REMOTE_BACKUP_DIR="${REMOTE_BACKUP_DIR:-/srv/auction/backups}"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-auction-demo}"
+DEMO_BASIC_AUTH_USER="${DEMO_BASIC_AUTH_USER:-ByteDance}"
+DEMO_BASIC_AUTH_PASSWORD="${DEMO_BASIC_AUTH_PASSWORD:-ByteDance}"
+REMOTE_BASIC_AUTH_FILE="${REMOTE_BASIC_AUTH_FILE:-/etc/nginx/.auction-demo.htpasswd}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -184,7 +187,7 @@ remote_precheck() {
   h5_dir="$(shell_quote "$REMOTE_H5_DIR")"
   admin_dir="$(shell_quote "$REMOTE_ADMIN_DIR")"
   nginx_conf="$(shell_quote "$REMOTE_NGINX_CONF")"
-  ssh_base "test -d $app_dir && test -f $env_file && test -d $h5_dir && test -d $admin_dir && test -f $nginx_conf && docker compose version >/dev/null && nginx -v >/dev/null"
+  ssh_base "test -d $app_dir && test -f $env_file && test -d $h5_dir && test -d $admin_dir && test -f $nginx_conf && docker compose version >/dev/null && nginx -v >/dev/null && openssl version >/dev/null"
   verify_remote_compose_uniqueness
 }
 
@@ -249,6 +252,7 @@ plan() {
   echo "- 同步 Admin 到 $REMOTE_ADMIN_DIR"
   echo "- 同步仓库源码到 $REMOTE_APP_DIR"
   echo "- 同步 Nginx 配置到 $REMOTE_NGINX_CONF"
+  echo "- 创建或更新演示入口 Basic Auth 文件 $REMOTE_BASIC_AUTH_FILE"
   echo "- 执行 docker compose --project-name $COMPOSE_PROJECT_NAME --env-file $REMOTE_ENV_FILE -f docker-compose.demo.yml up -d --build --remove-orphans，覆盖全量服务:"
   echo "  $(demo_full_stack_services)"
   echo "- 执行 nginx -t && systemctl reload nginx"
@@ -307,6 +311,14 @@ sync_nginx_config() {
   scp_base "$PROJECT_ROOT/deploy/demo/nginx-ip.conf" "$(ssh_dest):$REMOTE_NGINX_CONF"
 }
 
+ensure_basic_auth_file() {
+  local user password auth_file
+  user="$(shell_quote "$DEMO_BASIC_AUTH_USER")"
+  password="$(shell_quote "$DEMO_BASIC_AUTH_PASSWORD")"
+  auth_file="$(shell_quote "$REMOTE_BASIC_AUTH_FILE")"
+  ssh_base "hash=\$(openssl passwd -apr1 $password) && printf '%s:%s\n' $user \"\$hash\" > $auth_file && chown root:www-data $auth_file && chmod 640 $auth_file"
+}
+
 restart_remote() {
   local app_dir env_file compose
   app_dir="$(shell_quote "$REMOTE_APP_DIR")"
@@ -321,6 +333,15 @@ http_expect() {
   local code
   code="$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$url" || true)"
   echo "$url -> $code"
+  [[ "$code" =~ $expected_regex ]]
+}
+
+http_basic_expect() {
+  local url=$1
+  local expected_regex=$2
+  local code
+  code="$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 -u "$DEMO_BASIC_AUTH_USER:$DEMO_BASIC_AUTH_PASSWORD" "$url" || true)"
+  echo "$url with Basic Auth -> $code"
   [[ "$code" =~ $expected_regex ]]
 }
 
@@ -399,6 +420,8 @@ verify_prod() {
   http_expect "http://$DEPLOY_HOST/admin/" '^(2|3)[0-9][0-9]$' || failed=1
   http_expect "http://$DEPLOY_HOST/test-dashboard/" '^401$' || failed=1
   http_expect "http://$DEPLOY_HOST/grafana/" '^401$' || failed=1
+  http_basic_expect "http://$DEPLOY_HOST/test-dashboard/" '^(2|3)[0-9][0-9]$' || failed=1
+  http_basic_expect "http://$DEPLOY_HOST/grafana/" '^(2|3)[0-9][0-9]$' || failed=1
   http_expect "http://$DEPLOY_HOST/api/v1/products" '^200$' || failed=1
 
   if [[ "$failed" -ne 0 ]]; then
@@ -424,6 +447,7 @@ apply() {
   sync_frontend
   sync_backend
   sync_nginx_config
+  ensure_basic_auth_file
   restart_remote
   wait_for_remote_http_ready
   verify_prod
