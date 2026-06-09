@@ -4,22 +4,22 @@
 
 > 部署入口：当前 `main` 分支对应的精简部署操作文档见 [deploy/demo/MAIN_DEPLOY_QUICKSTART.md](file:///Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/deploy/demo/MAIN_DEPLOY_QUICKSTART.md)
 
-## Demo 服务器部署信息
+## 线上 Demo 入口
 
-- 公网 IP：`14.103.53.55`
-- 登录用户：`root`
-- SSH 私钥路径：`/Users/bytedance/Downloads/dy-auction.pem`
-- 域名：无，当前通过公网 IP 访问
-- 部署文件：允许修改仓库生成 demo 部署文件
-- 暂不部署：`test-service`、`grafana`、`prometheus`、`growthbook`
+- H5 前台：`http://14.103.53.55/`
+- Admin 后台：`http://14.103.53.55/admin/`
+- Gateway API：`http://14.103.53.55/api/v1`
+- Test Dashboard：`http://14.103.53.55/test-dashboard/`
+- Grafana：`http://14.103.53.55/grafana/`
+- 直播 WebSocket：`ws://14.103.53.55/api/v1/ws`
+- 测试进度 WebSocket：`ws://14.103.53.55:18092`
 
-## 演示账号信息
+## 演示访问凭据
 
-- 账号由 `scripts/init-demo-users.sh` 统一 seed，本地与 demo 服务器同源。
-- 买家A：手机号 `13800138001`，密码 `Demo@123456`
-- 买家B：手机号 `13800138004`，密码 `Demo@123456`
-- 商家账号：手机号 `13800138002`，密码 `Demo@123456`
-- 管理员账号：手机号 `13800138003`，密码 `Demo@123456`
+- `Test Dashboard` 与 `Grafana` 入口使用 Nginx Basic Auth：`ByteDance` / `ByteDance`。
+- `Grafana` 已开启 anonymous viewer，Basic Auth 通过后无需再输入 Grafana 应用账号。
+- 业务演示账号由 `scripts/init-demo-users.sh` 统一 seed；README 不再维护明文业务账号密码，请以当前环境初始化脚本或演示控制台为准。
+- `Nacos`、`Prometheus`、`Loki`、`GrowthBook` 已部署在线上服务器，但不公网裸开；评委通过 `Grafana`/`Test Dashboard` 查看演示结果。
 
 ## 技术栈
 
@@ -101,9 +101,9 @@ INTERNAL_API_TOKEN=dev docker compose up -d mysql redis rabbitmq
 ```
 
 说明：
-- MySQL 默认连接：`127.0.0.1:3306`，用户 `root`，密码 `root`，数据库 `auction`。
+- MySQL 默认连接：`127.0.0.1:3306`，数据库 `auction`；本地账号信息以 `docker-compose.yml` 和本地环境变量为准。
 - Redis 默认连接：`127.0.0.1:6379`。
-- RabbitMQ 默认连接：`127.0.0.1:5672`，用户 `guest`，密码 `guest`。
+- RabbitMQ 默认连接：`127.0.0.1:5672`；本地账号信息以 `docker-compose.yml` 和本地环境变量为准。
 - 本地后端脚本会通过环境变量禁用 Nacos 在线依赖，不需要启动 Nacos。
 
 #### 2. 启动本地后端
@@ -150,24 +150,7 @@ INTERNAL_API_TOKEN=dev docker compose up -d mysql redis rabbitmq
 
 #### 4. 本地测试账号
 
-本地部署时，`scripts/init-demo-users.sh` 会自动初始化以下演示账号；手机号与密码和 demo 服务器保持一致。
-
-```text
-H5 用户端：
-买家A手机号：13800138001
-买家B手机号：13800138004
-密码：Demo@123456
-
-本地商家账号（role=1，可用于 H5/商家态联调，也可在 Admin 端用邮箱登录）：
-手机号：13800138002
-邮箱：merchant@example.com
-密码：Demo@123456
-
-Admin 管理端：
-手机号：13800138003
-邮箱：admin@example.com
-密码：Demo@123456
-```
+本地部署时，`scripts/init-demo-users.sh` 会自动初始化演示账号；README 不维护明文账号密码，避免文档与脚本状态漂移。需要确认当前账号时，请查看初始化脚本或使用演示控制台的自动登录能力。
 
 #### 5. 常见问题
 
