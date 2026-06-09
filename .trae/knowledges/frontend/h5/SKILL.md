@@ -199,6 +199,11 @@ x = (tabRect.left - navRect.left) + (tabRect.width - W) / 2
 
 **来源**：session:6a28703b0bfcee1b04fc2ec6
 
+**部署与迁移关联**：
+- 底部导航组件属于 H5 核心交互，其变更需通过 `scripts/deploy-prod.sh` 部署到线上
+- 部署前需确保本地 `HEAD == origin/main` 且工作区干净，否则 plan 会被阻断
+- 若线上正在进行 Compose Project 迁移（如 `app` → `auction-demo`），需等待迁移完成且 `.deploy-ref` 版本对齐后才能部署新变更
+
 ### H5 底部导航共享指示器实现细节 (BottomNav Shared Indicator Implementation)
 
 **实现检查清单**（从设计到落地的关键验证点）：
@@ -228,6 +233,13 @@ x = (tabRect.left - navRect.left) + (tabRect.width - W) / 2
 - 卷复制时使用国内镜像源（如 `docker.m.daocloud.io/library/alpine:3.19`）避免拉取失败
 - 迁移后需运行 `scripts/init-demo-users.sh` 初始化演示账号
 - 必须保留旧 project 的命名卷作为回滚点，严禁执行 `down -v`
+- 迁移完成后需验证 `.deploy-ref` 版本标识与本地 HEAD 对齐，否则后续 `scripts/deploy-prod.sh verify` 会报错阻断
+- **迁移前置检查清单**：
+  - [ ] 本地 `HEAD == origin/main` 且工作区干净（无未提交的非 ignored 改动）
+  - [ ] 远端备份已完成（数据卷、静态资源、MySQL dump、`.deploy-ref`）
+  - [ ] 确认目标 project 名称（`auction-demo`）与脚本期望一致
+  - [ ] 确认命名卷映射关系（`app_*` → `auction-demo_*`），避免数据丢失
+  - [ ] 迁移后验证 `.deploy-ref` 与本地 HEAD 一致，确保 verify 可通过
 
 ### H5 首页直播间维度重构 (Homepage LiveRoom Dimension)
 

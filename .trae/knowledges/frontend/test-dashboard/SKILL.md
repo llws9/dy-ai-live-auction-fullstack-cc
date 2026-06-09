@@ -107,6 +107,119 @@ interface Anchor {
 
 **来源**：session:6a27ede70bfcee1b04fbc3b6
 
+## Demo Console Features
+
+### H5 并发出价演示 (Concurrent Bids Demo)
+**功能目标**：在 H5 Demo 控制台提供「一键抬价」按钮，由后端 test-service 发起快速连续出价，制造"价格被超越"场景，让用户体验竞价失败的业务反馈。
+
+**核心设计决策**：
+1. **串行非并发**：虽然按钮名为"并发压测"，但后端采用**串行快速递增**策略。原因：
+   - 业务层有 `AuctionBidLock` + 乐观锁，真并发会导致大量"出价过于频繁"失败
+   - 串行确保每笔出价基于上一笔成功后的最新价递增，抬价幅度可控
+   - 演示效果更稳定，H5 飘屏顺序自然
+
+2. **CapPrice 提前终止保护**：出价前检查，若下一笔金额 ≥ `cap_price` 则停止，避免触发 `handleCapPriceBid` 导致拍卖意外成交结束
+
+3. **Increment 自动修正**：若调用方传入的 `increment` < 规则 increment，自动按规则 increment 处理，避免首笔即低于最低出价失败
+
+4. **响应契约**：
+   - 全失败 → HTTP 400 + `ok: false` + `last_error`
+   - 有成功 → HTTP 200 + `ok: true` + `success_count/failure_count/highest_amount`
+
+**技术边界**：
+- 出价链路**不校验余额**，demo 用户无需预充值即可出价
+- 同一用户连续递增出价合法，无禁止规则
+- H5 端无需改动即可看到飘屏/排行/热度动画（由 `bid_placed` WS 事件驱动）
+
+**设计演变记录**：
+- **初始方案**：使用 goroutine 真并发，但发现会导致大量"出价过于频繁"失败，演示效果不稳定
+- **方案 A（最终采用）**：串行快速递增，每笔基于上一笔成功后的最新价递增，`failure_count` 接近 0，`highest_amount` 确定
+- **核心权衡**：放弃"并发压测"语义，换取"让用户用旧价稳定失败"的演示目标
+
+**实现检查清单**：
+- [x] test-service 读取 `rules.cap_price` 并实现 clamp 逻辑
+- [x] 出价金额公式：`baseline + increment*(i+1)`，每笔成功后更新 baseline
+- [x] 检测到下一笔 ≥ `cap_price` 时提前停止，返回已成功的出价统计
+- [x] 响应体统一包含 `ok` 字段，与 HTTP status code 语义一致
+- [x] H5 端通过 `demo:concurrent-bids-completed` 事件同步价格到直播间
+
+**测试要点**：
+- `DemoConsole` 测试：验证并发出价按钮触发正确 API 调用，成功后广播事件
+- `LiveRoomSlide` 测试：验证监听 `demo:concurrent-bids-completed` 事件并正确更新价格和出价输入
+- 后端测试：验证串行递增逻辑、CapPrice 提前终止、increment 自动修正
+
+**相关文档**：
+- 设计文档：`docs/superpowers/specs/2026-06-10-h5-demo-concurrent-bids-design.md`
+- 实现计划：`docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids-plan.md`
+
+### H5 出价抽屉价格同步问题 (Bid Drawer Price Sync)
+
+**问题背景**：用户点击「并发出价」后，H5 出价抽屉显示的 `bidAmount/minBid` 与实际 `current_price` 不一致。例如：抽屉显示最低出价 440，但实际当前价已被抬到 460，导致用户出价 450 一直失败。
+
+**根因分析**：
+1. 出价抽屉的 `minBid` 基于 H5 本地状态 `current_price` 计算
+2. 并发出价成功后，`DemoConsole` 只弹 toast，没有主动同步最新价格给直播间
+3. 直播间价格状态主要依赖 `bid_placed` WebSocket 事件更新
+4. 在本地演示/高频点击场景下，WS 可能延迟或丢失最后几笔状态，导致 H5 状态滞后
+
+**解决方案**：
+并发出价成功后，应将后端返回的 `highest_amount` 作为权威价格同步给 LiveRoom，而不是只等 WS。
+
+**具体实现**：
+1. 新增 `demo:concurrent-bids-completed` 自定义事件，由 `DemoConsole` 在并发出价成功后广播
+2. 事件 payload 携带 `highest_amount`（后端返回的权威最高价）
+3. `LiveRoomSlide` 监听该事件，收到后向上修正 `current_price`，确保出价抽屉的 `minBid` 同步刷新
+4. 同时更新 `bidAmount` 输入框为新的最低出价，避免用户基于旧价格出价失败
+
+**关键代码模式**：
+```tsx
+// DemoConsole.tsx - 并发出价成功后广播事件
+window.dispatchEvent(new CustomEvent('demo:concurrent-bids-completed', {
+  detail: { highest_amount: response.highest_amount }
+}));
+
+// LiveRoomSlide.tsx - 监听事件并同步价格
+useEffect(() => {
+  const handler = (e: CustomEvent) => {
+    const newPrice = e.detail.highest_amount;
+    if (newPrice > currentPrice) {
+      setCurrentPrice(newPrice);
+      setBidAmount(newPrice + minIncrement);
+    }
+  };
+  window.addEventListener('demo:concurrent-bids-completed', handler);
+  return () => window.removeEventListener('demo:concurrent-bids-completed', handler);
+}, [currentPrice, minIncrement]);
+```
+
+**教训**：
+- 高频出价场景下不能仅依赖 WebSocket 做状态同步，需要主动拉取或接口返回权威状态
+- Demo 控制台与直播间之间的状态同步需要考虑异步延迟
+- 出价抽屉的 `minBid` 计算应基于最新权威价格，而非本地可能滞后的状态
+- 跨组件状态同步优先考虑自定义事件（CustomEvent），避免引入复杂的状态管理库
+
+**来源**：session:6a2879d10bfcee1b04fc3745
+
+### 并发出价设计决策演变 (Concurrent Bids Design Evolution)
+
+**初始方案（已废弃）**：
+使用 goroutine 真并发发起出价，期望模拟高并发竞争场景。
+
+**问题发现**：
+- 业务层有 `AuctionBidLock` + 乐观锁，真并发会导致大量"出价过于频繁"失败
+- 并发下"第 i 笔金额"与"当时的 current_price"关系不确定，小金额的会撞"已被超越"失败
+- `failure_count` 不可控，`highest_amount` 不确定，演示效果不稳定
+
+**最终方案（方案 A - 串行快速递增）**：
+- 后端改为**串行循环出价**，每笔等上一笔成功再下一笔
+- 每笔基于上一笔成功后的最新价递增
+- `failure_count` 接近 0，`highest_amount` 确定，H5 飘屏顺序自然
+
+**核心权衡**：
+放弃"并发压测"的语义准确性，换取"让用户用旧价稳定失败"的演示目标。按钮文案可保留「并发压测」，但实质是"一键快速抬价"。
+
+**来源**：session:6a2879d10bfcee1b04fc3745
+
 ## Project Highlight Integration
 
 ### 故障注入的架构表达

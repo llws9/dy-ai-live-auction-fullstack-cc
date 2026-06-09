@@ -30,6 +30,7 @@ description: >
 - **公网 H5 图片兜底资源必须使用同源静态资源，禁止使用内网域名**。`copilot-cn.bytedance.net` 等 ByteDance 内网域名在公网环境会解析失败（ERR_NAME_NOT_RESOLVED），导致图片无法显示。兜底图应放在 `frontend/h5/public/assets/` 并使用相对路径引用（`frontend/h5/src/pages/Home/index.tsx`, `frontend/h5/src/utils/imageFallback.ts`, `test-service/client/client.go`）
 - 后端测试 SDK 造数时使用的图片 URL 也必须使用公网可达资源，不能依赖内网图片生成服务，否则公网环境数据会显示破图（`test-service/client/client.go`）
 - **Promtail 镜像版本必须与 Docker API 兼容**。线上 Docker API 1.44+ 不兼容 Promtail 2.9.x 版本，会导致日志采集失败、Loki `service_name` 标签为空。应使用兼容的 Promtail 版本（如 2.8.x 或 3.x）（`deploy/demo/docker-compose.yml`, `scripts/test-deploy-prod-scripts.sh`）
+- **API 密钥安全管理规范**：生产环境 AI 服务（如 Ark/Doubao）的 API Key 通过服务器环境文件（如 `/srv/auction/env/.env.demo`）配置，由 `product-service` 容器读取；Gateway 仅负责请求转发和鉴权，不直接调用 AI 接口。严禁将 API Key 提交至 Git 仓库或在对话中明文传输；更新密钥需修改服务器 `.env` 文件并重启对应服务
 - **Grafana 日志大盘变量查询应使用真实的 Docker 采集流**。Loki 日志流查询应使用 `{job="docker"}` 而非假设的 `service_name` 标签，以确保能正确拉取服务列表（`deploy/demo/grafana/dashboards/microservices-logs.json`）
 - **看直播领宝箱系统必须实现后端可信计时**。前端不可信，所有计时逻辑必须在服务端完成，防止用户通过修改本地时间刷币
 - **金币资产必须与现金余额隔离**。领宝箱获得的金币是独立资产类型，不能与用户的现金余额混用，避免资产混淆和审计困难
@@ -42,6 +43,12 @@ description: >
 - **Compose Project 迁移风险**：切换 project name 会影响命名卷（如 `app_mysql-demo-data` → `auction-demo_mysql-demo-data`），可能导致新容器使用空卷。迁移前必须备份数据卷，或显式复用旧卷
 - **Project 迁移执行方案**：统一成 `auction-demo` 需执行维护窗口迁移，步骤为：备份数据和静态资源 → 停 `app` 容器（不删卷）→ 复制 `app_*` 卷到 `auction-demo_*` → 启动 `auction-demo` → seed demo 用户 → 验证全链路。严禁执行 `down -v`，必须保留 `app_*` 卷作为回滚点
 - **迁移执行经验**：卷复制时使用国内镜像源（如 `docker.m.daocloud.io/library/alpine:3.19`）避免拉取失败；迁移后必须重新初始化演示账号（`scripts/init-demo-users.sh`）
+- **迁移前置检查清单**：
+  - [ ] 本地 `HEAD == origin/main` 且工作区干净（无未提交的非 ignored 改动）
+  - [ ] 远端备份已完成（数据卷、静态资源、MySQL dump、`.deploy-ref`）
+  - [ ] 确认目标 project 名称（`auction-demo`）与脚本期望一致
+  - [ ] 确认命名卷映射关系（`app_*` → `auction-demo_*`），避免数据丢失
+- **迁移后验证要点**：`scripts/deploy-prod.sh verify` 会检查远端 `.deploy-ref` 与本地 HEAD 是否一致；若迁移过程中该文件未更新或版本不一致，verify 会报错阻断
 
 ## Architecture
 - 前端按 H5、Admin、Test Dashboard 拆分，各自独立构建，但 API/WS 公共入口统一由 Gateway 与 Nginx 代理承载（`deploy/demo/MAIN_DEPLOY_QUICKSTART.md`）
@@ -90,7 +97,27 @@ description: >
 - **主题切换**：HTML 站本身作为项目「日/夜双主题」系统的活体演示，提供主题切换按钮
 - **公网部署**：使用独立 GitHub Pages 仓库托管，通过 `.deploy-ref` 版本校验确保部署一致性
 
-来源：session:6a25c5830bfcee1b04fb1c9e, session:6a25c5830bfcee1b04fb1c9e
+### 演示剧本设计流程
+为竞赛演示录制视频时，采用以下流程设计口播剧本：
+1. **叙事策略**：制造「基线 vs 生产级」的认知落差，每个模块先说"别人怎么做"，再说"我为什么这么做"
+2. **模块取舍**：完整版约 5-6 分钟覆盖全部亮点，精华版 3 分钟只保留核心模块（完整闭环、并发控制、混沌工程、收尾升华）
+3. **台词结构**：统一为「钩子句 → 操作旁白/画面指引 → 考量维度金句」
+4. **口吻风格**：采用亲近、自然的聊天式叙述，避免演讲腔和刻意对比句式
+5. **交付物**：分镜脚本表（画面+口播+操作提示+时间戳）+ 纯口播稿两份合一
+
+### 竞赛提交文档生成流程
+生成比赛交卷文档时采用以下流程：
+1. **交付方式**：先在仓库 `docs/` 下生成完整 markdown，review 后再导入飞书
+2. **内容分工**：AI 填写技术细节（核心功能、架构、AI能力、工程难点等），用户补全个人/项目基础信息
+3. **表现力增强**：对于架构图、压测报告等表现力要求高的部分，制作独立 HTML 专题页部署至公网，在文档中深链引用
+4. **架构图生成**：使用 `mindai-chart-generation` Skill 生成专业架构图，通过飞书画板插入文档
+
+### 飞书文档权限处理
+- **权限错误**：向比赛方提供的模板文档直接写入会因权限不足（code=1770032 forbidden）失败
+- **解决方案**：通过「创建副本」或新建个人文档方式获取写入权限，再将内容导入
+- **工具链**：使用 `feishu-cli` 导入 markdown 内容，使用 `lark-cli` + `whiteboard-cli` 插入画板/图表
+
+来源：session:6a25c5830bfcee1b04fb1c9e, session:6a25c5830bfcee1b04fb1c9e, session:6a2875380bfcee1b04fc33e8
 
 ## Child Knowledge Nodes
 - `./frontend/h5/SKILL.md` — H5 用户端：首页、直播间、个人中心、图片兜底策略、足迹功能、移动端布局约束，以及直播间战况热度条 (BidHeatBar) 的 UX 增强决策。
