@@ -15,6 +15,8 @@ const categories = [
   { id: 2, name: '艺术品' },
 ];
 
+const defaultAuctionCover = '/assets/default-auction-cover.svg';
+
 const auctions = [
   {
     id: 101,
@@ -31,7 +33,7 @@ const auctions = [
       name: '星河钻石腕表',
       category_name: '珠宝腕表',
       description: '新版 H5 E2E 测试竞拍商品',
-      images: ['https://copilot-cn.bytedance.net/api/ide/v1/text_to_image?prompt=luxury%20diamond%20watch%20on%20black%20velvet%2C%20realistic%20product%20photo&image_size=landscape_4_3'],
+      images: [defaultAuctionCover],
       rules: { start_price: 12000, increment: 100, cap_price: 50000, trigger_delay_before: 30 },
     },
   },
@@ -50,7 +52,7 @@ const auctions = [
       name: '宋代青瓷珍藏',
       category_name: '艺术品',
       description: '已结束竞拍商品',
-      images: ['https://copilot-cn.bytedance.net/api/ide/v1/text_to_image?prompt=ancient%20celadon%20vase%20museum%20lighting%2C%20realistic%20auction%20catalog%20photo&image_size=landscape_4_3'],
+      images: [defaultAuctionCover],
       rules: { start_price: 50000, increment: 500, trigger_delay_before: 30 },
     },
   },

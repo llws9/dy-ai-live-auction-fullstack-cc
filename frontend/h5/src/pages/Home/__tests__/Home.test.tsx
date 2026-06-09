@@ -284,7 +284,8 @@ describe('HomePage 分类联动 (T2.10)', () => {
     renderHome();
 
     const image = await screen.findByRole('img', { name: '压测拍品 1780733852' });
-    expect(image).toHaveAttribute('src', expect.stringContaining('/api/ide/v1/text_to_image'));
+    expect(image).toHaveAttribute('src', '/assets/default-auction-cover.svg');
+    expect(image).not.toHaveAttribute('src', expect.stringContaining('copilot-cn.bytedance.net'));
     expect(screen.queryByText('暂无图片')).not.toBeInTheDocument();
   });
 

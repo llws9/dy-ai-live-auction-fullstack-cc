@@ -88,8 +88,7 @@ interface LiveStream {
 }
 
 const SPECIAL_TABS: SpecialTab[] = ['全部', '收藏'];
-const DEFAULT_PRODUCT_COVER_IMAGE =
-  'https://copilot-cn.bytedance.net/api/ide/v1/text_to_image?prompt=premium%20auction%20product%20display%20on%20warm%20neutral%20background%2C%20realistic%20product%20photography%2C%20jade%20jewelry%20and%20luxury%20watch%2C%20soft%20studio%20lighting%2C%20mobile%20ecommerce%20card%20cover&image_size=landscape_4_3';
+const DEFAULT_PRODUCT_COVER_IMAGE = '/assets/default-auction-cover.svg';
 
 const SearchIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">

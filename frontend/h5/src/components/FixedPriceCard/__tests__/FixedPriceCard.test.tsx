@@ -82,7 +82,8 @@ describe('FixedPriceCard', () => {
     const image = screen.getByRole('img', { name: '破图商品' }) as HTMLImageElement;
     fireEvent.error(image);
 
-    expect(image.src).toContain('/api/ide/v1/text_to_image');
+    expect(image).toHaveAttribute('src', '/assets/default-auction-cover.svg');
+    expect(image.src).not.toContain('copilot-cn.bytedance.net');
   });
 
   it('优先展示接口返回的 product_title，避免降级成泛化标题', () => {

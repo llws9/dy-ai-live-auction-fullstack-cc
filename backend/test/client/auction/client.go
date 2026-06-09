@@ -25,7 +25,7 @@ const (
 	RoleUser     = "user"
 	RoleMerchant = "merchant"
 
-	defaultFixtureProductImage = "https://copilot-cn.bytedance.net/api/ide/v1/text_to_image?prompt=professional%20auction%20catalog%20photo%20of%20premium%20antique%20collectible%2C%20warm%20studio%20lighting%2C%20realistic%20product%20photography%2C%20mobile%20ecommerce%20card%20cover&image_size=landscape_4_3"
+	defaultFixtureProductImage = "/assets/default-auction-cover.svg"
 )
 
 // StepResult E2E 单步结果（同 spec §M3.2 StepResult）
