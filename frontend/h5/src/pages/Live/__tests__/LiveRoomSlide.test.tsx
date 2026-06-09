@@ -325,7 +325,7 @@ describe('LiveRoomSlide', () => {
   });
 
   it('does not render the product card follow row in the bid drawer while keeping ranking visible', async () => {
-    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+    const { container } = renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
 
     fireEvent.click(await screen.findByTestId('bid-dock'));
 
@@ -333,6 +333,8 @@ describe('LiveRoomSlide', () => {
       expect(screen.queryByText(/人收藏/)).not.toBeInTheDocument();
     });
     expect(screen.getByText('出价排行')).toBeInTheDocument();
+    const heatBar = screen.getByLabelText('竞拍战况热度');
+    expect(heatBar.parentElement).toBe(container.querySelector('.heatMarqueeContainer'));
   });
 
   it('publishes the resolved auction id to DemoContext and clears it on unmount', async () => {
@@ -1100,7 +1102,9 @@ describe('LiveRoomSlide', () => {
     const countdownEl = await screen.findByText('00:09');
     expect(countdownEl).toHaveClass('countdownUrgentText');
 
-    expect(screen.getByText(/🔥 已有 2 人出价 · 128 人围观/)).toBeInTheDocument();
+    expect(screen.getByText('战况冷静')).toBeInTheDocument();
+    expect(screen.getByText('已有 2 人出价')).toBeInTheDocument();
+    expect(screen.getByText('128 人围观')).toBeInTheDocument();
 
     dateNowSpy.mockRestore();
   });
