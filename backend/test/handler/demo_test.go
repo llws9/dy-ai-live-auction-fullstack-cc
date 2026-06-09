@@ -154,6 +154,30 @@ func TestPostConcurrentBidsRejectsBidCountAboveLimit(t *testing.T) {
 	}
 }
 
+func TestNormalizeConcurrentBidsRequestDefaultsMissingIntervalAndPreservesExplicitZero(t *testing.T) {
+	var missing concurrentBidsRequest
+	if err := json.Unmarshal([]byte(`{"auction_id":77}`), &missing); err != nil {
+		t.Fatalf("unmarshal missing interval: %v", err)
+	}
+	if err := normalizeConcurrentBidsRequest(&missing); err != nil {
+		t.Fatalf("normalize missing interval: %v", err)
+	}
+	if got := concurrentBidIntervalMS(missing); got != defaultConcurrentBidIntervalMS {
+		t.Fatalf("missing interval_ms normalized to %d, want %d", got, defaultConcurrentBidIntervalMS)
+	}
+
+	var explicitZero concurrentBidsRequest
+	if err := json.Unmarshal([]byte(`{"auction_id":77,"interval_ms":0}`), &explicitZero); err != nil {
+		t.Fatalf("unmarshal explicit zero interval: %v", err)
+	}
+	if err := normalizeConcurrentBidsRequest(&explicitZero); err != nil {
+		t.Fatalf("normalize explicit zero interval: %v", err)
+	}
+	if got := concurrentBidIntervalMS(explicitZero); got != 0 {
+		t.Fatalf("explicit interval_ms=0 normalized to %d, want 0", got)
+	}
+}
+
 func TestPostConcurrentBidsPlacesSerialIncrementalBids(t *testing.T) {
 	const secret = "demo-secret"
 	fake := &fakeDemoAuctionClient{
@@ -191,6 +215,30 @@ func TestPostConcurrentBidsPlacesSerialIncrementalBids(t *testing.T) {
 	}
 }
 
+func TestPostConcurrentBidsExplicitZeroIntervalDoesNotWait(t *testing.T) {
+	const secret = "demo-secret"
+	fake := &fakeDemoAuctionClient{
+		auction: auctioncli.Auction{
+			ID:           77,
+			CurrentPrice: 100,
+			Rules:        &auctioncli.AuctionRules{Increment: decimal.NewFromInt(10)},
+		},
+	}
+	h := NewDemoHandler(fake, nil, secret)
+	c := newDemoRequestContext(t, secret, `{"auction_id":77,"bid_count":3,"interval_ms":0}`)
+
+	startedAt := time.Now()
+	h.PostConcurrentBids(context.Background(), c)
+	elapsed := time.Since(startedAt)
+
+	if c.Response.StatusCode() != 200 {
+		t.Fatalf("status=%d want 200 body=%s", c.Response.StatusCode(), c.Response.Body())
+	}
+	if elapsed >= time.Duration(defaultConcurrentBidIntervalMS)*time.Millisecond {
+		t.Fatalf("explicit interval_ms=0 should not wait, elapsed=%s", elapsed)
+	}
+}
+
 func TestPostConcurrentBidsStopsBeforeCapPrice(t *testing.T) {
 	const secret = "demo-secret"
 	fake := &fakeDemoAuctionClient{
@@ -220,6 +268,28 @@ func TestPostConcurrentBidsStopsBeforeCapPrice(t *testing.T) {
 		if fake.bidCalls[i].amount != want {
 			t.Fatalf("call %d amount=%f want %f", i, fake.bidCalls[i].amount, want)
 		}
+	}
+}
+
+func TestPostConcurrentBidsPropagatesGetAuctionFailureStatus(t *testing.T) {
+	const secret = "demo-secret"
+	fake := &fakeDemoAuctionClient{
+		getStep: auctioncli.StepResult{Step: "get_auction", OK: false, StatusCode: 500, Message: "auction upstream unavailable"},
+	}
+	h := NewDemoHandler(fake, nil, secret)
+	c := newDemoRequestContext(t, secret, `{"auction_id":77,"bid_count":2,"interval_ms":0}`)
+
+	h.PostConcurrentBids(context.Background(), c)
+
+	if c.Response.StatusCode() != 500 {
+		t.Fatalf("status=%d want 500 body=%s", c.Response.StatusCode(), c.Response.Body())
+	}
+	var body map[string]any
+	if err := json.Unmarshal(c.Response.Body(), &body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	if body["step"] != "get_auction" || body["error"] != "auction upstream unavailable" {
+		t.Fatalf("unexpected response: %+v", body)
 	}
 }
 
@@ -270,6 +340,33 @@ func TestPostConcurrentBidsReturnsBadRequestWhenAllFailed(t *testing.T) {
 
 	if c.Response.StatusCode() != 400 {
 		t.Fatalf("status=%d want 400 body=%s", c.Response.StatusCode(), c.Response.Body())
+	}
+	body := decodeConcurrentBidsResponse(t, c.Response.Body())
+	if body.OK || body.SuccessCount != 0 || body.LastError != "竞拍已结束，无法出价" {
+		t.Fatalf("unexpected response: %+v", body)
+	}
+}
+
+func TestPostConcurrentBidsReturnsLastFailureStatusWhenAllFailed(t *testing.T) {
+	const secret = "demo-secret"
+	fake := &fakeDemoAuctionClient{
+		auction: auctioncli.Auction{
+			ID:           77,
+			CurrentPrice: 100,
+			Rules:        &auctioncli.AuctionRules{Increment: decimal.NewFromInt(10)},
+		},
+		bidResults: []auctioncli.StepResult{
+			{Step: "bid", OK: false, StatusCode: 500, Message: "auction upstream unavailable"},
+			{Step: "bid", OK: false, StatusCode: 409, Message: "竞拍已结束，无法出价"},
+		},
+	}
+	h := NewDemoHandler(fake, nil, secret)
+	c := newDemoRequestContext(t, secret, `{"auction_id":77,"bid_count":2,"interval_ms":0}`)
+
+	h.PostConcurrentBids(context.Background(), c)
+
+	if c.Response.StatusCode() != 409 {
+		t.Fatalf("status=%d want 409 body=%s", c.Response.StatusCode(), c.Response.Body())
 	}
 	body := decodeConcurrentBidsResponse(t, c.Response.Body())
 	if body.OK || body.SuccessCount != 0 || body.LastError != "竞拍已结束，无法出价" {

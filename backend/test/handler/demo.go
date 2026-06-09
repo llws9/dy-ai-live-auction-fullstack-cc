@@ -78,7 +78,7 @@ type followBidRequest struct {
 type concurrentBidsRequest struct {
 	AuctionID  int64           `json:"auction_id"`
 	BidCount   int             `json:"bid_count,omitempty"`
-	IntervalMS int             `json:"interval_ms,omitempty"`
+	IntervalMS *int            `json:"interval_ms,omitempty"`
 	Increment  json.RawMessage `json:"increment,omitempty"`
 }
 
@@ -162,13 +162,22 @@ func normalizeConcurrentBidsRequest(req *concurrentBidsRequest) error {
 	if req.BidCount < 1 || req.BidCount > maxConcurrentBidCount {
 		return fmt.Errorf("bid_count must be between 1 and %d", maxConcurrentBidCount)
 	}
-	if req.IntervalMS == 0 {
-		req.IntervalMS = defaultConcurrentBidIntervalMS
+	if req.IntervalMS == nil {
+		defaultInterval := defaultConcurrentBidIntervalMS
+		req.IntervalMS = &defaultInterval
 	}
-	if req.IntervalMS < 0 || req.IntervalMS > maxConcurrentBidIntervalMS {
+	intervalMS := concurrentBidIntervalMS(*req)
+	if intervalMS < 0 || intervalMS > maxConcurrentBidIntervalMS {
 		return fmt.Errorf("interval_ms must be between 0 and %d", maxConcurrentBidIntervalMS)
 	}
 	return nil
+}
+
+func concurrentBidIntervalMS(req concurrentBidsRequest) int {
+	if req.IntervalMS == nil {
+		return defaultConcurrentBidIntervalMS
+	}
+	return *req.IntervalMS
 }
 
 func effectiveConcurrentIncrement(requested *decimal.Decimal, ruleIncrement decimal.Decimal) decimal.Decimal {
@@ -484,7 +493,7 @@ func (h *DemoHandler) PostConcurrentBids(ctx context.Context, c *app.RequestCont
 
 	auction, step := h.bizCli.GetAuction(ctx, req.AuctionID)
 	if !step.OK {
-		c.JSON(400, map[string]any{"error": step.Message, "status": step.StatusCode})
+		writeDemoStepError(c, step)
 		return
 	}
 
@@ -507,16 +516,18 @@ func (h *DemoHandler) PostConcurrentBids(ctx context.Context, c *app.RequestCont
 	failureCount := 0
 	highestAmount := decimal.Zero
 	lastError := ""
+	lastFailureStatus := 0
+	intervalMS := concurrentBidIntervalMS(req)
 
 	for i := 0; i < req.BidCount; i++ {
-		if i > 0 && req.IntervalMS > 0 {
+		if i > 0 && intervalMS > 0 {
 			select {
 			case <-ctx.Done():
 				lastError = ctx.Err().Error()
 				failureCount++
 				i = req.BidCount
 				continue
-			case <-time.After(time.Duration(req.IntervalMS) * time.Millisecond):
+			case <-time.After(time.Duration(intervalMS) * time.Millisecond):
 			}
 		}
 
@@ -536,6 +547,9 @@ func (h *DemoHandler) PostConcurrentBids(ctx context.Context, c *app.RequestCont
 		step := h.bizCli.PlaceBid(ctx, buyerBUserID, req.AuctionID, bidAmount)
 		if !step.OK {
 			lastError = step.Message
+			if step.StatusCode >= 400 {
+				lastFailureStatus = step.StatusCode
+			}
 			failureCount++
 			continue
 		}
@@ -546,7 +560,11 @@ func (h *DemoHandler) PostConcurrentBids(ctx context.Context, c *app.RequestCont
 	status := 200
 	ok := true
 	if successCount == 0 {
-		status = 400
+		if lastFailureStatus >= 400 {
+			status = lastFailureStatus
+		} else {
+			status = 400
+		}
 		ok = false
 		if lastError == "" {
 			lastError = "no bid was placed"

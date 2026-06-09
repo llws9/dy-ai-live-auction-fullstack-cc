@@ -42,7 +42,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-10 05:44` |
+| Last Updated | `2026-06-10 05:53` |
 
 ## Status Legend
 
@@ -230,6 +230,8 @@
 | --- | --- | --- | --- |
 | `cd backend/test && go test ./handler -run 'TestPostConcurrentBids|TestPostFollowBid|TestComputeFollowBidAmount' -count=1` | Red failure before implementation | `FAIL: h.PostConcurrentBids undefined` | `passed_red_expectation` |
 | `cd backend/test && go test ./handler -run 'TestPostConcurrentBids|TestPostFollowBid|TestComputeFollowBidAmount' -count=1` | PASS | `ok test-service/handler 1.150s` | `passed` |
+| `cd backend/test && go test ./handler -run 'TestPostConcurrentBids|TestPostFollowBid|TestComputeFollowBidAmount' -count=1` | Red failure for quality fix | `FAIL: undefined: concurrentBidIntervalMS` | `passed_red_expectation` |
+| `cd backend/test && go test ./handler -run 'TestPostConcurrentBids|TestPostFollowBid|TestComputeFollowBidAmount' -count=1` | PASS | `ok test-service/handler 0.470s` | `passed` |
 
 **Runtime Source Evidence**
 
@@ -240,6 +242,7 @@
 **Modified Files**
 
 - `backend/test/handler/demo.go`
+- `backend/test/handler/demo_test.go`
 - `docs/superpowers/sdd/runs/2026-06-10-2026-06-10-h5-demo-concurrent-bids-state.md`
 
 **Integration Check**
@@ -252,11 +255,14 @@
 **Commits**
 
 - `b6667259ada99c5b316e2db6c44888b7db3e96bd` - `feat: add demo concurrent bids handler`
+- `pending` - `fix: tighten demo concurrent bids semantics`
 
 **Review Notes**
 
 - `PostConcurrentBids` keeps monetary arithmetic in `decimal.Decimal` until the existing SDK float64 boundary.
 - `cap_price` guard stops before amounts greater than or equal to cap price, avoiding direct成交 in demo pressure flow.
+- Quality fix: `interval_ms` now distinguishes missing from explicit `0`; missing defaults to `80`, explicit `0` performs no wait.
+- Quality fix: `GetAuction` errors use `writeDemoStepError`; all bid failures return the last valid upstream status code `>=400`, or `400` when absent.
 
 **Risks / Blockers**
 
