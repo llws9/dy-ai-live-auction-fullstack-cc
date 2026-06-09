@@ -11,7 +11,7 @@
 ## 2. 非目标
 
 - 不做边框呼吸光晕、不做背景粒子（成本高、易与已有飘屏视觉打架）。
-- 不依赖后端新增字段或接口，纯前端基于已收到的 WS 事件计算。
+- 不依赖后端新增字段或接口，纯前端基于现有实时事件与本地成功出价事件计算。
 - 不改动出价提交逻辑（A2 已从本次范围移除）。
 
 ## 3. 激烈度算法
@@ -34,28 +34,31 @@
 
 新增组件 `BidHeatBar`（`frontend/h5/src/components/LiveRoom/BidHeatBar.tsx` + 同名 `.module.css`）。
 
-- 职责单一: 输入「当前档位 level」，输出对应视觉的热度条。不感知 WS、不感知业务，纯展示。
+- 职责单一: 输入「当前档位 level」+「人数信息」，输出对应视觉的热度条。不感知 WS、不感知业务，纯展示。
 - Props:
   - `level: 'calm' | 'warming' | 'blazing'`
-  - 可选 `label?: string`（默认按档位给文案，如「战况升温」「白热化」）
+  - `bidderCount: number`
+  - `viewerCount: number`
 - 视觉:
   - 复用现有 `TreasureProgressBar` 的样式风格与设计 Token，保持直播间视觉一致。
   - 档位越高，填充比例越高、配色越暖；白热档加流光动画（`transform`/`opacity` 实现，不用 `width`/`left` 动画以保性能）。
+  - 文案由「档位文案 + 现有人数信息」组成，例如「战况白热 · 已有 N 人出价 · M 人围观」。
   - 适配双主题（light/dark）。
   - `prefers-reduced-motion` 下关闭流光动画，仅保留静态档位色。
 
-## 5. 集成
+## 5. 集成（升级现有 marquee，不新增布局）
 
-- 计算逻辑放在一个自定义 Hook `useBidHeat`（`frontend/h5/src/hooks/useBidHeat.ts`），输入「出价事件触发信号」，输出 `level`。
-  - 在 `LiveRoomSlide.tsx` 的 `ws.on('bid_placed', ...)` 回调里调用 Hook 暴露的 `markBid()`，使热度逻辑与渲染解耦。
-- 在 `LiveRoomSlide.tsx` 渲染 `<BidHeatBar level={level} />`，放置位置与现有直播间布局协调（建议主播信息区下方、与 `TreasureProgressBar` 同列对齐，不破坏既有对齐约束）。
+- 现状: `LiveRoomSlide.tsx` L1181-L1185 的 `heatMarqueeContainer` 已是一条静态「🔥 已有 N 人出价 · M 人围观」热度文案，位于 BidDock 抽屉内。
+- 方案: 用 `BidHeatBar` 替换 `heatMarqueeContainer`，复用其位置（抽屉内、价格块下方）。语义从静态文案升级为档位驱动的战况条，避免出现两个「热度」语义冲突，也不碰直播间主画面对齐约束。
+- 计算逻辑放在自定义 Hook `useBidHeat`（`frontend/h5/src/hooks/useBidHeat.ts`），输出 `level` 与 `markBid()`，与渲染解耦。
+- 在第 3 节所述三处出价来源调用 `markBid()`。
 
 ## 6. 数据流
 
 ```
-WS 'bid_placed' --> LiveRoomSlide 回调 --> useBidHeat.markBid()
+WS 'bid_placed' / handleBid 成功 / 'sky_lamp_auto_bid' --> useBidHeat.markBid()
 useBidHeat 内部 10s 滑窗 + 定时衰减 --> level
-level --> <BidHeatBar level /> 渲染
+level + 人数 --> <BidHeatBar /> 渲染（替换原 heatMarquee 位置）
 ```
 
 ## 7. 错误与边界

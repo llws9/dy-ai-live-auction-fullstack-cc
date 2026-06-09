@@ -23,6 +23,7 @@
 - 剧本类型: 单故障剧本，固定 `fault_type = 'error_rate'`，使用一组演示友好的预设参数（如 baseline 3s / inject 8s / recover 5s / error_rate 0.5）。
 - 执行: 点击后用预设参数复用现有 `startChaos` 流程（复用 `start()` 中 WS 连接 + 轮询逻辑），无需手动填参。
 - 前置: 依赖后端实验开始前已强制 `RecoverAll()` 的既有行为确保基线纯净（无需前端额外处理，但在 spec 中记录该依赖）。
+- 运行互斥: `running` 只表示启动请求进行中，不能代表实验全生命周期。按钮禁用必须同时考虑 `testID`、`progress`、`step`，仅当无测试或测试已进入终态（`step === 'done'` / `step === 'failed'` / `progress >= 100`）才允许再次启动。
 
 ### C1-b 阶段旁白字幕
 
@@ -30,8 +31,8 @@
   - baseline: 「正在采集基线指标，建立健康水位…」
   - inject: 「正在注入约 50% 错误率，观察系统反应…」（文案按当前 error_rate 动态生成）
   - recover: 「故障已移除，正在观测系统自愈…」
-  - 结束: 用 `summarizeResilienceReport` 已有结论文案收尾。
-- 仅手动模式与一键模式共用同一旁白逻辑（基于 `step`，不区分入口）。
+  - 结束: 当 `report` 已返回，或 `step === 'done'` / `progress >= 100` 且已有可用报告时，用 `summarizeResilienceReport` 已有结论文案收尾。
+- 仅手动模式与一键模式共用同一旁白逻辑（基于 `step` / `progress` / `report`，不区分入口）。
 
 ### C1-c 曲线锚点 + 量化指标卡
 
@@ -46,7 +47,7 @@
 
 ## 4. 组件与函数边界
 
-- 旁白文案生成: 纯函数 `buildNarration(step, form)` → string，便于单测。
+- 旁白文案生成: 纯函数 `buildNarration({ step, progress, form, report })` → string，便于单测；结束态必须显式依赖 `report` 或终态进度，不能只看 `step`。
 - 锚点计算: 纯函数 `buildCurveAnchors(buckets)` → `{ injectIndex?, slaBreachIndex?, recoverIndex? }`。
 - 量化指标计算: 纯函数 `buildDemoMetrics(report)` → `{ peakErrorRatePct, lostQps, recoveryMs }`。
 - 三个纯函数与渲染解耦，UI 仅消费其结果；`ResilienceCurve` 接收可选 anchors 渲染 `ReferenceLine`。
@@ -62,7 +63,7 @@ report/buckets --> buildDemoMetrics --> 指标卡
 
 ## 6. 错误与边界
 
-- 一键演示进行中按钮禁用，避免重复触发（复用现有 `running`/`testID` 禁用逻辑）。
+- 一键演示进行中按钮禁用，避免重复触发（需新增或复用类似 `isPressureStartDisabled` 的终态判断；不能只依赖当前 `running`）。
 - 无 SLA 击穿（错误率从未超阈值）: 不画击穿锚点。
 - 实时阶段 buckets 不全时: 锚点/指标卡按已有数据渐进显示，不报错。
 
