@@ -73,3 +73,17 @@ func TestBatchGetLiveStreams(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestHTTPLiveStreamClient_BatchDecodesViewerCount(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":200,"message":"success","data":{"items":[{"id":101,"name":"room","cover_image":"c","status":1,"creator_id":9,"viewer_count":128}]}}`))
+	}))
+	defer srv.Close()
+
+	c := NewHTTPLiveStreamClient(srv.URL, 0)
+	out, err := c.BatchGetLiveStreams(context.Background(), []int64{101})
+	require.NoError(t, err)
+	require.Contains(t, out, int64(101))
+	assert.Equal(t, int64(128), out[101].ViewerCount)
+}
