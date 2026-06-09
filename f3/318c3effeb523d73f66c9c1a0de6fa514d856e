@@ -1,0 +1,187 @@
+docs/superpowers/specs/2026-06-09-live-room-bid-heat-bar-design.md
+  h_be39affda52277 59,61
+  s_e74065dd1085e4::t_ba865a418ca0b4 14,37,40-41,45,49,51-54 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a27fd9f0bfcee1b04fbc6c3","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":14},{"Single":37},{"Range":[40,41]},{"Single":45},{"Single":49},{"Range":[51,54]}]}]}
+docs/superpowers/specs/2026-06-09-chaos-theater-mode-design.md
+  s_e74065dd1085e4::t_a712302ceea328 35,50 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a27fdc40bfcee1b04fbc72d","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":35},{"Single":50}]}]}
+  s_e74065dd1085e4::t_1b9aef8b498de0 26,34,66 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a27fdae0bfcee1b04fbc6f3","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":26},{"Single":34},{"Single":66}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "f3318c3effeb523d73f66c9c1a0de6fa514d856e",
+  "prompts": {},
+  "humans": {
+    "h_be39affda52277": {
+      "author": "翁松 <wengsong.9@bytedance.com>"
+    }
+  },
+  "sessions": {
+    "s_e74065dd1085e4": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a27ede70bfcee1b04fbc3b6",
+        "model": "gpt-5.5__max"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {
+    "docs/superpowers/specs/2026-06-09-chaos-theater-mode-design.md": [
+      {
+        "hash": "s_e74065dd1085e4::t_a712302ceea328",
+        "line_ranges": [
+          {
+            "Single": 35
+          },
+          {
+            "Single": 50
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a27fdc40bfcee1b04fbc72d",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 35
+              },
+              {
+                "Single": 50
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "hash": "s_e74065dd1085e4::t_1b9aef8b498de0",
+        "line_ranges": [
+          {
+            "Single": 26
+          },
+          {
+            "Single": 34
+          },
+          {
+            "Single": 66
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a27fdae0bfcee1b04fbc6f3",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 26
+              },
+              {
+                "Single": 34
+              },
+              {
+                "Single": 66
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "docs/superpowers/specs/2026-06-09-live-room-bid-heat-bar-design.md": [
+      {
+        "hash": "s_e74065dd1085e4::t_ba865a418ca0b4",
+        "line_ranges": [
+          {
+            "Single": 14
+          },
+          {
+            "Single": 37
+          },
+          {
+            "Range": [
+              40,
+              41
+            ]
+          },
+          {
+            "Single": 45
+          },
+          {
+            "Single": 49
+          },
+          {
+            "Range": [
+              51,
+              54
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a27fd9f0bfcee1b04fbc6c3",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 14
+              },
+              {
+                "Single": 37
+              },
+              {
+                "Range": [
+                  40,
+                  41
+                ]
+              },
+              {
+                "Single": 45
+              },
+              {
+                "Single": 49
+              },
+              {
+                "Range": [
+                  51,
+                  54
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "s_e74065dd1085e4": {
+      "tool": "trae",
+      "conversation_id": "6a27ede70bfcee1b04fbc3b6",
+      "session_id": "6a27ede70bfcee1b04fbc3b6",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_e74065dd1085e4::t_1b9aef8b498de0": {
+      "tool": "trae",
+      "conversation_id": "6a27ede70bfcee1b04fbc3b6",
+      "session_id": "6a27ede70bfcee1b04fbc3b6",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_e74065dd1085e4::t_a712302ceea328": {
+      "tool": "trae",
+      "conversation_id": "6a27ede70bfcee1b04fbc3b6",
+      "session_id": "6a27ede70bfcee1b04fbc3b6",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_e74065dd1085e4::t_ba865a418ca0b4": {
+      "tool": "trae",
+      "conversation_id": "6a27ede70bfcee1b04fbc3b6",
+      "session_id": "6a27ede70bfcee1b04fbc3b6",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
