@@ -303,6 +303,18 @@ const UserCenter: React.FC = () => {
           设置（暂未开放）
           <b>›</b>
         </Link>
+        <Link to="/" className={styles.secondaryItem}>
+          帮助中心（暂未开放）
+          <b>›</b>
+        </Link>
+        <Link to="/" className={styles.secondaryItem}>
+          客服与反馈（暂未开放）
+          <b>›</b>
+        </Link>
+        <Link to="/" className={styles.secondaryItem}>
+          关于平台（暂未开放）
+          <b>›</b>
+        </Link>
       </nav>
 
       <button

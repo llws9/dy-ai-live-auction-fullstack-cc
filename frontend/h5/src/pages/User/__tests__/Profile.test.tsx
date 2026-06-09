@@ -156,6 +156,9 @@ describe('Profile migration', () => {
     expect(mockedNotificationApi.getTouchpointSummary).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('link', { name: /1 件中标待支付/ })).toHaveAttribute('href', '/orders');
     expect(screen.getByRole('link', { name: /设置（暂未开放）/ })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: /帮助中心（暂未开放）/ })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: /客服与反馈（暂未开放）/ })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: /关于平台（暂未开放）/ })).toHaveAttribute('href', '/');
     const notificationLinks = screen.getAllByRole('link', { name: /消息通知/ });
     expect(notificationLinks).toHaveLength(1);
     expect(notificationLinks[0]).toHaveAttribute('href', '/notifications');
