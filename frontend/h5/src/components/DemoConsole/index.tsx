@@ -11,6 +11,7 @@ import {
 } from '../../services/demoApi';
 import { ApiError, liveStreamApi } from '../../services/api';
 import type { DemoMerchantAuctionMode } from '../../services/demoApi';
+import { dispatchDemoConcurrentBidsCompleted } from '../../events/demoAuctionEvents';
 import { dispatchDemoFixedPriceListed } from '../../events/fixedPriceEvents';
 import { useAuth } from '../../store/authContext';
 import { useDemo } from '../../store/demoContext';
@@ -143,6 +144,10 @@ export default function DemoConsole() {
     try {
       const result = await runWithDemoAuthRetry(() => triggerConcurrentBids({ auctionId: currentAuctionId }));
       if (result.highest_amount) {
+        dispatchDemoConcurrentBidsCompleted({
+          auctionId: currentAuctionId,
+          highestAmount: result.highest_amount,
+        });
         showToast(`并发出价已抬到 ¥${result.highest_amount}，请尝试用旧价出价`, 'success', TOAST_DURATION_MS);
       } else {
         showToast('已触发并发出价', 'success', TOAST_DURATION_MS);

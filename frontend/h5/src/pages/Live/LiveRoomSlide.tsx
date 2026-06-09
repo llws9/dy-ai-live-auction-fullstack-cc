@@ -23,6 +23,10 @@ import { useLiveChatStore } from '../../store/liveChatStore';
 import { trackBusinessEvent } from '../../utils/businessEvent';
 import { recordLiveRoomFootprint } from '../../utils/liveRoomFootprints';
 import { repairUtf8Mojibake } from '../../utils/textEncoding';
+import {
+  DEMO_CONCURRENT_BIDS_COMPLETED_EVENT,
+  type DemoConcurrentBidsCompletedDetail,
+} from '../../events/demoAuctionEvents';
 import BidDock from './BidDock';
 import RankingBlock from './RankingBlock';
 import { TreasureProgressBar } from './TreasureProgressBar';
@@ -702,6 +706,28 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
   useEffect(() => {
     setBidAmount(String(minBid));
   }, [minBid]);
+
+  useEffect(() => {
+    if (!active) return;
+
+    const handleDemoConcurrentBidsCompleted = (event: Event) => {
+      const detail = (event as CustomEvent<DemoConcurrentBidsCompletedDetail>).detail;
+      if (!detail || Number(detail.auctionId) !== effectiveAuctionId) return;
+
+      const highestAmount = toAmount(detail.highestAmount);
+      if (highestAmount <= 0) return;
+
+      setAuction((previous) => previous ? {
+        ...previous,
+        current_price: Math.max(toAmount(previous.current_price), highestAmount),
+      } : previous);
+    };
+
+    window.addEventListener(DEMO_CONCURRENT_BIDS_COMPLETED_EVENT, handleDemoConcurrentBidsCompleted);
+    return () => {
+      window.removeEventListener(DEMO_CONCURRENT_BIDS_COMPLETED_EVENT, handleDemoConcurrentBidsCompleted);
+    };
+  }, [active, effectiveAuctionId]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);

@@ -1033,6 +1033,26 @@ describe('LiveRoomSlide', () => {
     expect(screen.queryByText(/æ¼|ç¤|ä¹/)).not.toBeInTheDocument();
   });
 
+  it('refreshes bid input when demo concurrent bids report a newer highest amount', async () => {
+    renderSlide({ liveStreamId: 3, currentAuctionId: 5 });
+
+    fireEvent.click(await screen.findByTestId('bid-dock'));
+    const bidInput = await screen.findByLabelText('输入出价金额') as HTMLInputElement;
+
+    expect(bidInput.value).toBe('1300');
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('demo:concurrent-bids-completed', {
+        detail: {
+          auctionId: 5,
+          highestAmount: '1600',
+        },
+      }));
+    });
+
+    await waitFor(() => expect(bidInput.value).toBe('1700'));
+  });
+
   it('toggles haptic feedback and triggers vibration on bid success', async () => {
     const mockVibrate = jest.fn();
     Object.defineProperty(global.navigator, 'vibrate', {

@@ -503,6 +503,7 @@ describe('DemoConsole', () => {
 
   it('triggers concurrent bids for the current auction and reports the raised price', async () => {
     const user = userEvent.setup();
+    const dispatchSpy = jest.spyOn(window, 'dispatchEvent');
     renderConsole(777);
 
     await user.click(screen.getByTestId('demo-console-fab'));
@@ -511,6 +512,14 @@ describe('DemoConsole', () => {
 
     expect(mockedTriggerConcurrentBids).toHaveBeenCalledWith({ auctionId: 777 });
     expect(mockShowToast).toHaveBeenCalledWith('并发出价已抬到 ¥160，请尝试用旧价出价', 'success', 2500);
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'demo:concurrent-bids-completed',
+      detail: {
+        auctionId: 777,
+        highestAmount: '160',
+      },
+    }));
+    dispatchSpy.mockRestore();
   });
 
   it('warns and skips concurrent bids when there is no current auction', async () => {
