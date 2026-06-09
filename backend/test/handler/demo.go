@@ -29,6 +29,13 @@ const (
 	demoCategoryArtID     int64 = 12
 )
 
+const (
+	defaultConcurrentBidCount      = 6
+	maxConcurrentBidCount          = 20
+	defaultConcurrentBidIntervalMS = 80
+	maxConcurrentBidIntervalMS     = 1000
+)
+
 type demoAuctionClient interface {
 	GetAuction(ctx context.Context, auctionID int64) (auctioncli.Auction, auctioncli.StepResult)
 	PlaceBid(ctx context.Context, userID, auctionID int64, amount float64) auctioncli.StepResult
@@ -66,6 +73,13 @@ type followBidRequest struct {
 	AuctionID int64           `json:"auction_id"`
 	Amount    json.RawMessage `json:"amount,omitempty"`
 	Increment json.RawMessage `json:"increment,omitempty"`
+}
+
+type concurrentBidsRequest struct {
+	AuctionID  int64           `json:"auction_id"`
+	BidCount   int             `json:"bid_count,omitempty"`
+	IntervalMS int             `json:"interval_ms,omitempty"`
+	Increment  json.RawMessage `json:"increment,omitempty"`
 }
 
 type skyLampRequest struct {
@@ -136,6 +150,43 @@ func computeFollowBidAmount(current, start, increment decimal.Decimal, override 
 		baseline = start
 	}
 	return baseline.Add(increment)
+}
+
+func normalizeConcurrentBidsRequest(req *concurrentBidsRequest) error {
+	if req.AuctionID <= 0 {
+		return fmt.Errorf("auction_id is required")
+	}
+	if req.BidCount == 0 {
+		req.BidCount = defaultConcurrentBidCount
+	}
+	if req.BidCount < 1 || req.BidCount > maxConcurrentBidCount {
+		return fmt.Errorf("bid_count must be between 1 and %d", maxConcurrentBidCount)
+	}
+	if req.IntervalMS == 0 {
+		req.IntervalMS = defaultConcurrentBidIntervalMS
+	}
+	if req.IntervalMS < 0 || req.IntervalMS > maxConcurrentBidIntervalMS {
+		return fmt.Errorf("interval_ms must be between 0 and %d", maxConcurrentBidIntervalMS)
+	}
+	return nil
+}
+
+func effectiveConcurrentIncrement(requested *decimal.Decimal, ruleIncrement decimal.Decimal) decimal.Decimal {
+	increment := ruleIncrement
+	if requested != nil && requested.IsPositive() {
+		increment = *requested
+	}
+	if ruleIncrement.IsPositive() && increment.LessThan(ruleIncrement) {
+		increment = ruleIncrement
+	}
+	if !increment.IsPositive() {
+		increment = decimal.NewFromInt(1)
+	}
+	return increment
+}
+
+func concurrentBidAmount(baseline, increment decimal.Decimal, index int) decimal.Decimal {
+	return baseline.Add(increment.Mul(decimal.NewFromInt(int64(index + 1))))
 }
 
 func demoUserIDFromAuthorization(authHeader, jwtSecret string) (int64, error) {
@@ -403,6 +454,114 @@ func (h *DemoHandler) PostFollowBid(ctx context.Context, c *app.RequestContext) 
 		return
 	}
 	c.JSON(200, map[string]any{"ok": true, "auction_id": req.AuctionID, "buyer_user_id": buyerBUserID, "amount": amount.String()})
+}
+
+// PostConcurrentBids 以统一 seed 的买家B身份串行快速递增出价，稳定抬高当前拍卖价格。
+func (h *DemoHandler) PostConcurrentBids(ctx context.Context, c *app.RequestContext) {
+	if !h.authorizeDemoRequest(c) {
+		return
+	}
+	if h.bizCli == nil {
+		c.JSON(500, map[string]any{"error": "demo auction client is not configured"})
+		return
+	}
+
+	var req concurrentBidsRequest
+	if err := json.Unmarshal(c.Request.Body(), &req); err != nil {
+		c.JSON(400, map[string]any{"error": "invalid concurrent bids request"})
+		return
+	}
+	if err := normalizeConcurrentBidsRequest(&req); err != nil {
+		c.JSON(400, map[string]any{"error": err.Error()})
+		return
+	}
+
+	requestedIncrement, err := parseOptionalFollowBidAmount(req.Increment)
+	if err != nil {
+		c.JSON(400, map[string]any{"error": "invalid increment"})
+		return
+	}
+
+	auction, step := h.bizCli.GetAuction(ctx, req.AuctionID)
+	if !step.OK {
+		c.JSON(400, map[string]any{"error": step.Message, "status": step.StatusCode})
+		return
+	}
+
+	current := decimal.NewFromFloat(auction.CurrentPrice)
+	start := decimal.Zero
+	ruleIncrement := decimal.Zero
+	capPrice := decimal.Zero
+	if auction.Rules != nil {
+		start = auction.Rules.StartPrice
+		ruleIncrement = auction.Rules.Increment
+		capPrice = auction.Rules.CapPrice
+	}
+	baseline := current
+	if start.GreaterThan(baseline) {
+		baseline = start
+	}
+	increment := effectiveConcurrentIncrement(requestedIncrement, ruleIncrement)
+
+	successCount := 0
+	failureCount := 0
+	highestAmount := decimal.Zero
+	lastError := ""
+
+	for i := 0; i < req.BidCount; i++ {
+		if i > 0 && req.IntervalMS > 0 {
+			select {
+			case <-ctx.Done():
+				lastError = ctx.Err().Error()
+				failureCount++
+				i = req.BidCount
+				continue
+			case <-time.After(time.Duration(req.IntervalMS) * time.Millisecond):
+			}
+		}
+
+		amount := concurrentBidAmount(baseline, increment, i)
+		if capPrice.IsPositive() && amount.GreaterThanOrEqual(capPrice) {
+			break
+		}
+
+		bidAmount, err := decimalToBidAmount(amount)
+		if err != nil {
+			lastError = err.Error()
+			failureCount++
+			continue
+		}
+
+		hlog.CtxInfof(ctx, "[demo] concurrent-bids auction=%d amount=%s as buyerB=%d", req.AuctionID, amount, buyerBUserID)
+		step := h.bizCli.PlaceBid(ctx, buyerBUserID, req.AuctionID, bidAmount)
+		if !step.OK {
+			lastError = step.Message
+			failureCount++
+			continue
+		}
+		successCount++
+		highestAmount = amount
+	}
+
+	status := 200
+	ok := true
+	if successCount == 0 {
+		status = 400
+		ok = false
+		if lastError == "" {
+			lastError = "no bid was placed"
+		}
+	}
+
+	c.JSON(status, map[string]any{
+		"ok":             ok,
+		"auction_id":     req.AuctionID,
+		"buyer_user_id":  buyerBUserID,
+		"success_count":  successCount,
+		"failure_count":  failureCount,
+		"highest_amount": highestAmount.String(),
+		"last_error":     lastError,
+	})
 }
 
 // PostSkyLamp 以统一 seed 的买家B身份对指定拍卖开启点天灯。

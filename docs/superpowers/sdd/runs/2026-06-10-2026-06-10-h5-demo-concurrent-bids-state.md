@@ -31,18 +31,18 @@
 | State Template | `docs/superpowers/sdd/state-template.md` | yes | yes |
 | Plan | `docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md` | yes | yes |
 | Tasks | `docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md` | yes | yes |
-| Scope | `Task 1` | no | yes |
+| Scope | `Task 1, Task 3` | no | yes |
 
 ## Execution Summary
 
 | Metric | Value |
 | --- | --- |
-| Total Tasks | `1` |
-| Done | `1` |
+| Total Tasks | `2` |
+| Done | `2` |
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-10 05:25` |
+| Last Updated | `2026-06-10 05:44` |
 
 ## Status Legend
 
@@ -70,12 +70,14 @@
 | Task ID | Title | Status | Owner | Parallel Group | Depends On | Scope | Write Set | Read Set | Regression Sentinels | Runtime Services |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `T001` | `Auction SDK CapPrice Contract` | `done` | `main-agent` | `W1` | `-` | `Task 1` | `backend/test/client/auction/client.go; backend/test/client/auction/client_test.go` | `docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md` | `cd backend/test && go test ./client/auction -run 'TestSDK_GetAuctionParsesRule(Increment|CapPrice)|TestSDK_GetAuctionParsesStringCurrentPrice' -count=1` | `none` |
+| `T003` | `Demo Handler Implementation` | `done` | `main-agent` | `W3` | `T001,T002` | `Task 3` | `backend/test/handler/demo.go` | `backend/test/handler/demo_test.go; docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md` | `cd backend/test && go test ./handler -run 'TestPostConcurrentBids|TestPostFollowBid|TestComputeFollowBidAmount' -count=1` | `none` |
 
 ## Wave Plan
 
 | Wave | Goal | Tasks | Start Condition | Completion Condition |
 | --- | --- | --- | --- | --- |
 | `W1` | `Execute imported tasks with TDD evidence` | `T001` | `state file initialized` | `all tasks done or blocked with reason` |
+| `W3` | `Implement demo concurrent bids handler` | `T003` | `Task 2 failing tests present` | `target handler tests pass and implementation is committed` |
 
 ## Task Records
 
@@ -171,6 +173,99 @@
 
 - Completion summary: `Auction SDK now parses rules.cap_price into AuctionRules.CapPrice as decimal.Decimal.`
 - Remaining work: `none for Task 1`
+- First response line used: `当前分支/worktree：feat/h5-demo-concurrent-bids @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-h5-demo-concurrent-bids`
+
+### T003 - `Demo Handler Implementation`
+
+| Key | Value |
+| --- | --- |
+| Status | `done` |
+| Owner | `main-agent` |
+| Started At | `2026-06-10 05:36` |
+| Completed At | `2026-06-10 05:44` |
+| Branch | `feat/h5-demo-concurrent-bids` |
+| Worktree | `/Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-h5-demo-concurrent-bids` |
+| Base Commit | `b5893dc1d8ccfee21d70a859048a3252f5c09883` |
+| Target Branch | `main` |
+| Depends On | `T001,T002` |
+| Parallel Group | `W3` |
+
+**TDD Plan**
+
+- Red: use existing Task 2 handler tests as failing contract before implementation.
+- Green: implement request normalization, effective increment, serial incremental bidding, cap-price guard, and `ok` / `last_error` response.
+- Verify: run targeted handler regression command.
+- Red evidence: `cd backend/test && go test ./handler -run 'TestPostConcurrentBids|TestPostFollowBid|TestComputeFollowBidAmount' -count=1` failed with `h.PostConcurrentBids undefined`.
+- Green implementation: add `concurrentBidsRequest`, validation helpers, effective increment helpers, and `PostConcurrentBids`.
+- Verify evidence: targeted handler regression passed.
+
+**Write Set**
+
+- `backend/test/handler/demo.go`
+
+**Read Set**
+
+- `backend/test/handler/demo_test.go`
+- `docs/superpowers/plans/2026-06-10-h5-demo-concurrent-bids.md`
+- `AGENTS.md`
+- `docs/CONSTITUTION.md`
+- `docs/CODING.md`
+- `docs/superpowers/sdd/RUNBOOK.md`
+
+**Scope Expansion Requests**
+
+| Time | Requested Files | Reason | Decision |
+| --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` |
+
+**Regression Sentinels**
+
+- Automated sentinel: `cd backend/test && go test ./handler -run 'TestPostConcurrentBids|TestPostFollowBid|TestComputeFollowBidAmount' -count=1`
+- Manual fallback: `not needed`
+- Rollback behavior caught: missing concurrent bid handler, invalid request acceptance, non-serial amounts, cap_price crossing, and wrong partial/all-failed response semantics.
+
+**Verification Evidence**
+
+| Command | Expected | Actual | Result |
+| --- | --- | --- | --- |
+| `cd backend/test && go test ./handler -run 'TestPostConcurrentBids|TestPostFollowBid|TestComputeFollowBidAmount' -count=1` | Red failure before implementation | `FAIL: h.PostConcurrentBids undefined` | `passed_red_expectation` |
+| `cd backend/test && go test ./handler -run 'TestPostConcurrentBids|TestPostFollowBid|TestComputeFollowBidAmount' -count=1` | PASS | `ok test-service/handler 1.150s` | `passed` |
+
+**Runtime Source Evidence**
+
+| Service | Branch | Worktree | Commit | Dirty | Command | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| `-` | `-` | `-` | `-` | `-` | `-` | `-` |
+
+**Modified Files**
+
+- `backend/test/handler/demo.go`
+- `docs/superpowers/sdd/runs/2026-06-10-2026-06-10-h5-demo-concurrent-bids-state.md`
+
+**Integration Check**
+
+- Target branch: `main`
+- Branch relationship: `Task 3 started from b5893dc1d8ccfee21d70a859048a3252f5c09883 on feat/h5-demo-concurrent-bids`
+- Diff reviewed: `git diff -- backend/test/handler/demo.go docs/superpowers/sdd/runs/2026-06-10-2026-06-10-h5-demo-concurrent-bids-state.md`
+- Overlapping write-set tasks serialized: `yes; Task 3 only modified demo.go plus state`
+
+**Commits**
+
+- `pending` - `feat: add demo concurrent bids handler`
+
+**Review Notes**
+
+- `PostConcurrentBids` keeps monetary arithmetic in `decimal.Decimal` until the existing SDK float64 boundary.
+- `cap_price` guard stops before amounts greater than or equal to cap price, avoiding direct成交 in demo pressure flow.
+
+**Risks / Blockers**
+
+- `-`
+
+**Handoff**
+
+- Completion summary: `Demo handler supports serial fast concurrent-bid simulation with validation, effective increment, cap-price guard, and ok/last_error response.`
+- Remaining work: `Task 4 route registration and frontend tasks are outside this execution scope.`
 - First response line used: `当前分支/worktree：feat/h5-demo-concurrent-bids @ /Users/bytedance/myself/coding/dy-ai-live-auction-fullstack-cc/.worktrees/feat-h5-demo-concurrent-bids`
 
 
