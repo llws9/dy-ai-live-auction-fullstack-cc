@@ -128,6 +128,16 @@ describe('Live layout css', () => {
     expect(heatMarqueeContainerCss).toContain('border-radius: 0;');
   });
 
+  it('positions the bid heat bar as a floating dock on the bid sheet rim', () => {
+    const css = readLiveCss();
+    const sheetDockAddonCss = getClassBlock(css, 'sheetDockAddon');
+
+    expect(sheetDockAddonCss).toContain('position: absolute;');
+    expect(sheetDockAddonCss).toContain('bottom: calc(50dvh - 1px);');
+    expect(sheetDockAddonCss).toContain('z-index: 10;');
+    expect(sheetDockAddonCss).toContain('pointer-events: none;');
+  });
+
   it('keeps the online viewers pill compact without a close affordance', () => {
     const css = readLiveCss();
     const viewersRowCss = getClassBlock(css, 'viewersRow');

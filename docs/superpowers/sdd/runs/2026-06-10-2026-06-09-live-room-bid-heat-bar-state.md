@@ -42,7 +42,7 @@
 | Blocked | `0` |
 | In Progress | `0` |
 | Pending | `0` |
-| Last Updated | `2026-06-10 04:20` |
+| Last Updated | `2026-06-10 04:45` |
 
 ## Status Legend
 
@@ -110,6 +110,8 @@
 - `frontend/h5/src/components/LiveRoom/BidHeatBar.module.css`
 - `frontend/h5/src/components/LiveRoom/__tests__/BidHeatBar.test.tsx`
 - `frontend/h5/src/pages/Live/LiveRoomSlide.tsx`
+- `frontend/h5/src/pages/Live/BidDock.tsx`
+- `frontend/h5/src/pages/Live/__tests__/BidDock.test.tsx`
 - `frontend/h5/src/pages/Live/Live.module.css`
 - `frontend/h5/src/pages/Live/__tests__/LiveLayoutCss.test.ts`
 - `docs/superpowers/sdd/runs/2026-06-10-2026-06-09-live-room-bid-heat-bar-state.md`
@@ -154,6 +156,11 @@
 | `cd frontend/h5 && npm run build` | production build after post-review UI tuning | `tsc && vite build` passed, 149 modules transformed | `pass` |
 | `cd frontend/h5 && npm test -- BidHeatBar.test.tsx LiveLayoutCss.test.ts LiveRoomSlide.test.tsx` | broader A1 live-room regression after tuning | 3 suites passed, 57 tests passed | `pass` |
 | `git diff --check` | no whitespace errors | passed | `pass` |
+| `cd frontend/h5 && npm test -- BidHeatBar.test.tsx BidDock.test.tsx LiveLayoutCss.test.ts LiveRoomSlide.test.tsx` | RED for sheet-rim dock placement and live fill semantics | failed on missing `topAddon`, missing `sheetDockAddon`, and calm meter still full-filled | `pass_red` |
+| `cd frontend/h5 && npm test -- BidHeatBar.test.tsx BidDock.test.tsx LiveLayoutCss.test.ts LiveRoomSlide.test.tsx` | sheet-rim dock and live fill tests pass | 4 suites passed, 66 tests passed | `pass` |
+| `cd frontend/h5 && npm run build` | production build after sheet-rim dock change | `tsc && vite build` passed, 149 modules transformed | `pass` |
+| `git diff --check` | no whitespace errors | passed | `pass` |
+| `curl -s http://localhost:5173/src/pages/Live/BidDock.tsx ...` | dev server source contains `topAddon`/`sheetDockAddon`; `BidHeatBar` contains `value: 24` | source markers present | `pass` |
 
 **Runtime Source Evidence**
 
@@ -186,6 +193,7 @@
 
 **Review Notes**
 
+- Sheet-rim dock tuning: moved `BidHeatBar` from sheet scroll content into `BidDock.topAddon` rendered as `sheetDockAddon` on the sheet rim; restored calm fill to the original live value `24` while keeping the track width full.
 - Post-review UI tuning: removed the outer `heatMarqueeContainer` gray shell, slimmed `BidHeatBar` vertical density, made calm state keep a full-length meter, and removed the accidental `undefined` class from the rendered section.
 - Main-agent final review: verified no hardcoded HEX in `BidHeatBar.module.css`; verified `BidHeatBar` remains inside `styles.heatMarqueeContainer`; reran targeted tests and H5 build successfully.
 - Main-agent review requested changes: replace hardcoded CSS colors in `BidHeatBar.module.css` with existing H5 design tokens (`--color-*`, `--bg-*`, `--surface-*`, `--text-*`); preserve old heat marquee layout position by wrapping `BidHeatBar` with `styles.heatMarqueeContainer` or otherwise explicitly retaining equivalent spacing semantics.

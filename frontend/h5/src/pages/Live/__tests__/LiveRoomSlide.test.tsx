@@ -334,7 +334,8 @@ describe('LiveRoomSlide', () => {
     });
     expect(screen.getByText('出价排行')).toBeInTheDocument();
     const heatBar = screen.getByLabelText('竞拍战况热度');
-    expect(heatBar.parentElement).toBe(container.querySelector('.heatMarqueeContainer'));
+    expect(heatBar.parentElement).toBe(container.querySelector('.sheetDockAddon'));
+    expect(container.querySelector('.sheet')).not.toContainElement(heatBar);
   });
 
   it('publishes the resolved auction id to DemoContext and clears it on unmount', async () => {

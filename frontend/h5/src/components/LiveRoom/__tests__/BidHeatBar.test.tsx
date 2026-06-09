@@ -10,8 +10,9 @@ describe('BidHeatBar', () => {
     expect(screen.getByText('战况冷静')).toBeInTheDocument();
     expect(screen.getByText('已有 1 人出价')).toBeInTheDocument();
     expect(screen.getByText('88 人围观')).toBeInTheDocument();
-    expect(screen.getByRole('meter', { name: '战况热度' })).toHaveAttribute('aria-valuenow', '100');
-    expect(screen.getByTestId('bid-heat-fill')).toHaveStyle({ transform: 'scaleX(1)' });
+    expect(screen.getByRole('meter', { name: '战况热度' })).toHaveAttribute('aria-valuemax', '100');
+    expect(screen.getByRole('meter', { name: '战况热度' })).toHaveAttribute('aria-valuenow', '24');
+    expect(screen.getByTestId('bid-heat-fill')).toHaveStyle({ transform: 'scaleX(0.24)' });
   });
 
   it('renders warming label and warm state class', () => {
@@ -45,5 +46,6 @@ describe('BidHeatBar', () => {
     expect(css).toContain('gap: 4px;');
     expect(css).toContain('padding: 6px 10px;');
     expect(css).toContain('height: 6px;');
+    expect(css).toContain('width: 100%;');
   });
 });

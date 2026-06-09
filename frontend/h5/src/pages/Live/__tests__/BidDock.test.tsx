@@ -76,6 +76,22 @@ describe('BidDock', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('打开抽屉时把 topAddon 渲染为抽屉顶部坞，而不是塞进滚动内容', () => {
+    render(
+      <BidDock {...baseProps} sheet="bid" topAddon={<section aria-label="竞拍战况热度">热度条</section>}>
+        <div>出价表单</div>
+      </BidDock>
+    );
+
+    const addon = screen.getByTestId('bid-dock-top-addon');
+    const heatBar = screen.getByLabelText('竞拍战况热度');
+    const sheet = screen.getByLabelText('收起竞拍面板').parentElement;
+
+    expect(addon).toHaveClass('sheetDockAddon');
+    expect(addon).toContainElement(heatBar);
+    expect(sheet).not.toContainElement(heatBar);
+  });
+
   it('打开抽屉时先挂载闭合态，再进入滑入态', () => {
     const rafCallbacks: FrameRequestCallback[] = [];
     const requestAnimationFrameSpy = jest

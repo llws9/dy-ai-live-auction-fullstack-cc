@@ -827,6 +827,16 @@
   background: rgba(0, 0, 0, 0.45);
 }
 
+.sheetDockAddon {
+  position: absolute;
+  right: calc(var(--spacing-5) + 40px);
+  bottom: calc(50dvh - 1px);
+  left: calc(var(--spacing-5) + 40px);
+  z-index: 10;
+  display: flex;
+  pointer-events: none;
+}
+
 .sheet {
   position: absolute;
   right: 0;

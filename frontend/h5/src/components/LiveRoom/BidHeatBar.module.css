@@ -3,6 +3,7 @@
   --heat-accent-strong: var(--color-info-600);
   --heat-glow: color-mix(in srgb, var(--heat-accent) 28%, transparent);
   display: grid;
+  width: 100%;
   gap: 4px;
   padding: 6px 10px;
   border: 1px solid color-mix(in srgb, var(--heat-accent) 42%, transparent);

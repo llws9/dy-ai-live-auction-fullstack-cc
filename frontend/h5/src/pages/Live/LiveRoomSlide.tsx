@@ -1184,6 +1184,9 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
           onOpen={openSheet}
           onClose={closeSheet}
           onRequireLogin={() => showToast('请先登录后出价')}
+          topAddon={
+            <BidHeatBar level={heatLevel} bidderCount={ranking.length} viewerCount={viewerCount} />
+          }
         >
         <div className={styles.priceBlock}>
           <span className={styles.priceLabel}>当前最高价</span>
@@ -1192,10 +1195,6 @@ const LiveRoomSlide: React.FC<LiveRoomSlideProps> = ({ liveStreamId, currentAuct
             <span>起拍价 ¥{formatMoney(startPrice)}</span>
             <span>加价幅度 ¥{formatMoney(increment)}</span>
           </div>
-        </div>
-
-        <div className={styles.heatMarqueeContainer}>
-          <BidHeatBar level={heatLevel} bidderCount={ranking.length} viewerCount={viewerCount} />
         </div>
 
         <div className={`${styles.countdown} ${timeLeft < 10 && timeLeft > 0 ? styles.countdownUrgent : ''}`}>

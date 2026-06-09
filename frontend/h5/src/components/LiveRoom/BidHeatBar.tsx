@@ -10,7 +10,7 @@ interface BidHeatBarProps {
 const HEAT_VIEW = {
   calm: {
     label: '战况冷静',
-    value: 100,
+    value: 24,
   },
   warming: {
     label: '战况升温',
