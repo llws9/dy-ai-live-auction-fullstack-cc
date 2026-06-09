@@ -40,6 +40,7 @@ description: >
 - **`/dp-prod` 部署脚本的阻断条件**：要求工作区干净且 `HEAD == origin/main`，任一条件不满足都会阻断部署计划生成。本地领先远端的提交不会自动部署，需先 `git push origin main` 同步
 - **远端 Compose Project 名称不一致**：当前 demo 生产环境实际运行的容器 project 名为 `app`（如 `app-gateway-1`、`app-auction-1`），但部署脚本默认期望 `auction-demo`。直接使用默认 project name 会导致端口冲突，需显式设置 `COMPOSE_PROJECT_NAME=app` 或执行 project 迁移
 - **Compose Project 迁移风险**：切换 project name 会影响命名卷（如 `app_mysql-demo-data` → `auction-demo_mysql-demo-data`），可能导致新容器使用空卷。迁移前必须备份数据卷，或显式复用旧卷
+- **Project 迁移执行方案**：统一成 `auction-demo` 需执行维护窗口迁移，步骤为：备份数据和静态资源 → 停 `app` 容器（不删卷）→ 复制 `app_*` 卷到 `auction-demo_*` → 启动 `auction-demo` → seed demo 用户 → 验证全链路。严禁执行 `down -v`，必须保留 `app_*` 卷作为回滚点
 
 ## Architecture
 - 前端按 H5、Admin、Test Dashboard 拆分，各自独立构建，但 API/WS 公共入口统一由 Gateway 与 Nginx 代理承载（`deploy/demo/MAIN_DEPLOY_QUICKSTART.md`）

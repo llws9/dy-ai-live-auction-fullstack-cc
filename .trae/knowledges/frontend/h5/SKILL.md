@@ -199,6 +199,30 @@ x = (tabRect.left - navRect.left) + (tabRect.width - W) / 2
 
 **来源**：session:6a28703b0bfcee1b04fc2ec6
 
+### H5 底部导航共享指示器实现细节 (BottomNav Shared Indicator Implementation)
+
+**实现检查清单**（从设计到落地的关键验证点）：
+- [x] 指示器 `z-index` 设置为 `0`（非 `-1`），Tab 设置为 `1`，避免被背景层遮挡
+- [x] 首次定位禁用过渡动画，避免初始位置跳变
+- [x] 监听 `resize` 和 `document.fonts.ready` 重新测量
+- [x] 动效时长统一为 `260ms`，仅过渡 `transform` 属性
+- [x] 支持 `prefers-reduced-motion` 媒体查询降级为无动画
+
+**关键实现细节**：
+- 胶囊固定宽度 `72px`，通过 DOM 测量计算每个 Tab 的中心位置
+- 使用 `useLayoutEffect` 而非 `useEffect` 进行初始测量，避免首帧闪烁
+- Tab 宽度通过 `getBoundingClientRect()` 获取，需考虑字体加载完成后的重测
+- 路由变化时需重新触发测量，确保指示器位置正确
+- 指示器和 Tab 的 `z-index` 层级：指示器 `z-index: 0`，Tab `z-index: 1`，确保 Tab 内容在指示器上方
+
+**测试要点**：
+- 验证固定宽度胶囊在三个不同宽度 Tab 间的居中定位
+- 验证 `document.fonts.ready` 后重测机制
+- 验证 `prefers-reduced-motion` 降级
+- 验证双主题下指示器颜色正确性
+
+**来源**：session:6a28703b0bfcee1b04fc2ec6
+
 ### H5 首页直播间维度重构 (Homepage LiveRoom Dimension)
 
 **决策背景**：原首页查询的是「竞拍维度」卡片，但业务设定是一个商家只能有一个直播间，一个直播间同一时间只能有一个正在竞拍和一个即将开始；这导致首页和直播间 feed 数据重叠但形态不同，需要明确心智区分。
