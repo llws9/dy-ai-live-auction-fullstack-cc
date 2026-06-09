@@ -611,6 +611,63 @@ describe('HomePage 分类联动 (T2.10)', () => {
     expect(screen.getByRole('heading', { name: '热度结果' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '过期结果' })).not.toBeInTheDocument();
   });
+
+  it('进行中竞拍卡片在封面右下角展示真实观看人数', async () => {
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [
+        {
+          id: 30, product_id: 300, live_stream_id: 5, status: 1,
+          current_price: 1000, viewer_count: 128,
+          end_time: new Date(Date.now() + 3_600_000).toISOString(),
+          product: { id: 300, name: '在线人数拍品', images: ['/a.jpg'] },
+        },
+      ],
+      total: 1,
+    });
+
+    renderHome();
+
+    await screen.findByRole('heading', { name: '在线人数拍品' });
+    expect(screen.getByText(/128\s*观看/)).toBeInTheDocument();
+  });
+
+  it('进行中竞拍 viewer_count 为 0（降级）时不展示观看人数', async () => {
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [
+        {
+          id: 31, product_id: 301, live_stream_id: 5, status: 1,
+          current_price: 1000, viewer_count: 0,
+          end_time: new Date(Date.now() + 3_600_000).toISOString(),
+          product: { id: 301, name: '降级拍品', images: ['/a.jpg'] },
+        },
+      ],
+      total: 1,
+    });
+
+    renderHome();
+
+    await screen.findByRole('heading', { name: '降级拍品' });
+    expect(screen.queryByText(/观看/)).not.toBeInTheDocument();
+  });
+
+  it('已结束竞拍即使带 viewer_count 也不展示观看人数', async () => {
+    mockedAuctionApi.list.mockResolvedValue({
+      list: [
+        {
+          id: 32, product_id: 302, status: 3,
+          current_price: 1000, viewer_count: 99,
+          end_time: new Date(Date.now() - 1000).toISOString(),
+          product: { id: 302, name: '结束拍品', images: ['/a.jpg'] },
+        },
+      ],
+      total: 1,
+    });
+
+    renderHome();
+
+    await screen.findByRole('heading', { name: '结束拍品' });
+    expect(screen.queryByText(/观看/)).not.toBeInTheDocument();
+  });
 });
 
 describe('HomePage 未读消息红点 (T3.6 / F-D2)', () => {

@@ -233,6 +233,28 @@
   backdrop-filter: blur(12px);
 }
 
+.viewerBadge {
+  position: absolute;
+  right: var(--spacing-2);
+  bottom: var(--spacing-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px var(--spacing-2);
+  border-radius: var(--radius-full);
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 10px;
+  backdrop-filter: blur(12px);
+}
+
+.viewerDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff4d4f;
+}
+
 .statusLive {
   color: var(--text-brand);
 }

@@ -53,6 +53,7 @@ interface RawAuction {
   };
   bid_count?: number;
   bidder_count?: number;
+  viewer_count?: number | string;
   start_time?: string;
   end_time?: string;
 }
@@ -64,6 +65,7 @@ interface HomeAuction {
   status: number;
   currentPrice: number;
   bidCount: number;
+  viewerCount: number;
   sold: boolean;
   startTime?: string;
   endTime?: string;
@@ -250,6 +252,7 @@ const normalizeAuction = (auction: RawAuction, product?: ProductSummary): HomeAu
     status: auction.status ?? 0,
     currentPrice: currentPrice > 0 ? currentPrice : startPrice,
     bidCount: auction.bid_count ?? auction.bidder_count ?? 0,
+    viewerCount: toNumber(auction.viewer_count),
     sold,
     startTime: auction.start_time,
     endTime: auction.end_time,
@@ -672,6 +675,12 @@ const HomePage: React.FC = () => {
                       {upcoming && <span className={styles.upcomingDot} />}
                       {statusInfo.label}
                     </div>
+                    {statusInfo.live && auction.viewerCount > 0 && (
+                      <div className={styles.viewerBadge}>
+                        <span className={styles.viewerDot} />
+                        {auction.viewerCount.toLocaleString()} 观看
+                      </div>
+                    )}
                   </div>
 
                   <div className={styles.cardBody}>
