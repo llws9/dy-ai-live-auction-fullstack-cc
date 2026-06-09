@@ -442,8 +442,13 @@ assert_not_contains \
 
 assert_contains \
   "$ROOT/scripts/init-demo-users.sh" \
-  'mysql -h127\.0\.0\.1 -P3306' \
+  'mysql .* -h127\.0\.0\.1 -P3306' \
   "init-demo-users.sh must fall back to the host MySQL used by local backend processes"
+
+assert_contains \
+  "$ROOT/scripts/init-demo-users.sh" \
+  'default-character-set=utf8mb4' \
+  "init-demo-users.sh must write Chinese demo seed data through an explicit utf8mb4 MySQL connection"
 
 assert_contains \
   "$ROOT/scripts/init-demo-users.sh" \

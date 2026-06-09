@@ -24,11 +24,11 @@ mysql_exec() {
   if [[ -n "$mysql_container" ]] && [[ "$(docker inspect -f '{{.State.Running}}' "$mysql_container" 2>/dev/null || true)" == "true" ]]; then
     local mysql_password
     mysql_password="$(docker exec "$mysql_container" sh -lc 'printf "%s" "${MYSQL_ROOT_PASSWORD:-root}"')"
-    docker exec -i "$mysql_container" mysql -uroot -p"$mysql_password" auction "$@"
+    docker exec -i "$mysql_container" mysql --default-character-set=utf8mb4 -uroot -p"$mysql_password" auction "$@"
     return
   fi
 
-  mysql -h127.0.0.1 -P3306 -uroot -p"${MYSQL_ROOT_PASSWORD:-root}" auction "$@"
+  mysql --default-character-set=utf8mb4 -h127.0.0.1 -P3306 -uroot -p"${MYSQL_ROOT_PASSWORD:-root}" auction "$@"
 }
 
 mysql_scalar() {
