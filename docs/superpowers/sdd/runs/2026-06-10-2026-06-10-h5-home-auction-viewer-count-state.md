@@ -17,7 +17,7 @@
 | Worktree Dirty | `no (fresh worktree + copied docs)` |
 | Started At | `2026-06-10 07:43` |
 | Owner | `main-agent` |
-| Status | `active` |
+| Status | `completed` |
 
 ## Worktree Selection Note
 
@@ -37,11 +37,11 @@ RUNBOOK 默认 worktree 路径 `/Users/bytedance/.config/superpowers/worktrees/.
 | Metric | Value |
 | --- | --- |
 | Total Tasks | `5` |
-| Done | `4` |
+| Done | `5` |
 | Blocked | `0` |
 | In Progress | `0` |
-| Pending | `1 (T005 部署验证待用户决定)` |
-| Last Updated | `2026-06-10 08:10` |
+| Pending | `0` |
+| Last Updated | `2026-06-10 (T005 done)` |
 
 ## Key Decisions (from定稿 spec)
 
@@ -54,11 +54,11 @@ RUNBOOK 默认 worktree 路径 `/Users/bytedance/.config/superpowers/worktrees/.
 
 | Task ID | Title | Status | Owner | Wave | Depends On | Write Set | Read Set | Regression Sentinels |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `T001` | product 内部批量接口回填 viewer_count | `pending` | unassigned | `W1` | `-` | `backend/product/handler/internal.go`, `backend/product/main.go`, `backend/product/handler/internal_test.go` | `backend/product/service/live_stream.go`, plan/spec | `TestInternalHandler_BatchLiveStreams_ViewerCountRedisFirst/DBFallback` |
-| `T002` | auction client 透传 viewer_count | `pending` | unassigned | `W1` | `-` | `backend/auction/client/live_stream_client.go`, `backend/auction/client/live_stream_client_test.go` | plan/spec | `TestHTTPLiveStreamClient_BatchDecodesViewerCount` |
-| `T003` | auction 列表编排回填 viewer_count（含降级） | `pending` | unassigned | `W2` | `T002` | `backend/auction/handler/auction_list.go`, `backend/auction/handler/auction.go`, `backend/auction/handler/auction_list_test.go` | `backend/auction/client/live_stream_client.go`, plan/spec | `TestBuildAuctionListResponse_ViewerCount`（含降级不 5xx 子测试） |
-| `T004` | H5 首页类型扩展 + 进行中卡片渲染 pill | `pending` | unassigned | `W1` | `-` | `frontend/h5/src/pages/Home/index.tsx`, `frontend/h5/src/pages/Home/Home.module.css`, `frontend/h5/src/pages/Home/__tests__/Home.test.tsx` | plan/spec | `Home.test.tsx` 3 用例（展示/降级 0 不展示/已结束不展示） |
-| `T005` | 本地联调与部署验证 | `pending` | unassigned | `W3` | `T001,T003,T004` | `-（验证 only）` | 全链路 | curl `viewer_count` 透出 + 降级 + H5 视觉 |
+| `T001` | product 内部批量接口回填 viewer_count | `done` | subagent | `W1` | `-` | `backend/product/handler/internal.go`, `backend/product/main.go`, `backend/product/handler/internal_test.go` | `backend/product/service/live_stream.go`, plan/spec | `TestInternalHandler_BatchLiveStreams_ViewerCountRedisFirst/DBFallback` |
+| `T002` | auction client 透传 viewer_count | `done` | subagent | `W1` | `-` | `backend/auction/client/live_stream_client.go`, `backend/auction/client/live_stream_client_test.go` | plan/spec | `TestHTTPLiveStreamClient_BatchDecodesViewerCount` |
+| `T003` | auction 列表编排回填 viewer_count（含降级） | `done` | subagent | `W2` | `T002` | `backend/auction/handler/auction_list.go`, `backend/auction/handler/auction.go`, `backend/auction/handler/auction_list_test.go` | `backend/auction/client/live_stream_client.go`, plan/spec | `TestBuildAuctionListResponse_ViewerCount`（含降级不 5xx 子测试） |
+| `T004` | H5 首页类型扩展 + 进行中卡片渲染 pill | `done` | subagent | `W1` | `-` | `frontend/h5/src/pages/Home/index.tsx`, `frontend/h5/src/pages/Home/Home.module.css`, `frontend/h5/src/pages/Home/__tests__/Home.test.tsx` | plan/spec | `Home.test.tsx` 3 用例（展示/降级 0 不展示/已结束不展示） |
+| `T005` | 本地联调与部署验证 | `done` | main-agent | `W3` | `T001,T003,T004` | `-（验证 only）` | 全链路 | curl `viewer_count` 透出 + 运行时回填链路 + H5 视觉 |
 
 ## Wave Plan
 
@@ -108,8 +108,8 @@ RUNBOOK 默认 worktree 路径 `/Users/bytedance/.config/superpowers/worktrees/.
 ### T005 - 本地联调验证
 | Key | Value |
 | --- | --- |
-| Status | `pending（待用户决定是否 deploy-dev 联调）` |
-| Verification | `not_run` |
+| Status | `done` |
+| Verification | `passed`：(1) `git push origin main` 使 HEAD==origin/main（5 commit 推送）；(2) `scripts/deploy-dev.sh restart` 全栈重启 + `本地验证通过`；(3) curl `GET /api/v1/auctions` 确认 `viewer_count` 字段透出（默认全 status=3，值 0 符合预期）；(4) 运行时回填链路验证：Redis 写 `live:viewer:993112=1314` 后，引用该 live_stream 的 auction 全部回填 1314、其它 live_stream 仍 0（去重+独立查询正确），验证后已 DEL 清理；(5) H5 home HTTP 200。降级语义由 T003 单测 `fakeLiveStreamClient` 返回 error 子测试覆盖（运行时无法靠停整个 product-service 隔离，因商品摘要会先 5xx）。 |
 
 ## Runtime Sources
 
@@ -123,5 +123,5 @@ RUNBOOK 默认 worktree 路径 `/Users/bytedance/.config/superpowers/worktrees/.
 
 **状态**
 
-- `4/5 任务 done（T001-T004 全 TDD 通过并提交）。T005 部署联调 + 合入 main 待用户决定。`
+- `5/5 任务 done（T001-T004 全 TDD 通过并提交；T005 本地部署联调验证通过）。已合入 main 并 push origin/main。`
 - `diff vs main 仅 13 文件，范围 = 三块 write set + 批准的 5 行调用方适配。backend product/auction 全包测试通过；H5 jest 31 passed。`
