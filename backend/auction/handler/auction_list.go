@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"auction-service/client"
 	"auction-service/dao"
@@ -46,8 +47,9 @@ type AuctionProductSummary struct {
 // AuctionListItem 是 list 响应中的单条记录：原 auction 字段 + 内嵌 product 摘要。
 type AuctionListItem struct {
 	model.Auction
-	StartPrice *decimal.Decimal      `json:"start_price,omitempty"`
-	Product    AuctionProductSummary `json:"product"`
+	StartPrice  *decimal.Decimal      `json:"start_price,omitempty"`
+	Product     AuctionProductSummary `json:"product"`
+	ViewerCount int64                 `json:"viewer_count"`
 }
 
 // BuildAuctionListResponse 编排 GET /auctions 的核心逻辑：
@@ -60,6 +62,7 @@ type AuctionListItem struct {
 func BuildAuctionListResponse(
 	ctx context.Context,
 	pc client.ProductClient,
+	lsc client.LiveStreamClient,
 	lister auctionLister,
 	ruleFetcher auctionRuleBatchFetcher,
 	p ListParams,
@@ -119,6 +122,33 @@ func BuildAuctionListResponse(
 		}
 	}
 
+	// Step 3.5: 批量取直播间观看人数（仅 viewer_count）。
+	// 降级语义：失败不阻断整页，缺省为 0（装饰性信息不让整页挂）。
+	viewerByStream := map[int64]int64{}
+	if lsc != nil {
+		streamIDs := make([]int64, 0, len(auctions))
+		seenStream := make(map[int64]struct{}, len(auctions))
+		for _, a := range auctions {
+			if a.LiveStreamID == nil || *a.LiveStreamID <= 0 {
+				continue
+			}
+			if _, ok := seenStream[*a.LiveStreamID]; ok {
+				continue
+			}
+			seenStream[*a.LiveStreamID] = struct{}{}
+			streamIDs = append(streamIDs, *a.LiveStreamID)
+		}
+		if len(streamIDs) > 0 {
+			if streams, lerr := lsc.BatchGetLiveStreams(ctx, streamIDs); lerr != nil {
+				log.Printf("[WARN] auction list: batch live streams for viewer_count failed (degraded): %v", lerr)
+			} else {
+				for id, s := range streams {
+					viewerByStream[id] = s.ViewerCount
+				}
+			}
+		}
+	}
+
 	// Step 4: 回填
 	out := make([]AuctionListItem, 0, len(auctions))
 	hidden := int64(0)
@@ -133,6 +163,9 @@ func BuildAuctionListResponse(
 			}
 			if rule, ok := rules[a.ProductID]; ok && rule != nil {
 				item.StartPrice = &rule.StartPrice
+			}
+			if a.LiveStreamID != nil {
+				item.ViewerCount = viewerByStream[*a.LiveStreamID]
 			}
 			out = append(out, item)
 			continue

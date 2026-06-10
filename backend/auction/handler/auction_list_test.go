@@ -86,6 +86,21 @@ func (l *fakeLister) List(_ context.Context, f *dao.AuctionFilters, page, pageSi
 	return l.out, l.outTotal, l.outErr
 }
 
+// fakeLiveStreamClient 是 client.LiveStreamClient 的可控替身。
+type fakeLiveStreamClient struct {
+	out       map[int64]client.LiveStreamSummary
+	err       error
+	calledIDs []int64
+}
+
+func (f *fakeLiveStreamClient) BatchGetLiveStreams(_ context.Context, ids []int64) (map[int64]client.LiveStreamSummary, error) {
+	f.calledIDs = append([]int64(nil), ids...)
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.out, nil
+}
+
 func TestBuildAuctionListResponse(t *testing.T) {
 	ctx := context.Background()
 
@@ -115,7 +130,7 @@ func TestBuildAuctionListResponse(t *testing.T) {
 			},
 		}
 
-		items, total, err := BuildAuctionListResponse(ctx, fp, fl.List, rf, params)
+		items, total, err := BuildAuctionListResponse(ctx, fp, nil, fl.List, rf, params)
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), total)
 		require.Len(t, items, 2)
@@ -154,7 +169,7 @@ func TestBuildAuctionListResponse(t *testing.T) {
 		cid := int64(7)
 		params := ListParams{CategoryID: &cid, Page: 1, PageSize: 20}
 
-		items, total, err := BuildAuctionListResponse(ctx, fp, fl.List, nil, params)
+		items, total, err := BuildAuctionListResponse(ctx, fp, nil, fl.List, nil, params)
 		require.NoError(t, err)
 		assert.Equal(t, int64(1), total)
 		require.Len(t, items, 1)
@@ -173,7 +188,7 @@ func TestBuildAuctionListResponse(t *testing.T) {
 		cid := int64(7)
 		params := ListParams{CategoryID: &cid, Page: 1, PageSize: 20}
 
-		items, total, err := BuildAuctionListResponse(ctx, fp, fl.List, nil, params)
+		items, total, err := BuildAuctionListResponse(ctx, fp, nil, fl.List, nil, params)
 		require.NoError(t, err)
 		assert.Equal(t, int64(0), total)
 		assert.Empty(t, items)
@@ -188,7 +203,7 @@ func TestBuildAuctionListResponse(t *testing.T) {
 		cid := int64(7)
 		params := ListParams{CategoryID: &cid, Page: 1, PageSize: 20}
 
-		_, _, err := BuildAuctionListResponse(ctx, fp, fl.List, nil, params)
+		_, _, err := BuildAuctionListResponse(ctx, fp, nil, fl.List, nil, params)
 		require.Error(t, err)
 		assert.False(t, fl.called)
 	})
@@ -201,7 +216,7 @@ func TestBuildAuctionListResponse(t *testing.T) {
 		fp := &fakeProductClient{batchErr: errors.New("batch down")}
 		params := ListParams{Page: 1, PageSize: 20}
 
-		_, _, err := BuildAuctionListResponse(ctx, fp, fl.List, nil, params)
+		_, _, err := BuildAuctionListResponse(ctx, fp, nil, fl.List, nil, params)
 		require.Error(t, err)
 	})
 
@@ -213,7 +228,7 @@ func TestBuildAuctionListResponse(t *testing.T) {
 		// batch 返回空 map：表示 product-service 未找到该 id，或商品未发布。
 		fp := &fakeProductClient{batchOut: map[int64]client.ProductSummary{}}
 
-		items, total, err := BuildAuctionListResponse(ctx, fp, fl.List, nil, ListParams{Page: 1, PageSize: 20})
+		items, total, err := BuildAuctionListResponse(ctx, fp, nil, fl.List, nil, ListParams{Page: 1, PageSize: 20})
 		require.NoError(t, err)
 		assert.Equal(t, int64(0), total)
 		assert.Empty(t, items)
@@ -233,7 +248,7 @@ func TestBuildAuctionListResponse(t *testing.T) {
 			},
 		}
 
-		items, total, err := BuildAuctionListResponse(ctx, fp, fl.List, nil, ListParams{Upcoming: true, Page: 1, PageSize: 2})
+		items, total, err := BuildAuctionListResponse(ctx, fp, nil, fl.List, nil, ListParams{Upcoming: true, Page: 1, PageSize: 2})
 		require.NoError(t, err)
 		require.Equal(t, int64(1), total)
 		require.Len(t, items, 1)
@@ -242,6 +257,72 @@ func TestBuildAuctionListResponse(t *testing.T) {
 		assert.Nil(t, fl.gotFilters.Status)
 		assert.Equal(t, 1, fl.gotPage)
 		assert.Equal(t, 2, fl.gotPageSize)
+	})
+}
+
+func TestBuildAuctionListResponse_ViewerCount(t *testing.T) {
+	ctx := context.Background()
+	now := time.Now()
+	ls101 := int64(101)
+
+	newFixture := func() (*fakeLister, *fakeProductClient) {
+		fl := &fakeLister{
+			out: []model.Auction{
+				{ID: 1, ProductID: 11, LiveStreamID: &ls101, Status: model.AuctionStatusOngoing, StartTime: now, EndTime: now.Add(time.Hour)},
+			},
+			outTotal: 1,
+		}
+		fp := &fakeProductClient{
+			batchOut: map[int64]client.ProductSummary{
+				11: {ID: 11, Name: "p1", Images: []string{"u1"}},
+			},
+		}
+		return fl, fp
+	}
+
+	t.Run("正常回填 viewer_count", func(t *testing.T) {
+		fl, fp := newFixture()
+		lsc := &fakeLiveStreamClient{out: map[int64]client.LiveStreamSummary{
+			101: {ID: 101, ViewerCount: 128},
+		}}
+		items, _, err := BuildAuctionListResponse(ctx, fp, lsc, fl.List, nil, ListParams{Page: 1, PageSize: 20})
+		require.NoError(t, err)
+		require.Len(t, items, 1)
+		assert.Equal(t, int64(128), items[0].ViewerCount)
+		assert.Equal(t, []int64{101}, lsc.calledIDs)
+	})
+
+	t.Run("批量直播间失败时降级不 5xx，viewer_count=0", func(t *testing.T) {
+		fl, fp := newFixture()
+		lsc := &fakeLiveStreamClient{err: errors.New("product-service down")}
+		items, total, err := BuildAuctionListResponse(ctx, fp, lsc, fl.List, nil, ListParams{Page: 1, PageSize: 20})
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), total)
+		require.Len(t, items, 1)
+		assert.Equal(t, int64(0), items[0].ViewerCount)
+		assert.Equal(t, "p1", items[0].Product.Name)
+	})
+
+	t.Run("lsc 为 nil 时跳过，viewer_count=0", func(t *testing.T) {
+		fl, fp := newFixture()
+		items, _, err := BuildAuctionListResponse(ctx, fp, nil, fl.List, nil, ListParams{Page: 1, PageSize: 20})
+		require.NoError(t, err)
+		require.Len(t, items, 1)
+		assert.Equal(t, int64(0), items[0].ViewerCount)
+	})
+
+	t.Run("live_stream_id 为 nil 的 auction viewer_count=0 且不进 streamIDs", func(t *testing.T) {
+		fl := &fakeLister{
+			out:      []model.Auction{{ID: 2, ProductID: 22, LiveStreamID: nil, Status: model.AuctionStatusOngoing, StartTime: now, EndTime: now.Add(time.Hour)}},
+			outTotal: 1,
+		}
+		fp := &fakeProductClient{batchOut: map[int64]client.ProductSummary{22: {ID: 22, Name: "p2", Images: []string{"u2"}}}}
+		lsc := &fakeLiveStreamClient{out: map[int64]client.LiveStreamSummary{}}
+		items, _, err := BuildAuctionListResponse(ctx, fp, lsc, fl.List, nil, ListParams{Page: 1, PageSize: 20})
+		require.NoError(t, err)
+		require.Len(t, items, 1)
+		assert.Equal(t, int64(0), items[0].ViewerCount)
+		assert.Empty(t, lsc.calledIDs)
 	})
 }
 
