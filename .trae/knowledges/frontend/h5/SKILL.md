@@ -311,7 +311,44 @@ x = (tabRect.left - navRect.left) + (tabRect.width - W) / 2
 
 **来源**：session:6a28a0a30bfcee1b04fc5ce6
 
-### 列表接口非核心元数据软依赖原则 (List Interface Soft Dependency Principle)
+### 观看人数零值显示策略 (Viewer Count Zero Display)
+
+**决策背景**：用户要求直播间进行中时，即使观看人数为 0 也要显示 "0 观看"，而非隐藏角标。
+
+**核心决策**：
+- **展示条件变更**：从 `statusInfo.live && auction.viewerCount > 0` 改为仅判断 `statusInfo.live`
+- **零值展示**：`viewerCount === 0` 时显示 `"0 观看"`，非零时仍使用 `toLocaleString()` 格式化（如 `"1,314 观看"`）
+- **后端语义不变**：`viewer_count` 字段含义和降级策略保持不变
+
+**TDD 执行模式**：
+1. **Red**：先修改 Jest 测试断言，期望显示 `"0 观看"`，验证当前实现会失败
+2. **Green**：修改生产代码展示条件，让测试通过
+3. **Refactor**：保持改动最小化，仅调整展示层逻辑
+
+**来源**：session:6a28a0a30bfcee1b04fc5ce6
+
+### 观看人数数据源差异 (Viewer Count Data Source Discrepancy)
+
+**问题背景**：用户反馈直播间显示"有人观看"，但首页卡片显示"0 观看"，存在数据源不一致。
+
+**根因分析**：
+- **直播间页**：使用 `live_presence_update` WebSocket 消息中的 `viewer_count`，来自 Presence 系统的实时在线人数
+- **首页卡片**：使用 product-service 批量接口返回的 `live:viewer:{id}` Redis 快照或 DB 数据
+
+**关键发现**：
+- Presence 系统可能没有回写 `live:viewer:{id}` Redis key，导致首页读取的仍是旧快照
+- 两个数据源独立维护，存在同步延迟或写入缺失的可能
+
+**排查路径**：
+1. 检查 Presence 系统是否写入 `live:viewer:{id}`
+2. 检查 product-service 批量接口是否正确读取 Redis 优先、DB 兜底
+3. 确认两个数据源的更新频率和一致性策略
+
+**教训**：涉及跨系统数据一致性时，需明确写入路径和回写机制，避免"有数据但不同源"的隐性 bug。
+
+**来源**：session:6a28a0a30bfcee1b04fc5ce6
+
+### 列表接口非核心元数据软依赖原则 (List Interface Soft Dependency Principle
 
 **决策背景**：首页竞拍列表需要聚合直播间观看人数等非核心元数据，这些数据的查询失败不应导致整个列表接口 5xx。
 
