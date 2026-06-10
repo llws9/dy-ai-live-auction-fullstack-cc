@@ -51,6 +51,33 @@ description: >
 - **迁移后验证要点**：`scripts/deploy-prod.sh verify` 会检查远端 `.deploy-ref` 与本地 HEAD 是否一致；若迁移过程中该文件未更新或版本不一致，verify 会报错阻断
 - **独立测试平台的 WebSocket 访问必须通过 Nginx 反向代理**。公网环境下严禁浏览器直连微服务私有端口（如 `ws://ip:18092`），应统一通过 Nginx 路径（如 `/test-ws`）转发，避免 WS 连接挂起（`deploy/demo/nginx-ip.conf`, `scripts/deploy-prod.sh`）
 
+### 列表接口非核心元数据软依赖原则
+
+**问题背景**：列表接口（如首页竞拍列表）常需聚合非核心元数据（如直播间观看人数、主播头像等），这些数据的查询失败不应导致整个列表接口 5xx。
+
+**核心原则**：
+1. **软依赖定义**：非核心元数据（如 `viewer_count`、`host_avatar`）是「锦上添花」而非「必不可少」，查询失败时应降级处理而非报错
+2. **降级策略**：依赖服务不可用时，字段降级为默认值（如 `viewer_count=0`、头像为空字符串），并记录 Warn 级日志（每请求最多 1 条）
+3. **接口稳定性**：列表接口的核心职责是返回主数据（如竞拍列表），非核心元数据查询失败不应破坏主流程
+
+**实现模式**（以观看人数批量回填为例）：
+```go
+// 批量获取直播间摘要（Redis 优先/DB 兜底）
+summaryMap, err := liveStreamClient.BatchGetSummary(ctx, streamIDs)
+if err != nil {
+    // 降级：记录 WARN 日志，返回空 map，让 viewer_count 默认为 0
+    log.Printf("[WARN] batch get live stream summary failed: %v", err)
+    summaryMap = make(map[int64]*LiveStreamSummary)
+}
+// 组装响应时，summaryMap 中不存在的 ID 自动使用零值
+```
+
+**前端配合**：
+- 展示逻辑应处理零值/空值情况（如 `viewer_count > 0` 才显示角标）
+- 不过度依赖非核心字段的存在性
+
+**来源**：session:6a28a0a30bfcee1b04fc5ce6
+
 ## Architecture
 - 前端按 H5、Admin、Test Dashboard 拆分，各自独立构建，但 API/WS 公共入口统一由 Gateway 与 Nginx 代理承载（`deploy/demo/MAIN_DEPLOY_QUICKSTART.md`）
 - demo 生产发布以远端 `.deploy-ref` 和部署脚本验证为准，不能只用首页 HTTP 200 判断全链路健康（`deploy/demo/MAIN_DEPLOY_QUICKSTART.md`, `scripts/deploy-prod.sh`）

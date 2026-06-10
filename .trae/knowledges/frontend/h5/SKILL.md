@@ -279,3 +279,34 @@ x = (tabRect.left - navRect.left) + (tabRect.width - W) / 2
 - 状态角标仅作为视觉提示，不强制要求实时准确
 
 **来源**：session:6a289e7d0bfcee1b04fc5a92
+
+### H5 首页竞拍卡片观看人数显示 (Home Auction Viewer Count)
+
+**决策背景**：用户希望在首页普通竞拍卡片上显示真实的直播间观看人数，而非静态占位。
+
+**核心决策**：
+- **采用「真实快照人数」方案**：后端通过扩展 batch 接口批量回填 `viewer_count`，前端仅做展示，不引入 WebSocket 实时订阅
+  - 避开 N+1 请求风险和多连接 WebSocket 的复杂度
+  - 保证数据真实性，同时控制工程复杂度
+- **判定主语明确化**：显示与否只看 `auction.status`（前端 `statusInfo.live`），与 `live_stream.status` 无关
+- **后端不做 status 过滤**：batch 接口对**所有** status 的直播间都返回真实 viewer_count，过滤逻辑完全交前端处理，保持接口职责单一
+
+**技术边界与约束**：
+- **直播间维度语义**：`viewer_count` 是直播间维度而非竞拍维度，同一直播间挂多个竞拍时多张卡片显示相同人数是**预期行为**
+- **Batch 上限无需分批**：`internalLiveStreamBatchMaxIDs=200`，而首页 `page_size=20` 去重后 stream id ≤20，永不触发上限，**不实现分批逻辑**
+- **降级策略**：product 服务不可用时，后端聚合层应降级为 `viewer_count=0` 并记录 Warn 级日志（每请求最多 1 条），严禁导致整个列表接口 5xx
+- **软依赖原则**：列表项非核心元数据（如观看人数）应设为软依赖，后端聚合时若该字段查询失败应降级并记录日志，严禁导致整个列表接口报错
+
+**设计审核关键发现**（方案定稿前必须澄清的边界）：
+1. **「进行中」的判定主语**：存在两个 status（`auction.status` 和 `live_stream.status`），必须明确显示条件只看 `auction.status`（即前端 `statusInfo.live`），与 `live_stream.status` 无关
+2. **同直播间多竞拍卡片的 viewer_count 重复**：`viewerByStream` 是直播间维度，同 `live_stream_id` 的多个 auction 卡片会显示同一数值，这是预期行为而非 bug
+3. **Batch 接口职责范围**：batch 接口对所有 status 的直播间都返回真实 viewer_count，不过滤、不聚合，保持职责单一可复用
+
+**实现要点**：
+- `auction-service` 列表组装阶段调用 `product-service` 内部 batch 接口批量获取直播间摘要
+- 使用 Redis 优先的批量回填逻辑（Redis 命中则跳过 DB 查询）
+- 前端展示逻辑：`statusInfo.live && viewer_count > 0` 时才显示观看人数角标
+
+**设计文档**：`docs/superpowers/specs/2026-06-10-h5-home-auction-viewer-count-design.md`
+
+**来源**：session:6a28a0a30bfcee1b04fc5ce6
