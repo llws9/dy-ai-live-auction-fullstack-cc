@@ -37,7 +37,25 @@ func newInternalHandlerWithSeed(t *testing.T, seed func(db *gorm.DB)) *InternalH
 		seed(db)
 	}
 	svc := service.NewProductService(dao.NewProductDAO(db), dao.NewAuctionRuleDAO(db), dao.NewLiveStreamDAO(db))
-	return NewInternalHandler(svc, nil)
+	return NewInternalHandler(svc, nil, nil)
+}
+
+func newInternalHandlerWithSeedAndViewers(t *testing.T, seed func(db *gorm.DB), viewers service.LiveViewerCounter) *InternalHandler {
+	t.Helper()
+	dbName := strings.NewReplacer("/", "_", " ", "_").Replace(t.Name())
+	db, err := gorm.Open(sqlite.Open("file:"+dbName+"?mode=memory&cache=shared"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.Product{}, &model.Category{}, &model.AuctionRule{}, &model.LiveStream{}))
+	db.Exec("DELETE FROM products")
+	db.Exec("DELETE FROM categories")
+	db.Exec("DELETE FROM auction_rules")
+	db.Exec("DELETE FROM live_streams")
+	if seed != nil {
+		seed(db)
+	}
+	svc := service.NewProductService(dao.NewProductDAO(db), dao.NewAuctionRuleDAO(db), dao.NewLiveStreamDAO(db))
+	lsSvc := service.NewLiveStreamServiceWithMetrics(dao.NewLiveStreamDAO(db), viewers)
+	return NewInternalHandler(svc, dao.NewLiveStreamDAO(db), lsSvc)
 }
 
 func ptr64(v int64) *int64 { return &v }
@@ -387,4 +405,59 @@ func TestInternalHandler_BatchByIDs_InvalidJSON(t *testing.T) {
 	h.BatchByIDs(context.Background(), c)
 
 	assert.Equal(t, 400, c.Response.StatusCode())
+}
+
+func TestInternalHandler_BatchLiveStreams_ViewerCountRedisFirst(t *testing.T) {
+	h := newInternalHandlerWithSeedAndViewers(t, func(db *gorm.DB) {
+		require.NoError(t, db.Create(&model.LiveStream{
+			ID: 101, Name: "room-a", Status: 1, CreatorID: 9, ViewerCount: 19,
+		}).Error)
+	}, service.StaticLiveViewerCounter{101: 42})
+
+	body, _ := json.Marshal(map[string]interface{}{"ids": []int64{101}})
+	c := app.NewContext(0)
+	c.Request.SetBody(body)
+	c.Request.Header.SetMethod("POST")
+	c.Request.Header.SetContentTypeBytes([]byte("application/json"))
+	h.BatchLiveStreams(context.Background(), c)
+
+	require.Equal(t, 200, c.Response.StatusCode())
+	var resp struct {
+		Data struct {
+			Items []struct {
+				ID          int64 `json:"id"`
+				ViewerCount int64 `json:"viewer_count"`
+			} `json:"items"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &resp))
+	require.Len(t, resp.Data.Items, 1)
+	assert.Equal(t, int64(42), resp.Data.Items[0].ViewerCount)
+}
+
+func TestInternalHandler_BatchLiveStreams_ViewerCountDBFallback(t *testing.T) {
+	h := newInternalHandlerWithSeedAndViewers(t, func(db *gorm.DB) {
+		require.NoError(t, db.Create(&model.LiveStream{
+			ID: 102, Name: "room-b", Status: 1, CreatorID: 9, ViewerCount: 7,
+		}).Error)
+	}, service.StaticLiveViewerCounter{})
+
+	body, _ := json.Marshal(map[string]interface{}{"ids": []int64{102}})
+	c := app.NewContext(0)
+	c.Request.SetBody(body)
+	c.Request.Header.SetMethod("POST")
+	c.Request.Header.SetContentTypeBytes([]byte("application/json"))
+	h.BatchLiveStreams(context.Background(), c)
+
+	require.Equal(t, 200, c.Response.StatusCode())
+	var resp struct {
+		Data struct {
+			Items []struct {
+				ViewerCount int64 `json:"viewer_count"`
+			} `json:"items"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(c.Response.Body(), &resp))
+	require.Len(t, resp.Data.Items, 1)
+	assert.Equal(t, int64(7), resp.Data.Items[0].ViewerCount)
 }

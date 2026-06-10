@@ -32,7 +32,7 @@ func TestAdminOrderRoutesRequireInternalToken(t *testing.T) {
 		handler.NewLiveStreamHandler(nil),
 		handler.NewCategoryHandler(nil),
 		handler.NewCopywritingHandler(nil),
-		handler.NewInternalHandler(nil, nil),
+		handler.NewInternalHandler(nil, nil, nil),
 	)
 
 	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/admin/orders", nil)
@@ -55,7 +55,7 @@ func TestProductAdminRoutesRequireInternalToken(t *testing.T) {
 		handler.NewLiveStreamHandler(nil),
 		handler.NewCategoryHandler(nil),
 		handler.NewCopywritingHandler(nil),
-		handler.NewInternalHandler(nil, nil),
+		handler.NewInternalHandler(nil, nil, nil),
 	)
 
 	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/admin/products", nil)
@@ -78,7 +78,7 @@ func TestAuctionRuleTemplateAdminRoutesRequireInternalToken(t *testing.T) {
 		handler.NewLiveStreamHandler(nil),
 		handler.NewCategoryHandler(nil),
 		handler.NewCopywritingHandler(nil),
-		handler.NewInternalHandler(nil, nil),
+		handler.NewInternalHandler(nil, nil, nil),
 	)
 
 	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/admin/auction-rule-templates", nil)
@@ -105,7 +105,7 @@ func TestStatisticsRoutesRequireInternalToken(t *testing.T) {
 		handler.NewLiveStreamHandler(nil),
 		handler.NewCategoryHandler(nil),
 		handler.NewCopywritingHandler(nil),
-		handler.NewInternalHandler(nil, nil),
+		handler.NewInternalHandler(nil, nil, nil),
 	)
 
 	w := ut.PerformRequest(h.Engine, http.MethodGet, "/api/v1/statistics/overview", nil,

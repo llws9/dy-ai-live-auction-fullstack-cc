@@ -17,6 +17,7 @@ import (
 type InternalHandler struct {
 	productService *service.ProductService
 	liveStreamDAO  liveStreamBatchProvider
+	viewerCounter  liveViewerCounter
 }
 
 // liveStreamBatchProvider 抽象 LiveStreamDAO.GetByIDs，便于 handler 单测注入 fake。
@@ -24,11 +25,17 @@ type liveStreamBatchProvider interface {
 	GetByIDs(ctx context.Context, ids []int64) (map[int64]*model.LiveStream, error)
 }
 
+// liveViewerCounter 抽象在线人数回填，生产由 LiveStreamService 提供（Redis 优先、DB 兜底）。
+type liveViewerCounter interface {
+	ViewerCountForLiveStream(ctx context.Context, ls *model.LiveStream) int64
+}
+
 // NewInternalHandler 创建内部接口 Handler。
-func NewInternalHandler(productService *service.ProductService, liveStreamDAO liveStreamBatchProvider) *InternalHandler {
+func NewInternalHandler(productService *service.ProductService, liveStreamDAO liveStreamBatchProvider, viewerCounter liveViewerCounter) *InternalHandler {
 	return &InternalHandler{
 		productService: productService,
 		liveStreamDAO:  liveStreamDAO,
+		viewerCounter:  viewerCounter,
 	}
 }
 
@@ -155,11 +162,12 @@ func (h *InternalHandler) GetAuctionProductInfo(ctx context.Context, c *app.Requ
 
 // liveStreamSummary 是 /internal/live-streams/batch 的返回单元（spec B §4.1 契约）。
 type liveStreamSummary struct {
-	ID         int64  `json:"id"`
-	Name       string `json:"name"`
-	CoverImage string `json:"cover_image"`
-	Status     int    `json:"status"`
-	CreatorID  int64  `json:"creator_id"`
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	CoverImage  string `json:"cover_image"`
+	Status      int    `json:"status"`
+	CreatorID   int64  `json:"creator_id"`
+	ViewerCount int64  `json:"viewer_count"`
 }
 
 const internalLiveStreamBatchMaxIDs = 200
@@ -198,12 +206,17 @@ func (h *InternalHandler) BatchLiveStreams(ctx context.Context, c *app.RequestCo
 		if !ok {
 			continue
 		}
+		viewerCount := int64(0)
+		if h.viewerCounter != nil {
+			viewerCount = h.viewerCounter.ViewerCountForLiveStream(ctx, ls)
+		}
 		summaries = append(summaries, liveStreamSummary{
-			ID:         ls.ID,
-			Name:       ls.Name,
-			CoverImage: ls.CoverImage,
-			Status:     int(ls.Status),
-			CreatorID:  ls.CreatorID,
+			ID:          ls.ID,
+			Name:        ls.Name,
+			CoverImage:  ls.CoverImage,
+			Status:      int(ls.Status),
+			CreatorID:   ls.CreatorID,
+			ViewerCount: viewerCount,
 		})
 	}
 

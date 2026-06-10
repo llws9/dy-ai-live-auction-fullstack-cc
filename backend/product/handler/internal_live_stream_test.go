@@ -28,7 +28,7 @@ func (f *fakeLiveStreamProvider) GetByIDs(_ context.Context, _ []int64) (map[int
 }
 
 func newInternalHandlerWithLiveStreams(p liveStreamBatchProvider) *InternalHandler {
-	return NewInternalHandler(nil, p)
+	return NewInternalHandler(nil, p, nil)
 }
 
 // TestInternalHandler_BatchLiveStreams_OK 验证按入参顺序、缺失 id 跳过、id 去重。

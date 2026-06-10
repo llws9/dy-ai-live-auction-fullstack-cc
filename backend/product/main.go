@@ -159,7 +159,7 @@ func main() {
 	liveStreamHandler.SetAuctionClient(auctionClient)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 	copywritingHandler := handler.NewCopywritingHandler(copyService)
-	internalHandler := handler.NewInternalHandler(productService, liveStreamDAO)
+	internalHandler := handler.NewInternalHandler(productService, liveStreamDAO, liveStreamService)
 
 	// 监听配置变更（如果 Nacos 可用）
 	if nacosLoader != nil {
