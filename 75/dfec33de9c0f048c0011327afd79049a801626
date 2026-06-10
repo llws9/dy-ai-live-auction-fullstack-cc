@@ -1,0 +1,66 @@
+docs/superpowers/specs/2026-06-10-competition-submission.md
+  s_8976e3e6d88f4c::t_ae598ac2faa0c1 36,223 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a290abf0bfcee1b04fc697d","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Single":36},{"Single":223}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "75dfec33de9c0f048c0011327afd79049a801626",
+  "prompts": {},
+  "sessions": {
+    "s_8976e3e6d88f4c": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a2875380bfcee1b04fc33e8",
+        "model": "gpt-5.4__dev"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {
+    "docs/superpowers/specs/2026-06-10-competition-submission.md": [
+      {
+        "hash": "s_8976e3e6d88f4c::t_ae598ac2faa0c1",
+        "line_ranges": [
+          {
+            "Single": 36
+          },
+          {
+            "Single": 223
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a290abf0bfcee1b04fc697d",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Single": 36
+              },
+              {
+                "Single": 223
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "s_8976e3e6d88f4c": {
+      "tool": "trae",
+      "conversation_id": "6a2875380bfcee1b04fc33e8",
+      "session_id": "6a2875380bfcee1b04fc33e8",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_8976e3e6d88f4c::t_ae598ac2faa0c1": {
+      "tool": "trae",
+      "conversation_id": "6a2875380bfcee1b04fc33e8",
+      "session_id": "6a2875380bfcee1b04fc33e8",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
