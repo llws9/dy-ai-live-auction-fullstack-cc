@@ -675,7 +675,7 @@ const HomePage: React.FC = () => {
                       {upcoming && <span className={styles.upcomingDot} />}
                       {statusInfo.label}
                     </div>
-                    {statusInfo.live && auction.viewerCount > 0 && (
+                    {statusInfo.live && (
                       <div className={styles.viewerBadge}>
                         <span className={styles.viewerDot} />
                         {auction.viewerCount.toLocaleString()} 观看

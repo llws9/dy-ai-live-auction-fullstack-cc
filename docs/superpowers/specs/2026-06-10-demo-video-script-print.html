@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>演示视频剧本 · 可打印版（分镜表 + 纯口播稿）</title>
+<style>
+  :root{
+    --ink:#1a1a1a; --sub:#555; --line:#d8d8d8; --hl:#b3261e;
+    --th:#f3f3f3; --zebra:#fafafa; --tag:#eef;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    color:var(--ink); line-height:1.65; font-size:13px; background:#888;
+  }
+  /* A4 页面 */
+  .page{
+    width:210mm; min-height:297mm; padding:16mm 15mm; margin:8mm auto;
+    background:#fff; box-shadow:0 2px 12px rgba(0,0,0,.25);
+  }
+  h1{font-size:22px; margin:0 0 4px; letter-spacing:.5px;}
+  h2{font-size:16px; margin:22px 0 8px; padding-bottom:5px; border-bottom:2px solid var(--ink);}
+  h3{font-size:14px; margin:16px 0 6px; color:var(--hl);}
+  .meta{color:var(--sub); font-size:12px; margin:0 0 6px;}
+  .lead{color:var(--sub); font-size:12px; background:#f7f7f7; border-left:3px solid var(--hl); padding:8px 12px; margin:10px 0 0;}
+  table{width:100%; border-collapse:collapse; margin:8px 0 4px; font-size:12px;}
+  th,td{border:1px solid var(--line); padding:6px 8px; vertical-align:top; text-align:left;}
+  th{background:var(--th); font-weight:700; white-space:nowrap;}
+  tbody tr:nth-child(even){background:var(--zebra);}
+  .col-seg{width:34px; text-align:center; font-weight:700;}
+  .col-time{width:78px; white-space:nowrap; color:var(--sub);}
+  .star{color:var(--hl); font-weight:700;}
+  .pic{color:#1f5fbf; font-weight:600;}
+  .act{color:#0a7a4f; font-weight:600;}
+  .say{display:block; margin-top:3px;}
+  code{font-family:"SFMono-Regular",Consolas,Menlo,monospace; background:#f0f0f0; padding:0 3px; border-radius:3px; font-size:11.5px;}
+  .vo h3{display:flex; align-items:baseline; gap:8px;}
+  .vo .cue{font-size:11px; color:var(--sub); font-weight:400; background:var(--tag); padding:1px 7px; border-radius:10px;}
+  .vo p{margin:5px 0 12px;}
+  .gold{background:#fff6e0; padding:0 2px;}
+  .foot{margin-top:10px; font-size:11px; color:var(--sub); text-align:right;}
+
+  @page{ size:A4; margin:14mm; }
+  @media print{
+    body{background:#fff; font-size:12px;}
+    .page{width:auto; min-height:auto; margin:0; padding:0; box-shadow:none;}
+    .page + .page{ page-break-before:always; }
+    h2{ break-after:avoid; }
+    tr,h3,.vo p{ break-inside:avoid; }
+    .no-print{ display:none; }
+  }
+  .toolbar{position:sticky; top:0; background:#222; color:#fff; padding:8px 14px; text-align:center; font-size:13px;}
+  .toolbar button{background:var(--hl); color:#fff; border:0; padding:6px 16px; border-radius:5px; font-size:13px; cursor:pointer; margin-left:10px;}
+</style>
+</head>
+<body>
+
+<div class="toolbar no-print">
+  演示剧本 · 可打印版 ——
+  <button onclick="window.print()">打印 / 导出 PDF</button>
+</div>
+
+<!-- ============ 第 1 页起：分镜脚本表 ============ -->
+<section class="page">
+  <h1>演示视频剧本 · 可打印版</h1>
+  <p class="meta">抖音电商直播竞拍全栈系统 ｜ 含分镜脚本表 + 纯口播稿 ｜ ⭐ = 3 分钟精华版保留段</p>
+  <p class="lead">口播风格：自然亲近，像在跟人聊自己做的项目。<span class="gold">每段末尾的「考量金句」是评分关键，语速放慢、略停顿。</span> ⭐ 段为精华快剪保留段（0 / 1 / 2 / 6 / 8）。</p>
+
+  <h2>一、分镜脚本表</h2>
+  <table>
+    <thead>
+      <tr>
+        <th class="col-seg">段</th>
+        <th class="col-time">时间轴</th>
+        <th>画面 / 操作 / 口播</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="col-seg star">0⭐</td>
+        <td class="col-time">0:00–0:15<br>开场钩子</td>
+        <td>
+          <span class="pic">【画面】</span>亮点站首屏，5 端 + 网关 + 三服务 + 可观测栈架构总览图。
+          <span class="act">【操作】</span>缓慢下滑到「5 端 + 可观测」架构图，停在全景。
+          <span class="say"><span class="pic">【口播】</span>大家好，这是我做的抖音电商直播竞拍全栈系统。课题其实只要求做商家端和用户端两端闭环，不过我做的时候多往前走了几步，最后做成了一套有 <span class="gold">5 个端、还带独立测试编排平台和 Loki+Grafana 可观测栈</span>的微服务系统。接下来这几分钟，我会带大家看真实的系统和代码，也聊聊我每一步是怎么考虑的。</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="col-seg star">1⭐</td>
+        <td class="col-time">0:15–1:25<br>真实业务闭环</td>
+        <td>
+          <span class="pic">【画面1】</span>Admin 竞拍发布页。<span class="act">【操作】</span>填商品信息、配置规则（起拍价/加价幅度/封顶价/自动延时），发布。
+          <span class="say"><span class="pic">【口播】</span>我们先从商家端看起。商家在这里上架商品，配置竞拍规则，比如起拍价、加价幅度、封顶价，还有防狙击的自动延时，然后发布。这里有个小细节，前端所有请求都走网关的 <code>/api/v1</code>，服务之间走 <code>/internal</code> 接口，<span class="gold">前端不会跨服务直接连数据库</span>。</span>
+          <span class="say"><span class="pic">【画面2】</span>切 H5 用户端 A 进入直播间。<span class="act">【操作】</span>展示在线头像、围观人数、当前价、出价坞。</span>
+          <span class="say"><span class="pic">【口播】</span>用户进来直播间后，大家可以注意一下右上角，这里的在线头像和人数是<span class="gold">真实在线的 Presence 系统</span>，同一个人开多个标签页也只算一个人，而不是简单数 WebSocket 连接数。</span>
+          <span class="say"><span class="pic">【画面3】</span>A 出价 → 飘屏动画、领先胶囊、热度条升温。</span>
+          <span class="say"><span class="pic">【口播】</span>用户 A 出价后，会有领先状态胶囊、游戏化出价飘屏、战况热度条，让用户在关键的 5 秒里<span class="gold">一眼看懂「我是否领先、要不要反超、这场热不热」</span>。</span>
+          <span class="say"><span class="pic">【画面4】</span>切用户 B 反超 A；切回 A，A 收到 <code>bid_outbid</code> 推送。</span>
+          <span class="say"><span class="pic">【口播】</span>接着用户 B 出价反超了 A，A 这边会<span class="gold">立刻</span>收到「被超越」的推送。这条推送是出价成功后实时写进去、再通过用户专属的 WebSocket 房间精准推给他的，不是广播。</span>
+          <span class="say"><span class="pic">【画面5】</span>临近结束时出价 → 状态切「延时中」，倒计时刷新。</span>
+          <span class="say"><span class="pic">【口播】</span>再看这个挺关键的防狙击。如果快结束的时候还有人出价，系统会自动延时，避免有人卡着最后一秒绝杀。延时是用 SQL 原子累加做的，而且<span class="gold">判定放在锁外面，不会放大锁竞争</span>。</span>
+          <span class="say"><span class="pic">【画面6】</span>竞拍结束 → 成交 → 生成订单 → 中标通知 + 模拟支付。</span>
+          <span class="say"><span class="pic">【口播】</span>成交之后会自动生成订单，中标和没中标的结果都会进通知中心存下来，<span class="gold">用户就算当时离线了也不会错过</span>。这样从发布到成交，整条链路就完整跑通了。</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="col-seg star">2⭐</td>
+        <td class="col-time">1:25–2:10<br>出价并发三层</td>
+        <td>
+          <span class="pic">【画面】</span>亮点站「出价并发：三层控制」章节，三层卡片；可穿插 <code>service/bid.go</code> 代码。<span class="act">【操作】</span>依次高亮三层卡片。
+          <span class="say"><span class="pic">【口播】</span>高并发出价，可能很多人第一反应是上一把 Redis 锁就够了。但单点加锁其实解决不了所有问题，所以我把它拆成了三层。<b>第一层是 Redis 分布式锁</b>，负责互斥和短时限流，锁值用纳秒时间戳防止误删，解锁和续期都走 Lua 脚本保证原子。<b>第二层是数据库乐观锁</b>，价格更新走 <code>UPDATE WHERE version=?</code> 的 CAS 路径，遇到冲突就重读重试。<b>第三层是单事务一致性</b>，出价写入和状态更新放在同一个事务里，进出临界区各做一次最低价校验。我自己觉得最关键的一个取舍是：<span class="gold">把延时判定、通知发送、点天灯自动出价这些重逻辑全挪到锁外面异步做，让锁只负责保护共享状态，而不是把整个业务流程都串行化</span>。</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="col-seg">3</td>
+        <td class="col-time">2:10–2:45<br>WebSocket 链路</td>
+        <td>
+          <span class="pic">【画面】</span>亮点站「WebSocket 完整实时同步链路」章节。<span class="act">【操作】</span>依次指向 房间模型 / 状态恢复 / 高频广播。
+          <span class="say"><span class="pic">【口播】</span>实时同步这块，我觉得重点不只是用了 WebSocket，而是要把它做成一条<span class="gold">能连上、能恢复、广播也可控</span>的完整链路。房间我按竞拍房、弹幕房、用户通知房三类分开管理，遇到慢客户端就非阻塞丢弃，不让一个慢连接拖垮整个房间。断线时前端指数退避重连，重连之后用 <code>sync_request</code> 把当前价、领先者、结束时间重新拉回来——<span class="gold">恢复的是状态，而不是把日志重放一遍</span>。高频广播两边都做了节流，避免消息风暴。</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="col-seg">4</td>
+        <td class="col-time">2:45–3:45<br>六大难点快切</td>
+        <td>
+          <span class="pic">【画面】</span>亮点站「六大难点与解决方案」章节，逐个滚动定位。<span class="act">【操作】</span>每个难点停留约 8–10 秒，高亮关键词。
+          <span class="say"><span class="pic">【口播】</span>系统真正复杂的地方集中在六个难点，我一个个说说我的考量：<b>难点一状态机正确性</b>，5 个状态画成有向图，状态转换全部收敛到纯判断模块里，金额统一用 decimal 避免 float 误差。<b>难点二防狙击延时</b>，刚才演示过了，原子累加加判定放锁外。<b>难点三外部依赖降级</b>，Redis 锁挂了退回本地锁，弹幕限流出问题就放行，AI 链路默认 fail-open，原则是<span class="gold">绝不能把「依赖可用」当成「业务可用」的前提</span>。<b>难点四点天灯（自动代理出价）</b>，像 eBay 代理出价，用补偿代替长事务，锁粒度细化到每个订阅，显式标记挡住递归自激。<b>难点五真实在线 Presence</b>，连接数、用户数、头像展示是三个不同问题，在线人数以 Hub 里 presence 为准，多标签页去重，只有鉴权身份能进头像列表。<b>难点六看直播领宝箱</b>，没做成前端倒计时奖励，而是把观看时长、宝箱解锁、金币发放全收敛到后端可信状态：心跳计时、每日分桶重置、唯一键幂等领取，<span class="gold">金币和现金余额严格隔离，前端动画刷不了币</span>。</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="col-seg">5</td>
+        <td class="col-time">3:45–4:35<br>AI 双层</td>
+        <td>
+          <span class="pic">【画面1】</span>真实 Admin →「AI 一键文案」。<span class="act">【操作】</span>上传商品图 + 关键词 → 生成标题/描述/卖点/起拍价草稿。
+          <span class="say"><span class="pic">【口播】</span>AI 我是分两层来用的。<b>第一层是业务上的 AI</b>：商家后台这个「AI 一键文案」，输入商品图加几个关键词，就会调用火山方舟豆包的多模态模型，帮商家生成标题、描述、卖点和建议起拍价。工程上我做了三件事：用 <code>JSON mode</code> 约束结构化输出；把超时、上游错误、解析失败分级映射成不同状态码做兜底；把 LLM 能力收敛在 <code>shared/llm</code> 的 Provider 接口后面，<span class="gold">没为 AI 单独拆微服务，也没让模型 SDK 侵入业务层</span>。AI 只生成草稿，最终内容还是商家自己确认。</span>
+          <span class="say"><span class="pic">【画面2】</span>展示 4 个自创 Skill：<code>/dp-dev</code> <code>/dp-prod</code> <code>/sdd-run</code> <code>/ui-design-trio</code>。</span>
+          <span class="say"><span class="pic">【口播】</span><b>第二层是我自己用 AI 写代码的方法论</b>。我把高频人工经验沉淀成 4 个自创 Skill：dp-dev 本地强重启、dp-prod 带风险评估的部署、sdd-run 状态驱动开发、ui-design-trio 三版 UI 评审。我的想法是，<span class="gold">AI 代码贡献率不是越高越好，关键是把人工经验固化成可追溯、可复用的标准流程</span>，让 AI 在我设定好的工程约束里高效产出，而不是放任它生成一堆不可控的代码。</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="col-seg star">6⭐</td>
+        <td class="col-time">4:35–5:30<br>测试平台 + 混沌剧场</td>
+        <td>
+          <span class="pic">【画面1】</span>测试编排大屏，7 类场景入口、实时 QPS/P99 面板。
+          <span class="say"><span class="pic">【口播】</span>接下来是我自己挺想给大家看的一块。我没把测试只停留在单测和本地脚本，而是<span class="gold">单独做了一套可以在线触发、可观测、还能复盘的测试编排平台</span>。压测、E2E、防狙击、回调、混沌、剧本、AB 一共七类场景，执行器基于 goroutine 池加连接池复用，能实时算出 QPS 和 P50/P95/P99 分位延迟。</span>
+          <span class="say"><span class="pic">【画面2】</span>一键触发「混沌剧场模式」→ 自动跑 <code>baseline→inject→recover</code>，韧性曲线 + 阶段旁白 + 锚点 + 指标卡逐步出现。</span>
+          <span class="say"><span class="pic">【口播】</span>重点看这个<span class="gold">混沌剧场模式，它能一键把一次混沌实验变成一段叙事</span>。系统自动跑基线、注入故障、恢复三段，用进程内的 RoundTripper 注入错误率、延迟和断连，曲线上用锚点标出故障注入时刻、SLA 击穿点和恢复拐点，把检测延迟和恢复耗时都量化出来。这里有个我比较在意的工程约束：<span class="gold">故障注入完全不碰业务服务主路径</span>，它是从测试平台发起的横切控制面，绝不会在业务代码里写 if-chaos——既能验证韧性，又不会污染生产代码。</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="col-seg">7</td>
+        <td class="col-time">5:30–6:00<br>可观测性</td>
+        <td>
+          <span class="pic">【画面】</span>Grafana 大盘：Loki 日志 + 业务指标 + 增长漏斗。<span class="act">【操作】</span>切日志查询 → 业务指标面板 → 增长漏斗。
+          <span class="say"><span class="pic">【口播】</span>可观测性这块，我的理解不是出了事再回头翻日志，而是<span class="gold">从请求、业务指标到实验效果都有一个统一的入口</span>。结构化 JSON 日志用 <code>X-Request-ID</code> 跨服务串起来，敏感字段统一脱敏后进 Loki。业务指标覆盖出价、延时触发、并发峰值、溢价率、GMV、支付成功率，GORM 插件自动采 DB 指标。再往前一步，我把增长漏斗也做成了可观测链路：从提醒点击、进房回流、点击出价、一口价点击到购买成功，全程都能上报、落库、聚合。</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="col-seg star">8⭐</td>
+        <td class="col-time">6:00–6:25<br>收尾升华</td>
+        <td>
+          <span class="pic">【画面】</span>回到亮点站架构全景图，缓慢上滑收束，停在全景结束。
+          <span class="say"><span class="pic">【口播】</span>最后简单总结一下。这个项目我其实想说明的不是功能做完了，而是它有<span class="gold">工程深度</span>：并发用了三层而不是单点，实时链路能恢复，外部依赖会降级，测试能复盘，AI 也可控可追溯。这里面贯穿始终的就一句话——<span class="gold">绝不把「依赖可用」当成「业务可用」的前提，每个地方都尽量做到失败关闭、优雅降级</span>。课题要的是两端闭环，而我想交付的，是一套能上线、能观测、也能继续演进的系统。谢谢大家。</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="foot">分镜脚本表 · 共 9 段 · ⭐ 为 3 分钟精华版保留段</p>
+</section>
+
+<!-- ============ 纯口播稿（新页） ============ -->
+<section class="page vo">
+  <h2>二、纯口播稿（可直接连念 / 配音版）</h2>
+  <p class="lead">去掉画面与操作提示，仅保留连贯台词。括号内为画面切换提示，念时跳过。建议配字幕，<span class="gold">高亮句放慢</span>。</p>
+
+  <h3>开场<span class="cue">架构图</span></h3>
+  <p>大家好，这是我做的抖音电商直播竞拍全栈系统。课题其实只要求做商家端和用户端两端闭环，不过我做的时候多往前走了几步，最后做成了一套有 5 个端、还带独立测试编排平台和 Loki+Grafana 可观测栈的微服务系统。接下来这几分钟，我会带大家看真实的系统和代码，也聊聊我每一步是怎么考虑的。</p>
+
+  <h3>真实闭环<span class="cue">Admin 发布</span></h3>
+  <p>我们先从商家端看起。商家在这里上架商品，配置竞拍规则，比如起拍价、加价幅度、封顶价，还有防狙击的自动延时，然后发布。这里有个小细节，前端所有请求都走网关的 /api/v1，服务之间走 /internal 接口，前端不会跨服务直接连数据库。</p>
+
+  <h3>H5 进房<span class="cue">Presence</span></h3>
+  <p>用户进来直播间后，大家可以注意一下右上角，这里的在线头像和人数是真实在线的 Presence 系统，同一个人开多个标签页也只算一个人，而不是简单数 WebSocket 连接数。</p>
+
+  <h3>A 出价<span class="cue">氛围反馈</span></h3>
+  <p>用户 A 出价后，会有领先状态胶囊、游戏化出价飘屏、战况热度条，让用户在关键的 5 秒里一眼看懂"我是否领先、要不要反超、这场热不热"。</p>
+
+  <h3>B 反超<span class="cue">被超越推送</span></h3>
+  <p>接着用户 B 出价反超了 A，A 这边会立刻收到"被超越"的推送。这条推送是出价成功后实时写进去、再通过用户专属的 WebSocket 房间精准推给他的，不是广播。</p>
+
+  <h3>防狙击延时</h3>
+  <p>再看这个挺关键的防狙击。如果快结束的时候还有人出价，系统会自动延时，避免有人卡着最后一秒绝杀。延时是用 SQL 原子累加做的，而且判定放在锁外面，不会放大锁竞争。</p>
+
+  <h3>成交</h3>
+  <p>成交之后会自动生成订单，中标和没中标的结果都会进通知中心存下来，用户就算当时离线了也不会错过。这样从发布到成交，整条链路就完整跑通了。</p>
+
+  <h3>并发三层</h3>
+  <p>高并发出价，可能很多人第一反应是上一把 Redis 锁就够了。但单点加锁其实解决不了所有问题，所以我把它拆成了三层。第一层是 Redis 分布式锁，负责互斥和短时限流，锁值用纳秒时间戳防止误删，解锁和续期都走 Lua 脚本保证原子。第二层是数据库乐观锁，价格更新走 CAS 路径，遇到冲突就重读重试，防止被覆盖。第三层是单事务一致性，出价写入和状态更新放在同一个事务里，进出临界区各做一次最低价校验。我自己觉得最关键的一个取舍是，把延时判定、通知发送、点天灯自动出价这些比较重的逻辑全都挪到锁外面异步做，让锁只负责保护共享状态，而不是把整个业务流程都串行化。</p>
+
+  <h3>WebSocket</h3>
+  <p>实时同步这块，我觉得重点不只是用了 WebSocket，而是要把它做成一条能连上、能恢复、广播也可控的完整链路。房间我按竞拍房、弹幕房、用户通知房三类分开管理，遇到慢客户端就非阻塞丢弃，不让一个慢连接拖垮整个房间。断线的时候前端会指数退避重连，重连之后用 sync_request 把当前价、领先者、结束时间重新拉回来，恢复的是状态，而不是把日志重放一遍。高频广播两边都做了节流，避免消息风暴。</p>
+
+  <h3>六大难点</h3>
+  <p>系统真正复杂的地方集中在六个难点，我一个个说说我的考量。难点一是状态机的正确性，我把 5 个状态画成有向图，状态转换全部收敛到纯判断模块里，避免条件散落在各个地方，金额也统一用 decimal，避免 float 比较出误差。难点二是防狙击延时，刚才演示过了，就是原子累加加上判定放锁外。难点三是外部依赖降级，Redis 锁挂了就退回本地锁，弹幕限流出问题就放行，AI 链路默认 fail-open，我的原则是绝对不能把"依赖可用"当成"业务可用"的前提。难点四是点天灯，也就是自动代理出价，有点像 eBay 的代理出价，我用补偿代替长事务，把锁粒度细化到每个订阅，再用显式标记挡住递归自激。难点五是真实在线 Presence，连接数、用户数、头像展示其实是三个不同的问题，在线人数以 Hub 里的 presence 为准，多标签页去重，只有鉴权过的身份才能进头像列表。难点六是看直播领宝箱，我没做成前端倒计时奖励，而是把观看时长、宝箱解锁、金币发放全部收敛到后端可信状态，靠心跳计时、每日分桶重置、唯一键幂等领取，而且金币和现金余额是严格隔离的，前端动画刷不了币。</p>
+
+  <h3>AI · 业务层</h3>
+  <p>AI 我是分两层来用的。第一层是业务上的 AI，商家后台这个"AI 一键文案"，输入商品图加几个关键词，就会调用火山方舟豆包的多模态模型，帮商家生成标题、描述、卖点和建议起拍价。工程上我主要做了三件事，一是用 JSON mode 约束结构化输出让它更稳定，二是把超时、上游错误、解析失败分级映射成不同状态码做兜底，三是把 LLM 能力收敛在 shared/llm 的 Provider 接口后面，没有为 AI 单独拆一个微服务，也没让模型 SDK 侵入业务层。AI 在这里只生成草稿，最终内容还是商家自己确认。</p>
+
+  <h3>AI · 工程方法论</h3>
+  <p>第二层是我自己用 AI 写代码的方法论。我把平时高频用到的人工经验沉淀成了 4 个自创 Skill，dp-dev 是本地强重启，dp-prod 是带风险评估的部署，sdd-run 是状态驱动开发，ui-design-trio 是三版 UI 方案评审。我的想法是，AI 代码贡献率其实不是越高越好，关键是把人工经验固化成可追溯、可复用的标准流程，让 AI 在我设定好的工程约束里去高效产出，而不是放任它生成一堆不可控的代码。</p>
+
+  <h3>测试平台</h3>
+  <p>接下来是我自己挺想给大家看的一块。我没有把测试只停留在单测和本地脚本，而是单独做了一套可以在线触发、可观测、还能复盘的测试编排平台。压测、E2E、防狙击、回调、混沌、剧本、AB，一共七类场景，执行器是基于 goroutine 池加连接池复用做的，能实时算出 QPS 和 P50/P95/P99 这些分位延迟。</p>
+
+  <h3>混沌剧场</h3>
+  <p>重点看这个混沌剧场模式，它能一键把一次混沌实验变成一段叙事。系统会自动跑基线、注入故障、恢复这三段，用进程内的 RoundTripper 去注入错误率、延迟和断连，曲线上还会用锚点标出故障注入的时刻、SLA 击穿的点和恢复的拐点，并且把检测延迟和恢复耗时都量化出来。这里有个我比较在意的工程约束，就是故障注入完全不碰业务服务的主路径，它是从测试平台发起的横切控制面，绝对不会在业务代码里写 if-chaos，这样既能验证韧性，又不会污染生产代码。</p>
+
+  <h3>可观测性</h3>
+  <p>可观测性这块，我的理解不是出了事再回头翻日志，而是从请求、业务指标到实验效果都有一个统一的入口。结构化的 JSON 日志用 X-Request-ID 跨服务串起来，敏感字段统一脱敏后进 Loki。业务指标覆盖了出价、延时触发、并发峰值、溢价率、GMV、支付成功率这些。再往前一步，我把增长漏斗也做成了可观测链路，从提醒点击、进房回流、点击出价、一口价点击到购买成功，全程都能上报、落库、聚合。</p>
+
+  <h3>收尾</h3>
+  <p>最后简单总结一下。这个项目我其实想说明的不是功能做完了，而是它有工程深度，并发用了三层而不是单点，实时链路能恢复，外部依赖会降级，测试能复盘，AI 也可控可追溯。这里面贯穿始终的就一句话，绝不把"依赖可用"当成"业务可用"的前提，每个地方都尽量做到失败关闭、优雅降级。课题要的是两端闭环，而我想交付的，是一套能上线、能观测、也能继续演进的系统。谢谢大家。</p>
+
+  <p class="foot">纯口播稿 · 全篇约 6–7 分钟 · 精华版仅念 开场 / 真实闭环 / 并发三层 / 测试平台+混沌剧场 / 收尾</p>
+</section>
+
+</body>
+</html>

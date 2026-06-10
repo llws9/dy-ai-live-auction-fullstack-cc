@@ -43,6 +43,18 @@ export type TriggerOtherSkyLampInput = {
 
 export type DemoMerchantAuctionMode = 'upcoming' | 'ongoing';
 
+export type CreateDemoMerchantAuctionResponse = {
+  ok: boolean;
+  mode?: DemoMerchantAuctionMode;
+  product_id?: number;
+  live_stream_id?: number;
+  auction_id?: number;
+  start_time?: string;
+  end_time?: string;
+  reused?: boolean;
+  message?: string;
+};
+
 export type CreateDemoFixedPriceItemInput = {
   auctionId: number;
   liveStreamId: number;
@@ -159,7 +171,7 @@ export function triggerOtherSkyLamp(input: TriggerOtherSkyLampInput) {
 }
 
 export function createDemoMerchantAuction(mode: DemoMerchantAuctionMode) {
-  return postDemo('/merchant/auctions', { mode });
+  return postDemo<CreateDemoMerchantAuctionResponse>('/merchant/auctions', { mode });
 }
 
 export function createDemoFixedPriceItem(input: CreateDemoFixedPriceItemInput) {

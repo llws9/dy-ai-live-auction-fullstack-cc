@@ -631,7 +631,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
     expect(screen.getByText(/128\s*观看/)).toBeInTheDocument();
   });
 
-  it('进行中竞拍 viewer_count 为 0（降级）时不展示观看人数', async () => {
+  it('进行中竞拍 viewer_count 为 0 时展示 0 观看', async () => {
     mockedAuctionApi.list.mockResolvedValue({
       list: [
         {
@@ -647,7 +647,7 @@ describe('HomePage 分类联动 (T2.10)', () => {
     renderHome();
 
     await screen.findByRole('heading', { name: '降级拍品' });
-    expect(screen.queryByText(/观看/)).not.toBeInTheDocument();
+    expect(screen.getByText(/0\s*观看/)).toBeInTheDocument();
   });
 
   it('已结束竞拍即使带 viewer_count 也不展示观看人数', async () => {

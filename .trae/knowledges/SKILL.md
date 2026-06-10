@@ -152,6 +152,41 @@ if err != nil {
 
 **来源**：session:6a2875380bfcee1b04fc33e8
 
+### lark-cli 独立授权机制
+使用 `lark-cli` + `whiteboard-cli` 向飞书文档插入画板/图表时，需要**独立的 user 授权**，与 `feishu-cli` 的授权互不相通：
+
+- **授权方式**：Device Flow，需在浏览器打开授权链接完成
+- **权限域**：需确保有 `docs`（文档写入）和 `board`（画板）权限
+- **授权命令**：`lark-cli login --domain docs --recommend`
+- **验证状态**：`lark-cli whoami` 检查 `user` token 是否 `valid`
+- **常见错误**：`no_token` 表示需要重新授权；`token_expired` 表示 token 过期需刷新
+
+**与 feishu-cli 的区别**：
+- `feishu-cli` 用于导入 markdown 内容到飞书文档
+- `lark-cli` 用于操作画板、图表等高级功能
+- 两者使用不同的 token 体系，不能互相替代
+
+**来源**：session:6a2875380bfcee1b04fc33e8
+
+### 可打印版本交付物格式
+当需要生成可打印的剧本/文档时，采用**打印友好的单文件 HTML** 格式：
+
+**技术要点**：
+- **A4 分页**：使用 `@page A4` 和 `@media print` 控制打印尺寸
+- **防跨页断裂**：表格行和段落使用 `break-inside: avoid` 防止被分页截断
+- **黑白友好**：避免依赖彩色背景传达信息，使用边框/图标辅助
+- **打印按钮隐藏**：屏幕显示的工具栏（如「打印/导出 PDF」按钮）使用 `@media print { display: none }` 在打印时自动隐藏
+- **分页控制**：大章节使用 `page-break-before: always` 确保新章节起新页
+
+**内容结构**：
+- 分镜脚本表：表格形式，含段号/时间轴/画面/操作/口播
+- 纯口播稿：连续文本，去掉画面操作提示，适合直接朗读配音
+- 精华版指引：标注哪些模块进精简版
+
+**使用方式**：浏览器打开 HTML → `Cmd/Ctrl+P` → 目标选「存储为 PDF」
+
+**来源**：session:6a2875380bfcee1b04fc33e8
+
 ### 飞书文档权限处理
 - **权限错误**：向比赛方提供的模板文档直接写入会因权限不足（code=1770032 forbidden）失败
 - **解决方案**：通过「创建副本」或新建个人文档方式获取写入权限，再将内容导入

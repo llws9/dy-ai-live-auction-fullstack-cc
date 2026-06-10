@@ -230,8 +230,11 @@ export default function DemoConsole() {
     const actionKey = `merchant-auction-${mode}`;
     setRunningAction(actionKey);
     try {
-      await runWithDemoAuthRetry(() => createDemoMerchantAuction(mode), DEMO_MERCHANT_ACCOUNT);
+      const result = await runWithDemoAuthRetry(() => createDemoMerchantAuction(mode), DEMO_MERCHANT_ACCOUNT);
       showToast(mode === 'upcoming' ? '已创建1分钟后开播的竞拍' : '已创建正在竞拍场次', 'success', TOAST_DURATION_MS);
+      if (mode === 'ongoing' && result.live_stream_id && result.auction_id) {
+        navigate(`/live?id=${result.live_stream_id}&auction_id=${result.auction_id}`);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : '请稍后重试';
       showToast(`商家动作失败：${message}`, 'error', TOAST_DURATION_MS);

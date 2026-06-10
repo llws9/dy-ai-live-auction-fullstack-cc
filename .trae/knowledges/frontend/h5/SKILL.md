@@ -310,3 +310,30 @@ x = (tabRect.left - navRect.left) + (tabRect.width - W) / 2
 **设计文档**：`docs/superpowers/specs/2026-06-10-h5-home-auction-viewer-count-design.md`
 
 **来源**：session:6a28a0a30bfcee1b04fc5ce6
+
+### 列表接口非核心元数据软依赖原则 (List Interface Soft Dependency Principle)
+
+**决策背景**：首页竞拍列表需要聚合直播间观看人数等非核心元数据，这些数据的查询失败不应导致整个列表接口 5xx。
+
+**核心原则**：
+1. **软依赖定义**：非核心元数据（如 `viewer_count`）是「锦上添花」而非「必不可少」，查询失败时应降级处理而非报错
+2. **降级策略**：依赖服务不可用时，字段降级为默认值（如 `viewer_count=0`），并记录 Warn 级日志（每请求最多 1 条）
+3. **接口稳定性**：列表接口的核心职责是返回主数据（竞拍列表），非核心元数据查询失败不应破坏主流程
+
+**实现模式**（以观看人数批量回填为例）：
+```go
+// 批量获取直播间摘要（Redis 优先/DB 兜底）
+summaryMap, err := liveStreamClient.BatchGetSummary(ctx, streamIDs)
+if err != nil {
+    // 降级：记录 WARN 日志，返回空 map，让 viewer_count 默认为 0
+    log.Printf("[WARN] batch get live stream summary failed: %v", err)
+    summaryMap = make(map[int64]*LiveStreamSummary)
+}
+// 组装响应时，summaryMap 中不存在的 ID 自动使用零值
+```
+
+**前端配合**：
+- 展示逻辑应处理零值/空值情况（如 `viewer_count > 0` 才显示角标）
+- 不过度依赖非核心字段的存在性
+
+**来源**：session:6a28a0a30bfcee1b04fc5ce6

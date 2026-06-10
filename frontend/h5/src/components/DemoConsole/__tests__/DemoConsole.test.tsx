@@ -347,6 +347,25 @@ describe('DemoConsole', () => {
     expect(mockShowToast).toHaveBeenCalledWith('已创建正在竞拍场次', 'success', 2500);
   });
 
+  it('opens the returned live room after creating an ongoing merchant auction', async () => {
+    const user = userEvent.setup();
+    mockedCreateDemoMerchantAuction.mockResolvedValueOnce({
+      ok: true,
+      mode: 'ongoing',
+      product_id: 5001,
+      live_stream_id: 880301,
+      auction_id: 990701,
+      reused: true,
+    });
+    renderConsole();
+
+    await user.click(screen.getByTestId('demo-console-fab'));
+    await user.click(screen.getByRole('button', { name: '商家' }));
+    await user.click(screen.getByRole('button', { name: '正在竞拍' }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/live?id=880301&auction_id=990701');
+  });
+
   it('refreshes with the merchant account and retries when merchant action sees an expired token', async () => {
     const user = userEvent.setup();
     mockedCreateDemoMerchantAuction
