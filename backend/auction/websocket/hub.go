@@ -18,6 +18,8 @@ type Hub struct {
 	UserRooms   map[int64]map[*Client]bool // userID -> clients
 	userRoomsMu sync.RWMutex
 
+	presenceCountSink LiveViewerCountSink
+
 	Register   chan *Client
 	Unregister chan *Client
 	broadcast  chan *BroadcastMessage
@@ -49,6 +51,10 @@ func NewHub() *Hub {
 // SetStateManager 设置状态管理器
 func (h *Hub) SetStateManager(sm *StateManager) {
 	h.stateManager = sm
+}
+
+func (h *Hub) SetPresenceCountSink(sink LiveViewerCountSink) {
+	h.presenceCountSink = sink
 }
 
 // GetStateManager 获取状态管理器
@@ -276,7 +282,7 @@ func (h *Hub) RegisterToLiveStream(client *Client) {
 	h.liveStreamRoomsLock.Lock()
 	room, ok := h.liveStreamRooms[client.LiveStreamID]
 	if !ok {
-		room = NewLiveStreamRoom(client.LiveStreamID)
+		room = NewLiveStreamRoomWithPresenceCountSink(client.LiveStreamID, h.presenceCountSink)
 		h.liveStreamRooms[client.LiveStreamID] = room
 		go room.Run()
 	}

@@ -8,6 +8,10 @@ import (
 const chatHistorySize = 100
 const presenceViewerLimit = 3
 
+type LiveViewerCountSink interface {
+	SetLiveViewerCount(liveStreamID int64, count int) error
+}
+
 type presenceViewerState struct {
 	viewer  LivePresenceViewer
 	clients map[string]struct{}
@@ -32,11 +36,17 @@ type LiveStreamRoom struct {
 	Unregister chan *Client
 	Broadcast  chan *Message
 
+	presenceCountSink LiveViewerCountSink
+
 	done chan struct{}
 }
 
 // NewLiveStreamRoom 创建直播间房间
 func NewLiveStreamRoom(liveStreamID int64) *LiveStreamRoom {
+	return NewLiveStreamRoomWithPresenceCountSink(liveStreamID, nil)
+}
+
+func NewLiveStreamRoomWithPresenceCountSink(liveStreamID int64, sink LiveViewerCountSink) *LiveStreamRoom {
 	return &LiveStreamRoom{
 		LiveStreamID:     liveStreamID,
 		clients:          make(map[string]*Client),
@@ -44,6 +54,7 @@ func NewLiveStreamRoom(liveStreamID int64) *LiveStreamRoom {
 		Register:         make(chan *Client, 64),
 		Unregister:       make(chan *Client, 64),
 		Broadcast:        make(chan *Message, 256),
+		presenceCountSink: sink,
 		done:             make(chan struct{}),
 	}
 }
@@ -67,6 +78,9 @@ func (r *LiveStreamRoom) Run() {
 
 // Close 关闭房间
 func (r *LiveStreamRoom) Close() {
+	if r.GetPresenceSnapshot().ViewerCount > 0 {
+		r.syncPresenceCount(0)
+	}
 	close(r.done)
 	r.clientsLock.Lock()
 	r.clients = make(map[string]*Client)
@@ -224,7 +238,9 @@ func (r *LiveStreamRoom) GetPresenceSnapshot() *LivePresenceUpdateData {
 }
 
 func (r *LiveStreamRoom) broadcastPresenceSnapshot() {
-	msg := NewLivePresenceUpdateMessage(r.GetPresenceSnapshot())
+	snapshot := r.GetPresenceSnapshot()
+	r.syncPresenceCount(snapshot.ViewerCount)
+	msg := NewLivePresenceUpdateMessage(snapshot)
 
 	r.clientsLock.RLock()
 	defer r.clientsLock.RUnlock()
@@ -237,5 +253,14 @@ func (r *LiveStreamRoom) broadcastPresenceSnapshot() {
 		default:
 			log.Printf("[livestream_room] client %s buffer full, dropping presence update", c.ID)
 		}
+	}
+}
+
+func (r *LiveStreamRoom) syncPresenceCount(count int) {
+	if r.presenceCountSink == nil {
+		return
+	}
+	if err := r.presenceCountSink.SetLiveViewerCount(r.LiveStreamID, count); err != nil {
+		log.Printf("[livestream_room] sync live viewer count failed live_stream_id=%d count=%d err=%v", r.LiveStreamID, count, err)
 	}
 }

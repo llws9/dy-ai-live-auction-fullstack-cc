@@ -112,6 +112,7 @@ func main() {
 
 	// 初始化 WebSocket Hub
 	hub := websocket.NewHub()
+	hub.SetPresenceCountSink(websocket.NewRedisLiveViewerCountSink(dao.GetRedis()))
 
 	// 创建 WebSocketManager 统一管理 Hub 和 StateManager
 	wsManager := websocket.NewWebSocketManager(hub, dao.GetRedis())

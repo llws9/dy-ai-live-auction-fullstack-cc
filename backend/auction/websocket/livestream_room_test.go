@@ -5,6 +5,15 @@ import (
 	"time"
 )
 
+type recordingPresenceCountSink struct {
+	updates []int
+}
+
+func (s *recordingPresenceCountSink) SetLiveViewerCount(liveStreamID int64, count int) error {
+	s.updates = append(s.updates, count)
+	return nil
+}
+
 func newTestRoomClient(id string) *Client {
 	return &Client{
 		ID:   id,
@@ -164,6 +173,33 @@ func TestLiveStreamRoom_PresenceDeduplicatesUserConnections(t *testing.T) {
 	}
 	if len(secondSnapshot.Viewers) != 1 || secondSnapshot.Viewers[0].UserID != 42 {
 		t.Fatalf("viewers = %#v, want one viewer for user 42", secondSnapshot.Viewers)
+	}
+}
+
+func TestLiveStreamRoom_PresenceSyncsDeduplicatedViewerCount(t *testing.T) {
+	sink := &recordingPresenceCountSink{}
+	r := NewLiveStreamRoomWithPresenceCountSink(777, sink)
+	defer r.Close()
+
+	first := newPresenceRoomClient("c1", 42, "张三", true)
+	second := newPresenceRoomClient("c2", 42, "张三", true)
+
+	r.registerClient(first)
+	_ = nextPresenceUpdate(t, first)
+	r.registerClient(second)
+	_ = nextPresenceUpdate(t, second)
+	r.unregisterClient(first)
+	_ = nextPresenceUpdate(t, second)
+	r.unregisterClient(second)
+
+	want := []int{1, 1, 1, 0}
+	if len(sink.updates) != len(want) {
+		t.Fatalf("sink updates = %#v, want %#v", sink.updates, want)
+	}
+	for i := range want {
+		if sink.updates[i] != want[i] {
+			t.Fatalf("sink updates = %#v, want %#v", sink.updates, want)
+		}
 	}
 }
 
