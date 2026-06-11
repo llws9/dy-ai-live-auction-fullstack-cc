@@ -88,6 +88,57 @@ if err != nil {
 
 ## Patterns
 
+### 全栈功能开发 Workflow (Fullstack Feature Development Workflow)
+
+项目采用标准化的 7 阶段全栈开发流程（开发域，不含部署），仅适用于需要落库、多步骤实现、跨前后端协作或需要 SDD 的开发任务；一次性问答、纯分析、简单文案和无需落库的小任务走轻量通道。
+
+```
+[0] 需求澄清     brainstorming        → spec.md
+[1] UI 设计      ui-design-trio (等)   → 选定 UI 稿
+[2] 契约先行     brainstorming(轻)     → 契约 SSOT（见必填项）
+[3] 计划拆分     writing-plans        → plan.md + tasks.md (+checklist)
+[4] 前端波次     sdd-run              → 前端实现 + TDD 证据（按契约）
+[5] 后端波次     sdd-run              → 后端实现 + TDD 证据（按契约）
+[6] 知识沉淀评估  knowledges-update    → 更新知识树或记录 no-op
+```
+
+**核心原则**：
+- **契约先行**：接口契约优先于实现，作为前后端单一事实源（SSOT），避免 mock 与真实后端语义漂移
+- **writing-plans 是开发型 brainstorming 进入 SDD 前的前置条件**：不允许从 spec 直接跳到 sdd-run；纯讨论/纯文档类 brainstorming 不受此约束
+- **实现波次不强制先后**：阶段 4/5 默认对应前端/后端两类 task groups，串并行由 state 的 `Wave Plan` 与 `Parallel Group` 根据契约冻结状态、依赖、write set 和本地服务占用决定
+- **适用范围内不可跳**：需求澄清、计划拆分和知识沉淀评估；轻量通道任务除外
+
+**契约 SSOT 最小合格定义**（阶段2输出必须包含）：
+- 接口路径与方法必须走 `gateway-service` 的 `/api/v1` 入口（如 `GET /api/v1/products/:id`），禁止前端直连子服务
+- 请求/响应字段名、类型、是否必填
+- 鉴权字段：是否需要 JWT，下游身份统一使用网关派生的 `X-User-ID`，禁止硬编码用户身份或内部 Token
+- 错误码与 HTTP 状态码映射
+- 金额字段必须使用 `shopspring/decimal`（AGENTS.md 硬约束），禁止 float
+- 分页参数规范（如 `page`, `page_size`, `total`）
+- 跨服务依赖需声明调用方、被调用方、RPC/API 路径与降级语义；禁止跨服务直接查库
+
+**契约一致性原则**：
+- `grep -R "<api-path-or-field>" -n frontend backend docs` 只是 regression sentinel 的最低档，只能证明字符串存在
+- 核心/跨服务接口必须额外配至少一种：OpenAPI 校验、type check、API 测试或前后端 mock parity
+- 前后端并行前必须冻结契约；开发中若改契约，先更新契约 SSOT，并在 state 的 `API Contract Changes`、`Cross-Task Decisions` 和 `Wave Plan` 中登记影响与重新对齐条件
+
+**规模驱动的拆分形态**：
+- **默认形态（小/中功能）**：一份 plan 拆前后端两组 tasks，共享上下文
+- **大需求形态**：命中以下任一判据时，前后端各自独立走一轮 writing-plans + sdd-run
+  - 涉及跨服务调用或数据契约
+  - 涉及数据模型或 DB migration
+  - 需要并行多 subagent，或存在共享 write set 需隔离
+  - 接口/页面数量多、状态机复杂、兼容性风险高，单份 plan 难以承载
+
+**知识沉淀评估原则**：
+- 适用范围内的功能闭环后必须评估是否更新知识库
+- 仅针对新增约束、非直观决策或可复用经验进行持久化
+- 无 durable knowledge 时记录 no-op，避免将临时执行日志、工具输出、协调信息写入长期知识
+
+**来源**：session:6a29bfdc0bfcee1b04fc9f45, `docs/superpowers/specs/2026-06-11-fullstack-feature-workflow.md`
+
+---
+
 ### UX 增强开发流程
 对于复杂的 UX 增强任务，项目采用以下标准化流程：
 1. **brainstorming** — 明确动机、边界和取舍，输出候选方案清单
