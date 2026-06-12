@@ -5,19 +5,40 @@
       "id": 1,
       "prompt": "我想做一个 H5 直播间优惠券领取功能，涉及按钮、领取弹窗和后端领取接口，按全栈 workflow 执行。",
       "expected_output": "Triggers the fullstack-feature-workflow skill, starts at requirement clarification/brainstorming, identifies UI and API contract impact, requires Contract SSOT before implementation, then routes to writing-plans and sdd-run rather than jumping straight into code.",
-      "files": []
+      "files": [],
+      "expectations": [
+        "Uses the fullstack-feature-workflow skill rather than sdd-run directly.",
+        "Starts with requirement clarification / brainstorming and does not write implementation code immediately.",
+        "Identifies both UI impact and API contract impact.",
+        "Requires Contract SSOT before frontend/backend implementation.",
+        "Routes to writing-plans before any sdd-run execution."
+      ]
     },
     {
       "id": 2,
       "prompt": "给 Admin 商品列表加一个纯前端排序下拉，不改接口，按 workflow 做。",
       "expected_output": "Uses the workflow but chooses the minimal frontend-only path: requirement clarification, small UI brief or existing design system instead of mandatory three variants, no Contract SSOT, writing-plans, frontend sdd-run, and knowledge update review/no-op.",
-      "files": []
+      "files": [],
+      "expectations": [
+        "Uses the fullstack-feature-workflow skill because the user explicitly asked for workflow.",
+        "Classifies the task as frontend-only with no contract impact.",
+        "Skips Contract SSOT and backend implementation stages.",
+        "Allows a single UI brief or existing design-system path instead of mandatory ui-design-trio variants.",
+        "Still routes through writing-plans before frontend sdd-run."
+      ]
     },
     {
       "id": 3,
       "prompt": "为 auction-service 增加一个内部结算 RPC，涉及 product-service 订单创建和金额字段。",
       "expected_output": "Classifies the task as backend/cross-service and large-demand shape, skips UI design, requires Contract SSOT including RPC/API boundary, X-User-ID/auth if relevant, shopspring/decimal money fields, no direct cross-service DB access, then splits writing-plans and sdd-run by affected backend service or contract boundary without creating an empty frontend loop.",
-      "files": []
+      "files": [],
+      "expectations": [
+        "Uses the fullstack-feature-workflow skill for a cross-service backend feature.",
+        "Skips UI design because there is no UI surface.",
+        "Requires Contract SSOT with caller/callee RPC or API boundary.",
+        "Includes repository constraints: no direct cross-service DB access and money fields use shopspring/decimal.",
+        "Splits execution by affected backend service or shared contract boundary, not by an empty frontend/backend template."
+      ]
     }
   ]
 }
