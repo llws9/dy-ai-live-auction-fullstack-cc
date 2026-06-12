@@ -1,0 +1,66 @@
+.trae/knowledges/frontend/h5/SKILL.md
+  s_58fa9e24d43fde::t_79e25bd47c546d 184-186 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2c3c7f0bfcee1b04fcdb2a","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Range":[184,186]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "f2d806325fb421a9eaf49ccf9972f4ace012892c",
+  "prompts": {},
+  "sessions": {
+    "s_58fa9e24d43fde": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a29bfdc0bfcee1b04fc9f45",
+        "model": "openrouter-3o__max"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {
+    ".trae/knowledges/frontend/h5/SKILL.md": [
+      {
+        "hash": "s_58fa9e24d43fde::t_79e25bd47c546d",
+        "line_ranges": [
+          {
+            "Range": [
+              184,
+              186
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2c3c7f0bfcee1b04fcdb2a",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Range": [
+                  184,
+                  186
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "s_58fa9e24d43fde": {
+      "tool": "trae",
+      "conversation_id": "6a29bfdc0bfcee1b04fc9f45",
+      "session_id": "6a29bfdc0bfcee1b04fc9f45",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_58fa9e24d43fde::t_79e25bd47c546d": {
+      "tool": "trae",
+      "conversation_id": "6a29bfdc0bfcee1b04fc9f45",
+      "session_id": "6a29bfdc0bfcee1b04fc9f45",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
