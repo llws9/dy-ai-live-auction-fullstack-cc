@@ -110,6 +110,23 @@ describe('GoodsList', () => {
     expect(screen.queryByTitle('发布')).not.toBeInTheDocument()
   })
 
+  it('sorts by created_at desc by default and toggles to asc', async () => {
+    const user = userEvent.setup()
+    renderGoodsList()
+
+    // 默认按创建时间降序：晚创建的「匿名藏品」(11:00) 在「青花瓷瓶」(10:00) 之前
+    const rowsDesc = await screen.findAllByText(/青花瓷瓶|匿名藏品/)
+    expect(rowsDesc.map((el) => el.textContent)).toEqual(['匿名藏品', '青花瓷瓶'])
+
+    // 切换为升序后顺序反转
+    await user.selectOptions(screen.getByLabelText('排序方式'), 'created_at_asc')
+
+    await waitFor(() => {
+      const rowsAsc = screen.getAllByText(/青花瓷瓶|匿名藏品/)
+      expect(rowsAsc.map((el) => el.textContent)).toEqual(['青花瓷瓶', '匿名藏品'])
+    })
+  })
+
   it('uses derived status tabs for product lifecycle filtering', async () => {
     const user = userEvent.setup()
     renderGoodsList()
