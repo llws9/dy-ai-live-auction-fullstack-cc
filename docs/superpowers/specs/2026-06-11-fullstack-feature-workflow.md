@@ -72,6 +72,7 @@
 ### 3.1 阶段 1 — UI 设计（ui-design-trio 及其他 UI skill）
 
 - 基于 spec 产出 2-3 个可对比的 UI 变体，用户选定
+- 已有明确设计系统的小型 UI 修复 / 沿用现有组件 / 信息层级微调，可走单方案 UI brief，不必三稿
 - 纯后端功能、无界面改动时跳过
 
 ### 3.2 阶段 2 — 契约先行（轻量 brainstorming）
@@ -100,14 +101,14 @@
 ### 3.3 阶段 3 — 计划拆分（writing-plans）
 
 - **开发型 brainstorming 进入 SDD 前的前置条件是 writing-plans**，不允许从 spec 直接跳到 sdd-run（纯讨论/纯文档类 brainstorming 不受此约束）
-- 产出 `plan.md` + `tasks.md`；`checklist.md` 是可选独立产物，无独立 checklist 时可把验收清单内嵌进 tasks 或 state 文件
+- 产出 `plan.md` + `tasks.md`；`checklist.md` 是可选独立产物，无独立 checklist 时把验收清单内嵌进 tasks 或 state，并在 sdd-run 输入与 state 的 `Input Documents` 中标记为 `embedded in tasks/state`（避免执行者误判缺文件）
 - 任务按依赖拆分、声明 write set / read set / regression sentinel
 - 拆分形态由需求规模决定（见第 4 节）
 
 ### 3.4 / 3.5 阶段 4、5 — 实现（sdd-run）
 
 - 阶段 4/5 默认对应**前端波次 / 后端波次**两类 task groups，但不固定先后；串并行由 [RUNBOOK](../sdd/RUNBOOK.md) 的 `Wave Plan` + `Parallel Group` 依据契约冻结状态、依赖、write set、本地服务占用决定
-- **进入 sdd-run 前必须先创建或续用 state 文件**：运行 `python3 docs/superpowers/sdd/scripts/sdd_run.py`，无既有 state 时从 `docs/superpowers/sdd/state-template.md` 创建；以 state 的 branch/worktree/commit 为执行事实源
+- **进入 sdd-run 前必须先创建或续用 state 文件**：优先用 `/sdd-run`；脚本等价入口为 `python3 docs/superpowers/sdd/scripts/sdd_run.py --repo-root . --input "<用户的 /sdd-run 输入>"`，无既有 state 时从 `docs/superpowers/sdd/state-template.md` 创建；以 state 输出的 `state_path`/`branch`/`worktree` 为执行事实源
 - 各波次按 RUNBOOK 协议执行：隔离 worktree → **先写失败测试 → 最小实现 → 验证通过** → 回归 sentinel → review；TDD red-green 证据写入 state
 - 前端按契约对 mock；后端按契约实现，并跑契约一致性检查（见阶段 2 分档）
 - 本地排障遇到 `localhost`/IPv6/旧进程/端口占用时，先清理旧进程、核对运行事实，**不得为绕过本机问题修改主干配置**（如把统一 `localhost` 改成 `127.0.0.1`）
@@ -161,7 +162,8 @@ brainstorming → ui-design-trio → 契约(进阶档)
 
 前后端并行的前提是**契约已冻结**。规则：
 - 阶段 2 契约确认后标记为 frozen，前后端波次才能并行进入 sdd-run
-- 开发中若必须改契约：先更新契约 SSOT → 在 state 文件的 `API Contract Changes` 与 `Cross-Task Decisions` 表登记变更 → 受影响波次在 `Wave Plan` 中重新对齐其 Start Condition → 再继续
+- frozen 状态有落点：在契约 SSOT 文件头与 state 的 `Cross-Task Decisions` 表登记 `contract_version` / `frozen_at` / `owner`，作为冻结点 SSOT
+- 开发中若必须改契约：先更新契约 SSOT（递增 `contract_version`）→ 在 state 文件的 `API Contract Changes` 与 `Cross-Task Decisions` 表登记变更 → 受影响波次在 `Wave Plan` 中重新对齐其 Start Condition → 再继续
 - 禁止任一端私自改契约后继续，否则产生二次漂移
 
 ---
