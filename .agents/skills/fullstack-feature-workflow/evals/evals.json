@@ -1,0 +1,23 @@
+{
+  "skill_name": "fullstack-feature-workflow",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我想做一个 H5 直播间优惠券领取功能，涉及按钮、领取弹窗和后端领取接口，按全栈 workflow 执行。",
+      "expected_output": "Triggers the fullstack-feature-workflow skill, starts at requirement clarification/brainstorming, identifies UI and API contract impact, requires Contract SSOT before implementation, then routes to writing-plans and sdd-run rather than jumping straight into code.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "给 Admin 商品列表加一个纯前端排序下拉，不改接口，按 workflow 做。",
+      "expected_output": "Uses the workflow but chooses the minimal frontend-only path: requirement clarification, small UI brief or existing design system instead of mandatory three variants, no Contract SSOT, writing-plans, frontend sdd-run, and knowledge update review/no-op.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "为 auction-service 增加一个内部结算 RPC，涉及 product-service 订单创建和金额字段。",
+      "expected_output": "Classifies the task as backend/cross-service and large-demand shape, skips UI design, requires Contract SSOT including RPC/API boundary, X-User-ID/auth if relevant, shopspring/decimal money fields, no direct cross-service DB access, then separate backend-oriented writing-plans and sdd-run.",
+      "files": []
+    }
+  ]
+}
