@@ -16,7 +16,7 @@
     {
       "id": 3,
       "prompt": "为 auction-service 增加一个内部结算 RPC，涉及 product-service 订单创建和金额字段。",
-      "expected_output": "Classifies the task as backend/cross-service and large-demand shape, skips UI design, requires Contract SSOT including RPC/API boundary, X-User-ID/auth if relevant, shopspring/decimal money fields, no direct cross-service DB access, then separate backend-oriented writing-plans and sdd-run.",
+      "expected_output": "Classifies the task as backend/cross-service and large-demand shape, skips UI design, requires Contract SSOT including RPC/API boundary, X-User-ID/auth if relevant, shopspring/decimal money fields, no direct cross-service DB access, then splits writing-plans and sdd-run by affected backend service or contract boundary without creating an empty frontend loop.",
       "files": []
     }
   ]

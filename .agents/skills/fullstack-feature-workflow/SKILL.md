@@ -182,7 +182,7 @@ Record no-op when there is no durable knowledge. Do not write temporary executio
 
 Default: one plan with frontend/backend task groups.
 
-Use separate frontend and backend `writing-plans -> sdd-run` loops when any of these is true:
+Use separate `writing-plans -> sdd-run` loops by affected delivery domain when any of these is true:
 
 - cross-service call or data contract
 - data model or DB migration
@@ -192,6 +192,8 @@ Use separate frontend and backend `writing-plans -> sdd-run` loops when any of t
 - complex state machine
 - high compatibility risk
 - one plan would overload context
+
+Delivery domain means the actual affected surface: frontend app, backend service, shared contract, data migration, or docs. Do not create an empty frontend/backend loop just to fit the template. For a backend-only cross-service feature, split by backend service or contract boundary.
 
 Do not introduce a scoring system; any clear hit is enough to upgrade.
 
