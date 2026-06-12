@@ -46,6 +46,14 @@ Use a lightweight path instead when the request is:
 
 For lightweight tasks, record the decision in chat or commit message. Do not force spec/plan/knowledge updates.
 
+Decision order when both could apply (e.g. a small frontend change that asks for "workflow"):
+
+1. If the user explicitly asks for the workflow, use it but pick the minimal path (see `## Minimal Closure Table`).
+2. Otherwise, if the change persists code/docs and needs more than one step, use the workflow.
+3. Otherwise, use the lightweight path.
+
+A task with no contract impact still uses the workflow; it just skips Stage 2 and any backend wave.
+
 ## Stage Protocol
 
 Follow these stages in order. Skip only when the skip rule applies.
@@ -55,10 +63,14 @@ Follow these stages in order. Skip only when the skip rule applies.
 [1] UI design                  -> ui-design-trio or UI brief -> chosen UI direction
 [2] Contract-first design      -> lightweight brainstorming -> Contract SSOT
 [3] Plan split                 -> writing-plans -> plan.md + tasks.md (+ checklist)
-[4] Frontend wave              -> sdd-run -> frontend implementation + TDD evidence
-[5] Backend wave               -> sdd-run -> backend implementation + TDD evidence
-[6] Knowledge update review    -> knowledges-update or no-op
+[4] Implementation waves       -> sdd-run -> implementation + TDD evidence (per delivery domain)
+[5] Knowledge update review    -> knowledges-update or no-op
 ```
+
+Stage `[4]` covers all implementation waves. A wave maps to a delivery domain
+(frontend app, backend service, shared contract, data migration, docs), not a
+fixed frontend-then-backend order. See `## Scale Decision` for how many waves and
+how to split them.
 
 ### Stage 0 - Requirement Clarification
 
@@ -109,6 +121,7 @@ Contract consistency rules:
 
 - `grep -R "<api-path-or-field>" -n frontend backend docs` is only the minimum regression sentinel.
 - Core or cross-service interfaces need at least one stronger check: OpenAPI validation, type check, API test, or frontend/backend mock parity.
+- The freeze record and the change-tracking tables (`Cross-Task Decisions`, `API Contract Changes`, `Wave Plan`) live in the SDD state file created from `docs/superpowers/sdd/state-template.md`.
 - Once frozen, record the freeze in the Contract SSOT and the SDD state `Cross-Task Decisions` table.
 - If the contract changes during execution, increment `contract_version`, update `API Contract Changes`, update `Cross-Task Decisions`, and adjust affected `Wave Plan` start conditions before continuing.
 
@@ -117,6 +130,9 @@ Skip only when there is no contract impact.
 ### Stage 3 - Plan Split
 
 Invoke `writing-plans` before `sdd-run`. Development-oriented brainstorming must not jump directly from spec to execution.
+
+First decide plan shape via `## Scale Decision`: one plan with task groups, or
+separate plans per delivery domain.
 
 Plan outputs:
 
@@ -134,7 +150,7 @@ Each task must declare:
 - verification command
 - whether it belongs to frontend, backend, contract, docs, or knowledge update
 
-### Stage 4/5 - Implementation Waves
+### Stage 4 - Implementation Waves
 
 Invoke `sdd-run` only after plan/tasks exist.
 
@@ -156,7 +172,10 @@ Use script output as authoritative:
 - `branch`
 - `worktree`
 
-Frontend and backend waves are not necessarily sequential. Use `Wave Plan`, `Parallel Group`, dependencies, write sets, and local service ownership to decide parallelism.
+Frontend and backend waves are not necessarily sequential, and a wave is not
+necessarily one frontend plus one backend. Decide the number of waves and how to
+split them via `## Scale Decision`. Use `Wave Plan`, `Parallel Group`,
+dependencies, write sets, and local service ownership to decide parallelism.
 
 Implementation requirements:
 
@@ -165,7 +184,7 @@ Implementation requirements:
 - runtime source recorded for local/browser validation
 - no workaround that changes trunk config for local `localhost` / IPv6 / stale process issues
 
-### Stage 6 - Knowledge Update Review
+### Stage 5 - Knowledge Update Review
 
 After the feature closes, evaluate whether durable knowledge was created.
 
@@ -199,15 +218,16 @@ Do not introduce a scoring system; any clear hit is enough to upgrade.
 
 ## Minimal Closure Table
 
-| Task type | Minimal path |
-|---|---|
-| Cross-stack feature with UI + contract change | [0][1][2][3][4][5][6] |
-| Frontend-only, no contract change | [0][1][3][4][6] |
-| Frontend feature with contract change | [0][1][2][3][4][5][6] |
-| Backend-only capability | [0][2][3][5][6] |
-| Internal refactor / tiny style change with no behavior change | lightweight path |
+| Task type | Minimal path | Implementation waves at [4] |
+|---|---|---|
+| Cross-stack feature with UI + contract change | [0][1][2][3][4][5] | frontend + backend |
+| Frontend-only, no contract change | [0][1][3][4][5] | frontend only |
+| Frontend feature with contract change | [0][1][2][3][4][5] | frontend + backend |
+| Backend-only capability | [0][2][3][4][5] | backend only |
+| Internal refactor / tiny style change with no behavior change | lightweight path | — |
 
-Judge contract impact before frontend/backend impact.
+Judge contract impact before frontend/backend impact. Stage `[4]` always exists
+for implementation work; what differs is which delivery-domain waves run inside it.
 
 ## Output To User
 
