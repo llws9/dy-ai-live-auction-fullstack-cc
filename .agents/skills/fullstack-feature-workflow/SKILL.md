@@ -140,6 +140,20 @@ Plan outputs:
 - `tasks.md`
 - optional `checklist.md`
 
+Minimal-path exception (single-file or single-domain small change that still
+passes the Applicability Gate): you may inline the task definition instead of
+authoring standalone `plan.md` / `tasks.md`. This sits between the lightweight
+path and the full plan documents. To use it, all of these must hold:
+
+- the change touches one delivery domain and a small, enumerable write set
+- no contract impact and no cross-service coordination
+- the inline task still declares scope, write set / read set, regression sentinel, and verification command
+
+Record the inline task in the SDD state (or the commit/PR description if no state
+file is created). If any condition fails, fall back to standalone `writing-plans`
+outputs. Do not skip `writing-plans` entirely just because the change is small —
+the task definition and its sentinels are still required.
+
 If no standalone `checklist.md` exists, embed acceptance criteria in tasks or state, and mark the SDD `Input Documents` entry as `embedded in tasks/state`.
 
 Each task must declare:
@@ -228,6 +242,10 @@ Do not introduce a scoring system; any clear hit is enough to upgrade.
 
 Judge contract impact before frontend/backend impact. Stage `[4]` always exists
 for implementation work; what differs is which delivery-domain waves run inside it.
+
+For a small single-domain change with no contract impact, Stage `[3]` may use the
+inline task definition (see the minimal-path exception in Stage 3) instead of
+standalone `plan.md` / `tasks.md`.
 
 ## Output To User
 
