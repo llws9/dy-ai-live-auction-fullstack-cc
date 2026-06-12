@@ -58,6 +58,7 @@ export default function GoodsList() {
   const [page, setPage] = React.useState(1)
   const [total, setTotal] = React.useState(0)
   const [searchTerm, setSearchTerm] = React.useState("")
+  const [sortOrder, setSortOrder] = React.useState<"created_at_desc" | "created_at_asc">("created_at_desc")
   const pageSize = 10
 
   // 获取商品列表
@@ -131,6 +132,16 @@ export default function GoodsList() {
     )
   }, [products, searchTerm])
 
+  // 本地按创建时间排序（不改后端接口）
+  const sortedProducts = React.useMemo(() => {
+    const list = [...filteredProducts]
+    list.sort((a, b) => {
+      const diff = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      return sortOrder === "created_at_asc" ? diff : -diff
+    })
+    return list
+  }, [filteredProducts, sortOrder])
+
   // 分页计算
   const totalPages = Math.ceil(total / pageSize)
 
@@ -171,6 +182,15 @@ export default function GoodsList() {
               <Button variant="outline" size="icon" className="border-slate-200">
                 <Filter className="w-4 h-4" />
               </Button>
+              <select
+                aria-label="排序方式"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as "created_at_desc" | "created_at_asc")}
+                className="h-9 rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700"
+              >
+                <option value="created_at_desc">创建时间：最新优先</option>
+                <option value="created_at_asc">创建时间：最早优先</option>
+              </select>
             </div>
           </div>
 
@@ -188,14 +208,14 @@ export default function GoodsList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProducts.length === 0 ? (
+                {sortedProducts.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-slate-500 py-8">
                       暂无商品数据
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredProducts.map((item) => (
+                  sortedProducts.map((item) => (
                     <TableRow key={item.id} className="hover:bg-slate-50/80 transition-colors">
                       <TableCell>
                         <div className="flex items-center gap-3">
