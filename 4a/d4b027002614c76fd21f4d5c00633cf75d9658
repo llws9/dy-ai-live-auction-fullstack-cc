@@ -1,0 +1,66 @@
+docs/superpowers/specs/2026-06-11-runtime-facts-staleness-diagnosis-design.md
+  s_58fa9e24d43fde::t_12121c7957d733 6-200 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a2d07d30bfcee1b04fce404","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[6,200]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "4ad4b027002614c76fd21f4d5c00633cf75d9658",
+  "prompts": {},
+  "sessions": {
+    "s_58fa9e24d43fde": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a29bfdc0bfcee1b04fc9f45",
+        "model": "gpt-5.5__max"
+      },
+      "human_author": "翁松 <wengsong.9@bytedance.com>"
+    }
+  },
+  "attestation_metadata": {
+    "docs/superpowers/specs/2026-06-11-runtime-facts-staleness-diagnosis-design.md": [
+      {
+        "hash": "s_58fa9e24d43fde::t_12121c7957d733",
+        "line_ranges": [
+          {
+            "Range": [
+              6,
+              200
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a2d07d30bfcee1b04fce404",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  6,
+                  200
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "s_58fa9e24d43fde": {
+      "tool": "trae",
+      "conversation_id": "6a29bfdc0bfcee1b04fc9f45",
+      "session_id": "6a29bfdc0bfcee1b04fc9f45",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_58fa9e24d43fde::t_12121c7957d733": {
+      "tool": "trae",
+      "conversation_id": "6a29bfdc0bfcee1b04fc9f45",
+      "session_id": "6a29bfdc0bfcee1b04fc9f45",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
