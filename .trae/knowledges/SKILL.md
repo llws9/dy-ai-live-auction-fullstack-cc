@@ -27,6 +27,12 @@ description: >
 ## Gotchas
 - **Skill vs MCP 决策准则**：优先通过 Skill/Script 编排现有工具，仅在满足「高频复用、需结构化返回、需屏蔽跨平台差异、或 LLM 解析文本易错」时才考虑 MCP 化。环境事实查询是唯一经核实值得做的 P0 级 MCP 候选，其余（运行时诊断、外部系统桥接）已被现有 Skill/MCP 覆盖（`trace-query`、`argos-log`、`mcp_GitHub`、`feishu-cli`）（session:6a2990a00bfcee1b04fc825e）
 - **运行事实查询需建立完整关联链路**：验证结论一致性时必须确认「端口/URL -> 进程 -> 工作区 -> Git Commit -> 目标分支」的完整链路，防止在错误分支或陈旧运行环境下进行验证（session:6a2990a00bfcee1b04fc825e）
+- **知识库同步核验**：更新 `.trae/knowledges/` 时需确保条目不与项目硬约束冲突（例如曾误导将 `localhost` 改为 `127.0.0.1`）（session:6a29bfdc0bfcee1b04fc9f45）
+- **文档入库完整性**：具有相互依赖关系的文档（如 plan 和 spec）应作为一组资产同步入库，严禁在主干提交中留下指向 untracked 文件的断链引用（session:6a29bfdc0bfcee1b04fc9f45）
+- **提交分离策略**：业务代码、知识库更新、设计草案应分批提交，严禁混发以保持 Git 历史纯净（session:6a29bfdc0bfcee1b04fc9f45）
+- **隔离开发**：功能开发必须在独立的 worktree 中进行，验证通过后再合回 main，防止污染主干（session:6a29bfdc0bfcee1b04fc9f45）
+- **回归测试严密性**：H5 改动若导致样式回归测试失败或存在代码风格问题（如尾随空白），严禁提交（session:6a29bfdc0bfcee1b04fc9f45）
+- **环境配置稳定性**：禁止为了绕过本机环境问题（如端口冲突）修改主干配置（如 Vite proxy target）；优先清理旧进程、修正本地启动状态，保持使用 `localhost`（session:6a29bfdc0bfcee1b04fc9f45）
 - 前端流量必须经 `gateway-service` 的 `/api/v1` 入口，新增前端接口时不要直连后端子服务或绕过统一网关（`AGENTS.md`）
 - demo 生产环境不能把 Nacos、Prometheus、Loki、GrowthBook 等控制面端口直接公网裸开，观测入口应走受保护的 Nginx 反代（`deploy/demo/MAIN_DEPLOY_QUICKSTART.md`）
 - **公网 H5 图片兜底资源必须使用同源静态资源，禁止使用内网域名**。`copilot-cn.bytedance.net` 等 ByteDance 内网域名在公网环境会解析失败（ERR_NAME_NOT_RESOLVED），导致图片无法显示。兜底图应放在 `frontend/h5/public/assets/` 并使用相对路径引用（`frontend/h5/src/pages/Home/index.tsx`, `frontend/h5/src/utils/imageFallback.ts`, `test-service/client/client.go`）
